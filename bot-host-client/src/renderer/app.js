@@ -998,25 +998,6 @@
     });
   }
 
-  function renderBrowserExts(list) {
-    const box = $('browserExtList');
-    if (!box) return;
-    clear(box);
-    const rows = (Array.isArray(list) ? list : []).filter((row) => !row.builtin);
-    if (!rows.length) {
-      box.appendChild(el('div', 'empty', '暂无插件'));
-      return;
-    }
-    rows.forEach((item) => {
-      const row = el('div', 'list-row');
-      const main = el('div', 'list-main');
-      main.appendChild(el('span', 'list-title', item.name + ' · v' + item.version));
-      main.appendChild(el('span', 'muted', item.id));
-      row.appendChild(main);
-      box.appendChild(row);
-    });
-  }
-
   async function goBrowserUrl() {
     const input = $('browserUrl');
     const url = input.value.trim();
@@ -1042,7 +1023,6 @@
       void goBrowserUrl();
     }
   });
-  $('goPluginsFromBrowser').addEventListener('click', () => showPane('plugins'));
 
   /* ------------------------------------------------------ Chrome 插件包管理 */
 
@@ -1086,9 +1066,7 @@
 
   async function loadChromeExts() {
     const res = await api.listChromeExtensions();
-    const rows = (res && res.list) || [];
-    renderChromeExts(rows);
-    renderBrowserExts(rows);
+    renderChromeExts((res && res.list) || []);
   }
 
   async function importChromeExt(mode) {
@@ -1105,28 +1083,6 @@
   $('importChromeZip').addEventListener('click', () => void importChromeExt('zip'));
   $('importChromeFolder').addEventListener('click', () => void importChromeExt('folder'));
 
-  $('launchChrome').addEventListener('click', async () => {
-    const btn = $('launchChrome');
-    btn.disabled = true;
-    note($('chromeExtHint'), '正在打开客户端浏览器并加载插件…');
-    try {
-      const res = await api.launchChromeBrowser();
-      if (res && res.ok) {
-        const errors = Array.isArray(res.errors) ? res.errors : [];
-        note(
-          $('chromeExtHint'),
-          '客户端浏览器已打开' +
-            (res.loaded ? '，已加载 ' + res.loaded + ' 个插件' : '') +
-            (errors.length ? '；未能加载：' + errors.join('；') : ''),
-          errors.length ? 'bad' : 'ok'
-        );
-      } else {
-        note($('chromeExtHint'), (res && res.error) || '启动失败', 'bad');
-      }
-    } finally {
-      btn.disabled = false;
-    }
-  });
 
   /* -------------------------------------------------------- 工作区与权限 */
 

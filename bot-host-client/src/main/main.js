@@ -1189,7 +1189,7 @@ function setupIpc() {
   ipcMain.handle('chromeExt:launch', async () => {
     try {
       const loaded = await builtinBrowser.loadManagedExtensions();
-      await builtinBrowser.open('about:blank');
+      await builtinBrowser.open();
       if (loaded.loaded.length) {
         log('info', 'client browser opened with ' + loaded.loaded.length + ' extension(s)');
       }

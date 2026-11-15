@@ -404,26 +404,6 @@
         <section class="pane" data-pane="plugins">
           <div class="card">
             <div class="card-head">
-              <span class="card-title">Chrome 插件</span>
-              <span class="card-hint">为浏览器服务：装在客户端自带的浏览器里，Agent 直接调用</span>
-              <span class="card-actions">
-                <button id="importChromeZip" class="btn small ghost" title="上传 Chrome 插件包（ZIP，含 manifest.json）">上传 ZIP</button>
-                <button id="importChromeFolder" class="btn small ghost" title="从文件夹导入 Chrome 插件（含 manifest.json）">选择文件夹</button>
-                <button id="launchChrome" class="btn small primary" title="打开客户端自带浏览器（Agent 默认就在这个浏览器里操作）">打开客户端浏览器</button>
-              </span>
-            </div>
-            <div id="chromeExtList" class="list"></div>
-            <p id="chromeExtHint" class="card-note">
-              插件包上传后自动装进客户端自带的浏览器；Agent 的浏览器操作默认就发生在这个浏览器里，不启动也不扫描本机 Chrome / Edge，无需进入
-              chrome://extensions。首次在客户端浏览器里登录站点后，会话会保留。数据只在本机，不经过平台。
-            </p>
-            <div class="actions spaced">
-              <button id="openChromeExtFolder" class="btn small ghost">打开插件目录</button>
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="card-head">
               <span class="card-title">Agent 插件</span>
               <span class="card-hint">为 Agent 服务：HTTP 接口或本机命令，Agent 可直接调用</span>
               <span class="card-actions">
@@ -523,10 +503,21 @@
           <div class="card">
             <div class="card-head">
               <span class="card-title">Chrome 插件</span>
-              <span class="card-hint">导入的插件在打开客户端浏览器时自动加载</span>
-              <span class="card-actions"><button id="goPluginsFromBrowser" class="btn small ghost">去插件页管理</button></span>
+              <span class="card-hint">为浏览器服务：装在客户端自带的浏览器里，打开浏览器时自动加载</span>
+              <span class="card-actions">
+                <button id="importChromeZip" class="btn small ghost" title="上传 Chrome 插件包（ZIP，含 manifest.json）">上传 ZIP</button>
+                <button id="importChromeFolder" class="btn small ghost" title="从文件夹导入 Chrome 插件（含 manifest.json）">选择文件夹</button>
+              </span>
             </div>
-            <div id="browserExtList" class="list"><div class="empty">暂无插件</div></div>
+            <div id="chromeExtList" class="list">
+              <div class="empty">还没有导入 Chrome 插件</div>
+            </div>
+            <p id="chromeExtHint" class="card-note">
+              插件包上传后自动装进客户端自带浏览器；Agent 的浏览器操作默认就在这里，无需进入 chrome://extensions，也不要求开发者模式。数据只在本机，不经过平台。
+            </p>
+            <div class="actions spaced">
+              <button id="openChromeExtFolder" class="btn small ghost">打开插件目录</button>
+            </div>
           </div>
         </section>
       </main>
