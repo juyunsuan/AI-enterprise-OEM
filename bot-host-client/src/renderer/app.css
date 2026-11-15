@@ -442,6 +442,35 @@ select.fill { flex: 1; }
 .task-list .badge.warn { background: var(--warning-soft); color: var(--warning); }
 .task-list .badge.bad { background: var(--danger-soft); color: var(--danger); }
 
+.task-records { display: flex; flex-direction: column; gap: 8px; }
+.task-record { border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); }
+.task-record summary { display: flex; align-items: center; gap: 10px; padding: 9px 12px; cursor: pointer; list-style: none; }
+.task-record summary::-webkit-details-marker { display: none; }
+.task-record summary .t { flex: 0 0 44px; color: var(--text-3); font-family: "Consolas", monospace; font-size: 12px; }
+.task-record summary .title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-record summary .badge { flex: 0 0 auto; font-size: 11px; padding: 0 7px; line-height: 18px; border-radius: 4px; background: var(--bg-muted); color: var(--text-2); }
+.task-record summary .badge.ok { background: var(--success-soft); color: var(--success); }
+.task-record summary .badge.info { background: var(--info-soft); color: var(--primary); }
+.task-record summary .badge.warn { background: var(--warning-soft); color: var(--warning); }
+.task-record summary .badge.bad { background: var(--danger-soft); color: var(--danger); }
+.task-record-body { display: flex; flex-direction: column; gap: 8px; padding: 4px 12px 12px; border-top: 1px dashed var(--border); }
+.task-record-body .kv-row { align-items: flex-start; }
+.record-text {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  max-height: 260px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-2);
+  background: var(--bg-muted);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
 .log-text {
   margin: 0;
   max-height: 420px;

@@ -139,6 +139,11 @@ function open() {
   ensureColumn('chat_conversations', 'channel_id', "TEXT NOT NULL DEFAULT ''");
   ensureColumn('chat_conversations', 'workspace_path', "TEXT NOT NULL DEFAULT ''");
   ensureColumn('chat_messages', 'attachments', "TEXT NOT NULL DEFAULT '[]'");
+  // 任务记录：平台原文与本机回复要能在重启后回看。
+  ensureColumn('tasks', 'kind', "TEXT NOT NULL DEFAULT ''");
+  ensureColumn('tasks', 'instruction', "TEXT NOT NULL DEFAULT ''");
+  ensureColumn('tasks', 'cwd', "TEXT NOT NULL DEFAULT ''");
+  ensureColumn('tasks', 'reply', "TEXT NOT NULL DEFAULT ''");
   if (version !== SCHEMA_VERSION) handle.pragma('user_version = ' + SCHEMA_VERSION);
   return handle;
 }
@@ -195,6 +200,68 @@ function hasSetting(key) {
   return !!open().prepare('SELECT 1 AS hit FROM settings WHERE key = ?').get(String(key));
 }
 
+/* ---------------------------------------------------------------- tasks */
+
+/** 平台指令领取时入库：存平台原文；状态变化走 updateTaskRecord，不覆盖原文。 */
+function receiveTaskRecord(record) {
+  const code = String((record && record.commandCode) || '');
+  if (!code) return;
+  const at = (record && record.at) || new Date().toISOString();
+  open()
+    .prepare(
+      `INSERT INTO tasks (command_code, title, kind, instruction, cwd, status, error_message, reply, started_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, '', '', ?, ?)
+       ON CONFLICT(command_code) DO UPDATE SET
+         title = excluded.title, kind = excluded.kind, instruction = excluded.instruction,
+         cwd = excluded.cwd, status = excluded.status, updated_at = excluded.updated_at`
+    )
+    .run(
+      code,
+      String(record.title || '').slice(0, 200),
+      String(record.kind || ''),
+      String(record.instruction || '').slice(0, 20_000),
+      String(record.cwd || ''),
+      String(record.status || '已领取'),
+      at,
+      at
+    );
+}
+
+/** 状态/回复更新：只动状态相关列，保留平台原文。 */
+function updateTaskRecord(record) {
+  const code = String((record && record.commandCode) || '');
+  if (!code) return;
+  const at = (record && record.at) || new Date().toISOString();
+  open()
+    .prepare(
+      `INSERT INTO tasks (command_code, title, status, error_message, reply, started_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(command_code) DO UPDATE SET
+         title = excluded.title, status = excluded.status,
+         error_message = excluded.error_message, reply = excluded.reply, updated_at = excluded.updated_at`
+    )
+    .run(
+      code,
+      String(record.title || '').slice(0, 200),
+      String(record.status || ''),
+      String(record.errorMessage || '').slice(0, 2_000),
+      String(record.reply || '').slice(0, 20_000),
+      at,
+      at
+    );
+}
+
+function listTaskRecords(limit) {
+  const cap = Math.max(1, Math.min(500, Number(limit) || 100));
+  return open()
+    .prepare(
+      `SELECT command_code AS commandCode, title, kind, instruction, cwd, status,
+              error_message AS errorMessage, reply, started_at AS startedAt, updated_at AS updatedAt
+         FROM tasks ORDER BY updated_at DESC LIMIT ?`
+    )
+    .all(cap);
+}
+
 module.exports = {
   DATA_DIR,
   DB_FILE,
@@ -205,5 +272,8 @@ module.exports = {
   close,
   getSetting,
   setSetting,
-  hasSetting
+  hasSetting,
+  receiveTaskRecord,
+  updateTaskRecord,
+  listTaskRecords
 };

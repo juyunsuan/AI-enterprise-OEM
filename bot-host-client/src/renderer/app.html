@@ -34,6 +34,7 @@
         </div>
         <div class="nav-group">
           <div class="nav-group-title">运行</div>
+          <button class="nav-item" data-go="tasks"><span class="nav-dot"></span>任务记录</button>
           <button class="nav-item" data-go="workspace"><span class="nav-dot"></span>工作区与权限</button>
           <button class="nav-item" data-go="logs"><span class="nav-dot"></span>任务与日志</button>
         </div>
@@ -452,9 +453,9 @@
             <div class="kv">
               <div class="kv-row"><span class="k">权限</span>
                 <select id="policy" class="fill">
-                  <option value="deny">只读（默认，写文件与命令一律拒绝）</option>
+                  <option value="deny">只读（写文件与命令一律拒绝）</option>
                   <option value="allow-edits">允许改当前工作区内的文件</option>
-                  <option value="allow-all">允许改文件并执行命令</option>
+                  <option value="allow-all">允许改文件并执行命令（默认）</option>
                 </select>
               </div>
             </div>
@@ -472,6 +473,19 @@
         </section>
 
         <!-- 任务与日志 -->
+        <section class="pane" data-pane="tasks">
+          <div class="card">
+            <div class="card-head">
+              <span class="card-title">Bot 任务记录</span>
+              <span class="card-hint">平台下发给本机的全部指令与本机回复，只保存在本机</span>
+              <span class="card-actions"><button id="reloadRecords" class="btn small ghost">刷新</button></span>
+            </div>
+            <div id="taskRecords" class="task-records">
+              <div class="empty">暂无任务记录：平台下发指令后这里会出现完整内容</div>
+            </div>
+          </div>
+        </section>
+
         <section class="pane" data-pane="logs">
           <div class="grid-2">
             <div class="card">

@@ -540,7 +540,21 @@ async function doHeartbeat() {
     if (Array.isArray(data.commands)) {
       data.commands.forEach((cmd) => {
         if (!cmd || !cmd.commandCode) return;
-        if (runner.enqueue(cmd)) rememberWorkspace(cmd.cwd);
+        if (runner.enqueue(cmd)) {
+          rememberWorkspace(cmd.cwd);
+          try {
+            db.receiveTaskRecord({
+              commandCode: cmd.commandCode,
+              title: cmd.title || '',
+              kind: cmd.kind || '',
+              instruction: cmd.instruction || '',
+              cwd: cmd.cwd || '',
+              status: '已领取'
+            });
+          } catch (err) {
+            log('warn', 'task record failed: ' + err.message);
+          }
+        }
       });
     }
     if (Array.isArray(data.stop)) runner.applyStop(data.stop);
@@ -638,6 +652,13 @@ function setupRunner() {
       }
       broadcast('state:update', stateSnapshot());
       refreshAgentSnapshot();
+    },
+    onRecord: (record) => {
+      try {
+        db.updateTaskRecord(record);
+      } catch (err) {
+        log('warn', 'task record failed: ' + err.message);
+      }
     },
     onLog: log
   });
@@ -1113,6 +1134,14 @@ function setupIpc() {
   });
 
   ipcMain.handle('tasks:recent', () => (runner ? runner.getRecent() : []));
+  ipcMain.handle('tasks:records', (e, limit) => {
+    try {
+      return db.listTaskRecords(Number(limit) || 100);
+    } catch (err) {
+      log('warn', 'task records read failed: ' + err.message);
+      return [];
+    }
+  });
 
   // --- 本机对话 ------------------------------------------------------------
 

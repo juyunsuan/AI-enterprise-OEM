@@ -55,8 +55,9 @@ const DEFAULTS = {
   heartbeatSeconds: 5,
   // Whether to open at login. Defaults false until paired.
   autoStart: false,
-  // 本地工具权限档：deny（默认，只读）/ allow-edits（限工作区内写）/ allow-all（放开命令）。
-  permissionPolicy: 'deny',
+  // 本地工具权限档：deny（只读）/ allow-edits（限工作区内写）/ allow-all（放开命令）。
+  // 默认全开，用户可以在「工作区与权限」里按需下调。
+  permissionPolicy: 'allow-all',
   // Chrome 桥接：只监听 127.0.0.1；令牌首次启动自动生成，插件侧要填同一串。
   chromeBridgeToken: '',
   chromeBridgePort: 35911,

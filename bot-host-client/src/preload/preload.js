@@ -39,6 +39,7 @@ const api = {
   reconnect: () => ipcRenderer.invoke('app:reconnect'),
   getLogs: () => ipcRenderer.invoke('log:get'),
   getRecentTasks: () => ipcRenderer.invoke('tasks:recent'),
+  getTaskRecords: (limit) => ipcRenderer.invoke('tasks:records', limit),
 
   // --- local agent config (channels / skills / personas / memory) ---
   getAgent: () => ipcRenderer.invoke('agent:get'),

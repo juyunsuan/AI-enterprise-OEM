@@ -206,7 +206,7 @@ class TaskRunner {
           : result.status === 'timeout'
             ? '超时'
             : '失败';
-    this._record(cmd.commandCode, cmd.title || promptText, label, errorMessage);
+    this._record(cmd.commandCode, cmd.title || promptText, label, errorMessage, result.text || '');
   }
 
   async _ack(cmd, payload) {
@@ -218,16 +218,26 @@ class TaskRunner {
     }
   }
 
-  _record(commandCode, title, status, errorMessage) {
-    this.recent.unshift({
+  _record(commandCode, title, status, errorMessage, reply) {
+    const record = {
       commandCode,
       title: String(title || '').slice(0, 120),
       status,
       errorMessage: errorMessage || '',
+      reply: String(reply || '').slice(0, 20_000),
       at: new Date().toISOString()
-    });
+    };
+    this.recent.unshift(record);
     if (this.recent.length > 100) this.recent.length = 100;
     this.cancelCodes.delete(commandCode);
+    // 可选持久化钩子（main.js 写入本地 tasks 表）；失败只告警，不影响任务收尾。
+    if (this.deps.onRecord) {
+      try {
+        this.deps.onRecord(record);
+      } catch (err) {
+        this._log('warn', 'record persist failed: ' + err.message);
+      }
+    }
   }
 
   _log(level, msg) {

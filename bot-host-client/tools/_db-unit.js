@@ -474,6 +474,29 @@ check('只认库里的白名单与默认目录', () => {
     }
   });
 
+  check('任务记录：领取时存平台原文，完成后补本机回复且不覆盖原文', () => {
+    db.receiveTaskRecord({
+      commandCode: 'rec-1',
+      title: '整理周报',
+      kind: 'prompt',
+      instruction: '平台下发的完整原文',
+      cwd: 'C:/ws',
+      status: '已领取'
+    });
+    db.updateTaskRecord({
+      commandCode: 'rec-1',
+      title: '整理周报',
+      status: '成功',
+      reply: '本机完整回复'
+    });
+    const rows = db.listTaskRecords(10);
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].instruction, '平台下发的完整原文');
+    assert.equal(rows[0].kind, 'prompt');
+    assert.equal(rows[0].status, '成功');
+    assert.equal(rows[0].reply, '本机完整回复');
+  });
+
   db.close();
   fs.rmSync(HOME, { recursive: true, force: true });
 

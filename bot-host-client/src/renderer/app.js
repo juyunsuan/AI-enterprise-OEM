@@ -22,6 +22,7 @@
     memory: '长期记忆',
     plugins: '插件',
     workspace: '工作区与权限',
+    tasks: '任务记录',
     logs: '任务与日志'
   };
 
@@ -106,8 +107,8 @@
 
   function taskBadgeClass(status) {
     if (status === '成功' || status === 'ok' || status === '完成') return 'ok';
-    if (status === '执行中' || status === '排队中') return 'info';
-    if (status === '超时') return 'warn';
+    if (status === '执行中' || status === '排队中' || status === '已领取') return 'info';
+    if (status === '超时' || status === '已取消') return 'warn';
     return 'bad';
   }
 
@@ -129,6 +130,7 @@
     $('pageTitle').textContent = PAGE_TITLE[target];
     document.querySelector('.content').scrollTop = 0;
     if (target === 'logs') void loadTasks();
+    if (target === 'tasks') void loadTaskRecords();
     if (target === 'binding' && !state.pair && isLoggedIn()) void refreshPair();
     if (target === 'chat') {
       void loadChatList();
@@ -222,6 +224,38 @@
     const tasks = (await api.getRecentTasks()) || [];
     renderTaskList($('ovTaskList'), tasks, 5);
     renderTaskList($('taskList'), tasks, 30);
+  }
+
+  /** 平台→本机的完整记录：平台原文 + 本机回复，按更新时间倒序。 */
+  async function loadTaskRecords() {
+    const rows = (await api.getTaskRecords(100)) || [];
+    const box = $('taskRecords');
+    clear(box);
+    if (!rows.length) {
+      box.appendChild(el('div', 'empty', '暂无任务记录：平台下发指令后这里会出现完整内容'));
+      return;
+    }
+    rows.forEach((row) => {
+      const details = document.createElement('details');
+      details.className = 'task-record';
+      const summary = document.createElement('summary');
+      summary.appendChild(el('span', 't', fmtClock(row.updatedAt || row.startedAt)));
+      summary.appendChild(el('span', 'title', row.title || row.commandCode || '(无标题)'));
+      summary.appendChild(el('span', 'badge ' + taskBadgeClass(row.status), row.status || ''));
+      details.appendChild(summary);
+      const body = el('div', 'task-record-body');
+      const addBlock = (label, text, mono) => {
+        const line = el('div', 'kv-row');
+        line.appendChild(el('span', 'k', label));
+        line.appendChild(el('pre', 'record-text' + (mono ? ' mono' : ''), text || '—'));
+        body.appendChild(line);
+      };
+      addBlock('平台下发', row.instruction);
+      addBlock('本机回复', row.reply || row.errorMessage || '（未回复）');
+      if (row.cwd) addBlock('工作区', row.cwd, true);
+      details.appendChild(body);
+      box.appendChild(details);
+    });
   }
 
   async function loadLogs() {
@@ -1780,6 +1814,7 @@
   /* ------------------------------------------------------------ 任务/操作 */
 
   $('reloadTasks').addEventListener('click', () => void loadTasks());
+  $('reloadRecords').addEventListener('click', () => void loadTaskRecords());
   $('reloadLogs').addEventListener('click', () => void loadLogs());
 
   $('reconnect').addEventListener('click', async () => {
@@ -1823,6 +1858,10 @@
     $('pathVersion').textContent = snap.agent ? 'v' + (snap.agent.version || '1.0.0') : 'v1.0.0';
     $('pathDb').textContent = snap.dbPath || '—';
     $('pathDb').title = snap.dbPath || '';
+
+    // 任务记录页开着时跟随状态广播刷新（任务完成/失败会立刻反映出来）。
+    const activePane = document.querySelector('.pane.active');
+    if (activePane && activePane.dataset.pane === 'tasks') void loadTaskRecords();
   }
 
   async function reloadAll() {

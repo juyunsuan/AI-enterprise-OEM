@@ -167,6 +167,7 @@ function startModelStub(scripts) {
 
   await check('平台指令经 TaskRunner → Agent → 模型，结果与工作区原样回执', async () => {
     const acks = [];
+    const records = [];
     let okResolve;
     const done = new Promise((resolve) => (okResolve = resolve));
     const runner = new TaskRunner({
@@ -181,6 +182,7 @@ function startModelStub(scripts) {
           shouldCancel: input.shouldCancel
         }),
       onProgress: async () => ({ cancelRequested: false }),
+      onRecord: (record) => records.push(record),
       onAck: async (code, payload) => {
         acks.push(payload);
         okResolve();
@@ -193,12 +195,19 @@ function startModelStub(scripts) {
       timeoutSec: 60
     });
     await done;
+    // onAck 先于最终 _record 完成，等一个事件循环让收尾记录落下来。
+    await new Promise((resolve) => setTimeout(resolve, 0));
     assert.strictEqual(acks.length, 1);
     assert.strictEqual(acks[0].ok, true);
     assert.ok(acks[0].text.includes('pipeline-ok'), acks[0].text);
     assert.strictEqual(acks[0].effectiveWorkspace, configStore.get().workingDir);
     // 模型确实收到了平台那句话
     assert.ok(JSON.stringify(stub.seen[0]).includes('请回复 pipeline-ok'));
+    // 任务记录回调带上了本机回复正文
+    assert.ok(
+      records.some((r) => r.commandCode === 'cmd-pipeline' && r.status === '成功' && r.reply.includes('pipeline-ok')),
+      JSON.stringify(records)
+    );
   });
 
   console.log('技能');
