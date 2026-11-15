@@ -25,8 +25,9 @@ import { CurrentUser } from '../auth/current-user';
 import { text } from '../common/api';
 import { BusinessException } from '../common/business.exception';
 import { ErrorCode } from '../common/error-code';
-import { loadChannelCredentials } from '../ai/ai-channels';
+import { aipddApiKey, loadChannelCredentials } from '../ai/ai-channels';
 import { ContentCrypto } from '../content/content-crypto';
+import { aipddBaseUrl } from '../content/content-shared';
 import { parseId } from '../common/parse-id';
 import {
   computeNextOccurrence,
@@ -423,7 +424,12 @@ export class BotHostService {
       channelId: slot.channelId,
       channelName: this.channelLabel(slot.channelId, channel?.name),
       model: slot.model,
-      available: slot.channelId === -1 || Boolean(channel?.enabled),
+      // AIPDD 内置渠道（0）没有渠道行，「可用」取决于本人绑定 Key 或平台 Key 能否解出。
+      available:
+        slot.channelId === -1 ||
+        (slot.channelId === 0
+          ? Boolean(await aipddApiKey(this.prisma, userId))
+          : Boolean(channel?.enabled)),
       source: 'default',
     };
   }
@@ -473,16 +479,19 @@ export class BotHostService {
     const host = await this.loadHost(user, hostIdRaw);
     const channelId = Number(body.channelId);
     const model = clip(body.model, 128);
-    if (!Number.isInteger(channelId) || channelId === 0) {
+    if (!Number.isInteger(channelId) || channelId < -1) {
+      throw new BusinessException(ErrorCode.BAD_REQUEST, '请选择模型渠道');
+    }
+    if (channelId === 0 && !(await aipddApiKey(this.prisma, user.userId))) {
       throw new BusinessException(
         ErrorCode.BAD_REQUEST,
-        '请选择模型渠道（-1 为本站内置渠道）',
+        'AIPDD 渠道还没有可用的 Key：请先在「模型服务 → API Key 管理」绑定，或在平台后台配置平台 AIPDD Key',
       );
     }
     if (!model) {
       throw new BusinessException(ErrorCode.BAD_REQUEST, '请选择要用的模型');
     }
-    if (channelId !== -1) {
+    if (channelId > 0) {
       const channel = await this.prisma.contentModelChannel.findFirst({
         where: { id: channelId, userId: user.userId },
         select: { enabled: true },
@@ -1253,6 +1262,21 @@ export class BotHostService {
         source: grant.source,
       };
     } catch {
+      // AIPDD 内置渠道在本人未绑 Key 时改用平台 Key（与站内 AI 调用同口径），
+      // 让「平台默认文本模型=AIPDD」在客户端登录后无需手动授权即可用。
+      if (grant.channelId === 0) {
+        const apiKey = await aipddApiKey(this.prisma, host.userId);
+        if (apiKey) {
+          return {
+            channelId: 0,
+            baseUrl: aipddBaseUrl(),
+            apiKey,
+            protocol: 'openai',
+            model: grant.model,
+            source: grant.source,
+          };
+        }
+      }
       // 渠道被删/停用/Key 解不开：授权视为不可用，客户端回落本地配置。
       return null;
     }

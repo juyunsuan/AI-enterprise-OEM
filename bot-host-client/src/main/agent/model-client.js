@@ -239,6 +239,12 @@ async function complete({ channel, system, messages, tools, temperature, maxToke
   if (!channel || !channel.baseUrl || !channel.model) {
     throw new AgentError('NO_MODEL', '还没配置文本模型（渠道 + 模型）');
   }
+  if (!String(channel.apiKey || '').trim()) {
+    throw new AgentError(
+      'NO_MODEL',
+      '渠道还没有 API Key：在客户端「模型设置」里填写，或在平台「平台模型」给这台主机授权一个渠道'
+    );
+  }
   const delta = typeof onDelta === 'function' ? onDelta : () => {};
 
   if (channel.protocol === 'anthropic') {

@@ -505,6 +505,7 @@ export function HostPanel({
               value={grantChannel}
               options={[
                 { value: -1, label: "本站内置渠道（按积分计费）" },
+                { value: 0, label: "AIPDD 渠道（本人绑定或平台 Key）" },
                 ...channels.map((channel) => ({
                   value: channel.id,
                   label: channel.name,

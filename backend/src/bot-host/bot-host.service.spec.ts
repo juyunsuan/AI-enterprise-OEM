@@ -115,6 +115,31 @@ function table(seed: Row[] = [], defaults: Row = {}) {
       seed.push(...kept);
       return Promise.resolve({ count });
     },
+    upsert: ({
+      where,
+      create,
+      update,
+    }: {
+      where: Row;
+      create: Row;
+      update: Row;
+    }) => {
+      const row = seed.find((item) => matches(item, where));
+      if (row) {
+        applyData(row, update);
+        return Promise.resolve({ ...row });
+      }
+      const created: Row = {
+        id: (seq += 1),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        ...defaults,
+        ...where,
+        ...create,
+      };
+      seed.push(created);
+      return Promise.resolve({ ...created });
+    },
   };
 }
 
@@ -151,6 +176,8 @@ function setup(input: {
   // 没有独立授权时主机跟随平台「模型设置 → 文本」默认槽位；缺省就是「平台没配默认模型」。
   const contentModelSlot = table([]);
   const contentModelChannel = table([]);
+  // 渠道算力开关与平台 AIPDD Key 都挂在 system_settings 上；缺省行＝全部支持、平台没配 Key。
+  const systemSetting = table([]);
   const contentAgentConversation = table([]);
   const contentAgentMessage = table([]);
   const prisma = stub<PrismaService>({
@@ -164,6 +191,7 @@ function setup(input: {
     workbuddyHostModelGrant,
     contentModelSlot,
     contentModelChannel,
+    systemSetting,
     contentAgentConversation,
     contentAgentMessage,
   });
@@ -561,7 +589,7 @@ describe('BotHostService', () => {
     expect(command.status).toBe('PENDING');
   });
 
-  it('平台模型授权：没授权时心跳不下发密钥；channelId=0 拒绝保存', async () => {
+  it('平台模型授权：没默认模型时心跳不下发；AIPDD 默认模型用平台 Key 自动下发', async () => {
     const { service } = setup({ hosts: [hostRow] });
     const beat = await service.heartbeat(
       { id: 1, userId: 'u1', name: '测试主机' },
@@ -569,12 +597,80 @@ describe('BotHostService', () => {
       '127.0.0.1',
     );
     expect(beat.modelGrant).toBeNull();
+
+    const env = {
+      platform: process.env.AIPDD_PLATFORM_KEY,
+      credKey: process.env.EXTERNAL_CRED_KEY,
+    };
+    process.env.AIPDD_PLATFORM_KEY = 'sk-platform-test';
+    // AccountCrypto 构造函数要求 EXTERNAL_CRED_KEY，缺了连 AipddKeyService 都建不出来。
+    process.env.EXTERNAL_CRED_KEY = 'unit-test-cred-key';
+    try {
+      const { service: withSlot, contentModelSlot: slots } = setup({
+        hosts: [hostRow],
+      });
+      slots.rows.push({
+        id: 1,
+        userId: 'u1',
+        mediaType: 'text',
+        channelId: 0,
+        model: 'ap-deepseek-v4-flash',
+      });
+      const granted = await withSlot.heartbeat(
+        { id: 1, userId: 'u1', name: '测试主机' },
+        { caps: {} },
+        '127.0.0.1',
+      );
+      expect(granted.modelGrant).toMatchObject({
+        channelId: 0,
+        source: 'default',
+        protocol: 'openai',
+        model: 'ap-deepseek-v4-flash',
+        apiKey: 'sk-platform-test',
+      });
+      expect(String(granted.modelGrant?.baseUrl || '')).toContain('http');
+    } finally {
+      if (env.platform === undefined) delete process.env.AIPDD_PLATFORM_KEY;
+      else process.env.AIPDD_PLATFORM_KEY = env.platform;
+      if (env.credKey === undefined) delete process.env.EXTERNAL_CRED_KEY;
+      else process.env.EXTERNAL_CRED_KEY = env.credKey;
+    }
+  });
+
+  it('模型授权保存：channelId=0 没可用 Key 时给可执行提示，配好平台 Key 后可保存', async () => {
+    const { service } = setup({ hosts: [hostRow] });
     await expect(
       service.saveModelGrant(user, '1', {
         channelId: 0,
-        model: 'deepseek-chat',
+        model: 'ap-deepseek-v4-flash',
       }),
     ).rejects.toMatchObject({ errorCode: ErrorCode.BAD_REQUEST });
+
+    const env = {
+      platform: process.env.AIPDD_PLATFORM_KEY,
+      credKey: process.env.EXTERNAL_CRED_KEY,
+    };
+    process.env.AIPDD_PLATFORM_KEY = 'sk-platform-test';
+    process.env.EXTERNAL_CRED_KEY = 'unit-test-cred-key';
+    try {
+      await expect(
+        service.saveModelGrant(user, '1', {
+          channelId: 0,
+          model: 'ap-deepseek-v4-flash',
+        }),
+      ).resolves.toMatchObject({
+        grant: {
+          channelId: 0,
+          source: 'platform',
+          model: 'ap-deepseek-v4-flash',
+        },
+      });
+    } finally {
+      if (env.platform === undefined) delete process.env.AIPDD_PLATFORM_KEY;
+      else process.env.AIPDD_PLATFORM_KEY = env.platform;
+      if (env.credKey === undefined) delete process.env.EXTERNAL_CRED_KEY;
+      else process.env.EXTERNAL_CRED_KEY = env.credKey;
+    }
   });
 
   it('连接码绑账号：客户端用哪个账号登录就归哪个账号，别的账号轮询直接拒', async () => {
