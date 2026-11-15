@@ -21,8 +21,7 @@
     personas: '数字分身',
     memory: '长期记忆',
     plugins: '插件',
-    workspace: '工作区与权限',
-    logs: '任务与日志'
+    workspace: '工作区与权限'
   };
 
   const STATE_LABEL = {
@@ -128,7 +127,6 @@
     });
     $('pageTitle').textContent = PAGE_TITLE[target];
     document.querySelector('.content').scrollTop = 0;
-    if (target === 'logs') void loadTaskRecords();
     if (target === 'binding' && !state.pair && isLoggedIn()) void refreshPair();
     if (target === 'chat') {
       void loadChatList();
@@ -143,7 +141,6 @@
 
   $('goBinding').addEventListener('click', () => showPane('binding'));
   $('goModels').addEventListener('click', () => showPane('models'));
-  $('goLogs').addEventListener('click', () => showPane('logs'));
 
   /* ------------------------------------------------------------ 顶部状态 */
 
@@ -199,28 +196,6 @@
     if (st === 'UNCONFIGURED') note(hint, FAIL_HINT.NO_MODEL, 'bad');
     else if (agent.failReason) note(hint, FAIL_HINT[agent.failReason] || agent.failReason, 'bad');
     else note(hint, '');
-  }
-
-  function renderTaskList(node, tasks, limit) {
-    clear(node);
-    if (!Array.isArray(tasks) || !tasks.length) {
-      node.appendChild(el('li', 'muted', '暂无任务'));
-      return;
-    }
-    tasks.slice(0, limit).forEach((task) => {
-      const li = el('li');
-      li.appendChild(el('span', 't', fmtClock(task.at)));
-      const title = el('span', 'title', task.title || task.commandCode || '(无标题)');
-      title.title = (task.title || '') + (task.errorMessage ? '\n' + task.errorMessage : '');
-      li.appendChild(title);
-      li.appendChild(el('span', 'badge ' + taskBadgeClass(task.status), task.status || ''));
-      node.appendChild(li);
-    });
-  }
-
-  async function loadTasks() {
-    const tasks = (await api.getRecentTasks()) || [];
-    renderTaskList($('ovTaskList'), tasks, 5);
   }
 
   /** 平台→本机的完整记录：平台原文 + 本机回复，按更新时间倒序。 */
@@ -1838,8 +1813,11 @@
 
   /* ------------------------------------------------------------ 任务/操作 */
 
-  $('reloadRecords').addEventListener('click', () => void loadTaskRecords());
-  $('reloadLogs').addEventListener('click', () => void loadLogs());
+  $('reloadActive').addEventListener('click', () => {
+    const active = document.querySelector('[data-logs-tab].active');
+    if (active && active.dataset.logsTab === 'log') void loadLogs();
+    else void loadTaskRecords();
+  });
 
   // 任务与日志页的两个 Tab：默认 Bot 任务记录，切到日志时补一次全量刷新。
   function showLogsTab(tab) {
@@ -1905,7 +1883,7 @@
     const recordsPanel = document.querySelector('[data-logs-panel="records"]');
     if (
       activePane &&
-      activePane.dataset.pane === 'logs' &&
+      activePane.dataset.pane === 'overview' &&
       recordsPanel &&
       !recordsPanel.classList.contains('hidden')
     ) {
@@ -1916,7 +1894,7 @@
   async function reloadAll() {
     await reloadState();
     await reloadAgent();
-    await loadTasks();
+    await loadTaskRecords();
     const pair = await api.getPairStatus();
     if (pair) renderPair(pair);
   }
@@ -1958,7 +1936,7 @@
   });
 
   api.onLog((line) => {
-    const pane = document.querySelector('.pane[data-pane="logs"]');
+    const pane = document.querySelector('.pane[data-pane="overview"]');
     const panel = document.querySelector('[data-logs-panel="log"]');
     if (!pane || !pane.classList.contains('active') || !panel || panel.classList.contains('hidden')) return;
     const cur = $('logText').textContent === '(无日志)' ? '' : $('logText').textContent;
@@ -1973,7 +1951,7 @@
   (async function init() {
     const snap = await reloadState();
     await reloadAgent();
-    await loadTasks();
+    await loadTaskRecords();
     await loadChatList();
     const pair = await api.getPairStatus();
     if (pair) renderPair(pair);
