@@ -28,9 +28,9 @@
           <button class="nav-item" data-go="chat"><span class="nav-dot"></span>对话</button>
           <button class="nav-item" data-go="models"><span class="nav-dot"></span>模型渠道</button>
           <button class="nav-item" data-go="skills"><span class="nav-dot"></span>技能<span id="navSkillCount" class="nav-badge">0</span></button>
+          <button class="nav-item" data-go="plugins"><span class="nav-dot"></span>插件</button>
           <button class="nav-item" data-go="personas"><span class="nav-dot"></span>数字分身<span id="navPersonaCount" class="nav-badge">0</span></button>
           <button class="nav-item" data-go="memory"><span class="nav-dot"></span>长期记忆</button>
-          <button class="nav-item" data-go="plugins"><span class="nav-dot"></span>插件</button>
         </div>
         <div class="nav-group">
           <div class="nav-group-title">运行</div>
@@ -173,6 +173,18 @@
               <span class="card-actions"><button id="runCheck" class="btn small">重新检测</button></span>
             </div>
             <div id="checkList" class="check-list"><div class="empty">尚未检测</div></div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <span class="card-title">运行操作</span>
+            </div>
+            <div class="actions">
+              <button id="reconnect" class="btn">立即重连</button>
+              <button id="recheck" class="btn">环境自检</button>
+              <button id="quit" class="btn danger">退出客户端</button>
+            </div>
+            <p class="card-note">关闭窗口只是收进托盘，客户端会继续接活；退出才真正停掉心跳。</p>
           </div>
         </section>
 
@@ -380,8 +392,30 @@
         <section class="pane" data-pane="plugins">
           <div class="card">
             <div class="card-head">
+              <span class="card-title">Chrome 插件</span>
+              <span class="card-hint">为浏览器服务：扩展装在 Chrome/Edge 里，经本机桥接被 Agent 调用</span>
+              <span class="card-actions"><button id="bridgeRestart" class="btn small">重启桥接</button></span>
+            </div>
+            <div class="kv">
+              <div class="kv-row"><span class="k">状态</span><span id="bridgeState" class="v">—</span></div>
+              <div class="kv-row"><span class="k">桥接地址</span><span id="bridgeAddr" class="v mono">—</span></div>
+              <div class="kv-row"><span class="k">桥接令牌</span><span id="bridgeToken" class="v mono">—</span></div>
+              <div class="kv-row"><span class="k">监听端口</span><input id="bridgePort" type="number" min="1024" max="65535" class="fill" style="max-width:120px" /></div>
+            </div>
+            <div class="actions spaced">
+              <button id="copyBridge" class="btn small">复制桥接信息</button>
+              <button id="openBridgeFolder" class="btn small ghost">打开插件目录</button>
+            </div>
+            <p class="card-note">
+              安装方法：本客户端目录下的 <code>chrome-bridge-extension</code> 文件夹拖进 chrome://extensions（开发者模式 → 加载已解压的扩展程序），
+              首次打开扩展把上面的「桥接地址 + 令牌」填进去即可。桥接只监听本机 127.0.0.1，浏览器数据和 Cookie 不经过平台。
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
               <span class="card-title">Agent 插件</span>
-              <span class="card-hint">给 Agent 加自定义工具：HTTP 接口或本机命令</span>
+              <span class="card-hint">为 Agent 服务：HTTP 接口或本机命令，Agent 可直接调用</span>
               <span class="card-actions">
                 <button id="importPluginZip" class="btn small ghost" title="上传本地插件包（ZIP，含 plugin.json）">上传 ZIP</button>
                 <button id="importPluginFolder" class="btn small ghost" title="从文件夹导入插件（含 plugin.json）">选择文件夹</button>
@@ -393,7 +427,7 @@
 
           <div id="pluginEditorCard" class="card hidden">
             <div class="card-head">
-              <span class="card-title">编辑插件</span>
+              <span class="card-title">编辑 Agent 插件</span>
               <span class="card-hint" id="pluginMode"></span>
             </div>
             <div class="form">
@@ -416,28 +450,6 @@
               <button id="cancelPlugin" class="btn ghost">关闭</button>
             </div>
             <p id="pluginHint" class="card-note"></p>
-          </div>
-
-          <div class="card">
-            <div class="card-head">
-              <span class="card-title">Chrome 插件桥接</span>
-              <span class="card-hint">让 Agent 通过本机浏览器查页面、点按钮、填表单</span>
-              <span class="card-actions"><button id="bridgeRestart" class="btn small">重启桥接</button></span>
-            </div>
-            <div class="kv">
-              <div class="kv-row"><span class="k">状态</span><span id="bridgeState" class="v">—</span></div>
-              <div class="kv-row"><span class="k">桥接地址</span><span id="bridgeAddr" class="v mono">—</span></div>
-              <div class="kv-row"><span class="k">桥接令牌</span><span id="bridgeToken" class="v mono">—</span></div>
-              <div class="kv-row"><span class="k">监听端口</span><input id="bridgePort" type="number" min="1024" max="65535" class="fill" style="max-width:120px" /></div>
-            </div>
-            <div class="actions spaced">
-              <button id="copyBridge" class="btn small">复制桥接信息</button>
-              <button id="openBridgeFolder" class="btn small ghost">打开插件目录</button>
-            </div>
-            <p class="card-note">
-              安装方法：本客户端目录下的 <code>chrome-bridge-extension</code> 文件夹拖进 chrome://extensions（开发者模式 → 加载已解压的扩展程序），
-              首次打开扩展把上面的「桥接地址 + 令牌」填进去即可。桥接只监听本机 127.0.0.1，浏览器数据和 Cookie 不经过平台。
-            </p>
           </div>
         </section>
 
@@ -483,27 +495,14 @@
           </div>
 
           <div class="tabpanel" data-logs-panel="records">
-            <div class="grid-2">
-              <div class="card">
-                <div class="card-head">
-                  <span class="card-title">Bot 任务记录</span>
-                  <span class="card-hint">平台下发的全部指令与本机回复，只保存在本机</span>
-                  <span class="card-actions"><button id="reloadRecords" class="btn small ghost">刷新</button></span>
-                </div>
-                <div id="taskRecords" class="task-records">
-                  <div class="empty">暂无任务记录：平台下发指令后这里会出现完整内容</div>
-                </div>
+            <div class="card">
+              <div class="card-head">
+                <span class="card-title">Bot 任务记录</span>
+                <span class="card-hint">平台下发的全部指令与本机回复，只保存在本机</span>
+                <span class="card-actions"><button id="reloadRecords" class="btn small ghost">刷新</button></span>
               </div>
-              <div class="card">
-                <div class="card-head">
-                  <span class="card-title">运行操作</span>
-                </div>
-                <div class="actions">
-                  <button id="reconnect" class="btn">立即重连</button>
-                  <button id="recheck" class="btn">环境自检</button>
-                  <button id="quit" class="btn danger">退出客户端</button>
-                </div>
-                <p class="card-note">关闭窗口只是收进托盘，客户端会继续接活；退出才真正停掉心跳。</p>
+              <div id="taskRecords" class="task-records">
+                <div class="empty">暂无任务记录：平台下发指令后这里会出现完整内容</div>
               </div>
             </div>
           </div>
