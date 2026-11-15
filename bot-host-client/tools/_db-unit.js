@@ -497,6 +497,41 @@ check('只认库里的白名单与默认目录', () => {
     assert.equal(rows[0].reply, '本机完整回复');
   });
 
+  await checkAsync('工具重复调用会提前止损并给出执行摘要', async () => {
+    const agentRuntime = require('../src/main/agent');
+    const modelClient = require('../src/main/agent/model-client');
+    const original = modelClient.complete;
+    let rounds = 0;
+    try {
+      const cfg = configStore.get();
+      modelClient.complete = async () => {
+        rounds += 1;
+        return {
+          text: '',
+          toolCalls: [
+            {
+              id: 'repeat-' + rounds,
+              name: 'remember',
+              arguments: JSON.stringify({ text: '重复调用测试' })
+            }
+          ]
+        };
+      };
+      const res = await agentRuntime.run({
+        instruction: '测试重复调用',
+        cwd: cfg.workingDir,
+        policy: 'deny',
+        timeoutSec: 30
+      });
+      assert.strictEqual(res.status, 'ok');
+      assert.ok(res.text.includes('重复调用'), res.text);
+      assert.ok(res.text.includes('工具调用'), res.text);
+      assert.ok(rounds <= 3, '重复到第 3 次应当停止，实际轮次=' + rounds);
+    } finally {
+      modelClient.complete = original;
+    }
+  });
+
   db.close();
   fs.rmSync(HOME, { recursive: true, force: true });
 

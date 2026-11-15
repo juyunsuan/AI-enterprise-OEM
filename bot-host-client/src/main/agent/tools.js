@@ -226,7 +226,8 @@ function definitions() {
     },
     {
       name: 'run_command',
-      description: '在当前工作区目录下执行一条 shell 命令并返回输出。需要完整权限。',
+      description:
+        '在当前工作区目录下执行一条 shell 命令并返回输出。需要完整权限。要让用户在浏览器里打开网页，用 `start <完整URL>`（Windows）或 `open <URL>`（macOS）；curl 只用来读取内容，不会让用户看到页面。',
       parameters: {
         type: 'object',
         properties: {

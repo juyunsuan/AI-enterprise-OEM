@@ -89,7 +89,7 @@ function buildSystemPrompt(ctx) {
     '行为准则：',
     '1. 需要看文件就先 list_dir / read_file，不要凭空猜内容。',
     '2. 改动文件用 write_file；内容大就分多次写，别一次塞超过 1MB。',
-    '3. 只有确定需要时才 run_command；命令在当前工作区目录里执行。',
+    '3. 只有确定需要时才 run_command；命令在当前工作区目录里执行。用户说「打开/看一下某个网站」时用 `start <完整URL>`（Windows）或 `open <URL>`（macOS）拉起默认浏览器；curl 只用于读取内容，不会让用户看到页面。',
     '4. 最终回答用中文，讲清做了什么、结果如何、留下的文件在哪；不要复述思考过程。',
     '5. 做不到就直说原因，不要假装成功。'
   ];
@@ -229,6 +229,52 @@ function emitTool(input, event) {
  * @param {function} input.shouldCancel () => boolean
  * @param {function} input.onLog     (level, msg)
  */
+/** 工具调用的简短标识：命令取 command，读文件取 path，其余取 id/text 或名字。 */
+function callBrief(call) {
+  try {
+    const args = JSON.parse(call.arguments || '{}');
+    const value = args.command || args.path || args.text || args.id || args.name || '';
+    return String(value || call.name).slice(0, 120);
+  } catch {
+    return String(call.name || '').slice(0, 120);
+  }
+}
+
+/** 工具结果的简短摘要：命令输出取首行，其余取 error 或首段。 */
+function resultBrief(result) {
+  const raw = String(result && result.content ? result.content : '');
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object') {
+      const text = parsed.stdout || parsed.stderr || parsed.error || parsed.content || '';
+      const line = String(text || '')
+        .split('\n')
+        .find((row) => row.trim());
+      return line ? line.trim().slice(0, 120) : '';
+    }
+  } catch {
+    /* 非 JSON 结果直接截断 */
+  }
+  const line = raw.split('\n').find((row) => row.trim());
+  return line ? line.trim().slice(0, 120) : '';
+}
+
+/** 轮次/重复保护触发时的说明：把真正执行过的动作讲清楚，而不是回一句空话。 */
+function traceSummary(trace, reason) {
+  const lines = trace.slice(-5).map((row) => {
+    const head = '- ' + row.name + '：' + row.brief + ' → ' + (row.ok ? '成功' : '失败');
+    return row.detail ? head + '（' + row.detail + '）' : head;
+  });
+  return (
+    '模型没有产出最终回复（' +
+    reason +
+    '）。本轮实际执行了 ' +
+    trace.length +
+    ' 次工具调用，最近的动作：\n' +
+    lines.join('\n')
+  );
+}
+
 async function run(input) {
   const startedAt = Date.now();
   const timeoutSec = Math.max(10, Number(input.timeoutSec) || 300);
@@ -312,6 +358,8 @@ async function run(input) {
   });
 
   let finalText = '';
+  const toolTrace = [];
+  let stopReason = '';
   try {
     for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
       if (canceled()) break;
@@ -351,22 +399,53 @@ async function run(input) {
 
       conversation.push({ role: 'assistant', content: reply.text || '', toolCalls: reply.toolCalls });
 
+      let stopLoop = false;
       for (const call of reply.toolCalls) {
         if (canceled()) break;
+        const brief = callBrief(call);
+        // 同一条工具调用重复 3 次＝模型在原地打转；提前止损，避免耗尽轮次后只回一句空话。
+        const repeats = toolTrace.filter((row) => row.key === call.name + '|' + brief).length;
+        if (repeats >= 2) {
+          stopLoop = true;
+          stopReason = '检测到同一条工具调用已重复 3 次，主动停止';
+          log('warn', 'tool repeat guard tripped: ' + call.name);
+          break;
+        }
         emitTool(input, { name: call.name, phase: 'start' });
         const result = await tools.run(call.name, call.arguments, toolCtx);
         emitTool(input, { name: call.name, phase: 'end', ok: !!result.ok });
         log('info', 'tool ' + call.name + (result.ok ? ' ok' : ' failed'));
+        toolTrace.push({
+          key: call.name + '|' + brief,
+          name: call.name,
+          brief,
+          ok: !!result.ok,
+          detail: resultBrief(result)
+        });
         conversation.push({ role: 'tool', toolCallId: call.id, content: result.content });
       }
+      if (stopLoop) break;
     }
 
     if (canceled()) {
       return { status: 'canceled', text: finalText, errorMessage: '', effectiveWorkspace: root };
     }
+    // 模型只调工具、没给最终正文时，把真正执行过的动作讲清楚，而不是回一句空话。
+    if (!finalText && toolTrace.length) {
+      finalText = traceSummary(toolTrace, stopReason || '工具调用轮次用尽');
+    }
+    if (!finalText) {
+      return {
+        status: 'error',
+        text: '',
+        errorMessage: '模型没有返回任何内容（模型或渠道可能不支持工具调用，请检查「模型渠道」设置）',
+        failReason: 'NO_REPLY',
+        effectiveWorkspace: root
+      };
+    }
     return {
       status: 'ok',
-      text: finalText || '（模型没有返回正文）',
+      text: finalText,
       errorMessage: '',
       effectiveWorkspace: root
     };
