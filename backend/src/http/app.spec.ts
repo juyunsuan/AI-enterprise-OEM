@@ -21,6 +21,15 @@ describe('Hono routing and session boundary', () => {
     process.env.JWT_SECRET = 'isolated-unit-secret';
     process.env.DEV_AUTO_LOGIN = 'false';
     jest.spyOn(services.users, 'remember').mockResolvedValue(undefined);
+    // 维护模式中间件每个请求都会读一次 systemSetting；单测不连库，固定为「未开启维护」，
+    // 否则 CI（无 backend/.env，占位连接串）会把全部路由打回 500。
+    jest
+      .spyOn(services.prisma.systemSetting, 'findUnique')
+      .mockResolvedValue(null);
+    // 功能开关中间件对每个登录请求做一次闸门求值；单测不连库，直接放行。
+    jest
+      .spyOn(services.feature.toggle, 'assertFeatureOpen')
+      .mockResolvedValue(undefined);
     // 开源版会话只认本站自签令牌，并核对账号版本；这里把账户查询固定为有效账户。
     jest.spyOn(services.prisma.account, 'findUnique').mockResolvedValue(
       stub<Account>({
