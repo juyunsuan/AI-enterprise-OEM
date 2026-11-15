@@ -21,6 +21,7 @@
     personas: '数字分身',
     memory: '长期记忆',
     plugins: '插件',
+    browser: '浏览器',
     workspace: '工作区与权限'
   };
 
@@ -128,6 +129,10 @@
     $('pageTitle').textContent = PAGE_TITLE[target];
     document.querySelector('.content').scrollTop = 0;
     if (target === 'binding' && !state.pair && isLoggedIn()) void refreshPair();
+    if (target === 'browser') {
+      void openBuiltinBrowser();
+      void loadBrowserPages();
+    }
     if (target === 'chat') {
       void loadChatList();
       renderChatAttachments();
@@ -936,6 +941,8 @@
 
   function renderBridge(status) {
     state.bridge = status || {};
+    // 新版浏览器界面不再展示桥接面板；元素不在时只保留状态供内部使用。
+    if (!$('bridgeState')) return;
     $('bridgeState').textContent = !status || !status.running
       ? '未启动'
       : status.connected
@@ -953,22 +960,149 @@
     renderBridge(res && res.status ? res.status : null);
   }
 
-  $('bridgeRestart').addEventListener('click', async () => {
-    const res = await api.bridgeRestart({ port: Number($('bridgePort').value) || 0 });
-    if (!res || !res.ok) window.alert((res && res.error) || '重启失败');
-    await loadBridge();
-  });
-
-  $('copyBridge').addEventListener('click', async () => {
-    const status = state.bridge || {};
-    const text = bridgeAddress(status) + '\n' + (status.token || '');
-    const res = await api.copyText(text);
-    note($('pluginHint'), res && res.ok ? '桥接地址与令牌已复制' : '复制失败，请手动选中复制', res && res.ok ? 'ok' : 'bad');
-  });
-
-  $('openBridgeFolder').addEventListener('click', async () => {
-    const res = await api.openBridgeFolder();
+  $('openChromeExtFolder').addEventListener('click', async () => {
+    const res = await api.openChromeExtFolder();
     if (!res || !res.ok) window.alert((res && res.error) || '打开失败');
+  });
+
+  /* ---------------------------------------------------------- Agent 浏览器 */
+
+  async function openBuiltinBrowser() {
+    const res = await api.openBrowser();
+    if (!res || !res.ok) {
+      window.alert((res && res.error) || '打开客户端浏览器失败');
+      return;
+    }
+    setTimeout(() => void loadBrowserPages(), 600);
+  }
+
+  async function loadBrowserPages() {
+    const res = await api.browserPages();
+    const box = $('builtinPageList');
+    if (!box) return;
+    clear(box);
+    const rows = (res && res.list) || [];
+    if (!rows.length) {
+      box.appendChild(el('div', 'empty', '还没有打开的页面：点「打开浏览器」，或让 Agent 打开一个网址'));
+      return;
+    }
+    rows.forEach((row) => {
+      const item = el('div', 'list-row');
+      const main = el('div', 'list-main');
+      const title = el('span', 'list-title', row.title || '未命名页面');
+      title.appendChild(el('span', 'tag' + (row.active ? ' on' : ''), row.active ? '当前' : '#' + row.id));
+      main.appendChild(title);
+      main.appendChild(el('span', 'muted', row.url || 'about:blank'));
+      item.appendChild(main);
+      box.appendChild(item);
+    });
+  }
+
+  function renderBrowserExts(list) {
+    const box = $('browserExtList');
+    if (!box) return;
+    clear(box);
+    const rows = (Array.isArray(list) ? list : []).filter((row) => !row.builtin);
+    if (!rows.length) {
+      box.appendChild(el('div', 'empty', '暂无插件'));
+      return;
+    }
+    rows.forEach((item) => {
+      const row = el('div', 'list-row');
+      const main = el('div', 'list-main');
+      main.appendChild(el('span', 'list-title', item.name + ' · v' + item.version));
+      main.appendChild(el('span', 'muted', item.id));
+      row.appendChild(main);
+      box.appendChild(row);
+    });
+  }
+
+  $('openBuiltinBrowser').addEventListener('click', () => void openBuiltinBrowser());
+  $('reloadBrowserPages').addEventListener('click', () => void loadBrowserPages());
+  $('goPluginsFromBrowser').addEventListener('click', () => showPane('plugins'));
+
+  /* ------------------------------------------------------ Chrome 插件包管理 */
+
+  function renderChromeExts(list) {
+    const box = $('chromeExtList');
+    clear(box);
+    const rows = Array.isArray(list) ? list : [];
+    if (!rows.length) {
+      box.appendChild(el('div', 'empty', '还没有导入 Chrome 插件：点右上「上传 ZIP / 选择文件夹」'));
+      return;
+    }
+    rows.forEach((item) => {
+      const row = el('div', 'list-row');
+      const main = el('div', 'list-main');
+      const title = el('span', 'list-title', item.name);
+      title.appendChild(el('span', 'tag' + (item.builtin ? ' on' : ''), item.builtin ? '内置' : 'v' + item.version));
+      main.appendChild(title);
+      main.appendChild(
+        el('span', 'muted', item.id)
+      );
+      row.appendChild(main);
+      if (!item.builtin) {
+        const actions = el('div', 'list-actions');
+        const remove = el('button', 'btn small ghost', '删除');
+        remove.addEventListener('click', async () => {
+          if (!window.confirm('删除插件包「' + item.name + '」？')) return;
+          const res = await api.removeChromeExtension(item.id);
+          if (res && res.ok) {
+            note($('chromeExtHint'), '已删除：' + item.name, 'ok');
+            await loadChromeExts();
+          } else {
+            note($('chromeExtHint'), (res && res.error) || '删除失败', 'bad');
+          }
+        });
+        actions.appendChild(remove);
+        row.appendChild(actions);
+      }
+      box.appendChild(row);
+    });
+  }
+
+  async function loadChromeExts() {
+    const res = await api.listChromeExtensions();
+    const rows = (res && res.list) || [];
+    renderChromeExts(rows);
+    renderBrowserExts(rows);
+  }
+
+  async function importChromeExt(mode) {
+    const res = await api.importChromeExtension(mode);
+    if (!res || res.canceled) return;
+    if (res.ok) {
+      note($('chromeExtHint'), '已导入：' + res.item.name + ' v' + res.item.version, 'ok');
+      await loadChromeExts();
+    } else {
+      note($('chromeExtHint'), res.error || '插件包导入失败', 'bad');
+    }
+  }
+
+  $('importChromeZip').addEventListener('click', () => void importChromeExt('zip'));
+  $('importChromeFolder').addEventListener('click', () => void importChromeExt('folder'));
+
+  $('launchChrome').addEventListener('click', async () => {
+    const btn = $('launchChrome');
+    btn.disabled = true;
+    note($('chromeExtHint'), '正在打开客户端浏览器并加载插件…');
+    try {
+      const res = await api.launchChromeBrowser();
+      if (res && res.ok) {
+        const errors = Array.isArray(res.errors) ? res.errors : [];
+        note(
+          $('chromeExtHint'),
+          '客户端浏览器已打开' +
+            (res.loaded ? '，已加载 ' + res.loaded + ' 个插件' : '') +
+            (errors.length ? '；未能加载：' + errors.join('；') : ''),
+          errors.length ? 'bad' : 'ok'
+        );
+      } else {
+        note($('chromeExtHint'), (res && res.error) || '启动失败', 'bad');
+      }
+    } finally {
+      btn.disabled = false;
+    }
   });
 
   /* -------------------------------------------------------- 工作区与权限 */
@@ -1913,6 +2047,7 @@
     renderWorkspaces(data.workspaces || []);
     void loadPlugins();
     void loadBridge();
+    void loadChromeExts();
     if (!state.policyDirty && data.permissionPolicy) $('policy').value = data.permissionPolicy;
     note($('policyHint'), policyHintText(data.permissionPolicy));
     syncChatHeader();

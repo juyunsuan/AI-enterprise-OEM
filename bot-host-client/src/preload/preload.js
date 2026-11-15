@@ -82,6 +82,13 @@ const api = {
 
   // --- Chrome 桥接 ---
   bridgeStatus: () => ipcRenderer.invoke('bridge:status'),
+  listChromeExtensions: () => ipcRenderer.invoke('chromeExt:list'),
+  importChromeExtension: (mode) => ipcRenderer.invoke('chromeExt:importPackage', mode),
+  removeChromeExtension: (id) => ipcRenderer.invoke('chromeExt:remove', id),
+  launchChromeBrowser: () => ipcRenderer.invoke('chromeExt:launch'),
+  openChromeExtFolder: () => ipcRenderer.invoke('chromeExt:openFolder'),
+  openBrowser: (url) => ipcRenderer.invoke('browser:open', url),
+  browserPages: () => ipcRenderer.invoke('browser:pages'),
   bridgeRestart: (options) => ipcRenderer.invoke('bridge:restart', options),
   openBridgeFolder: () => ipcRenderer.invoke('bridge:openFolder'),
 

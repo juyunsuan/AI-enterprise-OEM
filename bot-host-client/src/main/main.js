@@ -36,6 +36,8 @@ const plugins = require('./plugins');
 const pluginPackage = require('./plugin-package');
 const skillPackage = require('./skill-package');
 const chromeBridge = require('./chrome-bridge');
+const chromeExtensions = require('./chrome-extensions');
+const builtinBrowser = require('./builtin-browser');
 const crypto = require('crypto');
 
 const PRODUCT_NAME = 'BotBuddy';
@@ -1123,6 +1125,70 @@ function setupIpc() {
   });
 
   ipcMain.handle('bridge:status', () => ({ ok: true, status: chromeBridge.shared.status() }));
+
+  // --- Chrome 插件包管理（客户端内完成导入/删除/自动加载） ---
+  ipcMain.handle('chromeExt:list', () => ({ ok: true, list: chromeExtensions.list() }));
+
+  ipcMain.handle('chromeExt:importPackage', async (e, mode) => {
+    const kind = mode === 'folder' ? 'folder' : 'zip';
+    const picked = await dialog.showOpenDialog(
+      mainWindow,
+      kind === 'folder'
+        ? { title: '选择 Chrome 插件文件夹', properties: ['openDirectory'] }
+        : {
+            title: '选择 Chrome 插件 ZIP',
+            properties: ['openFile'],
+            filters: [{ name: '插件包', extensions: ['zip'] }]
+          }
+    );
+    if (picked.canceled || !picked.filePaths.length) {
+      return { ok: false, canceled: true };
+    }
+    try {
+      const item =
+        kind === 'folder'
+          ? chromeExtensions.importFromDirectory(picked.filePaths[0])
+          : chromeExtensions.importFromZip(picked.filePaths[0]);
+      log('info', 'chrome extension installed: ' + item.name + ' v' + item.version);
+      return { ok: true, item };
+    } catch (error) {
+      return { ok: false, error: error.message || '插件包导入失败' };
+    }
+  });
+
+  ipcMain.handle('chromeExt:remove', (e, id) => chromeExtensions.remove(id));
+
+  // Agent 浏览器：打开/聚焦客户端自带浏览器，并返回当前页面清单。
+  ipcMain.handle('browser:open', async (e, url) => {
+    try {
+      await builtinBrowser.loadManagedExtensions();
+      const result = await builtinBrowser.focusOrOpen(url || 'about:blank');
+      return { ok: true, ...result };
+    } catch (error) {
+      return { ok: false, error: error.message || '打开客户端浏览器失败' };
+    }
+  });
+  ipcMain.handle('browser:pages', () => ({ ok: true, list: builtinBrowser.listWindows() }));
+
+  ipcMain.handle('chromeExt:openFolder', async () => {
+    fs.mkdirSync(chromeExtensions.DIR, { recursive: true });
+    const result = await shell.openPath(chromeExtensions.DIR);
+    return result ? { ok: false, error: result } : { ok: true };
+  });
+
+  // 打开客户端自带浏览器：Agent 的浏览器操作默认发生在这里，不需要外部浏览器。
+  ipcMain.handle('chromeExt:launch', async () => {
+    try {
+      const loaded = await builtinBrowser.loadManagedExtensions();
+      await builtinBrowser.open('about:blank');
+      if (loaded.loaded.length) {
+        log('info', 'client browser opened with ' + loaded.loaded.length + ' extension(s)');
+      }
+      return { ok: true, loaded: loaded.loaded.length, errors: loaded.errors };
+    } catch (error) {
+      return { ok: false, error: error.message || '打开客户端浏览器失败' };
+    }
+  });
 
   // 插件包随安装包一起发（extraResources）；开发态就打开仓库里的源目录。
   ipcMain.handle('bridge:openFolder', async () => {

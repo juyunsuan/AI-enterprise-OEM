@@ -34,6 +34,7 @@
         </div>
         <div class="nav-group">
           <div class="nav-group-title">运行</div>
+          <button class="nav-item" data-go="browser"><span class="nav-dot"></span>浏览器</button>
           <button class="nav-item" data-go="workspace"><span class="nav-dot"></span>工作区与权限</button>
         </div>
       </nav>
@@ -404,23 +405,21 @@
           <div class="card">
             <div class="card-head">
               <span class="card-title">Chrome 插件</span>
-              <span class="card-hint">为浏览器服务：扩展装在 Chrome/Edge 里，经本机桥接被 Agent 调用</span>
-              <span class="card-actions"><button id="bridgeRestart" class="btn small">重启桥接</button></span>
+              <span class="card-hint">为浏览器服务：装在客户端自带的浏览器里，Agent 直接调用</span>
+              <span class="card-actions">
+                <button id="importChromeZip" class="btn small ghost" title="上传 Chrome 插件包（ZIP，含 manifest.json）">上传 ZIP</button>
+                <button id="importChromeFolder" class="btn small ghost" title="从文件夹导入 Chrome 插件（含 manifest.json）">选择文件夹</button>
+                <button id="launchChrome" class="btn small primary" title="打开客户端自带浏览器（Agent 默认就在这个浏览器里操作）">打开客户端浏览器</button>
+              </span>
             </div>
-            <div class="kv">
-              <div class="kv-row"><span class="k">状态</span><span id="bridgeState" class="v">—</span></div>
-              <div class="kv-row"><span class="k">桥接地址</span><span id="bridgeAddr" class="v mono">—</span></div>
-              <div class="kv-row"><span class="k">桥接令牌</span><span id="bridgeToken" class="v mono">—</span></div>
-              <div class="kv-row"><span class="k">监听端口</span><input id="bridgePort" type="number" min="1024" max="65535" class="fill" style="max-width:120px" /></div>
-            </div>
-            <div class="actions spaced">
-              <button id="copyBridge" class="btn small">复制桥接信息</button>
-              <button id="openBridgeFolder" class="btn small ghost">打开插件目录</button>
-            </div>
-            <p class="card-note">
-              安装方法：本客户端目录下的 <code>chrome-bridge-extension</code> 文件夹拖进 chrome://extensions（开发者模式 → 加载已解压的扩展程序），
-              首次打开扩展把上面的「桥接地址 + 令牌」填进去即可。桥接只监听本机 127.0.0.1，浏览器数据和 Cookie 不经过平台。
+            <div id="chromeExtList" class="list"></div>
+            <p id="chromeExtHint" class="card-note">
+              插件包上传后自动装进客户端自带的浏览器；Agent 的浏览器操作默认就发生在这个浏览器里，不启动也不扫描本机 Chrome / Edge，无需进入
+              chrome://extensions。首次在客户端浏览器里登录站点后，会话会保留。数据只在本机，不经过平台。
             </p>
+            <div class="actions spaced">
+              <button id="openChromeExtFolder" class="btn small ghost">打开插件目录</button>
+            </div>
           </div>
 
           <div class="card">
@@ -498,7 +497,34 @@
           </div>
         </section>
 
-        <!-- 任务与日志 -->
+        <section class="pane" data-pane="browser">
+          <div class="card">
+            <div class="card-head">
+              <span class="card-title">Agent 浏览器</span>
+              <span class="card-hint">Agent 的浏览器操作默认使用这个客户端自带浏览器</span>
+              <span class="card-actions">
+                <button id="openBuiltinBrowser" class="btn small primary">打开浏览器</button>
+                <button id="reloadBrowserPages" class="btn small ghost">刷新</button>
+              </span>
+            </div>
+            <div id="builtinPageList" class="list">
+              <div class="empty">还没有打开的页面：点「打开浏览器」，或让 Agent 打开一个网址</div>
+            </div>
+            <p class="card-note">
+              首次在客户端浏览器里登录站点后，登录状态会保留；浏览器使用独立本地会话，数据不经过平台。
+              Agent 的打开网页、读取正文、点击与填表都发生在这里，不启动也不扫描本机 Chrome / Edge。
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <span class="card-title">Chrome 插件</span>
+              <span class="card-hint">导入的插件在打开客户端浏览器时自动加载</span>
+              <span class="card-actions"><button id="goPluginsFromBrowser" class="btn small ghost">去插件页管理</button></span>
+            </div>
+            <div id="browserExtList" class="list"><div class="empty">暂无插件</div></div>
+          </div>
+        </section>
       </main>
     </div>
   </div>

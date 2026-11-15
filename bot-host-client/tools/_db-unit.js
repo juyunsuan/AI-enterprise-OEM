@@ -532,6 +532,14 @@ check('只认库里的白名单与默认目录', () => {
     }
   });
 
+  await checkAsync('客户端自带浏览器提供 Agent 浏览器工具', async () => {
+    const builtinBrowser = require('../src/main/builtin-browser');
+    const names = builtinBrowser.toolDefs().map((def) => def.name);
+    for (const name of ['chrome_tabs', 'chrome_open', 'chrome_read', 'chrome_click', 'chrome_fill']) {
+      assert.ok(names.includes(name), '缺少工具 ' + name);
+    }
+  });
+
   db.close();
   fs.rmSync(HOME, { recursive: true, force: true });
 

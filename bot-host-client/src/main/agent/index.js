@@ -20,7 +20,7 @@ const agentConfig = require('./config');
 const modelClient = require('./model-client');
 const tools = require('./tools');
 const plugins = require('../plugins');
-const chromeBridge = require('../chrome-bridge');
+const builtinBrowser = require('../builtin-browser');
 
 const MAX_TOOL_ROUNDS = 8;
 const PROGRESS_CHUNK = 400;
@@ -45,8 +45,8 @@ function extraTools(pluginIds) {
       parameters: def.parameters,
       run: (args, ctx) => plugins.runTool(def.plugin, args, ctx)
     }));
-  // Chrome 工具只在插件真的连上桥接时才出现：离线时模型不该以为能操作浏览器。
-  for (const def of chromeBridge.toolDefs(chromeBridge.shared)) {
+  // 浏览器工具默认驱动客户端自带浏览器：不依赖外部 Chrome / Edge，也不需要桥接扩展在线。
+  for (const def of builtinBrowser.toolDefs()) {
     list.push({
       name: def.name,
       description: def.description,
