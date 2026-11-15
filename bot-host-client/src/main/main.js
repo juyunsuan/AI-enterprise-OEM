@@ -1169,6 +1169,15 @@ function setupIpc() {
     }
   });
   ipcMain.handle('browser:pages', () => ({ ok: true, list: builtinBrowser.listWindows() }));
+  ipcMain.handle('browser:goto', async (e, url) => {
+    try {
+      await builtinBrowser.loadManagedExtensions();
+      const result = await builtinBrowser.goto(url);
+      return { ok: true, ...result };
+    } catch (error) {
+      return { ok: false, error: error.message || '打开网址失败' };
+    }
+  });
 
   ipcMain.handle('chromeExt:openFolder', async () => {
     fs.mkdirSync(chromeExtensions.DIR, { recursive: true });

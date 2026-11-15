@@ -538,6 +538,10 @@ check('只认库里的白名单与默认目录', () => {
     for (const name of ['chrome_tabs', 'chrome_open', 'chrome_read', 'chrome_click', 'chrome_fill']) {
       assert.ok(names.includes(name), '缺少工具 ' + name);
     }
+    assert.equal(builtinBrowser.normalizeUrl('baidu.com'), 'https://baidu.com');
+    assert.equal(builtinBrowser.normalizeUrl('http://127.0.0.1:1690'), 'http://127.0.0.1:1690');
+    assert.throws(() => builtinBrowser.normalizeUrl('file:///etc/passwd'), /http/);
+    assert.throws(() => builtinBrowser.normalizeUrl(''), /网址/);
   });
 
   db.close();

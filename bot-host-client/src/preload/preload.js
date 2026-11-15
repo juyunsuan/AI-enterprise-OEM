@@ -89,6 +89,7 @@ const api = {
   openChromeExtFolder: () => ipcRenderer.invoke('chromeExt:openFolder'),
   openBrowser: (url) => ipcRenderer.invoke('browser:open', url),
   browserPages: () => ipcRenderer.invoke('browser:pages'),
+  browserGoto: (url) => ipcRenderer.invoke('browser:goto', url),
   bridgeRestart: (options) => ipcRenderer.invoke('bridge:restart', options),
   openBridgeFolder: () => ipcRenderer.invoke('bridge:openFolder'),
 

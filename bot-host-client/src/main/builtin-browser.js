@@ -188,6 +188,36 @@ function toolDefs() {
   ];
 }
 
+function normalizeUrl(raw) {
+  const text = String(raw || '').trim();
+  if (!text) throw new Error('请输入网址');
+  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(text)) {
+    if (!/^https?:\/\//i.test(text) && !/^about:/i.test(text)) {
+      throw new Error('只支持 http(s) 网址');
+    }
+    return text;
+  }
+  return 'https://' + text;
+}
+
+/** 地址栏打开：已有页面就在最后一个页面里导航并聚焦，没有才新开。 */
+async function goto(rawUrl) {
+  const target = normalizeUrl(rawUrl);
+  const alive = aliveWindows();
+  if (alive.length) {
+    const [id, win] = alive[alive.length - 1];
+    win.show();
+    win.focus();
+    try {
+      await win.loadURL(target);
+    } catch (error) {
+      throw new Error('打开失败：' + (error.message || target));
+    }
+    return { id, reused: true, url: target };
+  }
+  return open(target);
+}
+
 /** 菜单/按钮打开浏览器：已有窗口就聚焦最后一个，没有才新开。 */
 async function focusOrOpen(url) {
   const alive = aliveWindows();
@@ -200,4 +230,4 @@ async function focusOrOpen(url) {
   return open(url);
 }
 
-module.exports = { open, focusOrOpen, toolDefs, loadManagedExtensions, listWindows };
+module.exports = { open, goto, normalizeUrl, focusOrOpen, toolDefs, loadManagedExtensions, listWindows };

@@ -1017,8 +1017,31 @@
     });
   }
 
+  async function goBrowserUrl() {
+    const input = $('browserUrl');
+    const url = input.value.trim();
+    if (!url) {
+      input.focus();
+      return;
+    }
+    const res = await api.browserGoto(url);
+    if (!res || !res.ok) {
+      window.alert((res && res.error) || '打开网址失败');
+      return;
+    }
+    input.value = res.url || url;
+    setTimeout(() => void loadBrowserPages(), 700);
+  }
+
   $('openBuiltinBrowser').addEventListener('click', () => void openBuiltinBrowser());
   $('reloadBrowserPages').addEventListener('click', () => void loadBrowserPages());
+  $('browserGo').addEventListener('click', () => void goBrowserUrl());
+  $('browserUrl').addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      void goBrowserUrl();
+    }
+  });
   $('goPluginsFromBrowser').addEventListener('click', () => showPane('plugins'));
 
   /* ------------------------------------------------------ Chrome 插件包管理 */
