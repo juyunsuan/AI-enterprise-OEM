@@ -377,6 +377,8 @@ export class BotHostService {
       where: { id: row.id },
       data: { tokenHash: hashToken(token), tokenPrefix: token.slice(0, 10) },
     });
+    // 换令牌通常伴随客户端重装/重配：清指纹，下一次心跳按「变化」重发授权。
+    this.sentGrantPrints.delete(row.id);
     return { token, tokenPrefix: token.slice(0, 10) };
   }
 
@@ -1132,6 +1134,9 @@ export class BotHostService {
       where: { id: row.id },
       data: { issuedToken: '', usedAt: new Date() },
     });
+    // 客户端（重新）绑定时多半刚清过本地数据：清指纹，下一次心跳按「变化」重发授权，
+    // 否则新配对的客户端在指纹未变时会拿不到模型渠道。
+    this.sentGrantPrints.delete(row.hostId);
     return {
       paired: true,
       token: row.issuedToken,

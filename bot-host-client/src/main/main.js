@@ -509,10 +509,17 @@ async function doHeartbeat() {
       return;
     }
 
-    // 平台拒绝令牌：清掉并回到未绑定（连接码会重新出现在「设备绑定」里）。
-    if (res.httpStatus === 401 || (res.data && res.data.ok === false)) {
+    // 只有 401 才代表「配对已失效」；后端闪断/重启窗口里的 502、限流、非 JSON
+    // 响应等也会形成 ok:false 信封，这些一律只告警重试，不能清配对令牌——
+    // 否则后端每重启一次，客户端就永久掉线一次（实测发生过）。
+    if (res.httpStatus === 401) {
       log('warn', 'token rejected: ' + ((res.data && res.data.message) || 'unauthorized'));
       handleTokenRejected();
+      return;
+    }
+    if (res.data && res.data.ok === false) {
+      log('warn', 'heartbeat rejected: ' + ((res.data && res.data.message) || '平台返回异常'));
+      broadcast('state:update', stateSnapshot());
       return;
     }
 
