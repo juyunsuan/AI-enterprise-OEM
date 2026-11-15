@@ -542,7 +542,13 @@
     clear(box);
     state.skills = Array.isArray(list) ? list : [];
     if (!state.skills.length) {
-      box.appendChild(el('div', 'empty', '还没有技能：点右上「新建技能」，Agent 需要时自己读正文'));
+      box.appendChild(
+        el(
+          'div',
+          'empty',
+          '还没有技能：点右上「上传 ZIP / 选择文件夹」导入技能包，或「新建技能」手写；Agent 需要时自己读正文'
+        )
+      );
       return;
     }
     const on = Array.isArray(enabled) ? enabled : [];
@@ -615,6 +621,25 @@
     $('skId').focus();
   });
   $('cancelSkill').addEventListener('click', () => clearSkillForm());
+
+  // 技能包导入：只读本机 ZIP / 文件夹里的 SKILL.md，导入后立即可勾选使用。
+  async function importSkillPackage(mode) {
+    const res = await api.importSkillPackage(mode);
+    if (!res || res.canceled) return;
+    if (res.ok) {
+      note(
+        $('skillHint'),
+        '已导入：' + (res.skill.name || res.skill.id) + '（' + res.skill.id + '）',
+        'ok'
+      );
+      clearSkillForm();
+      await reloadAgent();
+    } else {
+      note($('skillHint'), res.error || '技能包导入失败', 'bad');
+    }
+  }
+  $('importSkillZip').addEventListener('click', () => importSkillPackage('zip'));
+  $('importSkillFolder').addEventListener('click', () => importSkillPackage('folder'));
 
   $('saveSkill').addEventListener('click', async () => {
     const id = state.editingSkillId || $('skId').value.trim();

@@ -294,7 +294,11 @@
             <div class="card-head">
               <span class="card-title">技能</span>
               <span class="card-hint">不勾选＝全部可用；勾选后只带这些进上下文</span>
-              <span class="card-actions"><button id="newSkill" class="btn small primary">新建技能</button></span>
+              <span class="card-actions">
+                <button id="importSkillZip" class="btn small ghost" title="上传本地技能包（ZIP，含 SKILL.md）">上传 ZIP</button>
+                <button id="importSkillFolder" class="btn small ghost" title="从文件夹导入技能（含 SKILL.md）">选择文件夹</button>
+                <button id="newSkill" class="btn small primary">新建技能</button>
+              </span>
             </div>
             <div id="skillList" class="list"></div>
           </div>

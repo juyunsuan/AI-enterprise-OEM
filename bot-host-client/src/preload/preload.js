@@ -50,6 +50,7 @@ const api = {
   readSkill: (id) => ipcRenderer.invoke('agent:readSkill', id),
   saveSkill: (payload) => ipcRenderer.invoke('agent:saveSkill', payload),
   removeSkill: (id) => ipcRenderer.invoke('agent:removeSkill', id),
+  importSkillPackage: (mode) => ipcRenderer.invoke('agent:importSkillPackage', mode),
   readPersona: (id) => ipcRenderer.invoke('agent:readPersona', id),
   savePersona: (payload) => ipcRenderer.invoke('agent:savePersona', payload),
   removePersona: (id) => ipcRenderer.invoke('agent:removePersona', id),

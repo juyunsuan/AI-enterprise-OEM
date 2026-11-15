@@ -33,6 +33,7 @@ const agentRuntime = require('./agent');
 const chatStore = require('./chat-store');
 const referenceStore = require('./references');
 const plugins = require('./plugins');
+const skillPackage = require('./skill-package');
 const chromeBridge = require('./chrome-bridge');
 const crypto = require('crypto');
 
@@ -934,6 +935,38 @@ function setupIpc() {
     const res = agentConfig.removeSkill(id);
     if (res.ok) refreshAgentSnapshot();
     return res;
+  });
+
+  // 技能包导入：ZIP 或文件夹只在本机解析成 name / description / 正文后入库，
+  // 不解压落盘、也不往平台同步（平台的技能是另一套账号级技能库）。
+  ipcMain.handle('agent:importSkillPackage', async (e, mode) => {
+    const kind = mode === 'folder' ? 'folder' : 'zip';
+    const picked = await dialog.showOpenDialog(
+      mainWindow,
+      kind === 'folder'
+        ? { title: '选择技能包文件夹', properties: ['openDirectory'] }
+        : {
+            title: '选择技能包 ZIP',
+            properties: ['openFile'],
+            filters: [{ name: '技能包', extensions: ['zip'] }]
+          }
+    );
+    if (picked.canceled || !picked.filePaths.length) {
+      return { ok: false, canceled: true };
+    }
+    try {
+      const skill =
+        kind === 'folder'
+          ? skillPackage.importFromDir(picked.filePaths[0])
+          : skillPackage.importFromZip(picked.filePaths[0]);
+      const saved = agentConfig.saveSkill(skill.id, skill);
+      if (!saved.ok) return saved;
+      log('info', 'skill package imported: ' + skill.id + ' · ' + skill.name);
+      refreshAgentSnapshot();
+      return { ok: true, skill };
+    } catch (error) {
+      return { ok: false, error: error.message || '技能包解析失败' };
+    }
   });
 
   ipcMain.handle('agent:readPersona', (e, id) => agentConfig.readPersona(id));
