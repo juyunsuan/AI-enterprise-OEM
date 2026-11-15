@@ -526,7 +526,7 @@ check('只认库里的白名单与默认目录', () => {
       assert.strictEqual(res.status, 'ok');
       assert.ok(res.text.includes('重复调用'), res.text);
       assert.ok(res.text.includes('工具调用'), res.text);
-      assert.ok(rounds <= 3, '重复到第 3 次应当停止，实际轮次=' + rounds);
+      assert.ok(rounds <= 4, '重复到第 3 次应当停止（外加一次总结请求），实际轮次=' + rounds);
     } finally {
       modelClient.complete = original;
     }

@@ -360,6 +360,7 @@ async function run(input) {
   let finalText = '';
   const toolTrace = [];
   let stopReason = '';
+  let endReason = '';
   try {
     for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
       if (canceled()) break;
@@ -395,7 +396,10 @@ async function run(input) {
       }
 
       if (reply.text) finalText = finalText ? finalText + '\n' + reply.text : reply.text;
-      if (!reply.toolCalls.length) break;
+      if (!reply.toolCalls.length) {
+        if (!reply.text) endReason = '模型在工具执行后没有给出总结';
+        break;
+      }
 
       conversation.push({ role: 'assistant', content: reply.text || '', toolCalls: reply.toolCalls });
 
@@ -430,9 +434,41 @@ async function run(input) {
     if (canceled()) {
       return { status: 'canceled', text: finalText, errorMessage: '', effectiveWorkspace: root };
     }
+    if (!finalText && toolTrace.length && !stopReason && !endReason) {
+      endReason = '工具调用轮次用尽';
+    }
+    // 部分模型（推理模型居多）在工具执行后会给一版空正文：再要一次纯文本总结，
+    // 别让用户只看到工具流水；仍失败才回退到执行摘要。
+    if (!finalText && toolTrace.length) {
+      try {
+        const nudge = await modelClient.complete({
+          channel,
+          system,
+          messages: conversation.concat({
+            role: 'user',
+            content: '工具已经执行完毕。请用一两句中文总结：做了什么、结果如何。不要再调用工具。'
+          }),
+          tools: [],
+          temperature: agentConfig.get().temperature,
+          maxTokens: agentConfig.get().maxTokens,
+          onDelta: (chunk) => {
+            if (typeof input.onDelta === 'function') {
+              try {
+                input.onDelta(chunk);
+              } catch (err) {
+                /* 渲染侧异常不影响执行 */
+              }
+            }
+          }
+        });
+        if (nudge.text && nudge.text.trim()) finalText = nudge.text.trim();
+      } catch (error) {
+        log('warn', 'summary retry failed: ' + error.message);
+      }
+    }
     // 模型只调工具、没给最终正文时，把真正执行过的动作讲清楚，而不是回一句空话。
     if (!finalText && toolTrace.length) {
-      finalText = traceSummary(toolTrace, stopReason || '工具调用轮次用尽');
+      finalText = traceSummary(toolTrace, stopReason || endReason || '模型没有给出总结');
     }
     if (!finalText) {
       return {
