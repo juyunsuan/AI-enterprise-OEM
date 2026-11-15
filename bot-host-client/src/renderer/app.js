@@ -22,7 +22,6 @@
     memory: '长期记忆',
     plugins: '插件',
     workspace: '工作区与权限',
-    tasks: '任务记录',
     logs: '任务与日志'
   };
 
@@ -129,8 +128,7 @@
     });
     $('pageTitle').textContent = PAGE_TITLE[target];
     document.querySelector('.content').scrollTop = 0;
-    if (target === 'logs') void loadTasks();
-    if (target === 'tasks') void loadTaskRecords();
+    if (target === 'logs') void loadTaskRecords();
     if (target === 'binding' && !state.pair && isLoggedIn()) void refreshPair();
     if (target === 'chat') {
       void loadChatList();
@@ -223,7 +221,6 @@
   async function loadTasks() {
     const tasks = (await api.getRecentTasks()) || [];
     renderTaskList($('ovTaskList'), tasks, 5);
-    renderTaskList($('taskList'), tasks, 30);
   }
 
   /** 平台→本机的完整记录：平台原文 + 本机回复，按更新时间倒序。 */
@@ -1841,7 +1838,6 @@
 
   /* ------------------------------------------------------------ 任务/操作 */
 
-  $('reloadTasks').addEventListener('click', () => void loadTasks());
   $('reloadRecords').addEventListener('click', () => void loadTaskRecords());
   $('reloadLogs').addEventListener('click', () => void loadLogs());
 
@@ -1887,9 +1883,9 @@
     $('pathDb').textContent = snap.dbPath || '—';
     $('pathDb').title = snap.dbPath || '';
 
-    // 任务记录页开着时跟随状态广播刷新（任务完成/失败会立刻反映出来）。
+    // 任务与日志页开着时跟随状态广播刷新任务记录（完成/失败会立刻反映出来）。
     const activePane = document.querySelector('.pane.active');
-    if (activePane && activePane.dataset.pane === 'tasks') void loadTaskRecords();
+    if (activePane && activePane.dataset.pane === 'logs') void loadTaskRecords();
   }
 
   async function reloadAll() {

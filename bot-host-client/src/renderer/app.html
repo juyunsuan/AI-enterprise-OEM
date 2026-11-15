@@ -34,7 +34,6 @@
         </div>
         <div class="nav-group">
           <div class="nav-group-title">运行</div>
-          <button class="nav-item" data-go="tasks"><span class="nav-dot"></span>任务记录</button>
           <button class="nav-item" data-go="workspace"><span class="nav-dot"></span>工作区与权限</button>
           <button class="nav-item" data-go="logs"><span class="nav-dot"></span>任务与日志</button>
         </div>
@@ -477,27 +476,17 @@
         </section>
 
         <!-- 任务与日志 -->
-        <section class="pane" data-pane="tasks">
-          <div class="card">
-            <div class="card-head">
-              <span class="card-title">Bot 任务记录</span>
-              <span class="card-hint">平台下发给本机的全部指令与本机回复，只保存在本机</span>
-              <span class="card-actions"><button id="reloadRecords" class="btn small ghost">刷新</button></span>
-            </div>
-            <div id="taskRecords" class="task-records">
-              <div class="empty">暂无任务记录：平台下发指令后这里会出现完整内容</div>
-            </div>
-          </div>
-        </section>
-
         <section class="pane" data-pane="logs">
           <div class="grid-2">
             <div class="card">
               <div class="card-head">
-                <span class="card-title">最近任务</span>
-                <span class="card-actions"><button id="reloadTasks" class="btn small ghost">刷新</button></span>
+                <span class="card-title">Bot 任务记录</span>
+                <span class="card-hint">平台下发的全部指令与本机回复，只保存在本机</span>
+                <span class="card-actions"><button id="reloadRecords" class="btn small ghost">刷新</button></span>
               </div>
-              <ul id="taskList" class="task-list"><li class="muted">暂无任务</li></ul>
+              <div id="taskRecords" class="task-records">
+                <div class="empty">暂无任务记录：平台下发指令后这里会出现完整内容</div>
+              </div>
             </div>
             <div class="card">
               <div class="card-head">
