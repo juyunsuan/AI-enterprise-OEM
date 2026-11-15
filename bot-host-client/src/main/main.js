@@ -1452,9 +1452,17 @@ if (!gotLock) {
     if (stopping) app.quit();
   });
 
-  app.on('before-quit', () => {
+  let kernelsStopped = false;
+  app.on('before-quit', (event) => {
     stopping = true;
     stopHeartbeat();
+    if (kernelsStopped) return;
+    event.preventDefault();
+    const timeout = new Promise((resolve) => setTimeout(resolve, 8000));
+    Promise.race([fp.shutdown().catch(() => {}), timeout]).finally(() => {
+      kernelsStopped = true;
+      app.quit();
+    });
   });
 
   app.whenReady().then(() => {

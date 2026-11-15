@@ -51,7 +51,13 @@ function httpTunnel(proxy, targetHost, targetPort) {
     (socket) =>
       new Promise((resolve, reject) => {
         let buffer = Buffer.alloc(0);
+        const timer = setTimeout(() => {
+          cleanup();
+          socket.destroy();
+          reject(new Error('代理隧道握手超时'));
+        }, CONNECT_TIMEOUT_MS);
         const cleanup = () => {
+          clearTimeout(timer);
           socket.removeListener('data', onData);
           socket.removeListener('error', onError);
         };
@@ -108,7 +114,15 @@ function socks5Tunnel(proxy, targetHost, targetPort) {
         const methods = useAuth ? [0x00, 0x02] : [0x00];
         let stage = 'method';
         let buffer = Buffer.alloc(0);
+        let timer = null;
+        const stopTimer = () => {
+          if (timer) {
+            clearTimeout(timer);
+            timer = null;
+          }
+        };
         const fail = (message) => {
+          stopTimer();
           socket.destroy();
           reject(new Error(message));
         };
@@ -162,11 +176,14 @@ function socks5Tunnel(proxy, targetHost, targetPort) {
             const atyp = buffer[3];
             let need = 0;
             if (atyp === 0x01) need = 4 + 2;
-            else if (atyp === 0x03) need = 1 + buffer[4] + 2;
-            else if (atyp === 0x04) need = 16 + 2;
+            else if (atyp === 0x03) {
+              if (buffer.length < 5) return;
+              need = 1 + buffer[4] + 2;
+            } else if (atyp === 0x04) need = 16 + 2;
             else return fail('SOCKS5 返回了未知地址类型');
             if (buffer.length < 4 + need) return;
             const rest = buffer.subarray(4 + need);
+            stopTimer();
             socket.removeListener('data', onData);
             if (rest.length) socket.unshift(rest);
             resolve(socket);
@@ -174,6 +191,7 @@ function socks5Tunnel(proxy, targetHost, targetPort) {
         };
         socket.on('data', onData);
         socket.once('error', (error) => fail('SOCKS5 上游失败：' + (error.message || error.code || '未知错误')));
+        timer = setTimeout(() => fail('SOCKS5 握手超时'), CONNECT_TIMEOUT_MS);
         socket.write(Buffer.from([0x05, methods.length, ...methods]));
       })
   );
@@ -216,8 +234,16 @@ async function startRelay(proxy) {
 
   server.on('connect', (req, clientSocket, head) => {
     track(clientSocket);
-    const [host, portRaw] = String(req.url || '').split(':');
-    const port = Number(portRaw) || 443;
+    // 兼容 IPv6 目标（CONNECT [::1]:443），按最后一个冒号拆分。
+    const target = String(req.url || '');
+    const splitAt = target.lastIndexOf(':');
+    const rawHost = splitAt > 0 ? target.slice(0, splitAt) : target;
+    const host = rawHost.replace(/^\[(.*)\]$/, '$1');
+    const port = Number(target.slice(splitAt + 1)) || 443;
+    if (!host) {
+      clientSocket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
+      return;
+    }
     openTunnel(proxy, host, port)
       .then((upstream) => {
         track(upstream);
@@ -260,7 +286,16 @@ async function startRelay(proxy) {
         upstream.write(
           req.method + ' ' + path + ' HTTP/1.1\r\n' + 'Host: ' + target.host + '\r\n' +
             Object.entries(req.headers)
-              .filter(([key]) => !['proxy-authorization', 'proxy-connection', 'host'].includes(String(key).toLowerCase()))
+              .filter(
+                ([key]) =>
+                  ![
+                    'proxy-authorization',
+                    'proxy-connection',
+                    'host',
+                    'connection',
+                    'keep-alive'
+                  ].includes(String(key).toLowerCase())
+              )
               .map(([key, value]) => key + ': ' + (Array.isArray(value) ? value.join(', ') : value) + '\r\n')
               .join('') +
             'Connection: close\r\n\r\n'

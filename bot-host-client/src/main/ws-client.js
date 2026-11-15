@@ -59,7 +59,22 @@ function connect(wsUrl, options = {}) {
 function makeClient(socket) {
   let buffer = Buffer.alloc(0);
   const listeners = [];
+  const closeListeners = [];
   let closed = false;
+  let notified = false;
+
+  function notifyClosed() {
+    if (notified) return;
+    notified = true;
+    closed = true;
+    for (const cb of closeListeners) {
+      try {
+        cb();
+      } catch {
+        /* 单个监听器异常不影响其它 */
+      }
+    }
+  }
 
   function sendFrame(opcode, payload) {
     if (closed) return;
@@ -152,14 +167,17 @@ function makeClient(socket) {
   });
   socket.on('close', () => {
     closed = true;
+    notifyClosed();
   });
   socket.on('error', () => {
     closed = true;
+    notifyClosed();
   });
 
   return {
     sendText: (text) => sendFrame(0x1, text),
     onText: (cb) => listeners.push(cb),
+    onClose: (cb) => closeListeners.push(cb),
     close,
   };
 }
@@ -287,6 +305,13 @@ async function browserSession(port, timeoutMs = 8000, targetId = '') {
     clearTimeout(entry.timer);
     if (message.error) entry.reject(new Error(message.error.message || 'CDP 调用失败'));
     else entry.resolve(message.result || {});
+  });
+  client.onClose(() => {
+    for (const entry of pending.values()) {
+      clearTimeout(entry.timer);
+      entry.reject(new Error('CDP 连接已断开'));
+    }
+    pending.clear();
   });
   const call = (method, params, sessionId, ms) => {
     const wait = ms || timeoutMs;

@@ -38,31 +38,43 @@ const HTML = `<!doctype html>
 
 let server = null;
 let startUrl = '';
+let pending = null;
 
 function ensure() {
   if (server) return Promise.resolve(startUrl);
-  return new Promise((resolve, reject) => {
+  if (pending) return pending;
+  pending = new Promise((resolve, reject) => {
     const next = http.createServer((req, res) => {
       if (req.url === '/' || req.url === '/index.html') {
-        res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
+        res.writeHead(200, {
+          'content-type': 'text/html; charset=utf-8',
+          'cache-control': 'no-store',
+          'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'",
+          'x-content-type-options': 'nosniff'
+        });
         res.end(HTML);
         return;
       }
       if (req.url === '/favicon.ico') {
-        res.writeHead(204);
+        res.writeHead(204, { 'cache-control': 'no-store' });
         res.end();
         return;
       }
       res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
       res.end('not found');
     });
-    next.once('error', reject);
+    next.once('error', (error) => {
+      pending = null;
+      reject(error);
+    });
     next.listen(0, '127.0.0.1', () => {
       server = next;
       startUrl = 'http://127.0.0.1:' + next.address().port + '/';
+      pending = null;
       resolve(startUrl);
     });
   });
+  return pending;
 }
 
 function close() {
@@ -70,6 +82,7 @@ function close() {
   const target = server;
   server = null;
   startUrl = '';
+  pending = null;
   return new Promise((resolve) => target.close(() => resolve()));
 }
 

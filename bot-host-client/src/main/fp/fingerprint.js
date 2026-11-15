@@ -22,6 +22,7 @@ function normalizeLanguages(list) {
   const out = [];
   for (const item of Array.isArray(list) ? list : []) {
     const value = String(item || '').trim().slice(0, 20);
+    if (!/^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/.test(value)) continue;
     if (value && !out.includes(value)) out.push(value);
     if (out.length >= 8) break;
   }

@@ -240,7 +240,18 @@ function relayConnect(relayPort, host, port, payload) {
   assert.throws(() => kernels.resolve('999.0.0.0'), /未安装/);
   kernels.remove('150.0.7871.186');
   assert.equal(kernels.list().length, 0);
-  ok('内核：安装/解析/校验/删除');
+
+  const evilDir = path.join(HOME, 'kernels', 'evil-1.0.0.0');
+  fs.mkdirSync(evilDir, { recursive: true });
+  fs.writeFileSync(path.join(HOME, 'outside.exe'), 'fake');
+  fs.writeFileSync(
+    path.join(evilDir, 'manifest.json'),
+    JSON.stringify({ version: 'evil-1.0.0.0', exe: '../../outside.exe' })
+  );
+  assert.ok(!kernels.list().some((row) => row.version === 'evil-1.0.0.0'));
+  fs.rmSync(evilDir, { recursive: true, force: true });
+  fs.rmSync(path.join(HOME, 'outside.exe'), { force: true });
+  ok('内核：安装/解析/校验/删除（清单 exe 越界被拒绝）');
 
   const echo = await echoServer();
   const socks = await fakeSocks5({ user: 'u1', password: 'p1' });
@@ -310,7 +321,8 @@ function relayConnect(relayPort, host, port, payload) {
   ok('出口 IP 检测：直连 + 经 SOCKS5 代理');
 
   const startPage = require('../src/main/fp/start-page');
-  const startUrl = await startPage.ensure();
+  const [startUrl, sameUrl] = await Promise.all([startPage.ensure(), startPage.ensure()]);
+  assert.equal(startUrl, sameUrl);
   assert.match(startUrl, /^http:\/\/127\.0\.0\.1:\d+\/$/);
   const html = await new Promise((resolve, reject) => {
     http

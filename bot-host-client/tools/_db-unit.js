@@ -561,14 +561,31 @@ check('只认库里的白名单与默认目录', () => {
     const updated = fpProfiles.update(created.id, { name: '店铺B' });
     assert.equal(updated.name, '店铺B');
     assert.equal(updated.proxy.hasPassword, true);
+    // 密码留空＝不改：换端口/主机时空密码不应把已存凭据清掉。
+    const moved = fpProfiles.update(created.id, {
+      proxy: { mode: 'proxy', type: 'http', host: '127.0.0.2', port: 8080, authMode: 'password', user: 'u', password: '' }
+    });
+    assert.equal(moved.proxy.hasPassword, true);
+    assert.equal(fpProfiles.proxyCredentials(created.id).password, 'secret-pass');
+    assert.throws(
+      () => fpProfiles.create({ name: '坏代理', proxy: { mode: 'proxy', host: 'http://127.0.0.1', port: 1 } }),
+      /代理地址/
+    );
     const dup = fpProfiles.duplicate(created.id);
     assert.notEqual(dup.id, created.id);
+    assert.equal(dup.proxy.hasPassword, true);
+    assert.equal(fpProfiles.proxyCredentials(dup.id).password, 'secret-pass');
     fpProfiles.setAgentProfile(created.id);
     assert.equal(fpProfiles.agentProfileId(), created.id);
     assert.equal(fpProfiles.agentProfile().id, created.id);
+    const profileDir = path.join(db.DATA_DIR, 'fp-profiles', created.id);
+    fs.mkdirSync(profileDir, { recursive: true });
+    fs.writeFileSync(path.join(profileDir, 'Cookies'), 'test');
     fpProfiles.remove(created.id);
     fpProfiles.remove(dup.id);
     assert.equal(fpProfiles.get(created.id), null);
+    assert.equal(fs.existsSync(profileDir), false);
+    assert.equal(fpProfiles.remove('bad/id').ok, false);
     assert.notEqual(fpProfiles.agentProfileId(), created.id);
     for (const row of fpProfiles.list()) fpProfiles.remove(row.id);
     const all = [];

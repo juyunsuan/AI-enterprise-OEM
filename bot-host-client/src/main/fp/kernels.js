@@ -64,8 +64,10 @@ function readManifest(dir) {
   try {
     const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
     const version = safeVersion(raw.version);
-    const exe = path.join(dir, String(raw.exe || 'chrome.exe'));
-    if (!version || !fs.existsSync(exe)) return null;
+    const root = path.resolve(dir) + path.sep;
+    const exe = path.resolve(dir, String(raw.exe || 'chrome.exe'));
+    const inside = exe.startsWith(root);
+    if (!version || !inside || !fs.existsSync(exe)) return null;
     return {
       version,
       dir,
@@ -114,6 +116,8 @@ function installFromDir(srcDir, options = {}) {
   ensureDir();
   const dest = path.join(DIR, version);
   const staging = path.join(DIR, '.staging-' + process.pid + '-' + Date.now().toString(36));
+  const backup = path.join(DIR, '.backup-' + process.pid + '-' + Date.now().toString(36));
+  let movedOld = false;
   try {
     fs.cpSync(srcDir, staging, { recursive: true });
     const stagedExe = findExe(staging);
@@ -133,10 +137,28 @@ function installFromDir(srcDir, options = {}) {
         2
       )
     );
-    fs.rmSync(dest, { recursive: true, force: true });
+    // 先备份旧版本再替换，避免 rename 失败时把已装内核丢掉。
+    if (fs.existsSync(dest)) {
+      fs.renameSync(dest, backup);
+      movedOld = true;
+    }
     fs.renameSync(staging, dest);
+    if (movedOld) fs.rmSync(backup, { recursive: true, force: true });
+  } catch (error) {
+    if (movedOld && !fs.existsSync(dest)) {
+      try {
+        fs.renameSync(backup, dest);
+      } catch {
+        /* 恢复失败时保留 backup 目录供人工处理 */
+      }
+    }
+    if (error.code === 'EPERM' || error.code === 'EBUSY' || error.code === 'EACCES') {
+      throw new Error('内核文件被占用（可能有窗口正在使用该版本），请关闭窗口后重试');
+    }
+    throw error;
   } finally {
     fs.rmSync(staging, { recursive: true, force: true });
+    if (fs.existsSync(dest)) fs.rmSync(backup, { recursive: true, force: true });
   }
   const manifest = readManifest(dest);
   if (!manifest) throw new Error('内核安装后校验失败');

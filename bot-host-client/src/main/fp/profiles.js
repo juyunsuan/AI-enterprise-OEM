@@ -85,6 +85,7 @@ function languagesOf(raw) {
   const out = [];
   for (const item of list) {
     const value = str(item, 20);
+    if (!/^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/.test(value)) continue;
     if (value && !out.includes(value)) out.push(value);
     if (out.length >= 8) break;
   }
@@ -101,6 +102,7 @@ function proxyOf(raw) {
   const host = str(input.host, 200);
   const port = clampInt(input.port, 1, 65535, 0);
   if (!host) throw new Error('代理地址不能为空');
+  if (!/^[A-Za-z0-9._:[\]-]+$/.test(host)) throw new Error('代理地址只支持主机名或 IP');
   if (!port) throw new Error('代理端口必须是 1–65535');
   return {
     mode,
@@ -132,7 +134,10 @@ function validate(input) {
   const kernelVersion = str(input && input.kernelVersion, 64);
   const groupName = str(input && input.groupName, 40);
   const extensionIds = Array.isArray(input && input.extensionIds)
-    ? input.extensionIds.map((id) => str(id, 64)).filter(Boolean).slice(0, 50)
+    ? input.extensionIds
+        .map((id) => str(id, 64))
+        .filter((id) => /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(id))
+        .slice(0, 50)
     : [];
   return { name, seed, platform, canvasNoise, audioNoise, webrtcMode, hardwareConcurrency, timezone, languages, proxy, kernelVersion, groupName, extensionIds };
 }
@@ -260,14 +265,11 @@ function update(id, input) {
           }
   };
   const v = validate(merged);
+  // 密码留空＝沿用已保存的密文（界面不回显密码，清空不等于删除）。
   const cipher =
     typeof v.proxy.password === 'string' && v.proxy.password
       ? encrypt(v.proxy.password)
-      : v.proxy.mode === current.proxy_mode &&
-          v.proxy.host === current.proxy_host &&
-          v.proxy.port === current.proxy_port &&
-          v.proxy.user === current.proxy_user &&
-          v.proxy.authMode === current.proxy_auth_mode
+      : v.proxy.mode === 'proxy'
         ? current.proxy_password_cipher
         : '';
   db.open()
@@ -309,18 +311,34 @@ function update(id, input) {
 function duplicate(id) {
   const source = get(id);
   if (!source) throw new Error('指纹窗口不存在');
-  return create({
+  const copy = create({
     ...source,
     name: source.name + ' 副本',
     seed: undefined,
     proxy: { ...source.proxy, password: undefined },
     extensionIds: source.extensionIds
   });
+  // 代理密码密文直接复用本机密钥，无需解密；副本否则会丢代理凭据。
+  const row = db.open().prepare('SELECT proxy_password_cipher FROM fp_profiles WHERE id = ?').get(String(id));
+  if (row && row.proxy_password_cipher) {
+    db.open()
+      .prepare('UPDATE fp_profiles SET proxy_password_cipher = ? WHERE id = ?')
+      .run(row.proxy_password_cipher, copy.id);
+  }
+  return get(copy.id);
 }
 
+/** 删除档案：先由调用方关闭窗口，再删库并清掉本机 user-data-dir（Cookie/存储）。 */
 function remove(id) {
   const key = String(id || '');
-  db.open().prepare('DELETE FROM fp_profiles WHERE id = ?').run(key);
+  if (!/^fp[A-Za-z0-9]+$/.test(key)) return { ok: false, error: '指纹窗口不存在' };
+  const info = db.open().prepare('DELETE FROM fp_profiles WHERE id = ?').run(key);
+  if (!info.changes) return { ok: false, error: '指纹窗口不存在' };
+  try {
+    fs.rmSync(path.join(db.DATA_DIR, 'fp-profiles', key), { recursive: true, force: true });
+  } catch {
+    /* 目录可能仍被内核占用，留待下次删除；档案本身已移除 */
+  }
   if (agentProfileId() === key) db.setSetting('fp.agentProfileId', '');
   return { ok: true };
 }

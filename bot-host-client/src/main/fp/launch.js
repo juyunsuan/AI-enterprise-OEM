@@ -24,7 +24,9 @@ const startPage = require('./start-page');
 const wsClient = require('../ws-client');
 
 const windows = new Map();
+const opening = new Map();
 const OPEN_DEFAULT = 20;
+let shuttingDown = false;
 
 function maxOpen() {
   const raw = Number(db.getSetting('fp.maxOpen', OPEN_DEFAULT));
@@ -63,15 +65,31 @@ function stateSummary(state) {
   };
 }
 
-async function open(profileId) {
+/** 同一档案的并发打开只拉起一个内核；上限按「已开 + 启动中」计算。 */
+function open(profileId) {
   const id = String(profileId || '');
+  if (shuttingDown) return Promise.reject(new Error('应用正在退出，无法打开指纹窗口'));
+  const pending = opening.get(id);
+  if (pending) return pending;
   const existing = windows.get(id);
   if (existing) {
-    return { ...stateSummary(existing), reused: true, wsEndpoint: 'http://127.0.0.1:' + existing.cdpPort };
+    return Promise.resolve({
+      ...stateSummary(existing),
+      reused: true,
+      wsEndpoint: 'http://127.0.0.1:' + existing.cdpPort
+    });
   }
-  if (windows.size >= maxOpen()) {
-    throw new Error('同时打开的指纹窗口已达上限（' + maxOpen() + '），请先关闭一些窗口');
+  if (windows.size + opening.size >= maxOpen()) {
+    return Promise.reject(
+      new Error('同时打开的指纹窗口已达上限（' + maxOpen() + '），请先关闭一些窗口')
+    );
   }
+  const task = doOpen(id).finally(() => opening.delete(id));
+  opening.set(id, task);
+  return task;
+}
+
+async function doOpen(id) {
   const profile = profiles.get(id);
   if (!profile) throw new Error('指纹窗口不存在');
   const kernel = kernels.resolve(profile.kernelVersion);
@@ -122,19 +140,25 @@ async function open(profileId) {
     error: ''
   };
   windows.set(profile.id, state);
-  child.once('exit', () => {
-    if (windows.get(profile.id) === state) {
-      windows.delete(profile.id);
-      if (state.relay) state.relay.close();
-      if (state.cdp) {
-        state.cdp.close();
-        state.cdp = null;
-      }
+  const forget = () => {
+    if (windows.get(profile.id) !== state) return;
+    windows.delete(profile.id);
+    if (state.relay) state.relay.close();
+    if (state.cdp) {
+      state.cdp.close();
+      state.cdp = null;
     }
+  };
+  child.once('exit', forget);
+  child.once('error', (error) => {
+    state.status = 'error';
+    state.error = '指纹内核进程启动失败：' + (error.message || error.code || '未知错误');
+    forget();
   });
   try {
-    const pages = await wsClient.waitReady(cdpPort, 25000);
-    if (!pages) throw new Error('内核没有在预期时间内就绪（CDP 无页面）');
+    const spawnFailed = new Promise((resolve) => child.once('error', () => resolve(null)));
+    const pages = await Promise.race([wsClient.waitReady(cdpPort, 25000), spawnFailed]);
+    if (!pages) throw new Error(state.error || '内核没有在预期时间内就绪（CDP 无页面）');
     state.cdp = await wsClient.browserSession(cdpPort, 10000);
     const ready = await primeKernelPage(state, pages);
     state.status = 'open';
@@ -146,15 +170,28 @@ async function open(profileId) {
       pages: (ready || pages).map((page) => ({ id: page.id, title: page.title, url: page.url }))
     };
   } catch (error) {
-    state.error = error.message;
-    await close(profile.id);
-    throw new Error('指纹内核启动失败：' + error.message);
+    state.error = state.error || error.message;
+    await teardown(state);
+    throw new Error('指纹内核启动失败：' + state.error);
   }
 }
 
-async function close(profileId) {
-  const state = windows.get(String(profileId || ''));
-  if (!state) return { ok: true, reused: false };
+function waitExit(child, timeoutMs) {
+  return new Promise((resolve) => {
+    if (!child || child.exitCode !== null) {
+      resolve();
+      return;
+    }
+    const timer = setTimeout(resolve, timeoutMs);
+    child.once('exit', () => {
+      clearTimeout(timer);
+      resolve();
+    });
+  });
+}
+
+async function teardown(state) {
+  if (!state) return;
   windows.delete(state.profileId);
   state.status = 'closing';
   if (state.cdp) {
@@ -171,22 +208,44 @@ async function close(profileId) {
   } catch {
     /* ignore */
   }
-  await new Promise((resolve) => setTimeout(resolve, 400));
-  if (state.child && state.child.pid) {
+  await waitExit(state.child, 1500);
+  if (state.child && state.child.exitCode === null) {
     try {
       spawn('taskkill', ['/PID', String(state.child.pid), '/T', '/F'], { stdio: 'ignore' });
     } catch {
       /* ignore */
     }
+    await waitExit(state.child, 1500);
   }
   if (state.relay) state.relay.close();
+}
+
+async function close(profileId) {
+  const key = String(profileId || '');
+  const pending = opening.get(key);
+  if (pending) {
+    try {
+      await pending;
+    } catch {
+      /* 启动失败时 doOpen 已自行回收 */
+    }
+  }
+  const state = windows.get(key);
+  if (!state) return { ok: true, reused: false };
+  await teardown(state);
   return { ok: true };
 }
 
 async function closeAll() {
   const ids = Array.from(windows.keys());
-  for (const id of ids) await close(id);
+  await Promise.all(ids.map((id) => close(id).catch(() => {})));
   return { closed: ids.length };
+}
+
+/** 应用退出：先标记停止接收新窗口，再并行回收全部内核。 */
+async function shutdown() {
+  shuttingDown = true;
+  await closeAll();
 }
 
 function listOpen() {
@@ -205,8 +264,7 @@ async function pages() {
           profileName: state.profileName,
           targetId: page.id,
           title: page.title || '',
-          url: page.url || '',
-          wsUrl: page.webSocketDebuggerUrl || ''
+          url: page.url || ''
         });
       }
     } catch {
@@ -314,6 +372,7 @@ module.exports = {
   open,
   close,
   closeAll,
+  shutdown,
   listOpen,
   pages,
   agentWindow,

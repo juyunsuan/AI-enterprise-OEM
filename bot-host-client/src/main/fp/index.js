@@ -37,8 +37,8 @@ function update(id, body) {
   return { profile: view(profiles.update(id, body || {})) };
 }
 
-function remove(id) {
-  launch.close(id);
+async function remove(id) {
+  await launch.close(id);
   return profiles.remove(id);
 }
 
@@ -56,6 +56,11 @@ async function close(id) {
 
 async function closeAll() {
   return launch.closeAll();
+}
+
+/** 应用退出：停收新窗口并回收全部内核进程。 */
+async function shutdown() {
+  return launch.shutdown();
 }
 
 async function pages() {
@@ -137,6 +142,7 @@ module.exports = {
   open,
   close,
   closeAll,
+  shutdown,
   pages,
   checkProxy,
   setAgentProfile,
