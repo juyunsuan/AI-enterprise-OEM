@@ -1841,6 +1841,23 @@
   $('reloadRecords').addEventListener('click', () => void loadTaskRecords());
   $('reloadLogs').addEventListener('click', () => void loadLogs());
 
+  // 任务与日志页的两个 Tab：默认 Bot 任务记录，切到日志时补一次全量刷新。
+  function showLogsTab(tab) {
+    const name = tab === 'log' ? 'log' : 'records';
+    document.querySelectorAll('[data-logs-tab]').forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.logsTab === name);
+    });
+    document.querySelectorAll('[data-logs-panel]').forEach((panel) => {
+      panel.classList.toggle('hidden', panel.dataset.logsPanel !== name);
+    });
+    if (name === 'log') void loadLogs();
+    else void loadTaskRecords();
+  }
+  document.querySelectorAll('[data-logs-tab]').forEach((btn) => {
+    btn.addEventListener('click', () => showLogsTab(btn.dataset.logsTab));
+  });
+  showLogsTab('records');
+
   $('reconnect').addEventListener('click', async () => {
     await api.reconnect();
     await reloadState();
@@ -1883,9 +1900,17 @@
     $('pathDb').textContent = snap.dbPath || '—';
     $('pathDb').title = snap.dbPath || '';
 
-    // 任务与日志页开着时跟随状态广播刷新任务记录（完成/失败会立刻反映出来）。
+    // 任务记录 Tab 可见时跟随状态广播刷新（完成/失败会立刻反映出来）。
     const activePane = document.querySelector('.pane.active');
-    if (activePane && activePane.dataset.pane === 'logs') void loadTaskRecords();
+    const recordsPanel = document.querySelector('[data-logs-panel="records"]');
+    if (
+      activePane &&
+      activePane.dataset.pane === 'logs' &&
+      recordsPanel &&
+      !recordsPanel.classList.contains('hidden')
+    ) {
+      void loadTaskRecords();
+    }
   }
 
   async function reloadAll() {
@@ -1934,7 +1959,8 @@
 
   api.onLog((line) => {
     const pane = document.querySelector('.pane[data-pane="logs"]');
-    if (!pane || !pane.classList.contains('active')) return;
+    const panel = document.querySelector('[data-logs-panel="log"]');
+    if (!pane || !pane.classList.contains('active') || !panel || panel.classList.contains('hidden')) return;
     const cur = $('logText').textContent === '(无日志)' ? '' : $('logText').textContent;
     $('logText').textContent = line + '\n' + cur;
   });

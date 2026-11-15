@@ -442,6 +442,11 @@ select.fill { flex: 1; }
 .task-list .badge.warn { background: var(--warning-soft); color: var(--warning); }
 .task-list .badge.bad { background: var(--danger-soft); color: var(--danger); }
 
+.tabbar { display: inline-flex; gap: 4px; margin-bottom: 12px; padding: 3px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); }
+.tabbtn { appearance: none; border: 0; background: transparent; color: var(--text-2); font-size: 13px; padding: 6px 16px; border-radius: 4px; cursor: pointer; }
+.tabbtn:hover { color: var(--text-1); }
+.tabbtn.active { background: var(--card); color: var(--primary); font-weight: 500; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06); }
+
 .task-records { display: flex; flex-direction: column; gap: 8px; }
 .task-record { border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); }
 .task-record summary { display: flex; align-items: center; gap: 10px; padding: 9px 12px; cursor: pointer; list-style: none; }

@@ -477,36 +477,45 @@
 
         <!-- 任务与日志 -->
         <section class="pane" data-pane="logs">
-          <div class="grid-2">
-            <div class="card">
-              <div class="card-head">
-                <span class="card-title">Bot 任务记录</span>
-                <span class="card-hint">平台下发的全部指令与本机回复，只保存在本机</span>
-                <span class="card-actions"><button id="reloadRecords" class="btn small ghost">刷新</button></span>
+          <div class="tabbar">
+            <button class="tabbtn active" type="button" data-logs-tab="records">Bot 任务记录</button>
+            <button class="tabbtn" type="button" data-logs-tab="log">日志</button>
+          </div>
+
+          <div class="tabpanel" data-logs-panel="records">
+            <div class="grid-2">
+              <div class="card">
+                <div class="card-head">
+                  <span class="card-title">Bot 任务记录</span>
+                  <span class="card-hint">平台下发的全部指令与本机回复，只保存在本机</span>
+                  <span class="card-actions"><button id="reloadRecords" class="btn small ghost">刷新</button></span>
+                </div>
+                <div id="taskRecords" class="task-records">
+                  <div class="empty">暂无任务记录：平台下发指令后这里会出现完整内容</div>
+                </div>
               </div>
-              <div id="taskRecords" class="task-records">
-                <div class="empty">暂无任务记录：平台下发指令后这里会出现完整内容</div>
+              <div class="card">
+                <div class="card-head">
+                  <span class="card-title">运行操作</span>
+                </div>
+                <div class="actions">
+                  <button id="reconnect" class="btn">立即重连</button>
+                  <button id="recheck" class="btn">环境自检</button>
+                  <button id="quit" class="btn danger">退出客户端</button>
+                </div>
+                <p class="card-note">关闭窗口只是收进托盘，客户端会继续接活；退出才真正停掉心跳。</p>
               </div>
-            </div>
-            <div class="card">
-              <div class="card-head">
-                <span class="card-title">运行操作</span>
-              </div>
-              <div class="actions">
-                <button id="reconnect" class="btn">立即重连</button>
-                <button id="recheck" class="btn">环境自检</button>
-                <button id="quit" class="btn danger">退出客户端</button>
-              </div>
-              <p class="card-note">关闭窗口只是收进托盘，客户端会继续接活；退出才真正停掉心跳。</p>
             </div>
           </div>
 
-          <div class="card">
-            <div class="card-head">
-              <span class="card-title">日志</span>
-              <span class="card-actions"><button id="reloadLogs" class="btn small ghost">刷新</button></span>
+          <div class="tabpanel hidden" data-logs-panel="log">
+            <div class="card">
+              <div class="card-head">
+                <span class="card-title">日志</span>
+                <span class="card-actions"><button id="reloadLogs" class="btn small ghost">刷新</button></span>
+              </div>
+              <pre id="logText" class="log-text">加载中…</pre>
             </div>
-            <pre id="logText" class="log-text">加载中…</pre>
           </div>
         </section>
       </main>
