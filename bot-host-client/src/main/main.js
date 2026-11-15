@@ -399,13 +399,20 @@ function rememberWorkspace(dir) {
  * 明文只在内存与本机库里；授权撤掉时把这条渠道的 Key 清空并切回本地渠道。
  */
 const PLATFORM_CHANNEL_ID = 'platform';
+const PLATFORM_CHANNEL_NAME = '平台授权渠道';
 
-function applyModelGrant(grant) {
-  const existing = agentConfig.listChannels().find((row) => row.id === PLATFORM_CHANNEL_ID) || null;
+function applyModelGrant(grant, unchanged) {
+  const list = agentConfig.listChannels();
+  const existing =
+    list.find((row) => row.id === PLATFORM_CHANNEL_ID) ||
+    list.find((row) => row.name === PLATFORM_CHANNEL_NAME) ||
+    null;
   if (grant && grant.baseUrl && grant.apiKey && grant.model) {
+    // 「未变化」只是幂等标记：旧内容还在本地就不动，避免每次心跳反复落库。
+    if (unchanged) return;
     const next = {
-      id: PLATFORM_CHANNEL_ID,
-      name: '平台授权渠道',
+      id: existing ? existing.id : PLATFORM_CHANNEL_ID,
+      name: PLATFORM_CHANNEL_NAME,
       protocol: grant.protocol === 'anthropic' ? 'anthropic' : 'openai',
       baseUrl: String(grant.baseUrl),
       apiKey: String(grant.apiKey),
@@ -419,17 +426,17 @@ function applyModelGrant(grant) {
       existing.protocol === next.protocol;
     if (!same) {
       agentConfig.saveChannel(next);
-      agentConfig.setActiveChannel(PLATFORM_CHANNEL_ID);
+      agentConfig.setActiveChannel(next.id);
       log('info', 'platform model grant applied: ' + next.model);
       refreshAgentSnapshot();
     }
     return;
   }
-  if (!existing) return;
+  if (unchanged || !existing) return;
   // 授权撤销：清空 Key（保留行占位），再把激活渠道切回第一条本地渠道。
   if (existing.apiKey) {
-    agentConfig.saveChannel({ id: PLATFORM_CHANNEL_ID, name: '平台授权渠道（已撤销）', protocol: existing.protocol, baseUrl: existing.baseUrl, apiKey: '', model: existing.model });
-    const local = agentConfig.listChannels().find((row) => row.id !== PLATFORM_CHANNEL_ID && row.apiKey);
+    agentConfig.saveChannel({ id: existing.id, name: PLATFORM_CHANNEL_NAME + '（已撤销）', protocol: existing.protocol, baseUrl: existing.baseUrl, apiKey: '', model: existing.model });
+    const local = agentConfig.listChannels().find((row) => row.id !== existing.id && row.apiKey);
     if (local) agentConfig.setActiveChannel(local.id);
     log('info', 'platform model grant revoked');
     refreshAgentSnapshot();
@@ -515,7 +522,7 @@ async function doHeartbeat() {
     if (typeof data.points === 'number' && Number.isFinite(data.points)) {
       userPoints = data.points;
     }
-    applyModelGrant(data.modelGrant);
+    applyModelGrant(data.modelGrant, data.grantUnchanged === true);
 
     if (data.heartbeatSeconds && data.heartbeatSeconds !== cfg.heartbeatSeconds) {
       configStore.save({ heartbeatSeconds: data.heartbeatSeconds });

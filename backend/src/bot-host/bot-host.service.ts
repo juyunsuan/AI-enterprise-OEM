@@ -391,6 +391,9 @@ export class BotHostService {
 
   // ---------------------------------------------------------------- 平台模型授权
 
+  /** 每台主机最近一次下发的授权指纹：内容未变时心跳只发「未变化」标记，否则旧客户端每次心跳都会重复建一条「平台授权渠道」。 */
+  private readonly sentGrantPrints = new Map<number, string>();
+
   private grantSource(raw: unknown): GrantSource {
     const value = text(raw);
     return value === 'client' || value === 'default' ? value : 'platform';
@@ -1205,14 +1208,20 @@ export class BotHostService {
       where: { hostId: host.id },
       data: { lastEventAt: now, eventCount: { increment: 1 } },
     });
+    const grant = await this.modelGrantForHost(host);
+    const fingerprint = JSON.stringify(grant);
+    const unchanged = this.sentGrantPrints.get(host.id) === fingerprint;
+    this.sentGrantPrints.set(host.id, fingerprint);
     return {
       received: true,
       serverTime: now.toISOString(),
       heartbeatSeconds: BOT_HEARTBEAT_SECONDS,
       commands: commands.map((row) => this.dispatchOf(row)),
       stop: stopped.map((row) => row.commandCode),
-      // 平台模型授权：客户端收到就当成「平台渠道」使用；为空表示平台没授权。
-      modelGrant: await this.modelGrantForHost(host),
+      // 平台模型授权：客户端收到就当成「平台渠道」使用；为空表示平台没授权，
+      // 或与上次下发完全相同（grantUnchanged=true，客户端按无操作处理）。
+      modelGrant: unchanged ? null : grant,
+      grantUnchanged: unchanged,
     };
   }
 

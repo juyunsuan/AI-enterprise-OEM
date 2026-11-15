@@ -629,6 +629,15 @@ describe('BotHostService', () => {
         apiKey: 'sk-platform-test',
       });
       expect(String(granted.modelGrant?.baseUrl || '')).toContain('http');
+
+      // 内容相同的第二次心跳只发「未变化」标记，客户端据此跳过，不再重复建渠道。
+      const again = await withSlot.heartbeat(
+        { id: 1, userId: 'u1', name: '测试主机' },
+        { caps: {} },
+        '127.0.0.1',
+      );
+      expect(again.modelGrant).toBeNull();
+      expect(again.grantUnchanged).toBe(true);
     } finally {
       if (env.platform === undefined) delete process.env.AIPDD_PLATFORM_KEY;
       else process.env.AIPDD_PLATFORM_KEY = env.platform;
