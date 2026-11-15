@@ -532,16 +532,48 @@ check('只认库里的白名单与默认目录', () => {
     }
   });
 
-  await checkAsync('客户端自带浏览器提供 Agent 浏览器工具', async () => {
-    const builtinBrowser = require('../src/main/builtin-browser');
-    const names = builtinBrowser.toolDefs().map((def) => def.name);
+  await checkAsync('Agent 浏览器工具绑定指纹窗口', async () => {
+    const fpBrowser = require('../src/main/fp/browser-tools');
+    const names = fpBrowser.toolDefs().map((def) => def.name);
     for (const name of ['chrome_tabs', 'chrome_open', 'chrome_read', 'chrome_click', 'chrome_fill']) {
       assert.ok(names.includes(name), '缺少工具 ' + name);
     }
-    assert.equal(builtinBrowser.normalizeUrl('baidu.com'), 'https://baidu.com');
-    assert.equal(builtinBrowser.normalizeUrl('http://127.0.0.1:1690'), 'http://127.0.0.1:1690');
-    assert.throws(() => builtinBrowser.normalizeUrl('file:///etc/passwd'), /http/);
-    assert.throws(() => builtinBrowser.normalizeUrl(''), /网址/);
+    const launch = require('../src/main/fp/launch');
+    assert.equal(launch.fingerprintUrl('baidu.com'), 'https://baidu.com');
+    assert.equal(launch.fingerprintUrl('http://127.0.0.1:1690'), 'http://127.0.0.1:1690');
+    assert.throws(() => launch.fingerprintUrl('file:///etc/passwd'), /http/);
+    assert.throws(() => launch.fingerprintUrl(''), /网址/);
+  });
+
+  check('指纹档案：创建/加密/更新/复制/删除/Agent 默认/100 上限', () => {
+    const fpProfiles = require('../src/main/fp/profiles');
+    const created = fpProfiles.create({
+      name: '店铺A',
+      platform: 'win',
+      proxy: { mode: 'proxy', type: 'http', host: '127.0.0.1', port: 8080, authMode: 'password', user: 'u', password: 'secret-pass' }
+    });
+    assert.ok(created.id);
+    assert.equal(created.proxy.hasPassword, true);
+    assert.ok(created.seed);
+    assert.ok(!JSON.stringify(created).includes('secret-pass'));
+    assert.equal(fpProfiles.proxyCredentials(created.id).password, 'secret-pass');
+    const updated = fpProfiles.update(created.id, { name: '店铺B' });
+    assert.equal(updated.name, '店铺B');
+    assert.equal(updated.proxy.hasPassword, true);
+    const dup = fpProfiles.duplicate(created.id);
+    assert.notEqual(dup.id, created.id);
+    fpProfiles.setAgentProfile(created.id);
+    assert.equal(fpProfiles.agentProfileId(), created.id);
+    assert.equal(fpProfiles.agentProfile().id, created.id);
+    fpProfiles.remove(created.id);
+    fpProfiles.remove(dup.id);
+    assert.equal(fpProfiles.get(created.id), null);
+    assert.notEqual(fpProfiles.agentProfileId(), created.id);
+    for (const row of fpProfiles.list()) fpProfiles.remove(row.id);
+    const all = [];
+    for (let i = 0; i < fpProfiles.MAX_PROFILES; i += 1) all.push(fpProfiles.create({ name: '批量' + i }));
+    assert.throws(() => fpProfiles.create({ name: '超限' }), /最多/);
+    for (const row of all) fpProfiles.remove(row.id);
   });
 
   db.close();

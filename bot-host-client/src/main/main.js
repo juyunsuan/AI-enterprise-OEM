@@ -37,7 +37,7 @@ const pluginPackage = require('./plugin-package');
 const skillPackage = require('./skill-package');
 const chromeBridge = require('./chrome-bridge');
 const chromeExtensions = require('./chrome-extensions');
-const builtinBrowser = require('./builtin-browser');
+const fp = require('./fp');
 const crypto = require('crypto');
 
 const PRODUCT_NAME = 'BotBuddy';
@@ -1158,26 +1158,56 @@ function setupIpc() {
 
   ipcMain.handle('chromeExt:remove', (e, id) => chromeExtensions.remove(id));
 
-  // Agent 浏览器：打开/聚焦客户端自带浏览器，并返回当前页面清单。
-  ipcMain.handle('browser:open', async (e, url) => {
+  // --- 指纹窗口（内核路线）：档案 / 内核 / 窗口 / 代理检测 ---
+  const fpGuard = (fn) => async (event, ...args) => {
     try {
-      await builtinBrowser.loadManagedExtensions();
-      const result = await builtinBrowser.focusOrOpen(url || 'about:blank');
-      return { ok: true, ...result };
+      return { ok: true, ...(await fn(...args)) };
     } catch (error) {
-      return { ok: false, error: error.message || '打开客户端浏览器失败' };
+      return { ok: false, error: error.message || '操作失败' };
     }
+  };
+  ipcMain.handle('fp:state', fpGuard(() => fp.state()));
+  ipcMain.handle('fp:create', fpGuard((body) => fp.create(body)));
+  ipcMain.handle('fp:update', fpGuard((id, body) => fp.update(id, body)));
+  ipcMain.handle('fp:remove', fpGuard((id) => fp.remove(id)));
+  ipcMain.handle('fp:duplicate', fpGuard((id) => fp.duplicate(id)));
+  ipcMain.handle('fp:open', fpGuard((id) => fp.open(id)));
+  ipcMain.handle('fp:close', fpGuard((id) => fp.close(id)));
+  ipcMain.handle('fp:closeAll', fpGuard(() => fp.closeAll()));
+  ipcMain.handle('fp:pages', fpGuard(() => fp.pages()));
+  ipcMain.handle('fp:checkProxy', fpGuard((body) => fp.checkProxy(body)));
+  ipcMain.handle('fp:setAgent', fpGuard((id) => fp.setAgentProfile(id)));
+  ipcMain.handle('fp:setMaxOpen', fpGuard((value) => fp.setMaxOpen(value)));
+  ipcMain.handle('fp:setIpCheckUrl', fpGuard((value) => fp.setIpCheckUrl(value)));
+  ipcMain.handle(
+    'fp:kernelImport',
+    fpGuard(async (mode) => {
+      const kind = mode === 'folder' ? 'folder' : 'zip';
+      const picked = await dialog.showOpenDialog(
+        mainWindow,
+        kind === 'folder'
+          ? { title: '选择指纹内核目录', properties: ['openDirectory'] }
+          : {
+              title: '选择指纹内核 ZIP',
+              properties: ['openFile'],
+              filters: [{ name: '内核包', extensions: ['zip'] }]
+            }
+      );
+      if (picked.canceled || !picked.filePaths.length) return { canceled: true };
+      const manifest =
+        kind === 'folder'
+          ? fp.kernels.installFromDir(picked.filePaths[0], { source: picked.filePaths[0] })
+          : fp.kernels.importFromZip(picked.filePaths[0]);
+      log('info', 'fingerprint kernel installed: ' + manifest.version);
+      return { kernel: { version: manifest.version, installedAt: manifest.installedAt } };
+    })
+  );
+  ipcMain.handle('fp:openKernelFolder', async () => {
+    fs.mkdirSync(fp.kernels.DIR, { recursive: true });
+    const error = await shell.openPath(fp.kernels.DIR);
+    return error ? { ok: false, error } : { ok: true };
   });
-  ipcMain.handle('browser:pages', () => ({ ok: true, list: builtinBrowser.listWindows() }));
-  ipcMain.handle('browser:goto', async (e, url) => {
-    try {
-      await builtinBrowser.loadManagedExtensions();
-      const result = await builtinBrowser.goto(url);
-      return { ok: true, ...result };
-    } catch (error) {
-      return { ok: false, error: error.message || '打开网址失败' };
-    }
-  });
+
 
   ipcMain.handle('chromeExt:openFolder', async () => {
     fs.mkdirSync(chromeExtensions.DIR, { recursive: true });
@@ -1185,19 +1215,6 @@ function setupIpc() {
     return result ? { ok: false, error: result } : { ok: true };
   });
 
-  // 打开客户端自带浏览器：Agent 的浏览器操作默认发生在这里，不需要外部浏览器。
-  ipcMain.handle('chromeExt:launch', async () => {
-    try {
-      const loaded = await builtinBrowser.loadManagedExtensions();
-      await builtinBrowser.open();
-      if (loaded.loaded.length) {
-        log('info', 'client browser opened with ' + loaded.loaded.length + ' extension(s)');
-      }
-      return { ok: true, loaded: loaded.loaded.length, errors: loaded.errors };
-    } catch (error) {
-      return { ok: false, error: error.message || '打开客户端浏览器失败' };
-    }
-  });
 
   // 插件包随安装包一起发（extraResources）；开发态就打开仓库里的源目录。
   ipcMain.handle('bridge:openFolder', async () => {

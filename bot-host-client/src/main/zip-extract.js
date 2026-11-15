@@ -16,9 +16,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const zlib = require('node:zlib');
 
-const MAX_ENTRIES = 2000;
-const MAX_FILE = 10 * 1024 * 1024;
-const MAX_TOTAL = 50 * 1024 * 1024;
+const DEFAULT_LIMITS = { entries: 2000, file: 10 * 1024 * 1024, total: 50 * 1024 * 1024 };
 
 function findEnd(buf) {
   const min = Math.max(0, buf.length - 65557);
@@ -45,13 +43,18 @@ function safeRelative(rawName) {
   return parts.join('/');
 }
 
-function extractZipToDir(buf, targetDir) {
+function extractZipToDir(buf, targetDir, options = {}) {
+  const limits = {
+    entries: Number(options.entries) || DEFAULT_LIMITS.entries,
+    file: Number(options.file) || DEFAULT_LIMITS.file,
+    total: Number(options.total) || DEFAULT_LIMITS.total
+  };
   const eocd = findEnd(buf);
   if (eocd < 0) throw new Error('不是有效的 ZIP 文件（找不到目录尾）');
   const total = buf.readUInt16LE(eocd + 10);
   const cdOffset = buf.readUInt32LE(eocd + 16);
   if (!total || cdOffset >= buf.length) throw new Error('ZIP 里没有文件');
-  if (total > MAX_ENTRIES) throw new Error('插件包文件数超过 ' + MAX_ENTRIES + ' 个');
+  if (total > limits.entries) throw new Error('压缩包文件数超过 ' + limits.entries + ' 个');
   const root = path.resolve(targetDir);
   fs.mkdirSync(root, { recursive: true });
   let cursor = cdOffset;
@@ -79,11 +82,13 @@ function extractZipToDir(buf, targetDir) {
     cursor += 46 + nameLen + extraLen + commentLen;
     const relative = safeRelative(rawName);
     if (!relative) continue;
-    if (uncompSize > MAX_FILE) {
-      throw new Error(relative + ' 超过 10MB，插件包过大');
+    if (uncompSize > limits.file) {
+      throw new Error(relative + ' 超过 ' + Math.round(limits.file / 1024 / 1024) + 'MB，包体过大');
     }
     totalBytes += uncompSize;
-    if (totalBytes > MAX_TOTAL) throw new Error('插件包解压后超过 50MB');
+    if (totalBytes > limits.total) {
+      throw new Error('压缩包解压后超过 ' + Math.round(limits.total / 1024 / 1024) + 'MB');
+    }
     if (localOffset + 30 > buf.length || buf.readUInt32LE(localOffset) !== 0x04034b50) {
       throw new Error('ZIP 文件头损坏：' + relative);
     }
@@ -95,7 +100,7 @@ function extractZipToDir(buf, targetDir) {
     let content;
     if (method === 0) content = raw;
     else if (method === 8) {
-      content = zlib.inflateRawSync(raw, { maxOutputLength: MAX_FILE });
+      content = zlib.inflateRawSync(raw, { maxOutputLength: limits.file });
     } else {
       throw new Error('不支持的 ZIP 压缩方式（仅支持 store / deflate）');
     }

@@ -105,14 +105,14 @@ try {
   assert.match(imported.id, /^[a-z0-9-]+$/);
   assert.equal(imported.name, '测试采集插件');
   const listed = chromeExtensions.list();
-  assert.ok(listed.some((row) => row.builtin), '内置桥接扩展要在列表里');
-  assert.equal(listed.filter((row) => !row.builtin).length, 1);
+  assert.equal(listed.length, 1);
+  assert.equal(listed[0].id, imported.id);
   assert.ok(fs.existsSync(path.join(chromeExtensions.DIR, imported.id, 'icons', 'icon.txt')));
   ok('文件夹导入：校验清单、复制子目录、列表可见');
 
   const again = chromeExtensions.importFromDirectory(src);
   assert.equal(again.id, imported.id);
-  assert.equal(chromeExtensions.list().filter((row) => !row.builtin).length, 1);
+  assert.equal(chromeExtensions.list().length, 1);
   ok('重复导入：同 id 覆盖，不新增');
 
   const zipPath = path.join(tmp, 'ext.zip');
@@ -146,7 +146,7 @@ try {
 
   const removed = chromeExtensions.remove(imported.id);
   assert.deepEqual(removed, { ok: true });
-  assert.equal(chromeExtensions.list().filter((row) => !row.builtin).length, 0);
+  assert.equal(chromeExtensions.list().length, 0);
   ok('删除：目录移除，列表同步');
 } finally {
   fs.rmSync(tmp, { recursive: true, force: true });

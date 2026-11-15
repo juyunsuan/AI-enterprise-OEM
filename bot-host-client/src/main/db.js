@@ -99,7 +99,35 @@ const SCHEMA = [
      config_json TEXT NOT NULL DEFAULT '{}',
      enabled     INTEGER NOT NULL DEFAULT 1,
      created_at  TEXT NOT NULL
-   )`
+   )`,
+  `CREATE TABLE IF NOT EXISTS fp_profiles (
+     id                    TEXT PRIMARY KEY,
+     name                  TEXT NOT NULL,
+     group_name            TEXT NOT NULL DEFAULT '',
+     seed                  TEXT NOT NULL,
+     kernel_version        TEXT NOT NULL DEFAULT '',
+     platform              TEXT NOT NULL DEFAULT 'win',
+     timezone              TEXT NOT NULL DEFAULT '',
+     languages_json        TEXT NOT NULL DEFAULT '[]',
+     canvas_noise          TEXT NOT NULL DEFAULT 'light',
+     audio_noise           TEXT NOT NULL DEFAULT 'light',
+     webrtc_mode           TEXT NOT NULL DEFAULT 'proxy',
+     hardware_concurrency  INTEGER NOT NULL DEFAULT 0,
+     proxy_mode            TEXT NOT NULL DEFAULT 'direct',
+     proxy_type            TEXT NOT NULL DEFAULT '',
+     proxy_host            TEXT NOT NULL DEFAULT '',
+     proxy_port            INTEGER NOT NULL DEFAULT 0,
+     proxy_auth_mode       TEXT NOT NULL DEFAULT 'password',
+     proxy_user            TEXT NOT NULL DEFAULT '',
+     proxy_password_cipher TEXT NOT NULL DEFAULT '',
+     extension_ids_json    TEXT NOT NULL DEFAULT '[]',
+     last_open_at          TEXT,
+     last_ip               TEXT,
+     created_at            TEXT NOT NULL,
+     updated_at            TEXT NOT NULL
+   )`,
+  `CREATE INDEX IF NOT EXISTS fp_profiles_updated_idx
+     ON fp_profiles (updated_at DESC)`
 ];
 
 let handle = null;

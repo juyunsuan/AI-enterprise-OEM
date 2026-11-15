@@ -1,0 +1,269 @@
+'use strict';
+
+/**
+ * 指纹窗口启动器：每个档案一个独立内核进程。
+ *
+ *   kernel.exe --user-data-dir=<档案目录> --fingerprint=<seed> ...
+ *     --proxy-server=http://127.0.0.1:<relayPort>（有代理时）
+ *     --remote-debugging-port=<cdpPort>（仅回环）
+ *
+ * 管理器用 CDP 感知页面、导航与操作；关闭时先 Browser.close，再兜底杀进程树。
+ * 同时打开上限默认 20（设置 fp.maxOpen 可调，最大 100）。
+ */
+
+const fs = require('node:fs');
+const net = require('node:net');
+const path = require('node:path');
+const { spawn } = require('node:child_process');
+const db = require('../db');
+const kernels = require('./kernels');
+const profiles = require('./profiles');
+const fingerprint = require('./fingerprint');
+const relay = require('./proxy-relay');
+const wsClient = require('../ws-client');
+
+const windows = new Map();
+const OPEN_DEFAULT = 20;
+
+function maxOpen() {
+  const raw = Number(db.getSetting('fp.maxOpen', OPEN_DEFAULT));
+  if (!Number.isFinite(raw)) return OPEN_DEFAULT;
+  return Math.max(1, Math.min(100, Math.round(raw)));
+}
+
+function setMaxOpen(value) {
+  const next = Math.max(1, Math.min(100, Math.round(Number(value) || OPEN_DEFAULT)));
+  db.setSetting('fp.maxOpen', next);
+  return next;
+}
+
+function freePort() {
+  return new Promise((resolve, reject) => {
+    const server = net.createServer();
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      const port = server.address().port;
+      server.close(() => resolve(port));
+    });
+  });
+}
+
+function stateSummary(state) {
+  return {
+    profileId: state.profileId,
+    profileName: state.profileName,
+    kernelVersion: state.kernelVersion,
+    status: state.status,
+    pid: state.child && state.child.pid ? state.child.pid : 0,
+    cdpPort: state.cdpPort,
+    relayPort: state.relayPort,
+    startedAt: state.startedAt,
+    error: state.error || ''
+  };
+}
+
+async function open(profileId) {
+  const id = String(profileId || '');
+  const existing = windows.get(id);
+  if (existing) {
+    return { ...stateSummary(existing), reused: true, wsEndpoint: 'http://127.0.0.1:' + existing.cdpPort };
+  }
+  if (windows.size >= maxOpen()) {
+    throw new Error('同时打开的指纹窗口已达上限（' + maxOpen() + '），请先关闭一些窗口');
+  }
+  const profile = profiles.get(id);
+  if (!profile) throw new Error('指纹窗口不存在');
+  const kernel = kernels.resolve(profile.kernelVersion);
+  const profileDir = path.join(db.DATA_DIR, 'fp-profiles', profile.id);
+  fs.mkdirSync(profileDir, { recursive: true });
+  const cdpPort = await freePort();
+  const creds = profiles.proxyCredentials(profile.id);
+  let relayHandle = null;
+  let relayPort = 0;
+  if (profile.proxy.mode === 'proxy') {
+    relayHandle = await relay.startRelay(creds);
+    relayPort = relayHandle.port;
+  }
+  const extensionDirs = [];
+  for (const extensionId of profile.extensionIds) {
+    const dir = path.join(require('../chrome-extensions').DIR, extensionId);
+    if (fs.existsSync(dir)) extensionDirs.push(dir);
+  }
+  const args = fingerprint.buildArgs(profile, {
+    profileDir,
+    relayPort,
+    cdpPort,
+    extensionDirs,
+    startUrl: 'about:blank'
+  });
+  let child;
+  try {
+    child = spawn(kernel.exe, args, {
+      cwd: path.dirname(kernel.exe),
+      stdio: 'ignore',
+      windowsHide: false
+    });
+  } catch (error) {
+    if (relayHandle) relayHandle.close();
+    throw new Error('启动指纹内核失败：' + error.message);
+  }
+  const state = {
+    profileId: profile.id,
+    profileName: profile.name,
+    kernelVersion: kernel.version,
+    cdpPort,
+    relayPort,
+    relay: relayHandle,
+    child,
+    startedAt: Date.now(),
+    status: 'starting',
+    error: ''
+  };
+  windows.set(profile.id, state);
+  child.once('exit', () => {
+    if (windows.get(profile.id) === state) {
+      windows.delete(profile.id);
+      if (state.relay) state.relay.close();
+    }
+  });
+  try {
+    const pages = await wsClient.waitReady(cdpPort, 25000);
+    if (!pages) throw new Error('内核没有在预期时间内就绪（CDP 无页面）');
+    state.status = 'open';
+    profiles.markOpened(profile.id, profile.lastIp || '');
+    return {
+      ...stateSummary(state),
+      reused: false,
+      wsEndpoint: 'http://127.0.0.1:' + cdpPort,
+      pages: pages.map((page) => ({ id: page.id, title: page.title, url: page.url }))
+    };
+  } catch (error) {
+    state.error = error.message;
+    await close(profile.id);
+    throw new Error('指纹内核启动失败：' + error.message);
+  }
+}
+
+async function close(profileId) {
+  const state = windows.get(String(profileId || ''));
+  if (!state) return { ok: true, reused: false };
+  windows.delete(state.profileId);
+  state.status = 'closing';
+  try {
+    await wsClient.closeBrowser(state.cdpPort);
+  } catch {
+    /* 内核可能已退出 */
+  }
+  try {
+    state.child.kill();
+  } catch {
+    /* ignore */
+  }
+  await new Promise((resolve) => setTimeout(resolve, 400));
+  if (state.child && state.child.pid) {
+    try {
+      spawn('taskkill', ['/PID', String(state.child.pid), '/T', '/F'], { stdio: 'ignore' });
+    } catch {
+      /* ignore */
+    }
+  }
+  if (state.relay) state.relay.close();
+  return { ok: true };
+}
+
+async function closeAll() {
+  const ids = Array.from(windows.keys());
+  for (const id of ids) await close(id);
+  return { closed: ids.length };
+}
+
+function listOpen() {
+  return Array.from(windows.values()).map(stateSummary);
+}
+
+/** 汇总所有已打开窗口的页面（Agent chrome_tabs 与 UI 都用它）。 */
+async function pages() {
+  const out = [];
+  for (const state of windows.values()) {
+    try {
+      const list = await wsClient.listPages(state.cdpPort);
+      for (const page of list) {
+        out.push({
+          profileId: state.profileId,
+          profileName: state.profileName,
+          targetId: page.id,
+          title: page.title || '',
+          url: page.url || '',
+          wsUrl: page.webSocketDebuggerUrl || ''
+        });
+      }
+    } catch {
+      /* 窗口正在关闭 */
+    }
+  }
+  return out;
+}
+
+function pickPage(list) {
+  const usable = list.filter((page) => page.wsUrl && page.url !== 'about:blank');
+  return usable[0] || list.find((page) => page.wsUrl) || null;
+}
+
+/** Agent 默认窗口：显式设置优先；没设置就取最近使用档案；没有任何档案时自动建一个。 */
+async function agentWindow() {
+  let profile = profiles.agentProfile();
+  if (!profile) {
+    profile = profiles.create({ name: '默认窗口', platform: 'win' });
+    profiles.setAgentProfile(profile.id);
+  }
+  if (!windows.has(profile.id)) {
+    await open(profile.id);
+  }
+  return windows.get(profile.id);
+}
+
+async function agentPage() {
+  const state = await agentWindow();
+  if (!state) throw new Error('Agent 默认窗口不可用');
+  const list = await wsClient.listPages(state.cdpPort);
+  const page = pickPage(list);
+  if (!page) throw new Error('Agent 默认窗口里没有可用页面');
+  return { state, page };
+}
+
+async function navigateAgent(rawUrl) {
+  const { state, page } = await agentPage();
+  const target = fingerprintUrl(rawUrl);
+  await wsClient.cdpCall(page.webSocketDebuggerUrl, 'Page.navigate', { url: target });
+  profiles.markOpened(state.profileId, '');
+  return { profileId: state.profileId, url: target };
+}
+
+async function evaluateAgent(expression, timeoutMs) {
+  const { page } = await agentPage();
+  return wsClient.cdpEvaluate(page.webSocketDebuggerUrl, expression, timeoutMs);
+}
+
+function fingerprintUrl(raw) {
+  const text = String(raw || '').trim();
+  if (!text) throw new Error('请输入网址');
+  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(text)) {
+    if (!/^https?:\/\//i.test(text) && !/^about:/i.test(text)) throw new Error('只支持 http(s) 网址');
+    return text;
+  }
+  return 'https://' + text;
+}
+
+module.exports = {
+  open,
+  close,
+  closeAll,
+  listOpen,
+  pages,
+  agentWindow,
+  navigateAgent,
+  evaluateAgent,
+  maxOpen,
+  setMaxOpen,
+  fingerprintUrl
+};

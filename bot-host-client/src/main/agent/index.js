@@ -20,7 +20,7 @@ const agentConfig = require('./config');
 const modelClient = require('./model-client');
 const tools = require('./tools');
 const plugins = require('../plugins');
-const builtinBrowser = require('../builtin-browser');
+const fpBrowser = require('../fp/browser-tools');
 
 const MAX_TOOL_ROUNDS = 8;
 const PROGRESS_CHUNK = 400;
@@ -46,7 +46,7 @@ function extraTools(pluginIds) {
       run: (args, ctx) => plugins.runTool(def.plugin, args, ctx)
     }));
   // 浏览器工具默认驱动客户端自带浏览器：不依赖外部 Chrome / Edge，也不需要桥接扩展在线。
-  for (const def of builtinBrowser.toolDefs()) {
+  for (const def of fpBrowser.toolDefs()) {
     list.push({
       name: def.name,
       description: def.description,

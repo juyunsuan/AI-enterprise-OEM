@@ -477,46 +477,150 @@
           </div>
         </section>
 
-        <section class="pane" data-pane="browser">
-          <div class="card">
-            <div class="card-head">
-              <span class="card-title">Agent 浏览器</span>
-              <span class="card-hint">Agent 的浏览器操作默认使用这个客户端自带浏览器</span>
-              <span class="card-actions">
-                <button id="openBuiltinBrowser" class="btn small primary">打开浏览器</button>
-                <button id="reloadBrowserPages" class="btn small ghost">刷新</button>
-              </span>
-            </div>
-            <div class="field-row" style="margin-bottom: 10px">
-              <input id="browserUrl" type="text" spellcheck="false" placeholder="输入网址（例如 baidu.com），回车或点「打开」" />
-              <button id="browserGo" class="btn primary">打开</button>
-            </div>
-            <div id="builtinPageList" class="list">
-              <div class="empty">还没有打开的页面：点「打开浏览器」，或让 Agent 打开一个网址</div>
-            </div>
-            <p class="card-note">
-              首次在客户端浏览器里登录站点后，登录状态会保留；浏览器使用独立本地会话，数据不经过平台。
-              Agent 的打开网页、读取正文、点击与填表都发生在这里，不启动也不扫描本机 Chrome / Edge。
-            </p>
+<section class="pane" data-pane="browser">
+          <div class="tabbar">
+            <button class="tabbtn active" type="button" data-browser-tab="windows">指纹窗口</button>
+            <button class="tabbtn" type="button" data-browser-tab="plugins">Chrome 插件</button>
           </div>
 
-          <div class="card">
-            <div class="card-head">
-              <span class="card-title">Chrome 插件</span>
-              <span class="card-hint">为浏览器服务：装在客户端自带的浏览器里，打开浏览器时自动加载</span>
-              <span class="card-actions">
-                <button id="importChromeZip" class="btn small ghost" title="上传 Chrome 插件包（ZIP，含 manifest.json）">上传 ZIP</button>
-                <button id="importChromeFolder" class="btn small ghost" title="从文件夹导入 Chrome 插件（含 manifest.json）">选择文件夹</button>
-              </span>
+          <div class="tabpanel" data-browser-panel="windows">
+            <div class="card">
+              <div class="card-head">
+                <span class="card-title">指纹内核</span>
+                <span class="card-hint" id="fpKernelState">未安装</span>
+                <span class="card-actions">
+                  <button id="fpKernelZip" class="btn small ghost">导入内核 ZIP</button>
+                  <button id="fpKernelDir" class="btn small ghost">选择内核目录</button>
+                  <button id="fpKernelFolder" class="btn small ghost">打开内核目录</button>
+                </span>
+              </div>
+              <p class="card-note">
+                内核是改造版 Chromium（fingerprint-chromium），按档案种子生成指纹。建议使用 Chrome 139+ 内核以支持完整的指纹参数；升级/更换内核不影响档案数据。
+              </p>
             </div>
-            <div id="chromeExtList" class="list">
-              <div class="empty">还没有导入 Chrome 插件</div>
+
+            <div class="card">
+              <div class="card-head">
+                <span class="card-title">指纹窗口</span>
+                <span class="card-hint" id="fpCountHint">—</span>
+                <span class="card-actions">
+                  <button id="fpNew" class="btn small primary">新增窗口</button>
+                  <button id="fpCloseAll" class="btn small ghost">全部关闭</button>
+                  <button id="fpReload" class="btn small ghost">刷新</button>
+                </span>
+              </div>
+              <div id="fpList" class="list"><div class="empty">还没有指纹窗口：点右上「新增窗口」</div></div>
+              <p id="fpHint" class="card-note"></p>
             </div>
-            <p id="chromeExtHint" class="card-note">
-              插件包上传后自动装进客户端自带浏览器；Agent 的浏览器操作默认就在这里，无需进入 chrome://extensions，也不要求开发者模式。数据只在本机，不经过平台。
-            </p>
-            <div class="actions spaced">
-              <button id="openChromeExtFolder" class="btn small ghost">打开插件目录</button>
+
+            <div id="fpEditor" class="card hidden">
+              <div class="card-head">
+                <span class="card-title" id="fpEditorTitle">新增指纹窗口</span>
+                <span class="card-hint">同一档案的指纹跨重启保持一致；密码留空表示不修改</span>
+                <span class="card-actions">
+                  <button id="fpSave" class="btn small primary">保存</button>
+                  <button id="fpCancel" class="btn small ghost">关闭</button>
+                </span>
+              </div>
+              <div class="form">
+                <label class="field"><span class="k">名称<em>*</em></span>
+                  <input id="fpName" type="text" spellcheck="false" placeholder="例如：店铺 A" /></label>
+                <label class="field"><span class="k">分组</span>
+                  <input id="fpGroup" type="text" spellcheck="false" placeholder="可选" /></label>
+                <label class="field"><span class="k">内核</span>
+                  <select id="fpKernel" class="fill"></select></label>
+                <label class="field"><span class="k">指纹平台</span>
+                  <select id="fpPlatform" class="fill">
+                    <option value="win">Windows</option>
+                    <option value="mac">macOS</option>
+                    <option value="linux">Linux</option>
+                  </select></label>
+                <label class="field"><span class="k">时区</span>
+                  <input id="fpTimezone" type="text" spellcheck="false" placeholder="Asia/Shanghai（留空＝内核按种子）" /></label>
+                <label class="field"><span class="k">语言</span>
+                  <input id="fpLanguages" type="text" spellcheck="false" placeholder="zh-CN,zh（留空＝内核按种子）" /></label>
+                <label class="field"><span class="k">CPU 线程</span>
+                  <input id="fpCores" type="number" min="0" max="64" placeholder="0＝按种子" /></label>
+                <label class="field"><span class="k">指纹种子</span>
+                  <input id="fpSeed" type="text" spellcheck="false" placeholder="留空自动生成（重新生成即换指纹）" /></label>
+                <label class="field"><span class="k">Canvas / 音频</span>
+                  <span class="field-row fill">
+                    <select id="fpCanvas">
+                      <option value="light">Canvas 轻噪（默认）</option>
+                      <option value="off">Canvas 关闭</option>
+                      <option value="strict">Canvas 严格</option>
+                    </select>
+                    <select id="fpAudio">
+                      <option value="light">音频轻噪（默认）</option>
+                      <option value="off">音频关闭</option>
+                      <option value="strict">音频严格</option>
+                    </select>
+                  </span></label>
+                <label class="field"><span class="k">WebRTC</span>
+                  <select id="fpWebrtc" class="fill">
+                    <option value="proxy">只走代理（默认）</option>
+                    <option value="disable">禁用</option>
+                    <option value="real">真实</option>
+                  </select></label>
+              </div>
+
+              <div class="kv spaced">
+                <div class="kv-row"><span class="k">代理</span>
+                  <select id="fpProxyMode">
+                    <option value="direct">本机 IP（直连）</option>
+                    <option value="proxy">代理</option>
+                  </select>
+                  <select id="fpProxyType">
+                    <option value="http">HTTP</option>
+                    <option value="https">HTTPS</option>
+                    <option value="socks5">SOCKS5</option>
+                  </select>
+                </div>
+                <div class="kv-row"><span class="k">地址</span>
+                  <span class="field-row fill">
+                    <input id="fpProxyHost" type="text" spellcheck="false" placeholder="代理地址，例如 127.0.0.1 / proxy.example.com" />
+                    <input id="fpProxyPort" type="number" min="1" max="65535" placeholder="端口" style="max-width:110px" />
+                  </span>
+                </div>
+                <div class="kv-row"><span class="k">认证</span>
+                  <select id="fpProxyAuth">
+                    <option value="password">账号密码</option>
+                    <option value="whitelist">IP 白名单</option>
+                  </select>
+                  <input id="fpProxyUser" type="text" spellcheck="false" placeholder="账号（白名单模式可空）" />
+                  <input id="fpProxyPass" type="password" spellcheck="false" placeholder="密码（留空不改）" />
+                </div>
+                <div class="kv-row"><span class="k">检测</span>
+                  <button id="fpCheckProxy" class="btn small">检测 IP</button>
+                  <span id="fpProxyResult" class="v mono">—</span>
+                </div>
+              </div>
+
+              <label class="field"><span class="k">启用的 Chrome 插件</span>
+                <span id="fpExts" class="chips"></span></label>
+              <p id="fpEditorHint" class="card-note"></p>
+            </div>
+          </div>
+
+          <div class="tabpanel hidden" data-browser-panel="plugins">
+            <div class="card">
+              <div class="card-head">
+                <span class="card-title">Chrome 插件</span>
+                <span class="card-hint">为指纹窗口服务：启动窗口时按勾选加载（MV2/MV3 取决于内核版本）</span>
+                <span class="card-actions">
+                  <button id="importChromeZip" class="btn small ghost" title="上传 Chrome 插件包（ZIP，含 manifest.json）">上传 ZIP</button>
+                  <button id="importChromeFolder" class="btn small ghost" title="从文件夹导入 Chrome 插件（含 manifest.json）">选择文件夹</button>
+                </span>
+              </div>
+              <div id="chromeExtList" class="list">
+                <div class="empty">还没有导入 Chrome 插件</div>
+              </div>
+              <p id="chromeExtHint" class="card-note">
+                插件包上传后进入本机插件库；在指纹窗口编辑页勾选后，启动该窗口时自动加载。数据只在本机，不经过平台。
+              </p>
+              <div class="actions spaced">
+                <button id="openChromeExtFolder" class="btn small ghost">打开插件目录</button>
+              </div>
             </div>
           </div>
         </section>

@@ -130,8 +130,8 @@
     document.querySelector('.content').scrollTop = 0;
     if (target === 'binding' && !state.pair && isLoggedIn()) void refreshPair();
     if (target === 'browser') {
-      void openBuiltinBrowser();
-      void loadBrowserPages();
+      showBrowserTab('windows');
+      void loadFpState();
     }
     if (target === 'chat') {
       void loadChatList();
@@ -965,64 +965,274 @@
     if (!res || !res.ok) window.alert((res && res.error) || '打开失败');
   });
 
-  /* ---------------------------------------------------------- Agent 浏览器 */
+/* ---------------------------------------------------------- 指纹窗口 */
 
-  async function openBuiltinBrowser() {
-    const res = await api.openBrowser();
-    if (!res || !res.ok) {
-      window.alert((res && res.error) || '打开客户端浏览器失败');
-      return;
-    }
-    setTimeout(() => void loadBrowserPages(), 600);
-  }
+  let fpKernels = [];
+  let fpProfiles = [];
+  let fpOpenWindows = [];
+  let fpAgentId = '';
+  let fpEditingId = '';
 
-  async function loadBrowserPages() {
-    const res = await api.browserPages();
-    const box = $('builtinPageList');
-    if (!box) return;
-    clear(box);
-    const rows = (res && res.list) || [];
-    if (!rows.length) {
-      box.appendChild(el('div', 'empty', '还没有打开的页面：点「打开浏览器」，或让 Agent 打开一个网址'));
-      return;
-    }
-    rows.forEach((row) => {
-      const item = el('div', 'list-row');
-      const main = el('div', 'list-main');
-      const title = el('span', 'list-title', row.title || '未命名页面');
-      title.appendChild(el('span', 'tag' + (row.active ? ' on' : ''), row.active ? '当前' : '#' + row.id));
-      main.appendChild(title);
-      main.appendChild(el('span', 'muted', row.url || 'about:blank'));
-      item.appendChild(main);
-      box.appendChild(item);
+  function showBrowserTab(tab) {
+    const name = tab === 'plugins' ? 'plugins' : 'windows';
+    document.querySelectorAll('[data-browser-tab]').forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.browserTab === name);
+    });
+    document.querySelectorAll('[data-browser-panel]').forEach((panel) => {
+      panel.classList.toggle('hidden', panel.dataset.browserPanel !== name);
     });
   }
 
-  async function goBrowserUrl() {
-    const input = $('browserUrl');
-    const url = input.value.trim();
-    if (!url) {
-      input.focus();
+  function renderFpExtChips(selected) {
+    const box = $('fpExts');
+    if (!box) return;
+    clear(box);
+    const rows = state.chromeExts || [];
+    if (!rows.length) {
+      box.appendChild(el('span', 'muted', '还没有导入 Chrome 插件'));
       return;
     }
-    const res = await api.browserGoto(url);
-    if (!res || !res.ok) {
-      window.alert((res && res.error) || '打开网址失败');
-      return;
-    }
-    input.value = res.url || url;
-    setTimeout(() => void loadBrowserPages(), 700);
+    const ids = Array.isArray(selected) ? selected : [];
+    rows.forEach((item) => {
+      const label = el('label', 'chip manual');
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.checked = ids.includes(item.id);
+      input.dataset.extId = item.id;
+      label.appendChild(input);
+      label.appendChild(document.createTextNode(' ' + item.name));
+      box.appendChild(label);
+    });
   }
 
-  $('openBuiltinBrowser').addEventListener('click', () => void openBuiltinBrowser());
-  $('reloadBrowserPages').addEventListener('click', () => void loadBrowserPages());
-  $('browserGo').addEventListener('click', () => void goBrowserUrl());
-  $('browserUrl').addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      void goBrowserUrl();
+  async function loadFpState() {
+    const res = await api.fpState();
+    if (!res || !res.ok) {
+      note($('fpHint'), (res && res.error) || '读取指纹窗口失败', 'bad');
+      return;
     }
+    fpKernels = res.kernels || [];
+    fpProfiles = res.list || [];
+    fpOpenWindows = res.open || [];
+    fpAgentId = res.agentProfileId || '';
+    $('fpKernelState').textContent = fpKernels.length
+      ? '已安装：' + fpKernels.map((k) => 'v' + k.version).join('、')
+      : '未安装：请导入指纹内核 ZIP';
+    const agentName = (fpProfiles.find((row) => row.id === fpAgentId) || {}).name || '未设置（取最近使用）';
+    $('fpCountHint').textContent =
+      '已用 ' + res.count + '/' + res.limit +
+      ' · 打开 ' + fpOpenWindows.length + '/' + res.openLimit +
+      ' · Agent 默认：' + agentName;
+    const select = $('fpKernel');
+    const current = select.value;
+    clear(select);
+    select.appendChild(new Option('默认（最新内核）', ''));
+    fpKernels.forEach((k) => select.appendChild(new Option('v' + k.version, k.version)));
+    if (current) select.value = current;
+    renderFpList();
+  }
+
+  function renderFpList() {
+    const box = $('fpList');
+    clear(box);
+    if (!fpProfiles.length) {
+      box.appendChild(el('div', 'empty', '还没有指纹窗口：点右上「新增窗口」'));
+      return;
+    }
+    const openMap = new Map(fpOpenWindows.map((row) => [row.profileId, row]));
+    fpProfiles.forEach((profile) => {
+      const row = el('div', 'list-row');
+      const main = el('div', 'list-main');
+      const title = el('span', 'list-title', profile.name);
+      title.appendChild(
+        el(
+          'span',
+          'tag' + (profile.id === fpAgentId ? ' on' : ''),
+          profile.id === fpAgentId
+            ? 'Agent 默认'
+            : profile.platform === 'win'
+              ? 'Windows'
+              : profile.platform === 'mac'
+                ? 'macOS'
+                : 'Linux'
+        )
+      );
+      main.appendChild(title);
+      const proxyText =
+        profile.proxy.mode === 'direct'
+          ? '本机 IP'
+          : profile.proxy.type + ' · ' + profile.proxy.host + ':' + profile.proxy.port +
+            (profile.proxy.authMode === 'whitelist' ? ' · 白名单' : '');
+      main.appendChild(
+        el(
+          'span',
+          'muted',
+          '内核 ' + (profile.kernelVersion || '默认') + ' · ' + proxyText +
+            (profile.lastIp ? ' · 上次 IP ' + profile.lastIp : '') + ' · 种子 ' + profile.seed
+        )
+      );
+      row.appendChild(main);
+
+      const running = openMap.get(profile.id);
+      const actions = el('div', 'list-actions');
+      const toggle = el('button', 'btn small ' + (running ? 'ghost' : 'primary'), running ? '关闭' : '打开');
+      toggle.addEventListener('click', async () => {
+        toggle.disabled = true;
+        const res = running ? await api.fpClose(profile.id) : await api.fpOpen(profile.id);
+        if (!res || !res.ok) window.alert((res && res.error) || (running ? '关闭失败' : '打开失败'));
+        await loadFpState();
+      });
+      actions.appendChild(toggle);
+      const edit = el('button', 'btn small', '编辑');
+      edit.addEventListener('click', () => openFpEditor(profile));
+      actions.appendChild(edit);
+      const duplicate = el('button', 'btn small ghost', '复制');
+      duplicate.addEventListener('click', async () => {
+        const res = await api.fpDuplicate(profile.id);
+        if (!res || !res.ok) window.alert((res && res.error) || '复制失败');
+        await loadFpState();
+      });
+      actions.appendChild(duplicate);
+      const agent = el('button', 'btn small ghost', profile.id === fpAgentId ? '取消默认' : '设为 Agent 默认');
+      agent.addEventListener('click', async () => {
+        const res = await api.fpSetAgent(profile.id === fpAgentId ? '' : profile.id);
+        if (!res || !res.ok) window.alert((res && res.error) || '设置失败');
+        await loadFpState();
+      });
+      actions.appendChild(agent);
+      const remove = el('button', 'btn small ghost', '删除');
+      remove.addEventListener('click', async () => {
+        if (!window.confirm('删除指纹窗口「' + profile.name + '」？该窗口的 Cookie 与本机数据会一并删除。')) return;
+        const res = await api.fpRemove(profile.id);
+        if (!res || !res.ok) window.alert((res && res.error) || '删除失败');
+        await loadFpState();
+      });
+      actions.appendChild(remove);
+      row.appendChild(actions);
+      box.appendChild(row);
+    });
+  }
+
+  function openFpEditor(profile) {
+    fpEditingId = profile ? profile.id : '';
+    $('fpEditorTitle').textContent = profile ? '编辑指纹窗口 · ' + profile.name : '新增指纹窗口';
+    $('fpName').value = profile ? profile.name : '';
+    $('fpGroup').value = profile ? profile.groupName || '' : '';
+    $('fpKernel').value = profile ? profile.kernelVersion || '' : '';
+    $('fpPlatform').value = profile ? profile.platform : 'win';
+    $('fpTimezone').value = profile ? profile.timezone || '' : '';
+    $('fpLanguages').value = profile ? (profile.languages || []).join(',') : '';
+    $('fpCores').value = profile ? String(profile.hardwareConcurrency || 0) : '0';
+    $('fpSeed').value = profile ? profile.seed : '';
+    $('fpCanvas').value = profile ? profile.canvasNoise : 'light';
+    $('fpAudio').value = profile ? profile.audioNoise : 'light';
+    $('fpWebrtc').value = profile ? profile.webrtcMode : 'proxy';
+    const proxy = (profile && profile.proxy) || {
+      mode: 'direct',
+      type: 'http',
+      host: '',
+      port: 0,
+      authMode: 'password',
+      user: ''
+    };
+    $('fpProxyMode').value = proxy.mode;
+    $('fpProxyType').value = proxy.type || 'http';
+    $('fpProxyHost').value = proxy.host || '';
+    $('fpProxyPort').value = proxy.port ? String(proxy.port) : '';
+    $('fpProxyAuth').value = proxy.authMode || 'password';
+    $('fpProxyUser').value = proxy.user || '';
+    $('fpProxyPass').value = '';
+    $('fpProxyResult').textContent = profile && profile.lastIp ? profile.lastIp : '—';
+    renderFpExtChips(profile ? profile.extensionIds : []);
+    note($('fpEditorHint'), profile && profile.hints && profile.hints.length ? profile.hints.join('；') : '');
+    $('fpEditor').classList.remove('hidden');
+    $('fpEditor').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    $('fpName').focus();
+  }
+
+  function fpFormBody() {
+    return {
+      name: $('fpName').value,
+      groupName: $('fpGroup').value,
+      kernelVersion: $('fpKernel').value,
+      platform: $('fpPlatform').value,
+      timezone: $('fpTimezone').value,
+      languages: $('fpLanguages').value.split(/[,，\s]+/).filter(Boolean),
+      hardwareConcurrency: Number($('fpCores').value) || 0,
+      seed: $('fpSeed').value.trim(),
+      canvasNoise: $('fpCanvas').value,
+      audioNoise: $('fpAudio').value,
+      webrtcMode: $('fpWebrtc').value,
+      proxy: {
+        mode: $('fpProxyMode').value,
+        type: $('fpProxyType').value,
+        host: $('fpProxyHost').value,
+        port: Number($('fpProxyPort').value) || 0,
+        authMode: $('fpProxyAuth').value,
+        user: $('fpProxyUser').value,
+        password: $('fpProxyPass').value
+      },
+      extensionIds: Array.from($('fpExts').querySelectorAll('input[type="checkbox"]:checked')).map(
+        (input) => input.dataset.extId
+      )
+    };
+  }
+
+  async function saveFpProfile() {
+    const body = fpFormBody();
+    const res = fpEditingId ? await api.fpUpdate(fpEditingId, body) : await api.fpCreate(body);
+    if (!res || !res.ok) {
+      note($('fpEditorHint'), (res && res.error) || '保存失败', 'bad');
+      return;
+    }
+    note($('fpHint'), fpEditingId ? '已保存：' + res.profile.name : '已创建：' + res.profile.name, 'ok');
+    $('fpEditor').classList.add('hidden');
+    fpEditingId = '';
+    await loadFpState();
+  }
+
+  async function checkFpProxy() {
+    $('fpProxyResult').textContent = '检测中…';
+    const body = { proxy: fpFormBody().proxy };
+    if (fpEditingId) body.profileId = fpEditingId;
+    const res = await api.fpCheckProxy(body);
+    if (!res || !res.ok) {
+      $('fpProxyResult').textContent = (res && res.error) || '检测失败';
+      return;
+    }
+    $('fpProxyResult').textContent = res.ip + ' · ' + res.ms + 'ms';
+  }
+
+  async function importFpKernel(mode) {
+    const res = await api.fpImportKernel(mode);
+    if (!res || res.canceled) return;
+    if (!res.ok) {
+      window.alert(res.error || '内核导入失败');
+      return;
+    }
+    note($('fpHint'), '内核已安装：v' + res.kernel.version, 'ok');
+    await loadFpState();
+  }
+
+  document.querySelectorAll('[data-browser-tab]').forEach((btn) => {
+    btn.addEventListener('click', () => showBrowserTab(btn.dataset.browserTab));
   });
+  $('fpNew').addEventListener('click', () => openFpEditor(null));
+  $('fpReload').addEventListener('click', () => void loadFpState());
+  $('fpCloseAll').addEventListener('click', async () => {
+    const res = await api.fpCloseAll();
+    if (!res || !res.ok) window.alert((res && res.error) || '关闭失败');
+    await loadFpState();
+  });
+  $('fpSave').addEventListener('click', () => void saveFpProfile());
+  $('fpCancel').addEventListener('click', () => {
+    $('fpEditor').classList.add('hidden');
+    fpEditingId = '';
+  });
+  $('fpCheckProxy').addEventListener('click', () => void checkFpProxy());
+  $('fpKernelZip').addEventListener('click', () => void importFpKernel('zip'));
+  $('fpKernelDir').addEventListener('click', () => void importFpKernel('folder'));
+  $('fpKernelFolder').addEventListener('click', () => void api.fpOpenKernelFolder());
 
   /* ------------------------------------------------------ Chrome 插件包管理 */
 
@@ -1066,7 +1276,14 @@
 
   async function loadChromeExts() {
     const res = await api.listChromeExtensions();
-    renderChromeExts((res && res.list) || []);
+    const rows = (res && res.list) || [];
+    state.chromeExts = rows;
+    renderChromeExts(rows);
+    renderFpExtChips(
+      fpEditingId
+        ? (fpProfiles.find((row) => row.id === fpEditingId) || {}).extensionIds || []
+        : []
+    );
   }
 
   async function importChromeExt(mode) {
@@ -2027,6 +2244,7 @@
     void loadPlugins();
     void loadBridge();
     void loadChromeExts();
+    void loadFpState();
     if (!state.policyDirty && data.permissionPolicy) $('policy').value = data.permissionPolicy;
     note($('policyHint'), policyHintText(data.permissionPolicy));
     syncChatHeader();
