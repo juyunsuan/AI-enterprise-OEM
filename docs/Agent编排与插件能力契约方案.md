@@ -306,3 +306,30 @@
 ---
 
 **待你回复 §八 N12–N18 与采集落表方案 N1–N11，我再按 §六 C1–C10 开工；确认前不动代码。**
+
+---
+
+## 九、落地状态（v1.5.1，2026-11-12）
+
+按 §六 批次实现；决策点按推荐采纳：N12=A、N13=B（并叠站点三态 C）、N14=A、N15=A、N16=A、N17=A、N18=B 起步。
+
+**已落地**
+
+- **C1（N12=A）能力菜单由契约派生**：`RC_ACTIONS` / `RC_ACTION_SPECS` 一处定义，决策提示词菜单（`rcActionMenuLines`）与服务端参数白名单（`rcActionFields`）同源派生，不再手写第二份。
+- **C2（N13=B/C）派发门 + 心跳指纹**：迁移 0091 给 `rpa_chrome_devices` 补 `caps`（协议 / 能力族 / 原语 / 站点矩阵哈希）；`availablePrimitives()` / `effectivePrimitives()` 取「目录 ∩ 本机指纹」；做不到的动作回 `CAPABILITY_MISSING` 并给降级做法，不再派下去干等超时。原语级 `minVersion` 见 `RC_BASE_MIN_VERSION="1.4.0"` / `RC_NEW_MIN_VERSION="1.5.1"`。
+- **C3（S1/S2）站点三态声明修正**：`EXTENSION_CAPABILITIES` 的 `sites` 补 `reason` / `fallback`（"本期不支持"必须说清是"没做"还是"平台不提供"，并给可执行替代）。
+  - **S3（偏差，如实记录）**：`bridge.js` 的 `pong` 只上报 `capabilities: ["task:envelope"]`。`chrome:agent` / `chrome:harvest` **不走页面桥**——它们是"设备通道 + 侧边栏"按心跳指纹协商的，页面桥发不出（也不该发）这两类动作。把 `TASK_ROUTES` 补上 chrome 路由会是"声明了但派不动"的假承诺，故不补。
+  - **S5 守卫（N16=A）**：新增 `scripts/verify-extension-caps.mjs`，断言「契约动作闭集 ↔ 插件 `IMPLEMENTED_PRIMITIVES`」「每个原语都有实现」「协议版本三处一致」「插件回报码 ⊆ `BROWSER_TASK_ERROR_CODES`」「站点矩阵三层同源」「能力声明的错误码 ⊆ 词表」「manifest / EXTENSION_RELEASE / README 版本 + 限额同源」。已挂进 `pnpm check:architecture` 并进 CI。守卫先红后绿：如实抓出了「`zhuanlan.zhihu.com` vs 契约 `www.zhihu.com`」的站点漂移（已把契约 `DISTRIBUTION_ORIGINS` 改为按**发布页** `publishUrl` 推导，与插件实际注入站点一致）。
+- **C4 harvest**、**C5 wait_for / fill_form / list_tabs / tab_select**、**C6 upload_file / 元素截图**：原语与站点闭合校验、所有权校验（`close_tab` / `tab_select` 只认本会话打开或显式认领的页）均已实现，限额与契约同源（快照 12000 字符 / 收割 200 条 / 等待 30s / 上传 ≤10MB）。
+- **C7（N17=A）工具白名单**：设备通道 `/tool` 只放行 `RpaChrome_*`（用户自己的私有台账，不过内置 MCP 写闸门）；其余走 `builtinMcp` 受写闸门约束。新增 `RpaChrome_landRows` 作为落表包装。
+- **C8（N18=B）缺口清单**：`POST /api/public/rpa-chrome/gap` + `RpaChrome_reportGap` → `recordChromeGap`，落 `RpaChromeMessage.kind='gap'`（迁移 0091 补 `(created_by, kind)` 索引），后台 `/rpa?tab=status` 出「能力缺口」面板。插件侧**真的回报**（此前分支只把 `reported` 写死为 true，已修）。
+- **C10 校验与文档**：typecheck / lint / jest（157 套用例）全绿；`api:docs:check` 通过；插件 README、帮助中心新增「采集落表」一题、根 README 均已更新；插件升到 **1.5.1** 并重打包（五处版本 + checksum 同步）。
+- **S4 错误码收口（唯一词表）**：新增 `NO_MATCH / TOO_LARGE / BAD_URL / BLOCKED_HOST / NOT_OWNED / OPEN_FAILED / UPLOAD_FAILED / INJECT_FAILED / SHOT_FAILED / WAIT_TIMEOUT / EXEC_ERROR`，并去重历史自造词（执行器 `PAGE_CHANGED → PLATFORM_CHANGED`、`UNKNOWN_ACTION → UNSUPPORTED_ACTION`）。
+
+**后续批次已落地（v1.5.3，2026-11-12）**
+
+- **C9（N14=A）意图队列连跑**：已实现。契约新增 `RC_AGENT_QUEUE_MAX=8`、`rcAgentExpectSchema`（`urlIncludes` / `selector` / `gone` / `text` 四种只读断言）、`rcAgentPlanStepSchema`（`action` + `thought` + 可选 `expect`）与 `RcAgentDecision.queue/plan`；云端 `normalizePlanQueue` 让每步过同一套校验（闭集 / 本机能力 / 敏感闸），某步不合法即**截断在它之前**、不足两步回落单步老路径（插件行为不变）。插件 `runQueue` 顺序执行、逐步核对 `expect`，偏离或连续失败即停下回脑重规划；连跑窗口上限 8 步。
+  - **安全闸不松**：队列同样受「先确认再执行」——`confirmed=false` 时云端下发分步方案卡，用户点确认后才开跑；队列里的敏感动作仍由插件单独停下等确认（`normalizePlanQueue` 用同一 `chromeActionNeedsConfirm` 判定）。
+  - 回归测试：`backend/src/rpa/chrome-agent-queue.spec.ts`（8 例：整形 / 不足两步回落 / 非法步截断 / 能力不足截断 / 上限裁剪 / 敏感步判定 / expect 归一化）。
+- **N15=A 工作流复用 `action` 节点调 `chrome_*`**：复核确认**无需新增节点**——32 个 `RpaChrome_*` 操作经 `mcpOperations()` 派生已自动进入工作流 action 节点目录（组「RPA自动化」、中文标签），引擎按 `runOperation` 派发并计入 `browserActions` 预算，`reserved.browserActions` / `maxBrowserActions` 门生效。
+  - 本批不改引擎，只补回归测试钉住既有接线：`backend/src/workflow/workflow-browser-step.spec.ts`（3 例：目录派生 + `runOperation` 派发入参 + 预算记账 + 5xx 默认失败 / `allowFailure` 容忍），防后续漂移。

@@ -27,18 +27,20 @@
     "dev:worker": "pnpm --filter aiworkin-enterprise-api worker:dev",
     "api:docs": "pnpm --filter aiworkin-enterprise-api exec tsx src/http/openapi.ts",
     "api:docs:check": "pnpm --filter aiworkin-enterprise-api exec tsx src/http/openapi.ts --check",
+    "pack:miniprogram": "node scripts/pack-miniprogram.mjs",
     "test:isolation": "node scripts/test-isolated-migration.mjs",
     "test:regression": "node scripts/test-isolated-migration.mjs --full",
     "test:performance": "node scripts/test-isolated-migration.mjs --performance",
     "test:benchmark:backends": "node scripts/benchmark-backend-isolated.mjs",
     "test:query-plans": "node scripts/test-isolated-migration.mjs --query-plans",
     "test:geo-recovery": "node scripts/verify-geo-collection-recovery.mjs",
-    "check:architecture": "node scripts/check-architecture.mjs",
+    "check:architecture": "node scripts/check-architecture.mjs && node scripts/verify-extension-caps.mjs",
     "audit:escapes": "node scripts/escape-audit.mjs --json=docs/escape-report.json --md=docs/escape-report.md",
     "check:escape-budget": "node scripts/escape-audit.mjs --check",
     "test:escape-audit": "node --test scripts/verify-escape-audit.mjs",
     "test:agent-security": "node --test scripts/verify-agent-security.mjs",
-    "test:creative-community": "node --test scripts/verify-creative-community.mjs"
+    "test:creative-community": "node --test scripts/verify-creative-community.mjs",
+    "test:geo-site": "node --test scripts/verify-marketing-geo-site.mjs"
   },
   "engines": {
     "node": ">=24.0.0",

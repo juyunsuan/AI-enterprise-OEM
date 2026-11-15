@@ -1,11 +1,12 @@
 "use client";
 
-import { App, Button, Form, Input, Modal, Select, Space, Table, Tag } from "antd";
+import { App, Button, Drawer, Form, Input, Modal, Select, Space, Table, Tag } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useState } from "react";
 import { usePasswordConfirm } from "@/components/confirm-with-password";
 import { EmptyState, Panel } from "@/components/ui/panel";
 import { fmtTime } from "@/lib/datetime";
+import { AgentPanel } from "./agent-panel";
 import {
   ACCOUNT_STATUS_LABEL,
   ACCOUNT_STATUS_OPTIONS,
@@ -52,6 +53,8 @@ export function AccountPanel({
   const [form, setForm] = useState<AccountForm>(EMPTY);
   const [busy, setBusy] = useState(false);
   const [verifyingId, setVerifyingId] = useState<number | null>(null);
+  const [agentAccountId, setAgentAccountId] = useState<number | null>(null);
+  const agentAccount = accounts.find((item) => item.id === agentAccountId);
 
   const patch = (next: Partial<AccountForm>) =>
     setForm((prev) => ({ ...prev, ...next }));
@@ -194,9 +197,10 @@ export function AccountPanel({
     {
       title: "操作",
       key: "actions",
-      width: 170,
+      width: 250,
       render: (_, row) => (
         <Space size={4}>
+          <Button onClick={() => setAgentAccountId(row.id)}>云端 Agent</Button>
           <Button
             loading={verifyingId === row.id}
             onClick={() => void verify(row)}
@@ -261,6 +265,16 @@ export function AccountPanel({
       ) : (
         <EmptyState text="还没有 Workbuddy 凭据：绑定一把腾讯云 API 密钥后，才能查看 Agent、拆解并派发任务" />
       )}
+
+      <Drawer
+        open={Boolean(agentAccount)}
+        title={`云端 Agent · ${agentAccount?.name || ""}`}
+        onClose={() => setAgentAccountId(null)}
+        size={1100}
+        destroyOnHidden
+      >
+        {agentAccount ? <AgentPanel key={agentAccount.id} account={agentAccount} /> : null}
+      </Drawer>
 
       <Modal
         open={open}

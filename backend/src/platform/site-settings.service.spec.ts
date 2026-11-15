@@ -2,6 +2,7 @@ import {
   BOARD_TAB_BOARDS,
   BOARD_TAB_ROLES,
   normalizeBoardTabs,
+  normalizeDownloadUrl,
 } from './site-settings.service';
 
 /**
@@ -63,5 +64,31 @@ describe('normalizeBoardTabs', () => {
     const duplicated = [...all, all[0]];
     expect(normalizeBoardTabs(all)).toHaveLength(limit);
     expect(normalizeBoardTabs(duplicated)).toHaveLength(limit);
+  });
+});
+
+/**
+ * 客户端下载地址会直接放进顶栏图标的跳转，只认 http(s) 与站内路径，
+ * 其它写法（javascript:、协议相对、带空白）一律当没填，避免把脏链接挂到导航上。
+ */
+describe('normalizeDownloadUrl', () => {
+  it('保留 http(s) 与站内路径', () => {
+    expect(normalizeDownloadUrl('https://cdn.example.com/BotBuddy.exe')).toBe(
+      'https://cdn.example.com/BotBuddy.exe',
+    );
+    expect(normalizeDownloadUrl('http://127.0.0.1:1690/downloads/a.exe')).toBe(
+      'http://127.0.0.1:1690/downloads/a.exe',
+    );
+    expect(normalizeDownloadUrl('/downloads/BotBuddy.exe')).toBe(
+      '/downloads/BotBuddy.exe',
+    );
+  });
+
+  it('丢弃脚本协议、协议相对与空值', () => {
+    expect(normalizeDownloadUrl('javascript:alert(1)')).toBe('');
+    expect(normalizeDownloadUrl('//evil.example.com/a.exe')).toBe('');
+    expect(normalizeDownloadUrl(' file:///c:/a.exe ')).toBe('');
+    expect(normalizeDownloadUrl('')).toBe('');
+    expect(normalizeDownloadUrl(null)).toBe('');
   });
 });

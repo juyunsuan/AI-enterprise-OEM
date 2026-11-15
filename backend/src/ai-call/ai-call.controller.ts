@@ -4,7 +4,7 @@ import { CurrentUser } from '../auth/current-user';
 import { AiCallAccountService } from './ai-call-account.service';
 
 /**
- * AI 调用账号界面侧接口（登录态）：Workbuddy 企业云页内的「AI 调用账号」页签用。
+ * AI 调用账号界面侧接口（登录态）：Workbuddy 企业版页内的「AI 调用账号」页签用。
  * 每个账号只看到自己的凭据；平台管理员也不代看他人明文。
  */
 export class AiCallController {

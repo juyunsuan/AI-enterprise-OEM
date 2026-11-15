@@ -61,7 +61,9 @@ export const FEATURE_SEED: FeatureSeedNode[] = [
   // ---------- 工作台 ----------
   group('workbench', '工作台', 10),
   menu('agent', 'workbench', 'Agent', '/agent', 10),
-  menu('workbuddy', 'workbench', 'Workbuddy 企业云', '/workbuddy', 20),
+  group('agent-bot', 'Agent-Bot', 25, 'workbench'),
+  menu('bot-hosts', 'agent-bot', 'Bot 主机', '/bot/hosts', 10),
+  menu('workbuddy', 'agent-bot', 'Workbuddy 企业版', '/workbuddy', 20),
   menu('data-table', 'workbench', '多维表格', '/data-table', 30),
   menu('rpa', 'workbench', 'RPA自动化', '/rpa', 40),
   group('content-creation', '内容创作', 50, 'workbench'),
@@ -77,6 +79,14 @@ export const FEATURE_SEED: FeatureSeedNode[] = [
     30,
   ),
   menu('marketing-tools', 'workbench', '营销工具', '/marketing-tools', 60),
+  // GEO 独立站建站器是 GEO 卡片内的一个页签，单独成码：关掉只停建站，不影响可见度报告与采集
+  menu(
+    'geo-site',
+    'marketing-tools',
+    'GEO 独立站建站',
+    '/marketing-tools?tab=geo-site',
+    20,
+  ),
   // 企微 SCRM 是营销工具页内的一张工具卡（8 个页签），单独建 code 以便整卡关闭
   menu(
     'wecom-scrm',
@@ -171,6 +181,8 @@ export const FEATURE_SEED: FeatureSeedNode[] = [
 export const FEATURE_API_PREFIXES: Record<string, string[]> = {
   agent: ['/enterprise/agent', '/enterprise/skillhub'],
   workbuddy: ['/enterprise/workbuddy'],
+  // 主机域前缀与 /enterprise/workbuddy 不同段（匹配要求前缀后紧跟 /），单独成码可只关主机通道
+  'bot-hosts': ['/enterprise/bot-hosts'],
   'data-table': ['/enterprise/data-tables'],
   rpa: ['/enterprise/rpa'],
   // 内容创作聚合页板块：PDP 详情页工具与多平台分发都归这一块；digital-assets 单独由 assets 接管（最长前缀）
@@ -189,6 +201,8 @@ export const FEATURE_API_PREFIXES: Record<string, string[]> = {
   community: ['/enterprise/community'],
   // 视频模版单独成码：前缀比 /enterprise/content 长，关闭模版不影响其它内容工具
   'video-templates': ['/enterprise/content/video-templates'],
+  // GEO 独立站建站器单独成码：前缀比 /enterprise/geo 长，关掉建站不影响 GEO 监测与采集
+  'geo-site': ['/enterprise/geo/site'],
   // 营销工具聚合页的独立后端域（达人建联走共享 connections 通道，不映射）
   'marketing-tools': [
     '/enterprise/geo',

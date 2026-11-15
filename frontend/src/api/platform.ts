@@ -29,6 +29,8 @@ export interface SiteConfig {
   siteUrl?: string;
   /** 顶部统一 Chrome 插件入口总开关 */
   extensionEntryEnabled?: boolean;
+  /** 顶部「下载客户端」入口的下载地址（http(s) 或站内路径）：留空即不显示图标 */
+  clientDownloadUrl?: string;
 }
 
 export type ExtensionInfo = {
@@ -72,6 +74,7 @@ const siteSchema = apiEnvelope(
     defaultLanguage: z.string().optional(),
     siteUrl: z.string().optional(),
     extensionEntryEnabled: z.boolean().optional(),
+    clientDownloadUrl: z.string().optional(),
   }),
 );
 

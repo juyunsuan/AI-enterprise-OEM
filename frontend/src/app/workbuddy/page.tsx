@@ -2,8 +2,8 @@
 
 import {
   KeyOutlined,
+  MessageOutlined,
   LockOutlined,
-  RobotOutlined,
   ScheduleOutlined,
 } from "@ant-design/icons";
 import { ConfigProvider, Skeleton } from "antd";
@@ -11,59 +11,51 @@ import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { Notice, PageHero } from "@/components/ui/panel";
 import { AccountPanel } from "./_components/account-panel";
-import { AgentPanel } from "./_components/agent-panel";
+import { CloudChatPanel } from "./_components/cloud-chat-panel";
+import { CloudSchedulePanel } from "./_components/cloud-schedule-panel";
 import { AccountPanel as AiCallAccountPanel } from "./_components/ai-call/account-panel";
 import { aiCallApi, type AiCallAccount } from "./_components/ai-call/common";
 import { AiCallGuideButton } from "./_components/ai-call/usage-guide";
 import {
   workbuddyApi,
   type WbAccount,
-  type WbPlan,
 } from "./_components/common";
-import { PlanPanel } from "./_components/plan-panel";
 import { WorkbuddyGuideButton } from "./_components/usage-guide";
 
 /**
- * Workbuddy 企业云（「工作台」栏目 · 按用户归属）：四个页签＝计划任务 / Agent /
- * Workbuddy Enterprise 账号 / AI 调用账号。
+ * Workbuddy 企业版（「工作台」栏目 · 按用户归属），布局与语义对齐 Bot 主机：
+ * 账号对话 / 定时任务 / Workbuddy Enterprise 账号 / AI 调用账号。
  *
- * 每个用户在「Workbuddy Enterprise 账号」里填自己的腾讯云 SecretId / SecretKey，用哪把密钥签名就只
- * 看得到那个企业名下的 Agent 与会话（隔离由腾讯云侧完成）；一个用户可以配多把密钥，
- * 计划拆解后把任务轮流分到多个账号的 Agent 上并行执行。计划任务走「口水话 → AI 澄清
- * 任务书 → 拆成逐条任务 → 派发到 Agent 会话 → 同步消息事件」，AI 澄清用的是全站统一的
- * API Key（在「API Key 管理」生成）。
+ * 一个 Workbuddy Enterprise 账号（腾讯云 SecretId / SecretKey）等同于一台 Bot 主机：
+ * 选中账号与云端 Agent 直接对话，或把每天要做的事排成定时任务，到点由平台按该账号
+ * 向云端 Agent 下发一轮。云端 Agent 的清单、版本与会话都按密钥隔离在腾讯云侧；
+ * 平台只保存调用凭据、指令与运行记录，用户离职后凭据即刻作废。
  *
  * 「AI 调用账号」是同一套账号体系下的第三方平台凭据库：每条凭据必须绑定到一个或多个
- * Workbuddy Enterprise 账号，任务在哪个 Workbuddy 账号下运行就只能取与该账号绑定的凭据，
- * 因此与 Workbuddy 收在同一个页面，不再单开入口。
+ * Workbuddy Enterprise 账号，任务在哪个 Workbuddy 账号下运行就只能取与该账号绑定的凭据。
  */
 export default function WorkbuddyPage() {
-  const [tab, setTab] = useState("plans");
+  const [tab, setTab] = useState("chat");
   // 阻断提示直达：/workbuddy?tab=accounts 定位到账号页签
   const wantedTab = useSearchParams().get("tab") || "";
   useEffect(() => {
-    if (["plans", "agents", "accounts", "ai-call"].includes(wantedTab)) setTab(wantedTab);
+    // 旧页签已下架：planes/agents 一律回落到仍存在的入口。
+    if (wantedTab === "agents" || wantedTab === "plans") setTab("accounts");
+    else if (["accounts", "ai-call", "chat", "schedules"].includes(wantedTab)) setTab(wantedTab);
   }, [wantedTab]);
-  const [plans, setPlans] = useState<WbPlan[]>([]);
   const [accounts, setAccounts] = useState<WbAccount[]>([]);
   const [aiCallAccounts, setAiCallAccounts] = useState<AiCallAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const reload = useCallback(async () => {
-    const [planResult, accountResult, aiCallResult] = await Promise.all([
-      workbuddyApi.plans(),
+    const [accountResult, aiCallResult] = await Promise.all([
       workbuddyApi.accounts(),
       aiCallApi.accounts(),
     ]);
-    setPlans(planResult.data?.items ?? []);
     setAccounts(accountResult.data ?? []);
     setAiCallAccounts(aiCallResult.data ?? []);
-    setError(
-      [planResult.message, accountResult.message, aiCallResult.message]
-        .filter(Boolean)
-        .join("；"),
-    );
+    setError([accountResult.message, aiCallResult.message].filter(Boolean).join("；"));
     setLoading(false);
   }, []);
 
@@ -74,25 +66,16 @@ export default function WorkbuddyPage() {
   return (
     <ConfigProvider button={{ autoInsertSpace: false }}>
       <PageHero
-        title="Workbuddy 企业云"
-        desc="先和 AI 把目标、交付物、验收标准与步骤聊清楚，形成任务书，再拆成逐条任务派给腾讯云侧合适的 Agent 执行，消息与工具调用回传到本系统查看。Agent、版本、会话都在你自己的腾讯云 Workbuddy 企业云账号下，本系统只保存调用凭据与任务记录；每个用户填自己的 SecretId / SecretKey，互不相通。可以配多把密钥，把任务并行分给多个账号的 Agent 加速。AI 澄清使用「API Key 管理」里平台 API Key（AIworkin 签发的 sk- Key）。「AI 调用账号」页签集中加密保存第三方平台的口令、API Key 与 Cookie，每条凭据按 Workbuddy Enterprise 账号授权，任务运行时经机器通道按绑定取用"
+        title="Workbuddy 企业版"
+        desc="企云账号等同于 Bot 主机：一个 Workbuddy Enterprise 账号（腾讯云 SecretId / SecretKey）就是一条执行通道，选中账号与云端 Agent 直接对话，或把每天要做的事排成定时任务，到点由平台按该账号下发一轮。云端 Agent 的清单、版本与会话都在你自己的腾讯云 Workbuddy 企业版下，平台只保存调用凭据、指令与运行记录，每个用户填自己的密钥、互不相通。「AI 调用账号」页签集中加密保存第三方平台的口令、API Key 与 Cookie，按 Workbuddy Enterprise 账号授权，任务运行时经机器通道按绑定取用"
         tabs={[
           {
-            key: "plans",
-            label: (
-              <>
-                <ScheduleOutlined aria-hidden /> 计划任务
-              </>
-            ),
-            count: plans.length,
+            key: "chat",
+            label: <><MessageOutlined aria-hidden /> 账号对话</>,
           },
           {
-            key: "agents",
-            label: (
-              <>
-                <RobotOutlined aria-hidden /> 云端Agent
-              </>
-            ),
+            key: "schedules",
+            label: <><ScheduleOutlined aria-hidden /> 定时任务</>,
           },
           {
             key: "accounts",
@@ -130,10 +113,10 @@ export default function WorkbuddyPage() {
 
       {loading ? (
         <Skeleton active paragraph={{ rows: 6 }} />
-      ) : tab === "plans" ? (
-        <PlanPanel plans={plans} accounts={accounts} reload={reload} />
-      ) : tab === "agents" ? (
-        <AgentPanel accounts={accounts} />
+      ) : tab === "chat" ? (
+        <CloudChatPanel accounts={accounts} />
+      ) : tab === "schedules" ? (
+        <CloudSchedulePanel accounts={accounts} />
       ) : tab === "accounts" ? (
         <AccountPanel accounts={accounts} reload={reload} />
       ) : (

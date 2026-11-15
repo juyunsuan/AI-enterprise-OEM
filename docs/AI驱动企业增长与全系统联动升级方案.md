@@ -1,9 +1,9 @@
 # AI 驱动企业增长与全系统联动升级方案
 
-> 版本：v0.1（方案稿，待确认）
-> 日期：2026-11-07
+> 版本：v0.1（方案稿）
+> 日期：2026-11-07（2026-11-12 校准状态行：方案已确认并落地）
 > 范围：OKR 2.0 / 项目铁三角 / 外部资源协作 / 全系统 AI 化 / 模块联动 / 统一抽象 / UI 与代码整改
-> 状态：**仅规划，未改代码**。确认后按「一次交付、内部排序」执行，不在每个模块结束反复追问。
+> 状态：**已实施**（Batch 0–6 于 2026-11-08 一次交付，交付证据见 §十一；技术验收指标见 §12.2——`backend/src/http/routes.ts` 183 行、`okr.service.ts` 374 行、`project.service.ts` 216 行，`antd <Tabs>` 业务页为 0，逃逸计数 6/6 未新增）。§〇 与 §一 是**2026-11-07 成文时点的现状审计**（保留原文作为改造前的对照），不代表当前状态。
 > 关联文档：
 > - [系统AI底座优化升级方案.md](file:///E:/wwwroot/oem-enterprise/docs/系统AI底座优化升级方案.md)：P0 底座、P1-A 知识库、P1-B 多维表格已落地；P1-C/D、P2 仍在推进。本方案不重复设计，只做**业务联动与统一抽象**，并把 AI 底座作为承重墙引用。
 > - [企微SCRM一体化方案.md](file:///E:/wwwroot/oem-enterprise/docs/企微SCRM一体化方案.md)、[营销获客智能体设计方案.md](file:///E:/wwwroot/oem-enterprise/docs/营销获客智能体设计方案.md)、[营销工具SEO增强设计方案.md](file:///E:/wwwroot/oem-enterprise/docs/营销工具SEO增强设计方案.md)、[借鉴Gauzy一体化升级方案.md](file:///E:/wwwroot/oem-enterprise/docs/借鉴Gauzy一体化升级方案.md)

@@ -18,6 +18,7 @@ import { projectSource } from './sources/project.source';
 import { taxSource } from './sources/tax.source';
 import { riskSource } from './sources/risk.source';
 import { rpaBrowserSource } from './sources/rpa.source';
+import { botHostSource } from './sources/bot-host.source';
 
 /** 板块源复用各板块自己的身份域列表，需要板块服务与身份服务（其余 7 个存量源只读 prisma）。 */
 export interface BoardSourceDeps {
@@ -31,7 +32,7 @@ export interface BoardSourceDeps {
   chrome?: () => ChromeAgentService | undefined;
 }
 
-/** 接入的 10 个存量源：账号级聚合，各源只读，不改各模块授权语义。 */
+/** 接入的 13 个源：账号级聚合，各源只读，不改各模块授权语义。 */
 export function registerTaskSources(
   registry: TaskSourceRegistry,
   prisma: PrismaService,
@@ -49,5 +50,6 @@ export function registerTaskSources(
     .register(logisticsSource(boards.logistics, boards.identity))
     .register(taxSource(boards.tax, boards.identity))
     .register(riskSource(boards.risks || (() => undefined)))
-    .register(rpaBrowserSource(boards.chrome || (() => undefined)));
+    .register(rpaBrowserSource(boards.chrome || (() => undefined)))
+    .register(botHostSource(prisma));
 }

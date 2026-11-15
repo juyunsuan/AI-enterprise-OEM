@@ -183,6 +183,7 @@ export class McpService {
       case 'browser_agent_result':
       case 'browser_agent_stop':
       case 'browser_extract':
+      case 'browser_collect_to_table':
       case 'browser_skill_list':
       case 'browser_skill_run':
         return this.browserAgent(user, toolName, input);
@@ -190,7 +191,7 @@ export class McpService {
   }
 
   /**
-   * 浏览器代理七件套：语义层自己判定在线闸与业务含义，MCP 这一层只做信封转换。
+   * 浏览器代理八件套：语义层自己判定在线闸与业务含义，MCP 这一层只做信封转换。
    * 发起/抽取/运行技能/停止都是改状态的动作，沿用在其他写工具上的无人值守闸——
    * 半夜的定时任务不能因为远端一句话就把用户的浏览器接管过去。
    */

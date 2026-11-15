@@ -90,6 +90,31 @@ export class RpaChromeController {
     return ok(await this.devices.saveSettings(user, body));
   }
 
+  // ---------- 能力缺口台账（N18） ----------
+
+  async gaps(user: CurrentUser, query: Record<string, unknown>) {
+    return ok({
+      list: await this.devices.listGaps(
+        user.userId,
+        Math.round(Number(query.limit) || 50),
+      ),
+    });
+  }
+
+  async reportGap(user: CurrentUser, body: Record<string, unknown>) {
+    return ok(
+      await this.devices.reportGap(
+        {
+          id: 0,
+          userId: user.userId,
+          clientId: text(body.clientId).trim().slice(0, 64),
+          name: '',
+        },
+        body,
+      ),
+    );
+  }
+
   // ---------- 浏览器代理台账（会话 / 消息 / 技能 / 录制 / 抽取） ----------
 
   async agents(user: CurrentUser, query: Record<string, unknown>) {
@@ -144,6 +169,11 @@ export class RpaChromeController {
 
   async saveExtract(user: CurrentUser, body: Record<string, unknown>) {
     return ok({ extract: await this.library.saveExtract(user, body) });
+  }
+
+  /** 采集结果落多维表格：与云端会话落表同一份原子实现，只是发起人是点击按钮的用户本人。 */
+  async landRows(user: CurrentUser, body: Record<string, unknown>) {
+    return ok(await this.agent.landUserRows(user, body));
   }
 
   // ---------- 计划任务（浏览器代理定时） ----------

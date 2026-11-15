@@ -522,6 +522,15 @@ export class PointsService {
     }
   }
 
+  /** 轻量余额：只查账户行、不存在按 0（心跳/客户端概览高频读取，不在这里建账）。 */
+  async balance(userId: string) {
+    const row = await this.prisma.pointAccount.findUnique({
+      where: { userId },
+      select: { balanceAmount: true },
+    });
+    return row ? toNum(row.balanceAmount) : 0;
+  }
+
   /** 账户总览：余额 + 三项累计 + 状态。 */
   async summary(userId: string) {
     const account = await this.ensureAccount(userId);

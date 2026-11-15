@@ -1,16 +1,24 @@
 "use client";
 
-import { CheckOutlined, SettingOutlined } from "@ant-design/icons";
-import { App, Button, Switch } from "antd";
+import {
+  CheckOutlined,
+  SettingOutlined,
+} from "@ant-design/icons";
+import { App, Button, Drawer, Switch } from "antd";
 import { useMemo, useState } from "react";
 import {
   EmptyState,
   Notice,
-  Panel,
   PanelTabs,
   PillTabs,
 } from "@/components/ui/panel";
 import { ROUTE_ICONS } from "@/components/pro/pro-layout";
+import {
+  DASHBOARD_SECTION_HINTS,
+  DASHBOARD_SECTION_KEYS,
+  DASHBOARD_SECTION_LABELS,
+  type DashboardSectionKey,
+} from "@/config/dashboard-sections";
 import { navigationFor, type EnterpriseRoute } from "@/config/routes";
 import { useI18n } from "@/lib/i18n/i18n";
 import { useSession } from "@/lib/session";
@@ -18,8 +26,9 @@ import { useSiteBrand } from "@/lib/site-brand";
 import { usePersonalization } from "@/lib/personalization";
 
 /**
- * 驾驶舱「个性化设置」：把「系统里要有哪些菜单」与「整体风格」两件事收在一处，
- * 取代原先右上角齿轮从右侧滑出的风格设置层。菜单显隐是账号级（跨设备），风格设置仍只存本机。
+ * 驾驶舱「个性化设置」抽屉：把「系统里要有哪些菜单」「首页要显示哪些板块」「整体风格」
+ * 三件事收在一处，由驾驶舱右上角的「个性化设置」按钮打开。
+ * 菜单与板块显隐是账号级（跨设备），风格设置仍只存本机浏览器。
  */
 
 /** 可配置的板块：其余分组（模型服务 / 管理设置 / 商务人脉等）与驾驶舱不开放个人显隐。 */
@@ -63,7 +72,17 @@ function leafPaths(node: MenuNode): string[] {
   return node.children.flatMap(leafPaths);
 }
 
-export function PersonalizationSettings() {
+/**
+ * 抽屉主体：内部自带页签，不渲染成 Panel（抽屉已有标题，避免双重标题）。
+ * 由调用方用 `<PersonalizationDrawer>` 打开。
+ */
+export function PersonalizationDrawer({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
   const { message } = App.useApp();
   const { t } = useI18n();
   const { me } = useSession();
@@ -75,12 +94,20 @@ export function PersonalizationSettings() {
     hiddenMenuPaths,
     saveHiddenMenuPaths,
     menusSaving,
+    hiddenSections,
+    saveHiddenSections,
+    sectionsSaving,
   } = usePersonalization();
 
   const [tab, setTab] = useState("menu");
-  const [draft, setDraft] = useState<string[] | null>(null);
-  const dirty = draft !== null;
-  const active = draft ?? hiddenMenuPaths;
+  const [menuDraft, setMenuDraft] = useState<string[] | null>(null);
+  const menuDirty = menuDraft !== null;
+  const menuActive = menuDraft ?? hiddenMenuPaths;
+
+  const [sectionDraft, setSectionDraft] = useState<string[] | null>(null);
+  const sectionDirty = sectionDraft !== null;
+  const sectionActive = sectionDraft ?? hiddenSections;
+  const sectionActiveSet = useMemo(() => new Set(sectionActive), [sectionActive]);
 
   /** 目录 = 当前身份可见菜单里的可配置分组（站点显隐 + 身份过滤已生效）。 */
   const groups = useMemo(() => {
@@ -92,33 +119,50 @@ export function PersonalizationSettings() {
       .map(toNode);
   }, [me, brand.hiddenMenuPaths]);
 
-  const activeSet = useMemo(() => new Set(active), [active]);
+  const menuActiveSet = useMemo(() => new Set(menuActive), [menuActive]);
   const iconOf = (node: MenuNode) =>
     node.icon ? ROUTE_ICONS[node.icon as keyof typeof ROUTE_ICONS] : null;
 
   const setLeaf = (path: string, visible: boolean) => {
-    const next = new Set(active);
+    const next = new Set(menuActive);
     if (visible) next.delete(path);
     else next.add(path);
-    setDraft([...next]);
+    setMenuDraft([...next]);
   };
 
   const setGroup = (node: MenuNode, visible: boolean) => {
-    const next = new Set(active);
+    const next = new Set(menuActive);
     for (const path of leafPaths(node)) {
       if (visible) next.delete(path);
       else next.add(path);
     }
-    setDraft([...next]);
+    setMenuDraft([...next]);
   };
 
   const saveMenus = async () => {
-    const ok = await saveHiddenMenuPaths(active);
+    const ok = await saveHiddenMenuPaths(menuActive);
     if (ok) {
       message.success("菜单设置已保存");
-      setDraft(null);
+      setMenuDraft(null);
     } else {
       message.error("菜单设置保存失败，请重试");
+    }
+  };
+
+  const setSection = (key: DashboardSectionKey, visible: boolean) => {
+    const next = new Set(sectionActive);
+    if (visible) next.delete(key);
+    else next.add(key);
+    setSectionDraft([...next]);
+  };
+
+  const saveSections = async () => {
+    const ok = await saveHiddenSections(sectionActive);
+    if (ok) {
+      message.success("首页板块已保存");
+      setSectionDraft(null);
+    } else {
+      message.error("首页板块保存失败，请重试");
     }
   };
 
@@ -130,7 +174,7 @@ export function PersonalizationSettings() {
       <div className="ps-grid">
         {groups.map((group) => {
           const paths = leafPaths(group);
-          const visibleCount = paths.filter((path) => !activeSet.has(path)).length;
+          const visibleCount = paths.filter((path) => !menuActiveSet.has(path)).length;
           return (
             <div className="ps-group" key={group.key}>
               <div className="ps-group-head">
@@ -157,7 +201,7 @@ export function PersonalizationSettings() {
                         <Switch
                           size="small"
                           checked={leafPaths(child).some(
-                            (path) => !activeSet.has(path),
+                            (path) => !menuActiveSet.has(path),
                           )}
                           onChange={(checked) => setGroup(child, checked)}
                           aria-label={`${child.name}：全部隐藏或显示`}
@@ -168,7 +212,7 @@ export function PersonalizationSettings() {
                           key={leaf.key}
                           node={leaf}
                           icon={iconOf(leaf)}
-                          visible={!activeSet.has(leaf.path || "")}
+                          visible={!menuActiveSet.has(leaf.path || "")}
                           onToggle={setLeaf}
                           label={t(leaf.name)}
                         />
@@ -179,7 +223,7 @@ export function PersonalizationSettings() {
                       key={child.key}
                       node={child}
                       icon={iconOf(child)}
-                      visible={!activeSet.has(child.path || "")}
+                      visible={!menuActiveSet.has(child.path || "")}
                       onToggle={setLeaf}
                       label={t(child.name)}
                     />
@@ -194,13 +238,13 @@ export function PersonalizationSettings() {
         <Button
           type="primary"
           loading={menusSaving}
-          disabled={!dirty}
+          disabled={!menuDirty}
           onClick={() => void saveMenus()}
         >
           保存菜单
         </Button>
-        <Button onClick={() => setDraft([])}>恢复默认（全部显示）</Button>
-        {dirty ? (
+        <Button onClick={() => setMenuDraft([])}>恢复默认（全部显示）</Button>
+        {menuDirty ? (
           <span className="text-12 muted">有未保存的修改</span>
         ) : (
           <span className="text-12 muted">已与账号同步</span>
@@ -356,24 +400,58 @@ export function PersonalizationSettings() {
     </div>
   );
 
+  const sectionTab = (
+    <div>
+      <Notice variant="info">
+        {`取消勾选的板块会从驾驶舱隐藏；把开关重新打开即可恢复，不会丢失数据。这里只列本页会出现的板块。`}
+      </Notice>
+      <div className="ps-sections">
+        {DASHBOARD_SECTION_KEYS.map((key) => (
+          <div className="ps-field" key={key}>
+            <div>
+              <div className="ps-field-label">{DASHBOARD_SECTION_LABELS[key]}</div>
+              <div className="ps-field-hint">{DASHBOARD_SECTION_HINTS[key]}</div>
+            </div>
+            <Switch
+              size="small"
+              checked={!sectionActiveSet.has(key)}
+              onChange={(checked) => setSection(key, checked)}
+              aria-label={`${DASHBOARD_SECTION_LABELS[key]}：显示或隐藏`}
+            />
+          </div>
+        ))}
+      </div>
+      <div className="ps-actions">
+        <Button
+          type="primary"
+          loading={sectionsSaving}
+          disabled={!sectionDirty}
+          onClick={() => void saveSections()}
+        >
+          保存首页板块
+        </Button>
+        <Button onClick={() => setSectionDraft([])}>恢复默认（全部显示）</Button>
+        {sectionDirty ? (
+          <span className="text-12 muted">有未保存的修改</span>
+        ) : (
+          <span className="text-12 muted">已与账号同步</span>
+        )}
+      </div>
+    </div>
+  );
+
   return (
-    <Panel
-      title="个性化设置"
-      titleBadge={
-        <span className="text-12 muted">
-          按需精简左侧菜单，并调整整体风格
-        </span>
-      }
-    >
+    <Drawer title="个性化设置" size={620} open={open} onClose={onClose} destroyOnHidden>
       <PanelTabs
         value={tab}
         onChange={setTab}
         items={[
           { key: "menu", label: "菜单配置", children: menuTab },
+          { key: "section", label: "首页板块", children: sectionTab },
           { key: "style", label: "整体风格", children: styleTab },
         ]}
       />
-    </Panel>
+    </Drawer>
   );
 }
 

@@ -47,6 +47,9 @@ function session(over: Partial<RcSessionView> = {}): RcSessionView {
     stepCount: 0,
     maxSteps: 25,
     model: '',
+    persist: 'none',
+    persistLabel: '只回对话',
+    tableId: 0,
     stopReason: '',
     startedAt: now,
     endedAt: null,
@@ -186,6 +189,41 @@ describe('BrowserAgentToolsService', () => {
     expect(body['mode']).toBe('extract');
     expect(String(body['goal'])).toContain('把搜索结果抽成表格');
     expect(String(body['goal'])).toContain('字段：标题、价格');
+  });
+
+  it('一句话采集进表：表头与幂等锚随会话落库口径下发，缺目标表即拒', async () => {
+    const { service, startCalls } = build({ devices: [device({})] });
+    const missing = await service.run(user, 'browser_collect_to_table', {
+      goal: '把昆明药店收进表格',
+    });
+    expect(missing?.ok).toBe(false);
+    expect(String(missing?.message)).toContain('目标多维表格');
+    expect(startCalls).toHaveLength(0);
+
+    const result = await service.run(user, 'browser_collect_to_table', {
+      goal: '把昆明药店收进表格',
+      table_name: '昆明药店',
+      fields: [
+        { name: '药店名称' },
+        { name: '电话', key: 'phone', type: 'text' },
+      ],
+      dedup_by: ['药店名称', 'address'],
+      start_url: 'https://map.baidu.com',
+    });
+    expect(result?.ok).toBe(true);
+    const body = startCalls[0];
+    expect(body['persist']).toBe('table');
+    expect(body['tableName']).toBe('昆明药店');
+    expect(body['fields']).toEqual([
+      { name: '药店名称' },
+      { name: '电话', key: 'phone', type: 'text' },
+    ]);
+    expect(body['dedupBy']).toEqual(['药店名称', 'address']);
+    expect(body['startUrl']).toBe('https://map.baidu.com');
+    // 目标里把「整批放进哪张表、表头要对上、按什么查重」讲清，模型不需要再复述行数据
+    expect(String(body['goal'])).toContain('整批放进多维表格「昆明药店」');
+    expect(String(body['goal'])).toContain('药店名称、电话');
+    expect(String(body['goal'])).toContain('药店名称 + address');
   });
 
   it('运行技能：按名称取正文当目标，站点补协议当起始地址', async () => {

@@ -34,6 +34,17 @@ function normalizeMenuPaths(value: unknown): string[] {
 }
 
 /**
+ * 客户端下载地址：只认 http(s) 绝对地址或站内路径（/downloads/...），
+ * 其它写法（javascript:、协议相对、带空白）一律当没填，避免把脏链接放到顶栏。
+ */
+export function normalizeDownloadUrl(value: unknown): string {
+  const raw = typeof value === 'string' ? value.trim().slice(0, 512) : '';
+  if (!raw) return '';
+  if (raw.startsWith('/') && !raw.startsWith('//')) return raw;
+  return /^https?:\/\/\S+$/i.test(raw) ? raw : '';
+}
+
+/**
  * 「业务服务」板块（与前端 routes.ts 该分组同源）：管理员可逐板块隐藏「需求信息 / 服务市集」两个页签。
  * 值取 `<板块>:<角色>`（角色 demand＝需求信息 / services＝服务市集），如 `marketing:services`。
  */
@@ -99,6 +110,11 @@ export interface SiteSettings {
    * 插件使用说明不受影响）；平台未发布插件包时入口同样不展示。
    */
   extensionEntryEnabled: boolean;
+  /**
+   * 顶部「下载客户端」入口的下载地址：管理员填了才在顶栏展示图标，点击直接打开该地址。
+   * 留空＝不展示入口；只接受 http(s) 绝对地址或站内路径。
+   */
+  clientDownloadUrl: string;
 }
 
 /**
@@ -135,6 +151,7 @@ export class SiteSettingsService {
       // 部署期兜底域名：管理员在后台改过之后以库里的值为准。
       siteUrl: normalizeSiteUrl(process.env.SITE_URL),
       extensionEntryEnabled: true,
+      clientDownloadUrl: normalizeDownloadUrl(process.env.CLIENT_DOWNLOAD_URL),
     };
   }
 
@@ -184,6 +201,10 @@ export class SiteSettingsService {
             : base.siteUrl,
         // 只有管理员显式关过才隐藏；历史配置没有该字段时保持默认展示
         extensionEntryEnabled: stored.extensionEntryEnabled !== false,
+        clientDownloadUrl:
+          stored.clientDownloadUrl !== undefined
+            ? normalizeDownloadUrl(stored.clientDownloadUrl)
+            : base.clientDownloadUrl,
       };
     } catch {
       return base;
@@ -250,6 +271,10 @@ export class SiteSettingsService {
         body.extensionEntryEnabled !== undefined
           ? body.extensionEntryEnabled === true
           : current.extensionEntryEnabled,
+      clientDownloadUrl:
+        body.clientDownloadUrl !== undefined
+          ? normalizeDownloadUrl(body.clientDownloadUrl)
+          : current.clientDownloadUrl,
     };
     await this.prisma.systemSetting.upsert({
       where: { key: SiteSettingsService.SITE_KEY },

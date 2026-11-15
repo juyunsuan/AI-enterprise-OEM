@@ -256,7 +256,8 @@ export class ContentAgentService {
 
   async listConversations(user: CurrentUser) {
     const rows = await this.prisma.contentAgentConversation.findMany({
-      where: { userId: user.userId },
+      // 只列 Agent 自己的会话：Bot 主机对话同表不同台面（scene=workbuddy_host）。
+      where: { userId: user.userId, scene: 'agent' },
       orderBy: { updatedAt: 'desc' },
       take: 50,
     });
@@ -312,7 +313,7 @@ export class ContentAgentService {
       throw new BusinessException(ErrorCode.BAD_REQUEST, '会话编号无效');
     }
     const row = await this.prisma.contentAgentConversation.findFirst({
-      where: { id: conversationId, userId: user.userId },
+      where: { id: conversationId, userId: user.userId, scene: 'agent' },
     });
     if (!row) throw new BusinessException(ErrorCode.NOT_FOUND, '会话不存在');
     return row;

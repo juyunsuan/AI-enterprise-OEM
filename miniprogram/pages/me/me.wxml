@@ -1,0 +1,50 @@
+<view class="page">
+  <view wx:if="{{!loggedIn}}" class="card">
+    <view class="title">未登录</view>
+    <view class="muted" style="margin-top: 12rpx">登录后可查看身份与绑定状态。</view>
+    <view class="btn btn-block" bindtap="goLogin">去登录</view>
+  </view>
+
+  <block wx:else>
+    <view class="card">
+      <view class="title">{{me.displayName || me.username}}</view>
+      <view class="muted" style="margin-top: 8rpx">账号：{{me.username}}</view>
+      <view class="muted">当前身份：{{currentIdentityLabel}}</view>
+    </view>
+
+    <view class="card" wx:if="{{identities.length > 1}}">
+      <view class="title">切换身份</view>
+      <view class="row wrap" style="margin-top: 16rpx">
+        <view
+          class="chip {{item.on ? 'chip-on' : ''}}"
+          wx:for="{{identities}}"
+          wx:key="key"
+          bindtap="onSwitchIdentity"
+          data-key="{{item.key}}"
+        >{{item.label}}</view>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="title">小程序绑定</view>
+      <view class="kv"><view class="kv-k">状态</view><view class="kv-v">{{status.bound ? '已绑定' : '未绑定'}}</view></view>
+      <view class="kv" wx:if="{{status.bound}}"><view class="kv-k">微信标识</view><view class="kv-v">{{status.openIdMasked}}</view></view>
+      <view class="kv" wx:if="{{status.boundAtText}}"><view class="kv-k">绑定时间</view><view class="kv-v">{{status.boundAtText}}</view></view>
+      <view class="btn btn-plain btn-block" wx:if="{{!status.bound}}" bindtap="onBind">绑定当前微信</view>
+    </view>
+
+    <view class="card">
+      <view class="title">服务器地址</view>
+      <view class="muted">接口所在域名，仅在需要更换时修改。</view>
+      <view class="server-field">
+        <input class="input" value="{{apiBase}}" bindinput="onApiBase" />
+        <view class="btn btn-plain" bindtap="onSaveApiBase">保存</view>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="btn btn-block btn-danger" bindtap="onLogout">退出登录</view>
+    </view>
+  </block>
+  <view class="footer-gap"></view>
+</view>

@@ -3,10 +3,19 @@ import { Prisma } from '../../generated/prisma';
 import {
   RC_AGENT_MODE_LABELS,
   RC_AGENT_MODES,
+  RC_AGENT_QUEUE_MAX,
+  RC_PERSIST_MODES,
+  RC_PERSIST_MODE_LABELS,
   RC_SESSION_STATUS_LABELS,
   mcpOperations,
+  rcActionMenuLines,
+  rcCapabilityGapNote,
+  rcWithElementName,
   rcSessionTerminal,
+  type DataTableLandRowsResult,
   type RcAgentDecision,
+  type RcAgentExpect,
+  type RcAgentPlanStep,
   type RcSessionView,
   type RcStepView,
   type RcToolCall,
@@ -28,6 +37,8 @@ import {
   type ChromeDevicePrincipal,
   type ChromeSettings,
 } from './chrome-device.service';
+import { normalizeGap, recordChromeGap } from './chrome-gap';
+import { landingOf, normalizeLanding, pickPersist } from './chrome-landing';
 import type { RpaTaskService } from './rpa-task.service';
 
 /**
@@ -44,36 +55,93 @@ const MAX_CONSECUTIVE_FAILURES = 3;
 const SCREENSHOT_MAX_BYTES = 3 * 1024 * 1024;
 const ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024;
 
-const SYSTEM_PROMPT = [
-  '你是浏览器自动化决策器。你看到的是用户本机 Chrome 当前页面的「页面地图」（可见交互元素清单）与最近几步执行历史。',
-  '你每一步只能输出一个 JSON 动作对象，不要输出多余文字。可用动作（闭集，别的动作一律无效）：',
-  '{ "action": "open_tab", "url": "https://..." }  打开新标签页并跳转到该地址',
-  '{ "action": "navigate", "url": "https://..." }  当前页跳转到该地址',
-  '{ "action": "close_tab", "tabId": 123 }  关闭本会话打开的第 123 号标签页（只能关 open_tab 回来的那个 id）',
-  '{ "action": "snapshot" }  读取当前页面地图（不确定页面时先做这个）',
-  '{ "action": "read", "elementIndex": 3 }  读取页面地图中第 3 号元素的文本/属性',
-  '{ "action": "act", "act": "click", "elementIndex": 3 }  点击第 3 号元素',
-  '{ "action": "act", "act": "type", "elementIndex": 4, "value": "文本" }  在第 4 号输入框输入',
-  '{ "action": "act", "act": "select", "elementIndex": 5, "value": "选项文本" }  选择下拉项',
-  '{ "action": "act", "act": "check", "elementIndex": 6, "value": true }  勾选（value=false 为取消勾选）第 6 号复选框/开关',
-  '{ "action": "act", "act": "scroll", "value": "down" }  向下滚动一屏（value 可为 up/down）',
-  '{ "action": "act", "act": "key", "key": "Enter" }  发一次按键（Enter/Tab/Escape 等；可加 elementIndex 指定作用元素，省略则作用于当前焦点）',
-  '{ "action": "act", "act": "submit", "elementIndex": 7 }  提交第 7 号元素所在的表单（属敏感动作，用户需在插件里点确认）',
-  '{ "action": "wait", "ms": 1500 }  等待固定毫秒数',
-  '{ "action": "wait", "target": { "selector": ".result-item" }, "timeoutMs": 8000 }  等某个元素出现再继续（比死等秒数稳，页面异步出结果时优先用这个；selector 也可换成 { "elementIndex": 3 }）',
-  '{ "action": "screenshot" }  截图（用于确认视觉结果）',
-  '{ "action": "finish", "reason": "完成原因" }  目标已达成或无法继续时结束',
-  '优先用 elementIndex 指定元素（比猜选择器可靠）；elementIndex 来自最近一次 snapshot 的页面地图。若目标已达成，立即输出 finish。',
-  'mode 字段表示用户的意图：act 在页面上执行操作、crawl 顺着链接批量抓取多页、extract 把当前页抽成结构化数据；按它调整策略。',
-  '先判断用户意图再决定怎么输出：',
-  '（1）若用户只是提问、闲聊、问你的身份/能力/用法，或要你解释、给建议、做规划而不需要操作页面，就直接输出 { "reply": "给用户的回答" }，不要勉强改动页面。',
-  '（2）若用户的目标需要操作页面：当 confirmed 字段为 false 时，先输出 { "confirm": "说明你打算做的事项与完成方式（要做什么、在哪个站点/页面、怎么做、拿到什么结果，该分步就分步），并问用户是否确认执行" }，本步不要输出任何动作；当 confirmed 为 true（用户已确认）时才逐步给出动作，第一步先给出第一个动作、并在 thought 里一两句说明整体计划，不要只回计划而不动作。',
-  '（3）只有在确实缺少关键信息（如目标站点、关键词、凭据）时才输出 { "question": "要问用户的话" }。',
-  '除页面动作外，还可以调用「平台工具」（本系统自己的接口动作）：{ "tool": { "tool": "工具名", "args": { ... } } }。',
-  '平台工具的 args：读取类填 { "query": { ... }, "pathParams": { ... } }，写入类填 { "body": { ... }, "pathParams": { ... } }；不确定参数就先调 list_operations 查（args 用 { "keyword": "关键词", "limit": 20 }）。',
-  '同一个目标里，页面动作与平台工具可以交替进行（如先在页面抓取，再把结果写回平台）。写类平台工具受本账号授权闸约束，未授权只会回草案——如实告诉用户去授权即可，不要反复重试。',
-  '禁止任何绕过登录/验证码、读取密码、支付或提交敏感内容的行为，除非用户目标明确要求且由用户本人确认。',
-].join('\n');
+/**
+ * 决策提示词（K4：动作菜单由契约 RC_ACTION_SPECS 生成，不再手写第二份清单）。
+ *
+ * `available` 是这台插件实际跑得动的原语（能力目录 ∩ 设备指纹）：菜单按它裁剪，
+ * 并把「当前做不到的动作」明确告诉模型——省得它反复试不存在的动作，也省得它把目标硬凑。
+ */
+function systemPrompt(available?: string[]): string {
+  const gapNote = rcCapabilityGapNote(available);
+  return [
+    '你是浏览器自动化决策器。你看到的是用户本机 Chrome 当前页面的「页面地图」（可见交互元素清单）与最近几步执行历史。',
+    '你每一步只能输出一个 JSON 动作对象，不要输出多余文字。可用动作（闭集，别的动作一律无效）：',
+    ...rcActionMenuLines(available),
+    '优先用 elementIndex 指定元素（比猜选择器可靠）；elementIndex 来自最近一次 snapshot 的页面地图。若目标已达成，立即输出 finish。',
+    ...(gapNote ? [gapNote] : []),
+    'mode 字段表示用户的意图：act 在页面上执行操作、crawl 顺着链接批量抓取多页、extract 把当前页抽成结构化数据；按它调整策略。',
+    '先判断用户意图再决定怎么输出：',
+    '（1）若用户只是提问、闲聊、问你的身份/能力/用法，或要你解释、给建议、做规划而不需要操作页面，就直接输出 { "reply": "给用户的回答" }，不要勉强改动页面。',
+    '（2）若用户的目标需要操作页面：当 confirmed 字段为 false 时，先输出 { "confirm": "说明你打算做的事项与完成方式（要做什么、在哪个站点/页面、怎么做、拿到什么结果，该分步就分步），并问用户是否确认执行" }，本步不要输出任何动作；当 confirmed 为 true（用户已确认）时才逐步给出动作：能一次看清后续多步就用下面的 queue 连跑，否则第一步先给出第一个动作、并在 thought 里一两句说明整体计划，不要只回计划而不给任何动作。',
+    '（3）只有在确实缺少关键信息（如目标站点、关键词、凭据）时才输出 { "question": "要问用户的话" }。',
+    '除页面动作外，还可以调用「平台工具」（本系统自己的接口动作）：{ "tool": { "tool": "工具名", "args": { ... } } }。',
+    '平台工具的 args：读取类填 { "query": { ... }, "pathParams": { ... } }，写入类填 { "body": { ... }, "pathParams": { ... } }；不确定参数就先调 list_operations 查（args 用 { "keyword": "关键词", "limit": 20 }）。',
+    '同一个目标里，页面动作与平台工具可以交替进行（如先在页面抓取，再把结果写回平台）。写类平台工具受本账号授权闸约束，未授权只会回草案——如实告诉用户去授权即可，不要反复重试。',
+    `若一个目标能一次看清接下来的 2–${RC_AGENT_QUEUE_MAX} 步，就把它们连成队列一次给出：{ "plan": "整体计划一两句", "queue": [{ "action": { ... }, "thought": "这一步在做什么", "expect": { "urlIncludes": "地址应包含", "selector": "应出现的元素", "gone": "应消失的元素", "text": "正文应出现" } }] }。expect 是这一步做完后的只读校验（四个都可留空），插件会逐步核对：一旦对不上就停下回来找你重规划，所以只在确有把握时填。队列里的 action 与单步动作同形；需要用户确认的敏感步骤，把它放队列里即可，插件会在跑到它时单独停下等确认。不要既给 queue 又给单个 action。`,
+    'persist 字段表示这次采集产物的去向：none 只在对话里给结果、extract 落采集台账、table 落多维表格。persist 不是 none 时，收割到的行一律用 harvest 的结构化结果直接投递给平台工具（DataTable_landRows 等），不要把行复述成自然语言再让工具重新拼装——复述会丢字段、也会数错行数。',
+    '缺能力时输出 { "gap": { "need": "需要什么能力", "why": "现有动作为什么做不到", "site": "当时站点", "attempted": ["试过什么"], "want": "希望插件补什么" } }，并同时用 finish 或 reply 如实告知用户，不要假装完成。',
+    '禁止任何绕过登录/验证码、读取密码、支付或提交敏感内容的行为，除非用户目标明确要求且由用户本人确认。',
+  ].join('\n');
+}
+
+/**
+ * 连跑队列里一步的「预期」（N14=A）：只收四种只读断言，四个都空视为没给预期。
+ */
+/** 连跑队列里一步的「预期」（N14=A）：只收四种只读断言，四个都空视为没给预期。 */
+export function normalizeExpect(raw: unknown): RcAgentExpect | null {
+  const source = toJsonObject(raw);
+  const expect: RcAgentExpect = {
+    urlIncludes: text(source.urlIncludes).slice(0, 200),
+    text: text(source.text).slice(0, 200),
+    selector: text(source.selector).slice(0, 300),
+    gone: text(source.gone).slice(0, 300),
+  };
+  return expect.urlIncludes || expect.text || expect.selector || expect.gone
+    ? expect
+    : null;
+}
+
+/**
+ * 意图队列（N14=A）：把模型给的多步计划整形成可连跑的步骤串。
+ * 逐步过同一套校验（闭集 / 本机能力 / 敏感闸）；某一步不合法就截断在它之前——
+ * 队列是顺序的，后面的步骤本来也依赖前面成功，留着只会盲跑。
+ * 不足两步时返回空队列，交回单步 action 的老路径，插件行为不变。
+ */
+export function normalizePlanQueue(
+  raw: Record<string, unknown>,
+  available: string[],
+  confirm: (action: Record<string, unknown>) => boolean,
+): { steps: RcAgentPlanStep[]; plan: string } {
+  const list = Array.isArray(raw.queue) ? raw.queue : [];
+  const plan = text(raw.plan).slice(0, 500);
+  const steps: RcAgentPlanStep[] = [];
+  for (const item of list.slice(0, RC_AGENT_QUEUE_MAX)) {
+    const entry = toJsonObject(item);
+    const inner = toJsonObject(entry.action);
+    const action = normalizeDecidedAction(
+      Object.keys(inner).length ? inner : entry,
+    );
+    if (!action) break;
+    const name = text(action.action);
+    if (available.length && !available.includes(name)) break;
+    steps.push({
+      action,
+      thought: text(entry.thought).slice(0, 1000),
+      needsConfirm: confirm(action),
+      expect: normalizeExpect(entry.expect),
+    });
+  }
+  return { steps: steps.length >= 2 ? steps : [], plan };
+}
+
+/**
+ * 队列步骤的一句话描述（模型没给 thought 时的兜底）：动作名 + 目标。
+ */
+function describeQueueStep(action: Record<string, unknown>): string {
+  const name = text(action.action);
+  const target = text(action.selector) || text(action.text) || text(action.url);
+  return target ? `${name}（${target.slice(0, 60)}）` : name;
+}
 
 /**
  * 插件 Agent 可调用的平台工具（契约派生，不写第二份清单）：只取与本场景相关的域。
@@ -84,10 +152,21 @@ const PLATFORM_TOOL_EXCLUDED = /^(RpaChrome_|OpenApi_rpa)/;
 /** 提示词工具的条数上限：够用即可，避免每步决策都为长清单付费。 */
 const PLATFORM_TOOL_LIMIT = 120;
 
+/** 跨域精选放行的工具（落表链路：找表 → 看列 → 起草表头 → 一次写完）。 */
+const PLATFORM_TOOL_INCLUDED = new Set([
+  'DataTable_list',
+  'DataTable_get',
+  'DataTable_aiPlanTable',
+  'DataTable_landRows',
+]);
+
 const PLATFORM_TOOL_ROWS = mcpOperations().filter(
   (row) =>
-    PLATFORM_TOOL_DOMAINS.includes(row.domain) &&
-    !PLATFORM_TOOL_EXCLUDED.test(row.operationId),
+    (PLATFORM_TOOL_DOMAINS.includes(row.domain) &&
+      !PLATFORM_TOOL_EXCLUDED.test(row.operationId)) ||
+    // 采集落表精选（docs/浏览器代理网页采集落表方案.md §五 D）：多维表格域整体不进菜单，
+    // 只放行「定位/新建表 + 起草表头 + 一次落表」这四个，Agent 拿不到删表删列的能力。
+    PLATFORM_TOOL_INCLUDED.has(row.operationId),
 );
 
 /** 额外工具（如本账号已共享的工作流 wf__<id>）：以本人身份按发布版本运行。 */
@@ -140,7 +219,12 @@ function normalizeToolCall(raw: unknown): RcToolCall | null {
   return { tool: name, args, code: text(bag.code).trim().slice(0, 64) };
 }
 
-type Decision = { action: Record<string, unknown>; thought: string };
+type Decision = {
+  action: Record<string, unknown>;
+  thought: string;
+  /** 能力缺口（这台插件做不到时给出）：会话如实收口，台账负责攒补齐清单。 */
+  gap?: ReturnType<typeof normalizeGap>;
+};
 
 /** 任务中心只用到「派发 + 回写状态」两个写入口（与 TaskCenterService 同签名）。 */
 type TaskPort = {
@@ -159,12 +243,33 @@ type TaskPort = {
 const LOGIN_BLOCK_PATTERN =
   /登录|登陆|验证码|风控|安全验证|login|sign\s*in|captcha|risk/i;
 
+/**
+ * 采集落表通道（D8）：引擎只认这一个入口，实现是多维表格服务的「原子落表」。
+ * 收割到的行从插件回执直接进这里，全程不经模型复述——复述会丢字段、也会数错行数。
+ */
+type LandingPort = {
+  landRows(
+    user: CurrentUser,
+    body: Record<string, unknown>,
+  ): Promise<DataTableLandRowsResult>;
+};
+
+/** `_source` 列的值：讲清「哪次会话、哪个站点」采的，定时重跑覆盖同一来源。 */
+function landSourceOf(sessionId: number, url: string) {
+  const host = url
+    .trim()
+    .replace(/^https?:\/\//i, '')
+    .split('/')[0];
+  return `会话#${sessionId}${host ? ` · ${host}` : ''}`.slice(0, 120);
+}
+
 export class ChromeAgentService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly devices: RpaChromeDeviceService,
     private readonly storage: StorageService,
     private readonly tasks: RpaTaskService,
+    private readonly table: LandingPort,
   ) {}
 
   private taskPort?: TaskPort;
@@ -331,6 +436,16 @@ export class ChromeAgentService {
       const maxSteps = Number.isFinite(maxStepsRaw)
         ? Math.min(60, Math.max(1, Math.round(maxStepsRaw)))
         : settings.maxSteps;
+      // 采集产物去向（D8）：会话级口径，收割回执一到就按它自动落台账/落表，不再等模型想起来
+      const persist = pickPersist(body.persist);
+      const tableId = Math.max(0, Math.round(Number(body.tableId) || 0));
+      const landing = normalizeLanding(body);
+      if (persist === 'table' && !tableId && !landing?.tableName) {
+        throw new BusinessException(
+          ErrorCode.BAD_REQUEST,
+          '落多维表格请先指定已有表，或给出新表名称',
+        );
+      }
 
       const session = await this.prisma.rpaChromeSession.create({
         data: {
@@ -341,10 +456,13 @@ export class ChromeAgentService {
           goal,
           startUrl,
           mode,
+          persist,
+          tableId,
           status: 'RUNNING',
           maxSteps,
           model: text(body.modelKey).trim().slice(0, 128),
           script: actions as Prisma.InputJsonValue,
+          ...(landing ? { landing } : {}),
         },
       });
       void this.run(session.id).catch(() => undefined);
@@ -423,6 +541,7 @@ export class ChromeAgentService {
       stepCount: row.stepCount,
       maxSteps: row.maxSteps,
       model: row.model,
+      ...this.persistOf(row),
       stopReason: row.stopReason,
       startedAt: row.startedAt.toISOString(),
       endedAt: row.endedAt ? row.endedAt.toISOString() : null,
@@ -456,11 +575,21 @@ export class ChromeAgentService {
       stepCount: row.stepCount,
       maxSteps: row.maxSteps,
       model: row.model,
+      ...this.persistOf(row),
       stopReason: row.stopReason,
       startedAt: row.startedAt.toISOString(),
       endedAt: row.endedAt ? row.endedAt.toISOString() : null,
       createdAt: row.createdAt.toISOString(),
     }));
+  }
+
+  /** 会话的采集产物流向（界面与 MCP 都读这一份）：persist 档位 + 目标表。 */
+  private persistOf(row: { persist: string; tableId: number }) {
+    return {
+      persist: row.persist,
+      persistLabel: RC_PERSIST_MODE_LABELS[row.persist] || row.persist,
+      tableId: row.tableId,
+    };
   }
 
   private stepView(row: Prisma.RpaChromeStepGetPayload<object>): RcStepView {
@@ -503,12 +632,28 @@ export class ChromeAgentService {
     const stepIndex = Math.max(0, Math.round(Number(body.stepIndex) || 0));
     const observation = toJsonObject(body.observation);
     const history = text(body.history).slice(0, 4000);
+    const persist = (RC_PERSIST_MODES as readonly string[]).includes(
+      text(body.persist).trim().toLowerCase(),
+    )
+      ? text(body.persist).trim().toLowerCase()
+      : 'none';
+    const tableId = Math.max(0, Math.round(Number(body.tableId) || 0));
+    // 能力指纹（L2 运行时协商）：菜单按这台插件实际会跑的原语裁剪，越界的动作在闸口就判无效。
+    const caps = await this.devices.deviceCaps(device.userId, device.clientId);
+    const available = await this.devices.availablePrimitives(
+      device.userId,
+      device.clientId,
+      caps,
+    );
     const snapshot = {
       goal,
       mode: (RC_AGENT_MODES as readonly string[]).includes(mode) ? mode : 'act',
       stepIndex: stepIndex + 1,
       maxSteps: settings.maxSteps,
       confirmed: body.confirmed === true,
+      persist,
+      tableId,
+      capabilities: available,
       observation,
       history,
     };
@@ -522,7 +667,7 @@ export class ChromeAgentService {
         module: 'rpa',
         operation: 'chrome_agent_step',
         messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'system', content: systemPrompt(available) },
           {
             role: 'user',
             content:
@@ -552,47 +697,99 @@ export class ChromeAgentService {
             0,
             300,
           );
+          // 意图队列（N14=A）：一次规划 2–8 步连跑；某步不合法就截断在它之前。
+          const { steps, plan } = normalizePlanQueue(raw, available, (item) =>
+            Boolean(
+              settings.confirmSensitive &&
+              chromeActionNeedsConfirm(item, observation),
+            ),
+          );
+          const queued = steps.length >= 2;
+          // 侧边栏自己的台账操作（RpaChrome_*）与对外 openAPI 通道不对 Agent 开放：
+          // 提示词菜单不给名字还不够——模型仍可能翻出这些名字直接点名，这里做运行时的同一道封口。
+          if (tool && PLATFORM_TOOL_EXCLUDED.test(tool.tool)) {
+            lastError = `工具「${tool.tool}」不对 Agent 开放（属侧边栏自身的台账操作）。请改用「可用平台工具」清单里的工具；确实需要就先请用户到侧边栏自行操作。`;
+            return null;
+          }
           if (
             !action &&
             !tool &&
             !reply &&
             !question &&
             !confirmText &&
-            !finishReason
+            !finishReason &&
+            !queued
           ) {
             lastError =
               '既没有给合法动作，也没有给出平台工具、结束原因、回复、追问或待确认说明';
             return null;
           }
-          if (raw.action && !action) {
+          if (raw.action && !action && !queued) {
             lastError = '动作不在闭集内或缺少必要字段';
+            return null;
+          }
+          // 原语级派发门（D0）：这台插件跑不动的动作直接判无效，回灌里教模型改报能力缺口。
+          if (
+            action &&
+            available.length &&
+            !available.includes(text(action.action))
+          ) {
+            lastError = `这台插件不支持「${text(action.action)}」动作（当前只会：${available.join('、')}）。请换用支持的动作；确实做不到就输出 gap 说明缺什么能力，并用 reply 或 finish 如实告知用户，不要假装完成`;
             return null;
           }
           if (raw.tool && !tool) {
             lastError = '平台工具缺少工具名（tool.tool）';
             return null;
           }
-          // 已有动作或工具＝执行步：清掉对话/确认类字段；否则是结束、对话轮次或待用户确认。
-          const executing = Boolean(action || tool);
+          // 已有动作或工具（或连跑队列）＝执行步：清掉对话/确认类字段；否则是结束、对话轮次或待用户确认。
+          const executing = Boolean(action || tool || queued);
           const talk = executing || Boolean(finishReason);
+          // 连跑队列也是一次「批量动手」：用户还没确认过就给插件一张方案卡，走既有的「先确认再执行」闸。
+          const queuePlan =
+            queued && body.confirmed !== true
+              ? `准备连跑 ${steps.length} 步（每步核对预期，偏离就停下重新规划）：\n${steps
+                  .map(
+                    (item, index) =>
+                      `${index + 1}. ${item.thought || describeQueueStep(item.action)}`,
+                  )
+                  .join('\n')}`
+              : '';
           return {
             thought,
-            action,
+            // 给了连跑队列就不再单发第一步：插件按 queue 顺序执行，避免同一步被重跑一遍。
+            action: queued ? null : action,
             tool,
+            queue: steps,
+            plan,
             needsConfirm: Boolean(
+              !queued &&
               action &&
               settings.confirmSensitive &&
-              chromeActionNeedsConfirm(action),
+              chromeActionNeedsConfirm(action, observation),
             ),
             finishReason: executing ? '' : finishReason,
             reply: talk ? '' : reply,
             question: talk ? '' : question,
-            confirm: talk ? '' : confirmText,
+            confirm: queued ? queuePlan : talk ? '' : confirmText,
+            gap: normalizeGap(raw.gap ?? toJsonObject(raw.action).gap),
             model: '',
           };
         },
       });
-      if (result) return { ...result.data, model: result.model || '' };
+      if (result) {
+        const decision = { ...result.data, model: result.model || '' };
+        if (decision.gap) {
+          // 缺口只记账不拦路：模型这一步已经如实回用户了，台账负责把「该补什么」攒下来。
+          await recordChromeGap(this.prisma, {
+            userId: device.userId,
+            clientId: device.clientId,
+            agentId: Math.max(0, Math.round(Number(body.agentId) || 0)),
+            version: caps.version,
+            ...decision.gap,
+          });
+        }
+        return decision;
+      }
     }
     // 全部尝试都没拿到合规决策：先分辨是不是「压根没有可用模型」，别把「还没设置默认模型」
     // 误报成模型行为问题，给用户一句可执行的引导。
@@ -616,12 +813,15 @@ export class ChromeAgentService {
         thought: '',
         action: null,
         tool: null,
+        queue: [],
+        plan: '',
         needsConfirm: false,
         finishReason: '',
         reply:
           '还没有设置默认模型：请到「模型服务 → 模型设置」选一个默认模型后再重试。',
         question: '',
         confirm: '',
+        gap: null,
         model: '',
       };
     }
@@ -629,11 +829,14 @@ export class ChromeAgentService {
       thought: '',
       action: null,
       tool: null,
+      queue: [],
+      plan: '',
       needsConfirm: false,
       finishReason: '模型连续未给出合规动作，已停止',
       reply: '',
       question: '',
       confirm: '',
+      gap: null,
       model: '',
     };
   }
@@ -934,11 +1137,21 @@ export class ChromeAgentService {
         command.commandCode,
         settings.stepTimeoutSeconds * 1000,
       );
+      const landed = await this.landCollected(current, decision, outcome);
       const stored = await this.persistOutcome(
         current,
         step.id,
         index,
-        outcome,
+        // 落表/落台账的结果并进本步观测：下一步的模型只看得到「落到哪张表、几行」，不复述行数据
+        landed
+          ? {
+              ...outcome,
+              result: {
+                ...outcome.result,
+                data: { ...toJsonObject(outcome.result.data), landed },
+              },
+            }
+          : outcome,
       );
       if (needsConfirm) {
         await this.settleConfirmTask(
@@ -1118,6 +1331,114 @@ export class ChromeAgentService {
     return { errorMessage };
   }
 
+  /**
+   * 采集产物按会话口径落库（D8）：harvest 成功的行直传落多维表格 / 采集台账，
+   * 落库结果并进本步观测——模型下一步只看到「落到哪张表、新增/更新/跳过几行」，不再复述行数据。
+   * 落库失败不硬断会话：把失败原因如实写回观测，让模型告知用户（会话步骤与截图留痕不受影响）。
+   */
+  private async landCollected(
+    session: Prisma.RpaChromeSessionGetPayload<object>,
+    decision: Decision,
+    outcome: { status: string; result: Record<string, unknown> },
+  ): Promise<Record<string, unknown> | null> {
+    if (session.persist === 'none' || outcome.status !== 'DONE') return null;
+    if (text(decision.action.action).trim().toLowerCase() !== 'harvest') {
+      return null;
+    }
+    const data = toJsonObject(outcome.result.data);
+    const rows = asJsonArray(data.items as Prisma.JsonValue)
+      .map((item) => toJsonObject(item))
+      .filter((item) => Object.keys(item).length);
+    if (!rows.length) return null;
+    const url = text(data.url).trim().slice(0, 2000);
+    try {
+      return session.persist === 'table'
+        ? await this.landToTable(session, rows, url)
+        : await this.landToExtract(session, rows, data);
+    } catch (error) {
+      const message = text((error as { message?: unknown })?.message).slice(
+        0,
+        300,
+      );
+      return {
+        ok: false,
+        persist: session.persist,
+        message: message || '采集结果落库失败，请如实告知用户',
+      };
+    }
+  }
+
+  /**
+   * 侧边栏「投递到多维表格」的落库入口：同一份原子落表（建表/补列/查重/写入一次做完）。
+   * 不套无人值守授权闸——发起人是本人点了按钮，不是 Agent 自己决定写数据。
+   */
+  async landUserRows(user: CurrentUser, body: Record<string, unknown>) {
+    return this.table.landRows(user, body);
+  }
+
+  /** 落多维表格：目标表 + 表头 + 幂等锚都取自会话留档，重跑同一页不产生重复行。 */
+  private async landToTable(
+    session: Prisma.RpaChromeSessionGetPayload<object>,
+    rows: Record<string, unknown>[],
+    url: string,
+  ) {
+    const spec = landingOf(session.landing);
+    const tableName = spec.tableName;
+    if (!session.tableId && !tableName) {
+      return {
+        ok: false,
+        persist: 'table',
+        message: '会话没有指定目标多维表格，请让用户选择已有表或给出新表名称',
+      };
+    }
+    const result = await this.table.landRows(
+      new CurrentUser(session.createdBy, '', ''),
+      {
+        rows: rows.slice(0, 500),
+        tableId: session.tableId,
+        ...(tableName ? { tableName } : {}),
+        fields: spec.fields,
+        dedupBy: spec.dedupBy,
+        source: landSourceOf(session.id, url),
+      },
+    );
+    return {
+      ok: true,
+      persist: 'table',
+      ...result,
+      tableUrl: `/data-table?table=${result.tableId}`,
+      truncated: rows.length > result.created + result.updated + result.skipped,
+    };
+  }
+
+  /** 落采集台账：与本账号「抽取结果」同一张表，界面可按来源链接回溯到会话步骤。 */
+  private async landToExtract(
+    session: Prisma.RpaChromeSessionGetPayload<object>,
+    rows: Record<string, unknown>[],
+    data: Record<string, unknown>,
+  ) {
+    const created = await this.prisma.rpaChromeExtract.create({
+      data: {
+        createdBy: session.createdBy,
+        agentId: 0,
+        url: text(data.url).trim().slice(0, 2000),
+        schemaNote: session.goal.slice(0, 2000),
+        data: {
+          total: Number(data.total) || rows.length,
+          ...(text(data.note) ? { note: text(data.note).slice(0, 500) } : {}),
+        },
+        rows: rows.slice(0, 500) as Prisma.InputJsonValue,
+        screenshotKey: text(data.screenshotKey).trim().slice(0, 200),
+      },
+    });
+    return {
+      ok: true,
+      persist: 'extract',
+      extractId: created.id,
+      total: rows.length,
+    };
+  }
+
   private async storeScreenshot(
     session: Prisma.RpaChromeSessionGetPayload<object>,
     index: number,
@@ -1166,6 +1487,10 @@ export class ChromeAgentService {
     history: string,
     settings: ChromeSettings,
   ): Promise<Decision | null> {
+    const available = await this.devices.availablePrimitives(
+      session.createdBy,
+      session.clientId,
+    );
     const snapshot = {
       goal: session.goal,
       mode: session.mode,
@@ -1173,6 +1498,9 @@ export class ChromeAgentService {
       maxSteps: settings.maxSteps,
       // 云端下发的目标＝平台/用户已派单，直接执行，不再走「先确认再执行」闸。
       confirmed: true,
+      persist: session.persist,
+      tableId: session.tableId,
+      capabilities: available,
       observation,
       history,
     };
@@ -1184,7 +1512,7 @@ export class ChromeAgentService {
         module: 'rpa',
         operation: 'chrome_decision',
         messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'system', content: systemPrompt(available) },
           {
             role: 'user',
             content:
@@ -1198,15 +1526,54 @@ export class ChromeAgentService {
         timeoutMs: DECISION_TIMEOUT_MS,
         purpose: 'chat',
         validate: (raw) => {
-          const action = normalizeDecidedAction(raw);
+          const thought = text(raw.thought).slice(0, 1000);
+          const gap = normalizeGap(raw.gap);
+          // 模型常只回 elementIndex：按本次观测的页面地图补出元素名，敏感闸门才认得出「发布/删除」（K20）。
+          const action = rcWithElementName(
+            normalizeDecidedAction(raw),
+            observation,
+          );
           if (!action) {
+            if (gap) {
+              // 只报缺口、给不出动作：用 finish 如实收口，而不是留一条「模型没给动作」的失败。
+              return {
+                action: {
+                  action: 'finish',
+                  reason: `插件缺少能力：${gap.need}`,
+                },
+                thought,
+                gap,
+              };
+            }
             lastError = '动作不在闭集内或缺少必要字段';
             return null;
           }
-          return { action, thought: text(raw.thought).slice(0, 1000) };
+          // 原语级派发门（D0）：这台插件跑不动的动作不排队、不试错，直接回灌改口。
+          if (
+            available.length &&
+            !available.includes(text(action.action).trim().toLowerCase())
+          ) {
+            lastError = `这台插件不支持「${text(action.action)}」动作（当前只会：${available.join('、')}）。请改用支持的动作；确实做不到就输出 gap 说明缺什么能力，不要假装完成`;
+            return null;
+          }
+          return gap ? { action, thought, gap } : { action, thought };
         },
       });
-      if (result) return result.data;
+      if (result) {
+        if (result.data.gap) {
+          await recordChromeGap(this.prisma, {
+            userId: session.createdBy,
+            clientId: session.clientId,
+            sessionId: session.id,
+            need: result.data.gap.need,
+            why: result.data.gap.why,
+            site: result.data.gap.site,
+            attempted: result.data.gap.attempted,
+            want: result.data.gap.want,
+          });
+        }
+        return result.data;
+      }
     }
     return null;
   }

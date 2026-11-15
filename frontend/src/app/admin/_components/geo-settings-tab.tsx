@@ -12,9 +12,9 @@ import {
 } from "@/app/marketing-tools/_components/geo-common";
 
 /**
- * GEO管理设置（平台管理后台）：只监管每周采集任务量（自动采集管线本周计划量与实际完成量，含逐项目明细）。
+ * GEO管理设置（平台管理后台）：每周采集任务量。
+ * 独立站的域名接入、站点台账、计费与脚本策略统一在「独立站管理」板块，这里不再重复。
  * 采集平台的 API Key 由每个账号在「营销工具 → GEO-AI引擎优化」里配自己的，后台看不到、也不能替别人配置。
- * 后端：GET /enterprise/admin/geo-collection/stats。
  */
 export function GeoSettingsTab() {
   return <GeoCollectRunsView />;

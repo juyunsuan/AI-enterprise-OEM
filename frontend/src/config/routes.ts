@@ -137,6 +137,13 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     group: "operation",
   },
   {
+    key: "geo-site",
+    name: "独立站管理",
+    icon: "global",
+    desc: "国际独立站平台侧配置：域名访问总开关、平台子域与 CNAME 目标、自定义域名台账（复检 / 解绑）、回源自检与计费容量脚本策略。",
+    group: "operation",
+  },
+  {
     key: "points",
     name: "积分与充值",
     icon: "pay-circle",
@@ -235,6 +242,13 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     group: "system",
   },
   {
+    key: "miniprogram",
+    name: "小程序管理",
+    icon: "mobile",
+    desc: "用户版小程序（移动办公延伸）：配置 AppID / AppSecret 与站点域名、按业务模块开关小程序端功能、上传代码包（版本 / 通道）并生成或上传小程序码；管理员把内置代码包下载后用微信开发者工具上传提审即可。",
+    group: "system",
+  },
+  {
     key: "settings",
     name: "系统设置",
     icon: "setting",
@@ -275,9 +289,17 @@ export const enterpriseRoute: EnterpriseRoute = {
       routes: [
         { path: "/tasks", name: "我的任务", icon: "tasks" },
         { path: "/agent", name: "Agent", icon: "robot" },
+        {
+          type: "group",
+          name: "Agent-Bot",
+          icon: "robot",
+          routes: [
+            { path: "/bot/hosts", name: "Bot 主机", icon: "network" },
+            { path: "/workbuddy", name: "Workbuddy 企业版", icon: "robot" },
+          ],
+        },
         { path: "/rpa", name: "RPA自动化", icon: "play" },
         { path: "/kb", name: "知识库", icon: "book" },
-        { path: "/workbuddy", name: "Workbuddy 企业云", icon: "robot" },
         { path: "/mail", name: "AI邮箱服务", icon: "mail" },
         { path: "/data-table", name: "多维表格", icon: "table" },
         /**
@@ -298,6 +320,7 @@ export const enterpriseRoute: EnterpriseRoute = {
           ],
         },
         { path: "/marketing-tools", name: "营销工具", icon: "horn" },
+        { path: "/international-site", name: "国际独立站", icon: "global" },
         { path: "/assets", name: "数字资产管理", icon: "folder" },
         { path: "/crm", name: "CRM", icon: "team" },
         { path: "/bi", name: "BI智能分析", icon: "chart" },
@@ -516,9 +539,14 @@ export const PAGE_META: Record<
       "按账号归属的云端 RPA：RPA 任务（建任务即绑定脚本＋账号＋运行参数）、RPA 账号（口令密文保存）、RPA 脚本（Automa JSON / JS / Python，可由 AIPDD 文字模型按需求生成），本地比特浏览器凭 API Key 认领执行并回传结果；另有「本地 Chrome 插件（浏览器代理）」执行端——插件登录本系统后本机浏览器成为在线设备，Agent 可在你已登录的站点自主多步执行。",
   },
   "/workbuddy": {
-    title: "Workbuddy 企业云",
+    title: "Workbuddy 企业版",
     description:
-      "按用户归属的腾讯云 Workbuddy 企业云：计划任务（口水话经 AI 澄清成任务书、拆条派发、同步 Agent 消息）、Agent（创建 / 版本 / 会话）、Workbuddy Enterprise 账号（用户自己的 SecretId / SecretKey 密文保存，可配多把并行）、AI 调用账号（第三方平台口令 / API Key / Cookie 加密保存，按 Workbuddy Enterprise 账号绑定授权，经机器通道按绑定取用）。",
+      "按用户归属的腾讯云 Workbuddy 企业版：计划任务（口水话经 AI 澄清成任务书、拆条派发、同步 Agent 消息）、Agent（创建 / 版本 / 会话）、Workbuddy Enterprise 账号（用户自己的 SecretId / SecretKey 密文保存，可配多把并行）、AI 调用账号（第三方平台口令 / API Key / Cookie 加密保存，按 Workbuddy Enterprise 账号绑定授权，经机器通道按绑定取用）。",
+  },
+  "/bot/hosts": {
+    title: "Bot 主机",
+    description:
+      "平台与 Bot 里的 Agent 直接对接：本机装好 BotBuddy 客户端（自带模型渠道、技能、数字分身、长期记忆与本地工具），用配对码或令牌与本站绑定后成为在线主机。对话框里说人话，平台把指令排队下发，客户端里的 Agent 直接执行并流式回传；也可把每轮要做的事排成定时任务。模型密钥、技能与本机文件永不离开这台机器，平台只传「做什么」与「做到哪了」。",
   },
   "/app-center": {
     title: "应用中心",
@@ -595,10 +623,15 @@ export const PAGE_META: Record<
     description:
       "与模型对话直接产出图片/视频：生成结果自动存进本账号的 AIPDD 数字资产；「记忆」页签里既有 Agent 长期记忆，也有你在全站做过的操作留痕。模型与 Key 在「模型服务 → 模型设置」里配置。",
   },
+  "/international-site": {
+    title: "国际独立站",
+    description:
+      "拖拽搭建对外站点：页面、菜单、文章与产品按多语言分别维护，发布到平台子域或客户自己的域名（TXT + CNAME 自助校验）。站点按月扣积分，欠费只停服不删数据；客户绑定域名后按该域名独立访问，配置方式见「平台管理 → 独立站管理」和接入文档。",
+  },
   "/marketing-tools": {
     title: "营销工具",
     description:
-      "十九个营销工具，首屏每个工具一张卡片、点卡片进入使用：达人建联（按类目 / 平台 / 粉丝数筛选达人并查看联系方式）、阿里云智能外呼（把多维表格名单映射导入阿里云智能外呼任务组）、阿里云邮件推送（把多维表格的联系人同步到阿里云收件人列表）、GEO-AI引擎优化（品牌在 AI 问答中的可见度报告与选题池，另含按语言与付费/免费筛选的发稿平台推荐与 GEO 建站入口，新窗口打开 AIworkin GEO 独立站看板）、SEO 优化（传统搜索引擎侧工作台：站点体检、关键词研究与聚类、排名跟踪、竞品洞察、外链分析与建设、本地 SEO 网格、程序化页面、结构化数据与收录提交、SEO 报告；三层数据源——自有抓取免费、DataForSEO 你自带 Key 你付费、系统 AI 计积分，无 Key 不造假数据）、营销技能库（内容 / 社媒 / 邮件 / SEO / 广告 / 调研 / 销售七类技能与品牌上下文，填参数即可运行，结果沉淀为内容资产，支持渠道连接与定时任务）、多平台内容分发、问卷设计与调研、活码引流、腾讯企点三件套、Google 潜客线索挖掘、企业数据 / 全球贸易大数据 / 全球商务人士大数据 / 全球达人大数据 / 全球POI大数据（各自独立：自然语言提数据需求，AI 解析后查询并逐批写入各自的多维表格）、AI销售管理-SalesBuddy（外部网站，点卡片新窗口打开 salesbuddy.top）。",
+      "十九个营销工具，首屏每个工具一张卡片、点卡片进入使用：达人建联（按类目 / 平台 / 粉丝数筛选达人并查看联系方式）、阿里云智能外呼（把多维表格名单映射导入阿里云智能外呼任务组）、阿里云邮件推送（把多维表格的联系人同步到阿里云收件人列表）、GEO-AI引擎优化（品牌在 AI 问答中的可见度报告与选题池，另含按语言与付费/免费筛选的发稿平台推荐；独立站建站见「国际独立站」）、SEO 优化（传统搜索引擎侧工作台：站点体检、关键词研究与聚类、排名跟踪、竞品洞察、外链分析与建设、本地 SEO 网格、程序化页面、结构化数据与收录提交、SEO 报告；三层数据源——自有抓取免费、DataForSEO 你自带 Key 你付费、系统 AI 计积分，无 Key 不造假数据）、营销技能库（内容 / 社媒 / 邮件 / SEO / 广告 / 调研 / 销售七类技能与品牌上下文，填参数即可运行，结果沉淀为内容资产，支持渠道连接与定时任务）、多平台内容分发、问卷设计与调研、活码引流、腾讯企点三件套、Google 潜客线索挖掘、企业数据 / 全球贸易大数据 / 全球商务人士大数据 / 全球达人大数据 / 全球POI大数据（各自独立：自然语言提数据需求，AI 解析后查询并逐批写入各自的多维表格）、AI销售管理-SalesBuddy（外部网站，点卡片新窗口打开 salesbuddy.top）。",
   },
   "/contracts": {
     title: "签约管理",

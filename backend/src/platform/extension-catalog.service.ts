@@ -1,10 +1,16 @@
 import {
   EXTENSION_CAPABILITIES,
   EXTENSION_CAPABILITY_STATUS_LABELS,
+  EXTENSION_SITE_LEVEL_LABELS,
+  extensionActionPrimitives,
   extensionCapabilityDefOf,
+  extensionPrimitiveMinVersion,
+  extensionSiteMatrix,
+  rcPrimitivesForVersion,
   type ExtensionCapabilityDef,
   type ExtensionCapabilityStatus,
   type ExtensionCapabilitySaveBody,
+  type RcDeviceCaps,
 } from '@enterprise/contracts';
 import { BusinessException } from '../common/business.exception';
 import { ErrorCode } from '../common/error-code';
@@ -86,6 +92,22 @@ export class ExtensionCatalogService {
         ),
       })),
       sitePermissions: [...def.sitePermissions],
+      primitives: extensionActionPrimitives(def.key),
+      primitiveMinVersions: Object.fromEntries(
+        extensionActionPrimitives(def.key).map((primitive) => [
+          primitive,
+          extensionPrimitiveMinVersion(def.key, primitive),
+        ]),
+      ),
+      sites: extensionSiteMatrix(def.key).map((item) => ({
+        site: item.site,
+        level: item.level,
+        levelLabel: EXTENSION_SITE_LEVEL_LABELS[item.level] || item.level,
+        actions: [...(item.actions ?? [])],
+        reason: item.reason ?? '',
+        fallback: item.fallback ?? '',
+      })),
+      errors: [...(def.errors ?? [])],
       requiresConfirmation: def.requiresConfirmation,
       completionEvidence: [...def.completionEvidence],
       retryRule: def.retryRule,
@@ -155,6 +177,72 @@ export class ExtensionCatalogService {
       grayOrgIds: this.normalizeIds(row?.grayOrgIds),
       forceUpgradeAt: row?.forceUpgradeAt ?? null,
     };
+  }
+
+  /**
+   * 这台设备实际跑得动的原语（能力目录 ∩ 设备指纹，D0 的唯一口径）：
+   * - 指纹里有 primitives 就按自报值（只认目录里登记过的名字，插件不能凭空发明动作）；
+   * - 旧插件不上报指纹就按版本号折算；再按「原语最低版本 + 平台覆盖的最低版本」裁一次。
+   * 结果用于三处：派发门、心跳回带给插件、决策提示词菜单。
+   */
+  async effectivePrimitives(
+    key: string,
+    opts: { caps?: RcDeviceCaps | null; pluginVersion?: string } = {},
+  ): Promise<string[]> {
+    const def = extensionCapabilityDefOf(key);
+    if (!def) return [];
+    const declared = extensionActionPrimitives(key);
+    const reported = (opts.caps?.primitives ?? [])
+      .map((item) => String(item).trim().toLowerCase())
+      .filter((item) => declared.includes(item));
+    const version =
+      (opts.caps?.version || opts.pluginVersion || '').trim() ||
+      EXTENSION_RELEASE.version;
+    const baseline = reported.length
+      ? reported
+      : rcPrimitivesForVersion(version).filter((item) =>
+          declared.includes(item),
+        );
+    const row = await this.prisma.extensionCapability
+      .findUnique({ where: { key } })
+      .catch(() => null);
+    const overrideMin = (row?.minVersion || '').trim();
+    return declared.filter((primitive) => {
+      if (!baseline.includes(primitive)) return false;
+      const min = extensionPrimitiveMinVersion(key, primitive);
+      if (min && compareVersions(version, min) < 0) return false;
+      if (overrideMin && compareVersions(version, overrideMin) < 0)
+        return false;
+      return true;
+    });
+  }
+
+  /**
+   * 原语级派发门（D0）：能力级 assertDispatchable 之后再过这一层。
+   * 不做「尽力而为」——插件跑不动的动作一律在入队前拒掉，回 CAPABILITY_MISSING 文案。
+   */
+  async assertPrimitiveDispatchable(
+    key: string,
+    primitive: string,
+    opts: { caps?: RcDeviceCaps | null; pluginVersion?: string } = {},
+  ): Promise<string[]> {
+    const available = await this.effectivePrimitives(key, opts);
+    const name = String(primitive || '')
+      .trim()
+      .toLowerCase();
+    if (!name) {
+      throw new BusinessException(ErrorCode.BAD_REQUEST, '缺少插件动作名');
+    }
+    if (!available.includes(name)) {
+      const min = extensionPrimitiveMinVersion(key, name);
+      throw new BusinessException(
+        ErrorCode.BAD_REQUEST,
+        min
+          ? `本插件版本不支持「${name}」动作（需 ${min} 及以上），请升级插件后重试`
+          : `本插件不支持「${name}」动作`,
+      );
+    }
+    return available;
   }
 
   /**

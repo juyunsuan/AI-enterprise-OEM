@@ -4,8 +4,12 @@ const envelope = <T extends z.ZodType>(data: T) =>
   z.object({ code: z.number(), message: z.string(), data: data.nullable() });
 const emptyQuery = z.object({});
 
-/** 已知的界面偏好键：驾驶舱「快捷导航」与侧栏「个性化菜单显隐」；未登记键一律拒绝写入。 */
-export const UI_PREFERENCE_KEYS = ["dashboard.shortcuts", "nav.hiddenMenus"] as const;
+/** 已知的界面偏好键：驾驶舱「快捷导航」「首页板块显隐」与侧栏「个性化菜单显隐」；未登记键一律拒绝写入。 */
+export const UI_PREFERENCE_KEYS = [
+  "dashboard.shortcuts",
+  "dashboard.sections",
+  "nav.hiddenMenus",
+] as const;
 export type UiPreferenceKey = (typeof UI_PREFERENCE_KEYS)[number];
 
 export const uiPreferenceSchema = z.object({
@@ -21,6 +25,15 @@ export const dashboardShortcutsSchema = z.object({
   paths: z.array(z.string()).max(12),
 });
 export type DashboardShortcuts = z.infer<typeof dashboardShortcutsSchema>;
+
+/**
+ * 驾驶舱「首页板块显隐」：账号级（跨设备）。
+ * 只存被关掉的板块 key；未出现在这里的板块一律显示，因此不需要随板块增删维护一份全量清单。
+ */
+export const dashboardHiddenSectionsSchema = z.object({
+  sections: z.array(z.string().min(1).max(64)).max(50),
+});
+export type DashboardHiddenSections = z.infer<typeof dashboardHiddenSectionsSchema>;
 
 /**
  * 侧栏「个性化菜单显隐」：账号级（跨设备）保存用户自己关掉的菜单叶子路径。

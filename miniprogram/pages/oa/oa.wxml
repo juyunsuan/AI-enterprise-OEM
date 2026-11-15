@@ -1,0 +1,17 @@
+<view class="page">
+  <view class="card" wx:for="{{list}}" wx:key="id" bindtap="openDetail" data-id="{{item.applicationId}}">
+    <view class="row between">
+      <view class="oa-title ellipsis">{{item.title}}</view>
+      <view class="tag">{{item.statusLabel}}</view>
+    </view>
+    <view class="row between oa-meta">
+      <view class="muted">{{item.number}} · {{item.templateName}}</view>
+      <view class="muted" wx:if="{{item.amountText}}">{{item.amountText}}</view>
+    </view>
+    <view class="muted">{{item.applicantName}}<text wx:if="{{item.department}}"> · {{item.department}}</text> · {{item.submittedAtText}}</view>
+  </view>
+
+  <view class="empty" wx:if="{{!loading && !list.length}}">暂无待审批单据</view>
+  <view class="muted loading" wx:if="{{loading}}">加载中…</view>
+  <view class="muted loading" wx:if="{{finished && list.length}}">没有更多了</view>
+</view>

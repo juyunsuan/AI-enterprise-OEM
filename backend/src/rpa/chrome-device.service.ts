@@ -1,13 +1,31 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { Prisma } from '../../generated/prisma';
 import {
+  RC_ACTIONS,
+  RC_ACT_INTERACTIONS,
+  RC_BASE_MIN_VERSION,
   RC_DEVICE_STATUS_LABELS,
   RC_DEVICE_TOKEN_PREFIX,
+  RC_DISCOVER_TOP,
+  RC_FILL_FIELDS,
+  RC_HARVEST_FIELDS,
+  RC_HARVEST_LIMIT,
+  RC_HARVEST_MODES,
   RC_HEARTBEAT_BATCH,
   RC_ONLINE_TIMEOUT_MS,
+  RC_READ_MODES,
+  RC_SNAPSHOT_TEXT_MAX,
+  RC_WAIT_FOR_MODES,
+  RC_WAIT_MAX_MS,
+  EXTENSION_CAPABILITY_KEYS,
+  rcActionFields,
+  rcDeviceCapsSchema,
   rcDeviceOnline,
   rcActionNeedsConfirm,
+  rcPrimitivesForVersion,
   normalizeLoginDomain,
+  type RcActionName,
+  type RcDeviceCaps,
   type RcDeviceView,
   type RcHeartbeatResult,
   type RcLoginResult,
@@ -19,8 +37,10 @@ import { BusinessException } from '../common/business.exception';
 import { ErrorCode } from '../common/error-code';
 import { RateWindow } from '../common/rate-window';
 import type { HrmScopeService } from '../hrm/hrm.scope';
+import type { ExtensionCatalogService } from '../platform/extension-catalog.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { toJsonObject, asJsonArray } from '../shared/json-value';
+import { listChromeGaps, normalizeGap, recordChromeGap } from './chrome-gap';
 
 /**
  * 本地 Chrome 插件设备通道（docs/本地Chrome插件RPA控制方案.md §5.1 / §5.2 / §8）：
@@ -31,18 +51,8 @@ import { toJsonObject, asJsonArray } from '../shared/json-value';
 const loginLimiter = new RateWindow(12, 60_000);
 const CLIENT_ID_PATTERN = /^[A-Za-z0-9_-]{8,64}$/;
 
-/** 设备可执行动作的闭集（与契约 RC_ACTIONS 对齐；未知动作一律 FAILED，不做「尽力而为」）。 */
-const RC_ACTION_SET = new Set([
-  'open_tab',
-  'close_tab',
-  'navigate',
-  'snapshot',
-  'read',
-  'act',
-  'wait',
-  'screenshot',
-  'finish',
-]);
+/** 设备可执行动作的闭集（直接取契约闭集，避免这里再手写一份而漏掉新增动作）。 */
+const RC_ACTION_SET = new Set<string>(RC_ACTIONS);
 
 export type ChromeSettings = {
   maxSteps: number;
@@ -91,6 +101,7 @@ function clip(value: unknown, max: number) {
 
 export class RpaChromeDeviceService {
   private accounts: AccountService | null = null;
+  private catalog: ExtensionCatalogService | null = null;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -103,6 +114,11 @@ export class RpaChromeDeviceService {
    */
   bindAccounts(accounts: AccountService) {
     this.accounts = accounts;
+  }
+
+  /** 能力目录同样晚于本服务构造：原语派发门与「这台设备跑得动什么」由它给唯一口径。 */
+  bindCatalog(catalog: ExtensionCatalogService) {
+    this.catalog = catalog;
   }
 
   private requireAccounts() {
@@ -333,6 +349,14 @@ export class RpaChromeDeviceService {
     const now = new Date();
     const version = clip(body.version, 24);
     const pages = Array.isArray(body.pages) ? body.pages.slice(0, 20) : [];
+    // 能力指纹只在内容真的变了时改写：心跳 30 秒一次，逐次写 JSON 会让这行变成热点。
+    const caps = normalizeDeviceCaps(body, version, now);
+    const prevCaps = toJsonObject(prev?.caps);
+    const sameCaps =
+      prevCaps.version === caps.version &&
+      prevCaps.protocol === caps.protocol &&
+      listEquals(prevCaps.capabilities, caps.capabilities) &&
+      listEquals(prevCaps.primitives, caps.primitives);
     await this.prisma.rpaChromeDevice.update({
       where: { id: device.id },
       data: {
@@ -340,6 +364,7 @@ export class RpaChromeDeviceService {
         lastIp: clip(ip, 64),
         status: 'ONLINE',
         pages: pages as Prisma.InputJsonValue,
+        ...(sameCaps ? {} : { caps: toJsonObject(caps) }),
         ...(version ? { extensionVersion: version } : {}),
       },
     });
@@ -388,6 +413,12 @@ export class RpaChromeDeviceService {
       })),
       stoppedSessionIds: stopped.map((row) => row.id),
       revoked: false,
+      // 回给插件「服务端认定它跑得动什么」：侧边栏菜单与本地降级都以这份为准。
+      primitives: await this.availablePrimitives(
+        device.userId,
+        device.clientId,
+        caps,
+      ),
       limits: limitsOf(settings),
     };
   }
@@ -516,6 +547,12 @@ export class RpaChromeDeviceService {
     needsConfirm: boolean;
   }) {
     const commandCode = newCommandCode();
+    // 派发门（D0）：所有出队动作（云端会话、脚本回放、计划任务、Agent 工具）都过这一个闸口，
+    // 不支持的原语在入队前就拒，会话以「请升级插件」收口，而不是让插件回一句看不懂的动作。
+    const primitive = text(input.action.action).trim().toLowerCase();
+    if (primitive && primitive !== 'finish') {
+      await this.assertPrimitive(input.userId, input.clientId, primitive);
+    }
     return this.prisma.rpaChromeCommand.create({
       data: {
         createdBy: input.userId,
@@ -661,6 +698,114 @@ export class RpaChromeDeviceService {
 
   // ---------- 供会话引擎复用的判断 ----------
 
+  /**
+   * 读设备能力指纹（D0 的唯一取数口）：指纹为空或没上报原语时，
+   * 按插件版本折算——旧插件因此只会拿到它 1.4.0 就有的动作，而不是「菜单里有、执行必失败」。
+   */
+  async deviceCaps(userId: string, clientId: string): Promise<RcDeviceCaps> {
+    const row = await this.prisma.rpaChromeDevice.findUnique({
+      where: { createdBy_clientId: { createdBy: userId, clientId } },
+      select: { caps: true, extensionVersion: true },
+    });
+    const parsed = rcDeviceCapsSchema.safeParse(toJsonObject(row?.caps));
+    const reported =
+      (parsed.success ? parsed.data.version : '') ||
+      row?.extensionVersion ||
+      '';
+    // 版本未知（老设备、种子数据）按基础版本折算：给到 1.4.0 就有的动作，新原语一律不给。
+    const version = reported || RC_BASE_MIN_VERSION;
+    const primitives =
+      parsed.success && parsed.data.primitives.length
+        ? parsed.data.primitives
+        : rcPrimitivesForVersion(version);
+    return {
+      version: reported,
+      protocol: parsed.success ? parsed.data.protocol : 0,
+      capabilities: parsed.success ? parsed.data.capabilities : [],
+      primitives: Array.from(new Set(primitives)),
+      siteMatrixHash: parsed.success ? parsed.data.siteMatrixHash : '',
+      at: parsed.success ? parsed.data.at : '',
+    };
+  }
+
+  /** 这台设备实际可用的动作原语（能力目录 ∩ 设备指纹）；决策菜单与派发门共用这一份。 */
+  async availablePrimitives(
+    userId: string,
+    clientId: string,
+    caps?: RcDeviceCaps,
+  ): Promise<string[]> {
+    const fingerprint = caps ?? (await this.deviceCaps(userId, clientId));
+    if (this.catalog) {
+      return this.catalog.effectivePrimitives('chrome', { caps: fingerprint });
+    }
+    // 目录尚未注入（单测直接构造本服务）时按闭集兜底，口径与 effectivePrimitives 一致。
+    const declared = new Set<string>(RC_ACTIONS);
+    return Array.from(
+      new Set(fingerprint.primitives.filter((item) => declared.has(item))),
+    );
+  }
+
+  /** 原语级派发门：这台插件跑不动的动作在入队前就拒掉（不做「尽力而为」）。 */
+  async assertPrimitive(userId: string, clientId: string, primitive: string) {
+    const available = await this.availablePrimitives(userId, clientId);
+    const name = String(primitive || '')
+      .trim()
+      .toLowerCase();
+    if (!name) return available;
+    // 指纹为空＝这台设备的能力我们还不清楚（从没心跳过）：不硬拦，交给插件按未知动作如实回执。
+    if (!available.length) return available;
+    if (!available.includes(name)) {
+      throw new BusinessException(
+        ErrorCode.BAD_REQUEST,
+        `本地 Chrome 插件当前不支持「${name}」动作，请升级插件后重试`,
+      );
+    }
+    return available;
+  }
+
+  // ---------- 能力缺口台账（N18：先落 RpaChromeMessage.kind='gap'，攒够再升表） ----------
+
+  /** 插件/侧边栏一键回报：need 必填，其余字段尽力补齐（版本按设备台账兜）。 */
+  async reportGap(
+    principal: ChromeDevicePrincipal,
+    body: Record<string, unknown>,
+  ) {
+    const gap = normalizeGap(body);
+    if (!gap) {
+      throw new BusinessException(
+        ErrorCode.BAD_REQUEST,
+        '请说明缺少什么能力（need）',
+      );
+    }
+    const version =
+      text(body.version).trim().slice(0, 24) ||
+      (await this.versionOf(principal.userId, principal.clientId));
+    const view = await recordChromeGap(this.prisma, {
+      userId: principal.userId,
+      clientId: principal.clientId,
+      agentId: Math.max(0, Math.round(Number(body.agentId) || 0)),
+      sessionId: Math.max(0, Math.round(Number(body.sessionId) || 0)),
+      version,
+      ...gap,
+    });
+    return { gap: view };
+  }
+
+  /** 插件版本：指定设备按设备取，未指定（界面端回报）按最近心跳的设备取。 */
+  private async versionOf(userId: string, clientId: string) {
+    if (clientId) return (await this.deviceCaps(userId, clientId)).version;
+    const row = await this.prisma.rpaChromeDevice.findFirst({
+      where: { createdBy: userId },
+      orderBy: { lastSeenAt: 'desc' },
+      select: { extensionVersion: true },
+    });
+    return row?.extensionVersion || '';
+  }
+
+  async listGaps(userId: string, limit = 50) {
+    return listChromeGaps(this.prisma, userId, limit);
+  }
+
   async deviceOnline(userId: string, clientId: string) {
     const row = await this.prisma.rpaChromeDevice.findUnique({
       where: { createdBy_clientId: { createdBy: userId, clientId } },
@@ -707,7 +852,53 @@ export function limitsOf(settings: ChromeSettings) {
   };
 }
 
-/** 校验并规整一次 LLM/脚本给出的动作：只放行闭集动作，act 只放行已登记子动作。 */
+/** 两个字符串列表是否同序同值（心跳逐次比对能力指纹用）。 */
+function listEquals(left: unknown, right: string[]): boolean {
+  if (!Array.isArray(left)) return right.length === 0;
+  if (left.length !== right.length) return false;
+  return left.every((item, index) => String(item) === right[index]);
+}
+
+/**
+ * 心跳上报的能力指纹归一（D0 落库形态）：
+ * · primitives 只认契约闭集里的名字——插件不能自报一个不存在的动作来获得派发；
+ * · 旧插件不上报时按版本号折算，保证它只拿基础动作；
+ * · capabilities 只认能力目录里的键。
+ */
+export function normalizeDeviceCaps(
+  body: Record<string, unknown>,
+  version: string,
+  at: Date,
+): RcDeviceCaps {
+  const declared = new Set<string>(RC_ACTIONS);
+  const reported = (Array.isArray(body.primitives) ? body.primitives : [])
+    .map((item) => text(item).trim().toLowerCase())
+    .filter((item) => declared.has(item));
+  const capabilities = (
+    Array.isArray(body.capabilities) ? body.capabilities : []
+  )
+    .map((item) => text(item).trim())
+    .filter((item) =>
+      (EXTENSION_CAPABILITY_KEYS as readonly string[]).includes(item),
+    );
+  return {
+    version: text(version).slice(0, 24),
+    protocol: Math.max(0, Math.round(Number(body.protocol) || 0)),
+    capabilities: Array.from(new Set(capabilities)).slice(0, 10),
+    primitives: Array.from(
+      new Set(reported.length ? reported : rcPrimitivesForVersion(version)),
+    ),
+    siteMatrixHash: text(body.siteMatrixHash).trim().slice(0, 64),
+    at: at.toISOString(),
+  };
+}
+
+/**
+ * 校验并规整一次 LLM/脚本给出的动作：只放行闭集动作，act 只放行已登记子动作。
+ *
+ * 参数白名单由契约 `RC_ACTION_SPECS.fields` 派生。以前这里是手写清单，
+ * `timeoutMs`、`mode` 就是这样被静默吃掉——表现为「提示词教了、插件会做，但永远不生效」。
+ */
 export function normalizeChromeAction(
   raw: unknown,
 ): Record<string, unknown> | null {
@@ -718,35 +909,109 @@ export function normalizeChromeAction(
   const normalized: Record<string, unknown> = { action: name };
   if (name === 'act') {
     const interact = text(action.act).trim().toLowerCase();
-    if (
-      !['click', 'type', 'select', 'check', 'scroll', 'key', 'submit'].includes(
-        interact,
-      )
-    ) {
+    if (!(RC_ACT_INTERACTIONS as readonly string[]).includes(interact)) {
       return null;
     }
     normalized.act = interact;
   }
-  for (const key of [
-    'selector',
-    'elementIndex',
-    'value',
-    'url',
-    'tabId',
-    'ms',
-    'timeoutMs',
-    'key',
-    'target',
-    'reason',
-  ]) {
-    if (action[key] !== undefined) normalized[key] = action[key];
+  for (const key of rcActionFields(name)) {
+    if (key === 'action' || key === 'act') continue;
+    if (action[key] === undefined) continue;
+    const cleaned = cleanActionValue(name as RcActionName, key, action[key]);
+    if (cleaned !== undefined) normalized[key] = cleaned;
   }
   return normalized;
 }
 
+/** 数值参数的取值区间（超出即夹住，不给模型第二次机会把页面拖死）。 */
+const ACTION_NUMBER_BOUNDS: Record<string, [number, number]> = {
+  ms: [0, RC_WAIT_MAX_MS],
+  timeoutMs: [0, RC_WAIT_MAX_MS],
+  maxChars: [0, RC_SNAPSHOT_TEXT_MAX],
+  limit: [1, RC_HARVEST_LIMIT],
+  top: [1, RC_DISCOVER_TOP],
+  minCount: [2, 20],
+  elementIndex: [0, 400],
+  tabId: [0, 2_000_000],
+};
+
+/** 字符串参数的长度上限（不给默认＝原样放行：act 的 value 可能是整段正文）。 */
+const ACTION_STRING_MAX: Record<string, number> = {
+  selector: 300,
+  url: 2000,
+  fileUrl: 2000,
+  fileName: 200,
+  mimeType: 100,
+  attribute: 40,
+  text: 200,
+  urlIncludes: 300,
+  region: 300,
+  reason: 500,
+  elementName: 120,
+  key: 40,
+};
+
+/** 单条参数取值：枚举非法就丢弃该键（让执行器走默认口径），数值夹区间，数组限长度。 */
+function cleanActionValue(
+  name: RcActionName,
+  key: string,
+  value: unknown,
+): unknown {
+  if (key === 'mode') {
+    const allowed: readonly string[] =
+      name === 'read'
+        ? RC_READ_MODES
+        : name === 'harvest'
+          ? RC_HARVEST_MODES
+          : name === 'wait_for'
+            ? RC_WAIT_FOR_MODES
+            : [];
+    const mode = text(value).trim().toLowerCase();
+    return allowed.includes(mode) ? mode : undefined;
+  }
+  const bound = ACTION_NUMBER_BOUNDS[key];
+  if (bound) {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return undefined;
+    return Math.min(bound[1], Math.max(bound[0], Math.round(num)));
+  }
+  if (key === 'fields') {
+    if (!Array.isArray(value)) return undefined;
+    const cap = name === 'harvest' ? RC_HARVEST_FIELDS : RC_FILL_FIELDS;
+    return value.slice(0, cap);
+  }
+  if (key === 'scroll') {
+    if (!value || typeof value !== 'object') return undefined;
+    const scroll = toJsonObject(value);
+    return {
+      rounds: Math.min(20, Math.max(0, Math.round(Number(scroll.rounds) || 0))),
+      ms: Math.min(
+        RC_WAIT_MAX_MS,
+        Math.max(0, Math.round(Number(scroll.ms) || 1200)),
+      ),
+    };
+  }
+  if (
+    key === 'confirmed' ||
+    key === 'submit' ||
+    key === 'focus' ||
+    key === 'clearFirst'
+  ) {
+    return value === true;
+  }
+  if (typeof value === 'string') {
+    const max = ACTION_STRING_MAX[key];
+    return max ? value.slice(0, max) : value;
+  }
+  return value;
+}
+
 /** 动作是否属于敏感操作（提交类 / 命中关键词的点击），需本人在插件弹窗确认。 */
-export function chromeActionNeedsConfirm(action: Record<string, unknown>) {
-  return rcActionNeedsConfirm(action);
+export function chromeActionNeedsConfirm(
+  action: Record<string, unknown>,
+  observation?: unknown,
+) {
+  return rcActionNeedsConfirm(action, observation);
 }
 
 /**

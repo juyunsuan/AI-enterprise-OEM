@@ -1,0 +1,27 @@
+<view class="page">
+  <view class="filters">
+    <view
+      class="chip {{item.key === activeFilter ? 'chip-on' : ''}}"
+      wx:for="{{filters}}"
+      wx:key="key"
+      bindtap="onFilter"
+      data-key="{{item.key}}"
+    >{{item.label}}</view>
+  </view>
+
+  <view class="card task" wx:for="{{list}}" wx:key="id" bindtap="openDetail" data-id="{{item.id}}">
+    <view class="row between">
+      <view class="task-title ellipsis">{{item.title}}</view>
+      <view class="tag {{item.overdue ? 'tag-danger' : ''}}">{{item.overdue ? '已逾期' : item.statusLabel}}</view>
+    </view>
+    <view class="row between task-meta">
+      <view class="muted">{{item.sourceLabel}} · {{item.categoryLabel}}</view>
+      <view class="muted">{{item.dueAt ? '截止 ' + item.dueAtText : item.createdAtText}}</view>
+    </view>
+    <view class="muted ellipsis" wx:if="{{item.description}}">{{item.description}}</view>
+  </view>
+
+  <view class="empty" wx:if="{{!loading && !list.length}}">暂无任务</view>
+  <view class="muted loading" wx:if="{{loading}}">加载中…</view>
+  <view class="muted loading" wx:if="{{finished && list.length}}">没有更多了</view>
+</view>

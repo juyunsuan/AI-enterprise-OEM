@@ -3,7 +3,7 @@ import { endpoint } from "@/api/endpoint";
 
 /**
  * AI 调用账号界面层：给 AI 自动化任务准备第三方平台凭据，并按 Workbuddy
- * Enterprise 账号授权可用范围。界面是 Workbuddy 企业云页内的页签，绑定下拉直接
+ * Enterprise 账号授权可用范围。界面是 Workbuddy 企业版页内的页签，绑定下拉直接
  * 用页面已加载的 Workbuddy 账号，不再单独发一次请求。
  * 后端：/enterprise/ai-call/*（登录态）与 /api/v1/ai-call/*（API Key 机器通道）。
  */

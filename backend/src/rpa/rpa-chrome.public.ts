@@ -130,6 +130,11 @@ export function registerRpaChromePublic(
     handle(c, (device) => devices.logout(device)),
   );
 
+  // 能力缺口回报（N18）：侧边栏「这个做不到，帮我反馈」→ 落本账号台账，平台按站点×需求排行。
+  app.post('/api/public/rpa-chrome/gap', (c) =>
+    handle(c, (device, body) => devices.reportGap(device, body)),
+  );
+
   // 侧边栏 Agent 引导：可用的模型（本系统模型广场）+ 额度 + 安全设置。
   app.post('/api/public/rpa-chrome/bootstrap', (c) =>
     handle(c, async (device) => {
@@ -137,6 +142,11 @@ export function registerRpaChromePublic(
       const [catalog, settings] = await Promise.all([
         services.rpaChrome.catalog.userCatalog(user),
         devices.settingsOf(device.userId),
+      ]);
+      // 能力指纹回灌给侧边栏：面板展示「这台插件会什么」，插件也据此在本地先拦不支持的动作。
+      const [caps, primitives] = await Promise.all([
+        devices.deviceCaps(device.userId, device.clientId),
+        devices.availablePrimitives(device.userId, device.clientId),
       ]);
       return {
         models: catalog.list
@@ -156,6 +166,8 @@ export function registerRpaChromePublic(
           blockedHosts: settings.blockedHosts,
           confirmSensitive: settings.confirmSensitive,
         },
+        primitives,
+        caps,
       };
     }),
   );

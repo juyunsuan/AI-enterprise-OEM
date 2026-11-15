@@ -1699,6 +1699,286 @@ model GeoCollectItem {
   @@map("geo_collect_items")
 }
 
+/// GEO 独立站（营销工具 · GEO · 建站）：拖拽元素树存 Json，发布即快照一份线上内容。
+model GeoSite {
+  id               Int       @id @default(autoincrement())
+  /// 归属账号（与 GeoProject 同口径：企业用户本人，或代客作业的服务商/职员/平台管理员）
+  ownerUserId      String    @map("owner_user_id") @db.VarChar(64)
+  /// 企业档案 id（0 = 未绑定企业）
+  enterpriseId     Int       @default(0) @map("enterprise_id")
+  /// 品牌方当事人 userId（数据可见性用，与 GeoProject 同语义）
+  enterpriseUserId String    @default("") @map("enterprise_user_id") @db.VarChar(64)
+  /// 关联 GEO 项目（0 = 未关联；用于把品牌上下文灌进站点 SEO 结构化数据）
+  geoProjectId     Int       @default(0) @map("geo_project_id")
+  title            String    @db.VarChar(120)
+  /// 平台子域标识：{slug}.<站点域名>，全局唯一
+  slug             String    @unique @db.VarChar(63)
+  /// 站点默认语言：与平台 SUPPORTED_LANGUAGES 同口径；默认语言走无前缀地址
+  defaultLanguage  String    @default("zh-CN") @map("default_language") @db.VarChar(16)
+  /// 已启用的语言码（JSON string[]，含默认语言）；空数组按 [defaultLanguage] 处理
+  languages        Json      @default("[]")
+  /// 草稿元素树（Framely EditorElement[] 同构）
+  content          Json      @default("[]")
+  /// 站点级 SEO/GEO 档案：meta / OG / JSON-LD 勾选 / llms.txt 开关
+  seo              Json      @default("{}")
+  favicon          String    @default("") @db.VarChar(500)
+  coverImage       String    @default("") @map("cover_image") @db.VarChar(500)
+  /// DRAFT 草稿 | PUBLISHED 已发布 | SUSPENDED 欠费停服（数据保留）
+  status           String    @default("DRAFT") @db.VarChar(16)
+  /// 线上快照：访客读这份，编辑草稿不影响线上
+  publishedContent Json?     @map("published_content")
+  publishedSeo     Json?     @map("published_seo")
+  publishedAt      DateTime? @map("published_at")
+  /// 线上导航快照：站点发布时把菜单树冻结一份，草稿改菜单不影响线上
+  publishedMenus   Json?     @map("published_menus")
+  /// 站点级自定义脚本开关（0 = 本站关闭注入，平台开关与域名闸门之外的第三道闸）
+  scriptsEnabled   Int       @default(1) @map("scripts_enabled") @db.TinyInt
+  /// 欠费停服时间（用于 72 小时缓冲与恢复判定）
+  suspendedAt      DateTime? @map("suspended_at")
+  /// 计费起始时间（首月按天折算的锚点）
+  billingFrom      DateTime  @default(now()) @map("billing_from")
+  /// 停服/强制下线操作人与原因（合规处置留痕）
+  offBy            String    @default("") @map("off_by") @db.VarChar(64)
+  offReason        String    @default("") @map("off_reason") @db.VarChar(500)
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  @@index([ownerUserId])
+  @@index([enterpriseId])
+  @@index([status])
+  @@map("geo_sites")
+}
+
+/// 用户自助绑定的自定义域名（一个站点可多个域名，其中一个为主域名）。
+model GeoSiteDomain {
+  id          Int       @id @default(autoincrement())
+  siteId      Int       @map("site_id")
+  ownerUserId String    @map("owner_user_id") @db.VarChar(64)
+  /// 纯主机名（小写、无协议），全站唯一
+  domain      String    @unique @db.VarChar(253)
+  /// 随机校验令牌：TXT 记录值与探针回显都用它
+  verifyToken String    @map("verify_token") @db.VarChar(32)
+  /// PENDING 待校验 | VERIFYING 校验中 | ACTIVE 生效 | ERROR 校验失败 | DISABLED 平台停用
+  status      String    @default("PENDING") @db.VarChar(16)
+  /// 主域名（1 = 是，一个站最多一个）
+  isPrimary   Int       @default(0) @map("is_primary") @db.TinyInt
+  lastCheckAt DateTime? @map("last_check_at")
+  lastError   String    @default("") @map("last_error") @db.VarChar(500)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([siteId])
+  @@index([status])
+  @@map("geo_site_domains")
+}
+
+/// 站点月度账单：唯一键 (siteId, periodMonth) 是出账幂等的硬保证（日批重跑不会重复扣费）。
+model GeoSiteBill {
+  id           Int      @id @default(autoincrement())
+  siteId       Int      @map("site_id")
+  ownerUserId  String   @map("owner_user_id") @db.VarChar(64)
+  /// 账期 YYYY-MM
+  periodMonth  String   @map("period_month") @db.VarChar(7)
+  /// 本期计费的当月在册天数（首月/末月按天折算）
+  days         Int      @default(0)
+  pointsAmount Decimal  @default(0) @map("points_amount") @db.Decimal(18, 4)
+  /// CHARGED 已扣 | ARREARS 余额不足 | WAIVED 免费额内/未计费
+  status       String   @default("CHARGED") @db.VarChar(16)
+  txId         Int      @default(0) @map("tx_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@unique([siteId, periodMonth], map: "geo_site_bills_site_period_uniq")
+  @@index([ownerUserId, periodMonth])
+  @@map("geo_site_bills")
+}
+
+/// 站点页面：一个站点多页，path 为站内路径（'' = 首页）。列表/详情页通过 contentType 绑定内容库。
+model GeoSitePage {
+  id               Int       @id @default(autoincrement())
+  siteId           Int       @map("site_id")
+  ownerUserId      String    @map("owner_user_id") @db.VarChar(64)
+  /// 站内路径片段：'' 首页 | products | blog（无前后斜杠，小写连字符，可多段）
+  path             String    @db.VarChar(191)
+  /// 语言码：'' = 站点默认语言（存量数据零迁移），其余为已启用的语言
+  lang             String    @default("") @db.VarChar(16)
+  title            String    @db.VarChar(120)
+  /// 页面模板类型：home/landing/articleList/articleDetail/productList/productDetail/blank/custom
+  kind             String    @default("custom") @db.VarChar(24)
+  /// 首页标记（一个站点最多一个 1）
+  isHome           Int       @default(0) @map("is_home") @db.TinyInt
+  /// 列表页绑定的内容类型：article | product（'' = 不绑定）
+  contentType      String    @default("") @map("content_type") @db.VarChar(16)
+  /// 列表页每页条数
+  pageSize         Int       @default(9) @map("page_size")
+  sort             Int       @default(0)
+  /// DRAFT 草稿 | PUBLISHED 已发布
+  status           String    @default("DRAFT") @db.VarChar(16)
+  content          Json      @default("[]")
+  seo              Json      @default("{}")
+  /// 页面自定义脚本（白名单校验后的 https 外链：[{ src, host, label }]）
+  scripts          Json      @default("[]")
+  publishedContent Json?     @map("published_content")
+  publishedSeo     Json?     @map("published_seo")
+  publishedScripts Json?     @map("published_scripts")
+  publishedAt      DateTime? @map("published_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  @@unique([siteId, lang, path], map: "geo_site_pages_site_lang_path_uniq")
+  @@index([ownerUserId])
+  @@index([siteId, lang, sort])
+  @@map("geo_site_pages")
+}
+
+/// 站点导航菜单：HEADER 顶部 / FOOTER 页脚，支持两级与五种目标类型（页面/文章/产品/外链/锚点）。
+model GeoSiteMenuItem {
+  id          Int      @id @default(autoincrement())
+  siteId      Int      @map("site_id")
+  ownerUserId String   @map("owner_user_id") @db.VarChar(64)
+  /// HEADER 顶部导航 | FOOTER 页脚导航
+  location    String   @default("HEADER") @db.VarChar(16)
+  /// 语言码：'' = 站点默认语言；每个语言各一棵导航树
+  lang        String   @default("") @db.VarChar(16)
+  /// 父菜单 id（0 = 顶级）
+  parentId    Int      @default(0) @map("parent_id")
+  label       String   @db.VarChar(60)
+  /// PAGE 站内页面 | ARTICLE 文章 | PRODUCT 产品 | URL 外部链接 | ANCHOR 页内锚点
+  targetType  String   @default("PAGE") @map("target_type") @db.VarChar(16)
+  /// 目标 id（page/article/product），URL 与 ANCHOR 时为 0
+  targetId    Int      @default(0) @map("target_id")
+  /// 外部链接（http/https）或页内锚点（#xxx）
+  url         String   @default("") @db.VarChar(500)
+  sort        Int      @default(0)
+  /// 是否显示
+  visible     Int      @default(1) @db.TinyInt
+  /// 新标签页打开
+  openNewTab  Int      @default(0) @map("open_new_tab") @db.TinyInt
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([siteId, lang, location, sort])
+  @@index([ownerUserId])
+  @@map("geo_site_menu_items")
+}
+
+/// 站点内容库 · 文章：正文存元素树，与页面共用同一套转义与样式白名单渲染管线。
+model GeoSiteArticle {
+  id           Int       @id @default(autoincrement())
+  siteId       Int       @map("site_id")
+  ownerUserId  String    @map("owner_user_id") @db.VarChar(64)
+  title        String    @db.VarChar(200)
+  /// 站内标识：/blog/{slug}，同一站点同一语言内唯一
+  slug         String    @db.VarChar(191)
+  /// 语言码：'' = 站点默认语言
+  lang         String    @default("") @db.VarChar(16)
+  summary      String    @default("") @db.VarChar(500)
+  /// 正文元素树（同 GeoSitePage.content 结构）
+  body         Json      @default("[]")
+  coverImage   String    @default("") @map("cover_image") @db.VarChar(500)
+  /// 图集：[{ url, alt }]
+  gallery      Json      @default("[]")
+  category     String    @default("") @db.VarChar(60)
+  /// 标签列表：string[]
+  tags         Json      @default("[]")
+  authorName   String    @default("") @map("author_name") @db.VarChar(60)
+  /// FAQ 问答：[{ q, a }]，用于 FAQPage JSON-LD
+  faqs         Json      @default("[]")
+  /// 关联产品 id：number[]
+  relatedIds   Json      @default("[]") @map("related_ids")
+  seo          Json      @default("{}")
+  /// DRAFT 草稿 | PUBLISHED 已发布 | OFFLINE 下线
+  status       String    @default("DRAFT") @db.VarChar(16)
+  publishedAt  DateTime? @map("published_at")
+  viewCount    Int       @default(0) @map("view_count")
+  sort         Int       @default(0)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@unique([siteId, lang, slug], map: "geo_site_articles_site_lang_slug_uniq")
+  @@index([siteId, lang, status, publishedAt])
+  @@index([ownerUserId])
+  @@map("geo_site_articles")
+}
+
+/// 站点内容库 · 产品：字段用于产品详情页模板的规格/价格区块。
+model GeoSiteProduct {
+  id           Int       @id @default(autoincrement())
+  siteId       Int       @map("site_id")
+  ownerUserId  String    @map("owner_user_id") @db.VarChar(64)
+  title        String    @db.VarChar(200)
+  slug         String    @db.VarChar(191)
+  /// 语言码：'' = 站点默认语言
+  lang         String    @default("") @db.VarChar(16)
+  summary      String    @default("") @db.VarChar(500)
+  body         Json      @default("[]")
+  coverImage   String    @default("") @map("cover_image") @db.VarChar(500)
+  gallery      Json      @default("[]")
+  category     String    @default("") @db.VarChar(60)
+  tags         Json      @default("[]")
+  /// 展示价格（数值，文案单位由 unit 描述）
+  price        Decimal   @default(0) @db.Decimal(18, 2)
+  /// 价格单位：元/件、万元/年…
+  unit         String    @default("") @db.VarChar(20)
+  /// 是否「联系我们询价」（隐藏价格）
+  priceOnAsk   Int       @default(0) @map("price_on_ask") @db.TinyInt
+  /// 规格参数：[{ name, value }]
+  specs        Json      @default("[]")
+  /// 购买/咨询跳转链接
+  buyUrl       String    @default("") @map("buy_url") @db.VarChar(500)
+  faqs         Json      @default("[]")
+  seo          Json      @default("{}")
+  /// 首页/列表置顶推荐
+  featured     Int       @default(0) @db.TinyInt
+  status       String    @default("DRAFT") @db.VarChar(16)
+  publishedAt  DateTime? @map("published_at")
+  viewCount    Int       @default(0) @map("view_count")
+  sort         Int       @default(0)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@unique([siteId, lang, slug], map: "geo_site_products_site_lang_slug_uniq")
+  @@index([siteId, lang, status, publishedAt])
+  @@index([ownerUserId])
+  @@map("geo_site_products")
+}
+
+/// 发布台账：站点每次发布留一行，供管理端追溯与内容统计。
+model GeoSitePublishLog {
+  id         Int      @id @default(autoincrement())
+  siteId     Int      @map("site_id")
+  ownerUserId String  @map("owner_user_id") @db.VarChar(64)
+  /// SITE 整站发布 | PAGE 单页 | ARTICLE 文章 | PRODUCT 产品
+  targetKind String   @map("target_kind") @db.VarChar(16)
+  targetId   Int      @default(0) @map("target_id")
+  label      String   @default("") @db.VarChar(200)
+  /// 本次变更摘要（页面数/内容数等，纯展示）
+  note       String   @default("") @db.VarChar(500)
+  operator   String   @default("") @db.VarChar(64)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([siteId, createdAt])
+  @@map("geo_site_publish_logs")
+}
+
+/// 站点模板库：BLOCK = 画布里另存的可复用区块，PAGE = 整页另存；元素树与页面共用同一套白名单校验。
+model GeoSiteTemplate {
+  id          Int      @id @default(autoincrement())
+  siteId      Int      @map("site_id")
+  ownerUserId String   @map("owner_user_id") @db.VarChar(64)
+  /// BLOCK 区块片段 | PAGE 整页模板
+  kind        String   @default("BLOCK") @db.VarChar(16)
+  name        String   @db.VarChar(60)
+  note        String   @default("") @db.VarChar(200)
+  /// 顶层元素数组（与 geo_site_pages.content 同构）
+  content     Json     @default("[]")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([siteId, kind, id])
+  @@index([ownerUserId])
+  @@map("geo_site_templates")
+}
+
 /// Atomic per-day document sequences. Initialized from the maximum existing document number.
 model DocumentCounter {
   key   String @id @db.VarChar(32)
@@ -2053,6 +2333,9 @@ model RpaChromeDevice {
   status           String    @default("ONLINE") @db.VarChar(16)
   /// 插件最近一次心跳回报的打开页面 [{ tabId, url, title }]，仅界面展示
   pages            Json      @default("[]")
+  /// 能力指纹 { version, protocol, capabilities, primitives, siteMatrixHash, at }
+  /// 派发门与决策提示词菜单的唯一依据：旧插件拿不到只有新版才支持的动作
+  caps             Json      @default("{}")
   lastSeenAt       DateTime? @map("last_seen_at")
   lastIp           String    @default("") @map("last_ip") @db.VarChar(64)
   createdAt        DateTime  @default(now()) @map("created_at")
@@ -2105,6 +2388,10 @@ model RpaChromeSession {
   startUrl     String    @default("") @map("start_url") @db.VarChar(2000)
   /// 能力档：act 操作 / crawl 顺链接批量抓取 / extract 抽取结构化结果
   mode         String    @default("act") @db.VarChar(16)
+  /// 采集产物去向（none 只展示 / extract 落抽取台账 / table 落多维表格）：会话级留档，任何档位都不关步骤截图审计
+  persist      String    @default("none") @db.VarChar(16)
+  /// persist=table 时的目标多维表格（0＝落表时按表名新建）
+  tableId      Int       @default(0) @map("table_id")
   /// RUNNING | WAITING_CONFIRM | PAUSED | COMPLETED | FAILED | CANCELLED | TIMEOUT
   status       String    @default("RUNNING") @db.VarChar(16)
   stepCount    Int       @default(0) @map("step_count")
@@ -2116,6 +2403,8 @@ model RpaChromeSession {
   errorMessage String    @default("") @map("error_message") @db.VarChar(500)
   /// 确定性动作序列（给出时逐步回放，不走 LLM、不产生 AI 积分）
   script       Json      @default("[]")
+  /// 落表口径（tableName/fields/dedupBy/source）：persist=table 时收割结果按它原子落表，定时重跑靠 dedupBy 幂等
+  landing      Json?
   startedAt    DateTime  @default(now()) @map("started_at")
   endedAt      DateTime? @map("ended_at")
   createdAt    DateTime  @default(now()) @map("created_at")
@@ -2199,6 +2488,8 @@ model RpaChromeMessage {
 
   @@unique([agentId, seq])
   @@index([agentId, createdAt])
+  /// 能力缺口清单按人 + kind 查（kind='gap'）
+  @@index([createdBy, kind])
   @@map("rpa_chrome_messages")
 }
 
@@ -2273,6 +2564,12 @@ model RpaChromeSchedule {
   startUrl       String    @default("") @map("start_url") @db.VarChar(2000)
   /// 确定性动作序列：给了就逐步回放（不走 LLM），空则走 LLM 决策
   script         Json      @default("[]")
+  /// 采集产物去向（none/extract/table）：定时重跑每轮都按它落表，配合 landing.dedupBy 不产生重复行
+  persist        String    @default("none") @db.VarChar(16)
+  /// persist=table 的目标多维表格（0＝按 landing.tableName 定位或新建）
+  tableId        Int       @default(0) @map("table_id")
+  /// 落表口径（tableName/fields/dedupBy）：随会话一并下发，重跑口径固定在计划里
+  landing        Json?
   /// 决策用模型（空＝「模型设置」默认文本槽位）
   model          String    @default("") @db.VarChar(128)
   maxSteps       Int       @default(25) @map("max_steps")
@@ -2422,6 +2719,288 @@ model WorkbuddyTaskEvent {
 
   @@unique([taskId, seq])
   @@map("workbuddy_task_events")
+}
+
+/// Agent-Bot·Workbuddy 主机：用户本机装了 WorkBuddy + AIPDD Enterprise 客户端的一台机器。
+/// 归属账号；客户端主动出站心跳（默认 5 秒），平台经指令队列下发自然语言任务。
+model WorkbuddyCloudCommand {
+  id              Int       @id @default(autoincrement())
+  userId          String    @map("user_id") @db.VarChar(64)
+  accountId       Int       @map("account_id")
+  agentId         String    @default("") @map("agent_id") @db.VarChar(64)
+  versionId       String    @default("") @map("version_id") @db.VarChar(64)
+  conversationId  Int       @default(0) @map("conversation_id")
+  sessionId       String    @default("") @map("session_id") @db.VarChar(128)
+  endpoint        String    @default("") @db.VarChar(500)
+  commandCode     String    @unique @map("command_code") @db.VarChar(40)
+  kind            String    @default("prompt") @db.VarChar(16)
+  title           String    @default("") @db.VarChar(200)
+  payload         Json      @default("{}")
+  status          String    @default("PENDING") @db.VarChar(16)
+  progressText    String    @default("") @map("progress_text") @db.Text
+  result          Json      @default("{}")
+  error           String    @default("") @db.VarChar(500)
+  cancelRequested Boolean   @default(false) @map("cancel_requested")
+  sourceTaskId    Int       @default(0) @map("source_task_id")
+  scheduleId      Int       @default(0) @map("schedule_id")
+  retryCount      Int       @default(0) @map("retry_count")
+  dispatchedAt    DateTime? @map("dispatched_at")
+  finishedAt      DateTime? @map("finished_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@index([accountId, status, id])
+  @@index([userId, createdAt])
+  @@index([scheduleId, createdAt])
+  @@map("workbuddy_cloud_commands")
+}
+
+model WorkbuddyCloudSchedule {
+  id             Int       @id @default(autoincrement())
+  userId         String    @map("user_id") @db.VarChar(64)
+  accountId      Int       @map("account_id")
+  title          String    @db.VarChar(80)
+  instruction    String    @db.Text
+  payload        Json      @default("{}")
+  scheduleType   String    @default("recurring") @map("schedule_type") @db.VarChar(16)
+  scheduleConfig Json      @default("{}") @map("schedule_config")
+  scheduledAt    DateTime? @map("scheduled_at")
+  status         String    @default("enabled") @db.VarChar(16)
+  lastRunAt      DateTime? @map("last_run_at")
+  lastStatus     String    @default("") @map("last_status") @db.VarChar(16)
+  lastError      String    @default("") @map("last_error") @db.VarChar(500)
+  runCount       Int       @default(0) @map("run_count")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@index([userId, status])
+  @@index([status, scheduleType, scheduledAt])
+  @@map("workbuddy_cloud_schedules")
+}
+
+model WorkbuddyCloudScheduleRun {
+  id             Int       @id @default(autoincrement())
+  scheduleId     Int       @map("schedule_id")
+  accountId      Int       @map("account_id")
+  userId         String    @map("user_id") @db.VarChar(64)
+  status         String    @default("queued") @db.VarChar(16)
+  commandCode    String    @default("") @map("command_code") @db.VarChar(40)
+  conversationId Int       @default(0) @map("conversation_id")
+  error          String    @default("") @db.VarChar(500)
+  startedAt      DateTime? @map("started_at")
+  finishedAt     DateTime? @map("finished_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  @@index([scheduleId, createdAt])
+  @@map("workbuddy_cloud_schedule_runs")
+}
+
+model WorkbuddyHost {
+  id                Int       @id @default(autoincrement())
+  /// 归属用户（本站账户 userId）
+  userId            String    @map("user_id") @db.VarChar(64)
+  /// 设备显示名（配对时用户填写）
+  name              String    @default("") @db.VarChar(80)
+  /// win | mac（客户端自报；本期不含 Linux 主机）
+  platform          String    @default("") @db.VarChar(16)
+  /// 主机令牌哈希：sha256(明文 wb_...)；明文只在配对成功响应里出现一次
+  tokenHash         String    @unique @map("token_hash") @db.VarChar(64)
+  /// 令牌前 8 位，仅供界面识别
+  tokenPrefix       String    @default("") @map("token_prefix") @db.VarChar(16)
+  /// ONLINE | OFFLINE | NEVER | DISABLED（OFFLINE 由心跳超时折算，不落库）
+  status            String    @default("NEVER") @db.VarChar(16)
+  /// 客户端程序版本
+  clientVersion     String    @default("") @map("client_version") @db.VarChar(24)
+  /// 心跳自报：本机是否检测到在跑的 WorkBuddy
+  wbDetected        Boolean   @default(false) @map("wb_detected")
+  /// 能力指纹 { acpPort, acp, os, at }
+  caps              Json      @default("{}")
+  /// 客户端默认工作区（任务 cwd 缺省取它）
+  workingDir        String    @default("") @map("working_dir") @db.VarChar(300)
+  /// 心跳周期（秒），随心跳下发
+  heartbeatSeconds  Int       @default(5) @map("heartbeat_seconds")
+  lastSeenAt        DateTime? @map("last_seen_at")
+  lastIp            String    @default("") @map("last_ip") @db.VarChar(64)
+  enabled           Boolean   @default(true)
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@unique([userId, name])
+  @@index([userId, status])
+  @@map("workbuddy_hosts")
+}
+
+/// Workbuddy 主机·「通信」通道：每台主机自带一条内置通道（kind=workbuddy_host），不可删除。
+/// 与 ContentAgentAssistantChannel 同构（凭据密文 AES-256-GCM、allowedUsers、启停）。
+model WorkbuddyHostChannel {
+  id          Int       @id @default(autoincrement())
+  hostId      Int       @map("host_id")
+  userId      String    @map("user_id") @db.VarChar(64)
+  /// 固定 workbuddy_host（主机内置通道）
+  kind        String    @default("workbuddy_host") @db.VarChar(24)
+  name        String    @default("通信") @db.VarChar(80)
+  /// 通道凭据密文（AES-256-GCM），实际鉴权凭据即主机令牌哈希
+  configCipher String   @default("") @map("config_cipher") @db.Text
+  /// 允许经此通道下发的账号（空＝不限，仅归属人可用）
+  allowedUsers Json     @default("[]") @map("allowed_users")
+  enabled     Boolean   @default(true)
+  lastEventAt DateTime? @map("last_event_at")
+  eventCount  Int       @default(0) @map("event_count")
+  lastError   String    @default("") @map("last_error") @db.VarChar(300)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@unique([hostId, kind])
+  @@index([userId, enabled])
+  @@map("workbuddy_host_channels")
+}
+
+/// Workbuddy 主机·指令队列（核心表）：平台写入，主机心跳领取，按 commandCode 幂等回执。
+/// kind=prompt 直投 WorkBuddy ACP；schedule 记来源为定时任务（载荷同构，只多回指计划）。
+model WorkbuddyHostCommand {
+  id            Int       @id @default(autoincrement())
+  userId        String    @map("user_id") @db.VarChar(64)
+  hostId        Int       @map("host_id")
+  /// 归属会话（WorkbuddyHostConversation.conversationId）；为 0 表示无会话（如纯手动下发）
+  conversationId Int      @default(0) @map("conversation_id")
+  /// 服务端生成的指令码，主机回执按它幂等（唯一）
+  commandCode   String    @unique @map("command_code") @db.VarChar(40)
+  /// prompt | schedule
+  kind          String    @default("prompt") @db.VarChar(16)
+  title         String    @default("") @db.VarChar(200)
+  /// 载荷 { instruction, cwd, timeoutSec }
+  payload       Json      @default("{}")
+  /// PENDING | DISPATCHED | DONE | FAILED | TIMEOUT | CANCELED
+  status        String    @default("PENDING") @db.VarChar(16)
+  /// 流式进度累积（客户端 progress 回传的片段，节流写入）
+  progressText  String    @default("") @map("progress_text") @db.Text
+  /// 终结回执 { text, errorMessage, elapsedMs, acpSessionId }
+  result        Json      @default("{}")
+  error         String    @default("") @db.VarChar(500)
+  acpSessionId  String    @default("") @map("acp_session_id") @db.VarChar(80)
+  /// 平台侧取消标记：客户端下次 progress/心跳读到后中断执行
+  cancelRequested Boolean @default(false) @map("cancel_requested")
+  /// 关联的统一任务中心待办（0＝无）
+  sourceTaskId  Int       @default(0) @map("source_task_id")
+  /// 关联的定时任务（0＝非定时）
+  scheduleId    Int       @default(0) @map("schedule_id")
+  retryCount    Int       @default(0) @map("retry_count")
+  dispatchedAt  DateTime? @map("dispatched_at")
+  finishedAt    DateTime? @map("finished_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@index([hostId, status, id])
+  @@index([userId, createdAt])
+  @@index([scheduleId, createdAt])
+  @@map("workbuddy_host_commands")
+}
+
+/// Workbuddy 主机·会话映射：一台主机一个对话框（会话消息复用 ContentAgentConversation / Message）。
+model WorkbuddyHostConversation {
+  id             Int      @id @default(autoincrement())
+  hostId         Int      @unique @map("host_id")
+  userId         String   @map("user_id") @db.VarChar(64)
+  /// ContentAgentConversation.id
+  conversationId Int      @map("conversation_id")
+  title          String   @default("") @db.VarChar(80)
+  lastMessageAt  DateTime? @map("last_message_at")
+  messageCount   Int      @default(0) @map("message_count")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([userId, lastMessageAt])
+  @@map("workbuddy_host_conversations")
+}
+
+/// Workbuddy 主机·定时任务：复用统一时间口径（once/scheduled/recurring），到点由调度器下发指令。
+model WorkbuddyHostSchedule {
+  id             Int       @id @default(autoincrement())
+  userId         String    @map("user_id") @db.VarChar(64)
+  hostId         Int       @map("host_id")
+  title          String    @db.VarChar(80)
+  /// 每轮下发的自然语言指令（自包含，不看历史）
+  instruction    String    @db.Text
+  /// 额外载荷 { cwd, timeoutSec }
+  payload        Json      @default("{}")
+  /// once | scheduled | recurring
+  scheduleType   String    @default("recurring") @map("schedule_type") @db.VarChar(16)
+  scheduleConfig Json      @default("{}") @map("schedule_config")
+  /// 下一次执行时刻；once 跑完即置空
+  scheduledAt    DateTime? @map("scheduled_at")
+  /// enabled | paused
+  status         String    @default("enabled") @db.VarChar(16)
+  lastRunAt      DateTime? @map("last_run_at")
+  /// running | queued | succeeded | failed | skipped；空串＝还没跑过
+  lastStatus     String    @default("") @map("last_status") @db.VarChar(16)
+  lastError      String    @default("") @map("last_error") @db.VarChar(500)
+  runCount       Int       @default(0) @map("run_count")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@index([userId, status])
+  @@index([status, scheduleType, scheduledAt])
+  @@map("workbuddy_host_schedules")
+}
+
+/// Workbuddy 主机·定时任务运行记录：一行一轮，可跳回当轮对话看结果。
+model WorkbuddyHostScheduleRun {
+  id            Int       @id @default(autoincrement())
+  scheduleId    Int       @map("schedule_id")
+  hostId        Int       @map("host_id")
+  userId        String    @map("user_id") @db.VarChar(64)
+  /// queued | dispatched | succeeded | failed | skipped
+  status        String    @default("queued") @db.VarChar(16)
+  commandCode   String    @default("") @map("command_code") @db.VarChar(40)
+  /// 归属会话（跳转用）
+  conversationId Int      @default(0) @map("conversation_id")
+  error         String    @default("") @db.VarChar(500)
+  startedAt     DateTime? @map("started_at")
+  finishedAt    DateTime? @map("finished_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  @@index([scheduleId, createdAt])
+  @@map("workbuddy_host_schedule_runs")
+}
+
+/// Workbuddy 主机·配对码：客户端申请 → 用户在平台输码绑定 → 客户端轮询取回令牌。
+/// 6 位、单次有效、10 分钟过期、用后即废。
+model WorkbuddyHostPairCode {
+  id         Int       @id @default(autoincrement())
+  code       String    @unique @db.VarChar(12)
+  /// 客户端自报设备信息 { os, hostname, clientVersion }
+  deviceInfo Json      @default("{}") @map("device_info")
+  /// 绑定后回填
+  userId     String    @default("") @map("user_id") @db.VarChar(64)
+  hostId     Int       @default(0) @map("host_id")
+  /// 绑定成功后一次性返回的明文令牌（客户端取走后清空，避免重复泄露）
+  issuedToken String   @default("") @map("issued_token") @db.VarChar(80)
+  expiresAt  DateTime  @map("expires_at")
+  usedAt     DateTime? @map("used_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@index([expiresAt])
+  @@map("workbuddy_host_pair_codes")
+}
+
+/// Bot 主机·平台模型授权（B 方案）：用户/管理员在平台选一个模型渠道 + 模型，
+/// 主机心跳时把该渠道的真实密钥一次性下发给客户端，客户端按「平台渠道」使用；
+/// 平台只在这里记录授权关系，不保存客户端本地配置。
+model WorkbuddyHostModelGrant {
+  id        Int      @id @default(autoincrement())
+  userId    String   @map("user_id") @db.VarChar(64)
+  hostId    Int      @unique @map("host_id")
+  /// 指向 content_model_channels；-1 为本站内置渠道（LocalAPI）
+  channelId Int      @map("channel_id")
+  model     String   @db.VarChar(128)
+  enabled   Boolean  @default(true)
+  /// default＝跟随平台默认文本模型 / platform＝平台为本机授权 / client＝客户端改动同步上来
+  source    String   @default("platform") @db.VarChar(16)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId, enabled])
+  @@map("workbuddy_host_model_grants")
 }
 
 model AiCallAccount {
@@ -3002,10 +3581,14 @@ model ContentAgentConversation {
   /// 本会话使用的数字分身（0＝自动：模型按每轮语义自选）；分身被删也不清历史会话上的名字
   personaId   Int      @default(0) @map("persona_id")
   personaName String   @default("") @map("persona_name") @db.VarChar(30)
+  /// 会话归属台面：agent（Agent 页）/ workbuddy_host（Workbuddy 主机对话）。
+  /// 两个台面各自只读自己的会话，主机对话不会出现在 Agent 的会话列表里。
+  scene       String   @default("agent") @map("scene") @db.VarChar(24)
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@index([userId, updatedAt])
+  @@index([userId, scene, updatedAt])
   @@map("content_agent_conversations")
 }
 
@@ -12621,4 +13204,49 @@ model WechatMpInboundEvent {
 
   @@index([openId, createdAt])
   @@map("wechat_mp_inbound_events")
+}
+
+/// 用户版小程序·代码包台账：管理员上传 zip（对象存储）并维护版本 / 通道 / 小程序码。
+/// 微信侧的上传与提审发布仍由管理员在开发者工具 / 公众平台完成，本表只做托管与下载。
+model MiniProgramRelease {
+  id            Int      @id @default(autoincrement())
+  version       String   @db.VarChar(40)
+  /// STABLE | BETA
+  channel       String   @default("STABLE") @db.VarChar(8)
+  fileName      String   @map("file_name") @db.VarChar(160)
+  fileSize      Int      @default(0) @map("file_size")
+  /// 对象存储完整键（StorageService 口径）
+  ossKey        String   @map("oss_key") @db.VarChar(400)
+  /// 上传时算出的 SHA-256，页面展示供管理员核对
+  sha256        String   @default("") @db.VarChar(64)
+  changelog     String   @default("") @db.VarChar(1000)
+  /// 最低基础库版本（下载后微信开发者工具 / 后台设置用）
+  minBaseLib    String   @default("") @map("min_base_lib") @db.VarChar(40)
+  /// 小程序码图片地址（外链或对象存储键解析后的 URL）
+  qrcodeUrl     String   @default("") @map("qrcode_url") @db.VarChar(500)
+  downloadCount Int      @default(0) @map("download_count")
+  enabled       Boolean  @default(true)
+  createdBy     String   @default("") @map("created_by") @db.VarChar(64)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@unique([version, channel])
+  @@index([channel, enabled, createdAt])
+  @@map("miniprogram_releases")
+}
+
+/// 用户版小程序·openId 与站内账号绑定（小程序 openId 与服务号 openId 不同，单独一张表）。
+/// 跨通道免登靠 unionId 反查 WechatMpBinding.unionId。
+model MiniProgramBinding {
+  id        Int      @id @default(autoincrement())
+  userId    String   @unique @map("user_id") @db.VarChar(64)
+  openId    String   @unique @map("open_id") @db.VarChar(64)
+  unionId   String?  @map("union_id") @db.VarChar(64)
+  nickname  String   @default("") @db.VarChar(120)
+  avatarUrl String   @default("") @map("avatar_url") @db.VarChar(500)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([unionId])
+  @@map("miniprogram_bindings")
 }

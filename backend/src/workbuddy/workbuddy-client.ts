@@ -5,7 +5,7 @@ import { httpRequest, TransportError } from '../http/transport';
 import { shorten } from './workbuddy-shared';
 
 /**
- * 腾讯云 WorkBuddy Managed Agents（Workbuddy 企业云）的 API 3.0 客户端。
+ * 腾讯云 WorkBuddy Managed Agents（Workbuddy 企业版）的 API 3.0 客户端。
  *
  * 签名走标准 TC3-HMAC-SHA256：密钥对（SecretId / SecretKey）由每个用户自己填，
  * 用哪把 key 签名就只看得到那个企业的 Agent 与会话，SaaS 隔离由腾讯云侧完成，本地不再做 ACL。

@@ -11,6 +11,7 @@ export const BILLING_SUBJECT_LABELS: Record<string, string> = {
   asset_storage: "数字资产存储",
   bi: "BI 查询",
   crm: "CRM 席位",
+  geo_site: "GEO 独立站月费",
   hrm_resume_score: "简历/JD 智能评分",
   insight_report: "AI 洞察报告",
   jd_generate: "AI 生成 JD",
@@ -70,6 +71,7 @@ export const INSIGHT_SCOPE_LABELS: Record<string, string> = {
 export const TX_SCENE_LABELS: Record<string, string> = {
   ai_customer: "AI 客服",
   asset_storage: "资产存储",
+  geo_site: "GEO 独立站月费",
   oa: "OA 提交",
   admin: "管理员调整",
   gift: "积分赠送",

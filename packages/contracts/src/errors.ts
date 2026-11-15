@@ -111,6 +111,15 @@ export const ErrorCode = {
     message: "内容未通过安全审核",
     httpStatus: 400,
   },
+  /**
+   * 指令携带的工作区不在客户端上报的白名单内（方案 §5.4 第一条闸门）：
+   * 平台下发前先拦一道，客户端执行前仍会再校验一次并回执同一原因。
+   */
+  WORKSPACE_NOT_ALLOWED: {
+    code: 26007,
+    message: "工作区不在本机白名单内",
+    httpStatus: 400,
+  },
   NOT_IMPLEMENTED: {
     code: 501,
     message: "not implemented",

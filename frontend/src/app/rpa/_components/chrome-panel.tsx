@@ -7,8 +7,10 @@ import {
   PauseOutlined,
   ReloadOutlined,
   StopOutlined,
+  TableOutlined,
 } from "@ant-design/icons";
-import { App, Badge, Button, Drawer, Empty, Input, InputNumber, Modal, Space, Table, Tag, Tooltip } from "antd";
+import { App, Badge, Button, Checkbox, Drawer, Empty, Input, InputNumber, Modal, Select, Space, Table, Tag, Tooltip } from "antd";
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePasswordConfirm } from "@/components/confirm-with-password";
 import { RawImg } from "@/components/ui/raw-img";
@@ -20,7 +22,12 @@ import {
   rcDeviceBadge,
   rcSessionColor,
   rpaChromeApi,
+  type DataTableLandField,
+  type DataTableLandRowsResult,
   type RcDeviceView,
+  type RcExtractResultView,
+  type RcGapView,
+  type RcLandTableOption,
   type RcSessionView,
   type RcStepView,
 } from "@/api/rpa-chrome";
@@ -33,6 +40,17 @@ import {
  */
 
 const POLL_MS = 15_000;
+
+/** 落表可选列类型（与契约 DataTable_landRows 的 fields.type 同一套，合法性由后端判定）。 */
+const LAND_TYPE_OPTIONS = [
+  { value: "text", label: "文本" },
+  { value: "number", label: "数字" },
+  { value: "boolean", label: "是/否" },
+  { value: "date", label: "日期" },
+  { value: "url", label: "链接" },
+  { value: "email", label: "邮箱" },
+  { value: "json", label: "JSON" },
+];
 
 /** 动作快照 → 一行人话：动作名 + 关键参数（目标/文本/地址），够看清这一步在干什么。 */
 function actionText(action: Record<string, unknown>): string {
@@ -55,6 +73,71 @@ function actionText(action: Record<string, unknown>): string {
   return detail.length ? `${label}｜${detail.join(" ")}` : label;
 }
 
+/** 列表里的长文本：截断显示，完整内容由 Tooltip 兜住。 */
+function clipText(value: string, max: number): string {
+  const text = String(value || "");
+  return text.length > max ? `${text.slice(0, max)}…` : text;
+}
+
+/** 采集行的键 → 合法列键（小写字母/数字/下划线）；页面标签这类中文键先占位，落表前由用户改名。 */
+function landKeyOf(rawKey: string, index: number): string {
+  const direct = rawKey.trim().toLowerCase();
+  if (/^[a-z][a-z0-9_]{0,39}$/.test(direct)) return direct;
+  const slug = rawKey
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 34);
+  return /^[a-z][a-z0-9_]{0,39}$/.test(slug) ? slug : `col_${index + 1}`;
+}
+
+/** 值形态猜列类型（只帮用户少点几下，最终合法性由后端判定）：数字/布尔/链接/邮箱/其余文本。 */
+function landTypeOf(key: string, rows: Record<string, unknown>[]): string {
+  const values = rows
+    .map((row) => row[key])
+    .filter((value) => value !== null && value !== undefined && value !== "");
+  if (!values.length) return "text";
+  if (values.every((value) => typeof value === "number")) return "number";
+  if (values.every((value) => typeof value === "boolean")) return "boolean";
+  if (values.every((value) => /^https?:\/\//i.test(String(value)))) return "url";
+  if (values.every((value) => /^[^@\s]+@[^@\s]+$/.test(String(value)))) return "email";
+  return "text";
+}
+
+/** 采集行的键清单（保持首次出现顺序，最多 40 个，与契约 fields 上限一致）。 */
+function landKeysOf(rows: Record<string, unknown>[]): string[] {
+  const keys: string[] = [];
+  for (const row of rows) {
+    for (const key of Object.keys(row)) {
+      if (!keys.includes(key)) keys.push(key);
+      if (keys.length >= 40) return keys;
+    }
+  }
+  return keys;
+}
+
+/** 来源标注：说清「哪次采集、哪个站点」，与 `_source` 列 120 字上限一致。 */
+function landSourceOf(extract: RcExtractResultView): string {
+  const host = (() => {
+    try {
+      return new URL(extract.url).host;
+    } catch {
+      return "";
+    }
+  })();
+  return `采集台账#${extract.id}${host ? ` · ${host}` : ""}`.slice(0, 120);
+}
+
+/** 落表候选表名：默认跟着来源站点，用户可改（同名已有表由后端复用，不重复建表）。 */
+function landTableNameOf(extract: RcExtractResultView): string {
+  try {
+    const host = new URL(extract.url).host || "采集结果";
+    return `${host} 采集`.slice(0, 60);
+  } catch {
+    return "采集结果".slice(0, 60);
+  }
+}
+
 export function ChromePanel() {
   const { message } = App.useApp();
   const { request, modal } = usePasswordConfirm();
@@ -66,6 +149,9 @@ export function ChromePanel() {
   const [detailBusy, setDetailBusy] = useState(false);
   const [starting, setStarting] = useState<RcDeviceView | null>(null);
   const [info, setInfo] = useState<ExtensionInfo | null>(null);
+  const [extracts, setExtracts] = useState<RcExtractResultView[]>([]);
+  const [gaps, setGaps] = useState<RcGapView[]>([]);
+  const [landing, setLanding] = useState<RcExtractResultView | null>(null);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // 下载引导与顶栏「浏览器插件」入口同源：取不到（未发布 / 入口关闭）就不渲染下载按钮。
@@ -87,14 +173,26 @@ export function ChromePanel() {
   const reload = useCallback(
     async (showSpinner = false) => {
       if (showSpinner) setLoading(true);
-      const [deviceResult, sessionResult] = await Promise.all([
-        rpaChromeApi.devices(),
-        rpaChromeApi.sessions(),
-      ]);
+      const [deviceResult, sessionResult, extractResult, gapResult] =
+        await Promise.all([
+          rpaChromeApi.devices(),
+          rpaChromeApi.sessions(),
+          rpaChromeApi.extracts(),
+          rpaChromeApi.gaps(),
+        ]);
       if (deviceResult.data) setDevices(deviceResult.data.devices);
       if (sessionResult.data) setSessions(sessionResult.data.list);
+      if (extractResult.data) setExtracts(extractResult.data.list);
+      if (gapResult.data) setGaps(gapResult.data.list);
       setError(
-        [deviceResult.message, sessionResult.message].filter(Boolean).join("；"),
+        [
+          deviceResult.message,
+          sessionResult.message,
+          extractResult.message,
+          gapResult.message,
+        ]
+          .filter(Boolean)
+          .join("；"),
       );
       setLoading(false);
     },
@@ -304,6 +402,143 @@ export function ChromePanel() {
     },
   ];
 
+  const extractColumns = [
+    {
+      title: "时间",
+      dataIndex: "createdAt",
+      key: "createdAt",
+      width: 150,
+      render: (value: string) => fmtTime(value),
+    },
+    {
+      title: "来源页面",
+      dataIndex: "url",
+      key: "url",
+      render: (value: string) => (
+        <Tooltip title={value}>
+          <a href={value} target="_blank" rel="noreferrer noopener">
+            {value ? clipText(value, 60) : "—"}
+          </a>
+        </Tooltip>
+      ),
+    },
+    {
+      title: "行数",
+      key: "rows",
+      width: 80,
+      render: (_: unknown, row: RcExtractResultView) => row.rows.length,
+    },
+    {
+      title: "字段",
+      key: "keys",
+      width: 260,
+      render: (_: unknown, row: RcExtractResultView) => {
+        const keys = landKeysOf(row.rows);
+        return keys.length ? (
+          <Space size={4} wrap>
+            {keys.slice(0, 6).map((key) => (
+              <Tag key={key}>{key}</Tag>
+            ))}
+            {keys.length > 6 ? <span className="text-12 muted">+{keys.length - 6}</span> : null}
+          </Space>
+        ) : (
+          "—"
+        );
+      },
+    },
+    {
+      title: "抽取口径",
+      dataIndex: "schemaNote",
+      key: "schemaNote",
+      width: 220,
+      render: (value: string) =>
+        value ? (
+          <Tooltip title={value}>
+            <span>{clipText(value, 40)}</span>
+          </Tooltip>
+        ) : (
+          "—"
+        ),
+    },
+    {
+      title: "操作",
+      key: "actions",
+      width: 150,
+      render: (_: unknown, row: RcExtractResultView) => (
+        <Button
+          size="small"
+          type="primary"
+          disabled={!row.rows.length}
+          onClick={() => setLanding(row)}
+        >
+          投递到多维表格
+        </Button>
+      ),
+    },
+  ];
+
+  const gapColumns = [
+    {
+      title: "时间",
+      dataIndex: "createdAt",
+      key: "createdAt",
+      width: 150,
+      render: (value: string) => fmtTime(value),
+    },
+    {
+      title: "站点",
+      dataIndex: "site",
+      key: "site",
+      width: 160,
+      render: (value: string) => value || "—",
+    },
+    {
+      title: "缺的能力",
+      dataIndex: "need",
+      key: "need",
+      render: (value: string) => (
+        <Tooltip title={value}>
+          <span>{clipText(value, 48)}</span>
+        </Tooltip>
+      ),
+    },
+    {
+      title: "当时试过",
+      key: "attempted",
+      width: 200,
+      render: (_: unknown, row: RcGapView) =>
+        row.attempted.length ? row.attempted.join(" / ") : "—",
+    },
+    {
+      title: "期望",
+      dataIndex: "want",
+      key: "want",
+      width: 180,
+      render: (value: string) => (value ? clipText(value, 40) : "—"),
+    },
+    {
+      title: "插件版本",
+      dataIndex: "version",
+      key: "version",
+      width: 100,
+      render: (value: string) => (value ? `v${value}` : "—"),
+    },
+    {
+      title: "会话",
+      dataIndex: "sessionId",
+      key: "sessionId",
+      width: 90,
+      render: (value: number) =>
+        value ? (
+          <Button type="link" size="small" onClick={() => openDetail(value)}>
+            #{value}
+          </Button>
+        ) : (
+          "—"
+        ),
+    },
+  ];
+
   const hasOnline = devices.some((device) => device.online);
   const activeSessions = sessions.filter((row) =>
     ["RUNNING", "WAITING_CONFIRM", "PAUSED"].includes(row.status),
@@ -420,6 +655,58 @@ export function ChromePanel() {
         </Panel>
       </div>
 
+      <div style={{ marginTop: 20 }}>
+        <Panel title="采集结果" titleBadge={`${extracts.length} 条`}>
+          {extracts.length ? (
+            <Table<RcExtractResultView>
+              rowKey="id"
+              size="small"
+              columns={extractColumns}
+              dataSource={extracts}
+              scroll={{ x: "max-content" }}
+              pagination={{ pageSize: 10, hideOnSinglePage: true }}
+              expandable={{
+                expandedRowRender: (row) =>
+                  row.rows.length ? (
+                    <pre className="mono text-12" style={{ margin: 0, whiteSpace: "pre-wrap" }}>
+                      {JSON.stringify(row.rows.slice(0, 3), null, 2)}
+                    </pre>
+                  ) : (
+                    "这条台账没有行数据（只存了整包结果）。"
+                  ),
+              }}
+            />
+          ) : (
+            <EmptyState
+              icon={<TableOutlined aria-hidden />}
+              text="还没有采集结果：在浏览器代理里把「存到哪里」选成「存采集台账」或「落多维表格」，收割到的行会按次出现在这里，随时能补投到任意一张多维表格"
+            />
+          )}
+        </Panel>
+      </div>
+
+      <div style={{ marginTop: 20 }}>
+        <Panel title="能力缺口" titleBadge={`${gaps.length} 条`}>
+          {gaps.length ? (
+            <Table<RcGapView>
+              rowKey="id"
+              size="small"
+              columns={gapColumns}
+              dataSource={gaps}
+              scroll={{ x: "max-content" }}
+              pagination={{ pageSize: 10, hideOnSinglePage: true }}
+            />
+          ) : (
+            <EmptyState
+              icon={<ChromeOutlined aria-hidden />}
+              text="还没有能力缺口记录：Agent 想让插件做一件这台浏览器版本做不到的事时，会自动记一条到这里（含当时试过的动作与期望），作为插件迭代的输入清单"
+            />
+          )}
+        </Panel>
+      </div>
+
+      <LandRowsModal extract={landing} onClose={() => setLanding(null)} />
+
       <StartSessionModal
         device={starting}
         onClose={() => setStarting(null)}
@@ -451,6 +738,271 @@ export function ChromePanel() {
       />
       {modal}
     </Panel>
+  );
+}
+
+/** 落表的一列草稿：采集字段名 → 表头名 / 列键 / 类型 / 是否查重锚。 */
+type LandColumn = { source: string; name: string; key: string; type: string };
+
+/**
+ * 采集结果 → 多维表格（方案 D3 的界面入口）：选一张已有表或新建一张，
+ * 表头名、列键与查重锚在这里对齐——后端一次调用完成「定位表 + 补列 + 查重写入」，
+ * 界面如实回报新增/更新/跳过与没写进去的字段，不静丢。
+ */
+function LandRowsModal({
+  extract,
+  onClose,
+}: {
+  extract: RcExtractResultView | null;
+  onClose: () => void;
+}) {
+  const { message } = App.useApp();
+  const [tables, setTables] = useState<RcLandTableOption[]>([]);
+  const [tablesError, setTablesError] = useState("");
+  const [tableId, setTableId] = useState(0);
+  const [tableName, setTableName] = useState("");
+  const [columns, setColumns] = useState<LandColumn[]>([]);
+  const [dedupBy, setDedupBy] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<DataTableLandRowsResult | null>(null);
+
+  const rows = extract?.rows ?? [];
+
+  useEffect(() => {
+    if (!extract) return;
+    setTablesError("");
+    setTableId(0);
+    setTableName(landTableNameOf(extract));
+    setDedupBy([]);
+    setResult(null);
+    setColumns(
+      landKeysOf(extract.rows).map((key, index) => ({
+        source: key,
+        name: key.slice(0, 40),
+        key: landKeyOf(key, index),
+        type: landTypeOf(key, extract.rows),
+      })),
+    );
+    let alive = true;
+    void rpaChromeApi.tableOptions().then((next) => {
+      if (!alive) return;
+      if (next.data) setTables(next.data);
+      setTablesError(next.message);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [extract]);
+
+  const patchColumn = (source: string, patch: Partial<LandColumn>) =>
+    setColumns((prev) =>
+      prev.map((item) => (item.source === source ? { ...item, ...patch } : item)),
+    );
+
+  const submit = async () => {
+    if (!extract) return;
+    if (!rows.length) {
+      message.warning("这条采集台账没有行数据，无法落表");
+      return;
+    }
+    if (!tableId && !tableName.trim()) {
+      message.warning("请填写新表名称，或改选一张已有表");
+      return;
+    }
+    const invalid = columns.find((item) => !/^[a-z][a-z0-9_]{0,39}$/.test(item.key));
+    if (invalid) {
+      message.warning(
+        `列「${invalid.name || invalid.source}」的列键不合法：只能用小写字母、数字与下划线，且以字母开头`,
+      );
+      return;
+    }
+    setBusy(true);
+    try {
+      const next = await rpaChromeApi.landRows({
+        rows,
+        tableId,
+        ...(tableId ? {} : { tableName: tableName.trim() }),
+        fields: columns.map((item) => ({
+          name: item.name || item.source,
+          key: item.key,
+          type: item.type as DataTableLandField["type"],
+        })),
+        ...(dedupBy.length ? { dedupBy } : {}),
+        source: landSourceOf(extract),
+      });
+      setResult(next);
+      message.success(
+        `已落表「${next.tableName}」：新增 ${next.created} / 更新 ${next.updated} / 跳过 ${next.skipped}`,
+      );
+    } catch (err) {
+      message.error((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal
+      open={!!extract}
+      title="投递到多维表格"
+      width={860}
+      onCancel={onClose}
+      destroyOnHidden
+      footer={
+        <Space wrap>
+          {result ? (
+            <Link href={`/data-table?table=${result.tableId}`} target="_blank">
+              <Button size="small" icon={<TableOutlined aria-hidden />}>
+                {`打开「${result.tableName}」`}
+              </Button>
+            </Link>
+          ) : null}
+          <Button size="small" onClick={onClose}>
+            {result ? "关闭" : "取消"}
+          </Button>
+          <Button
+            size="small"
+            type="primary"
+            loading={busy}
+            disabled={!rows.length}
+            onClick={() => void submit()}
+          >
+            {busy ? "写入中" : "写入"}
+          </Button>
+        </Space>
+      }
+    >
+      <div className="text-12 muted" style={{ marginBottom: 12 }}>
+        {`${rows.length} 行 · 来源 ${extract?.url || "—"}`}
+      </div>
+
+      <Space size={8} wrap style={{ marginBottom: 12 }}>
+        <span>目标表</span>
+        <Select
+          style={{ width: 300 }}
+          value={tableId}
+          onChange={(next) => setTableId(Number(next))}
+          options={[
+            { value: 0, label: "新建一张表" },
+            ...tables.map((table) => ({
+              value: table.id,
+              label: `${table.name} · ${table.rowCount} 行`,
+            })),
+          ]}
+        />
+        {!tableId ? (
+          <Input
+            style={{ width: 240 }}
+            maxLength={60}
+            value={tableName}
+            placeholder="新表名称"
+            onChange={(event) => setTableName(event.target.value)}
+          />
+        ) : null}
+      </Space>
+      {tablesError ? (
+        <Notice variant="error">{`已有表清单读取失败：${tablesError}（可先新建一张表）`}</Notice>
+      ) : null}
+
+      <Table<LandColumn>
+        rowKey="source"
+        size="small"
+        dataSource={columns}
+        pagination={false}
+        scroll={{ x: "max-content", y: 320 }}
+        columns={[
+          {
+            title: "采集字段",
+            dataIndex: "source",
+            key: "source",
+            width: 160,
+            render: (value: string) => <span className="mono">{value}</span>,
+          },
+          {
+            title: "表头名",
+            key: "name",
+            width: 180,
+            render: (_: unknown, row: LandColumn) => (
+              <Input
+                size="small"
+                maxLength={40}
+                value={row.name}
+                onChange={(event) => patchColumn(row.source, { name: event.target.value })}
+              />
+            ),
+          },
+          {
+            title: "列键",
+            key: "key",
+            width: 160,
+            render: (_: unknown, row: LandColumn) => (
+              <Input
+                size="small"
+                maxLength={40}
+                value={row.key}
+                onChange={(event) =>
+                  patchColumn(row.source, { key: event.target.value.trim().toLowerCase() })
+                }
+              />
+            ),
+          },
+          {
+            title: "类型",
+            key: "type",
+            width: 120,
+            render: (_: unknown, row: LandColumn) => (
+              <Select
+                size="small"
+                style={{ width: "100%" }}
+                value={row.type}
+                options={LAND_TYPE_OPTIONS}
+                onChange={(next) => patchColumn(row.source, { type: String(next) })}
+              />
+            ),
+          },
+          {
+            title: "查重锚",
+            key: "dedup",
+            width: 90,
+            render: (_: unknown, row: LandColumn) => (
+              <Checkbox
+                checked={dedupBy.includes(row.key || row.source)}
+                disabled={
+                  !dedupBy.includes(row.key || row.source) && dedupBy.length >= 5
+                }
+                onChange={(event) =>
+                  setDedupBy((prev) => {
+                    const anchor = row.key || row.source;
+                    if (event.target.checked) return [...prev, anchor].slice(0, 5);
+                    return prev.filter((item) => item !== anchor);
+                  })
+                }
+              />
+            ),
+          },
+        ]}
+      />
+
+      <div className="text-12 muted" style={{ marginTop: 10 }}>
+        查重锚：命中同值的行按更新处理（定时重跑不产生重复行），最多 5 列；不选则每次都新增。
+      </div>
+
+      {result ? (
+        <Notice>
+          <div>
+            {`已${result.tableCreated ? "新建并写入" : "写入"}「${result.tableName}」：新增 ${result.created} · 更新 ${result.updated} · 跳过 ${result.skipped}${
+              result.batches > 1 ? ` · 分 ${result.batches} 批` : ""
+            }`}
+          </div>
+          {result.addedFields.length ? (
+            <div>{`本次补齐表头：${result.addedFields.map((item) => item.name || item.key).join("、")}`}</div>
+          ) : null}
+          {result.missedKeys.length ? (
+            <div>{`这些采集字段没有对应列，未写入：${result.missedKeys.join("、")}`}</div>
+          ) : null}
+        </Notice>
+      ) : null}
+    </Modal>
   );
 }
 

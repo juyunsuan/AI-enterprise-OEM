@@ -111,7 +111,7 @@ export const AGENT_DOMAIN_LABELS: Record<string, string> = {
   webhooks: "Webhook 订阅",
   "wecom-scrm": "企微 SCRM",
   workflows: "工作流",
-  workbuddy: "Workbuddy 企业云",
+  workbuddy: "Workbuddy 企业版",
 };
 
 export const AGENT_CHANNEL_LABELS: Record<string, string> = {
@@ -158,6 +158,7 @@ const AGENT_ACTION_VERBS: Record<string, string> = {
   import: "导入",
   invoice: "开票",
   invite: "邀请",
+  land: "落入",
   match: "匹配",
   materialize: "落地",
   onboard: "进件",
@@ -301,6 +302,7 @@ const AGENT_ACTION_NOUNS: Record<string, string> = {
   field: "字段",
   fields: "字段",
   flex: "用工",
+  gap: "缺口",
   form: "表单",
   from: "由",
   geo: "GEO",

@@ -434,6 +434,7 @@ export class RpaChromeLibraryService {
     row: Prisma.RpaChromeExtractGetPayload<object>,
   ): RcExtractResultView {
     return {
+      id: row.id,
       agentId: row.agentId,
       url: row.url,
       schemaNote: row.schemaNote,

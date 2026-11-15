@@ -10,6 +10,7 @@ import { CommunityAdminTab } from "../_components/community-admin-tab";
 import { ContractsTab } from "../_components/contracts-tab";
 import { FlexPayrollSwitch } from "../_components/flex-payroll-switch";
 import { GeoSettingsTab } from "../_components/geo-settings-tab";
+import { GeoSiteManageTab } from "../_components/geo-site-manage-tab";
 import { ProviderApplicationsTab } from "../_components/provider-applications-tab";
 import { ProvidersManageTab } from "../_components/providers-manage-tab";
 import { SettingsTab } from "../_components/settings-tab";
@@ -29,6 +30,7 @@ import { ServicePackagesTab } from "../_components/service-packages-tab";
 import { ModelPlazaAdminTab } from "../_components/model-plaza-admin-tab";
 import { HardwareAdminTab } from "../_components/hardware-admin-tab";
 import { WechatMpTab } from "../_components/wechat-mp-tab";
+import { MiniProgramTab } from "../_components/miniprogram-tab";
 import {
   GapsChangelogTab,
   GapsEntitlementsTab,
@@ -85,6 +87,7 @@ export default function AdminSectionPage() {
       {section === "capabilities" ? <CapabilityTab /> : null}
       {section === "tax-admin" ? <TaxAdminTab /> : null}
       {section === "geo" ? <GeoSettingsTab /> : null}
+      {section === "geo-site" ? <GeoSiteManageTab /> : null}
       {section === "marketing-livecode" ? <LivecodeAdminTab /> : null}
       {section === "community" ? <CommunityAdminTab /> : null}
       {section === "video-templates" ? <VideoTemplateAdminTab /> : null}
@@ -102,6 +105,7 @@ export default function AdminSectionPage() {
       {section === "upgrade" ? <UpgradeTab /> : null}
       {section === "ai-code" ? <AiCodeTab /> : null}
       {section === "wechat-mp" ? <WechatMpTab /> : null}
+      {section === "miniprogram" ? <MiniProgramTab /> : null}
       {section === "settings" ? <SettingsTab /> : null}
     </>
   );

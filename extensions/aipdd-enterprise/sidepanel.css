@@ -235,7 +235,7 @@ button:disabled { cursor: default; opacity: .55; }
   background: var(--card);
   border-top: 1px solid var(--border);
 }
-.cmp-top { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.cmp-top { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
 .mode {
   display: inline-flex;
   align-items: center;
@@ -537,6 +537,39 @@ button:disabled { cursor: default; opacity: .55; }
 .pop-item:hover { background: var(--bg-muted); color: var(--text-1); }
 .pop-item .d { display: block; color: var(--text-3); font-size: 11px; }
 .pop-sep { height: 1px; margin: 4px 0; background: var(--border); }
+
+/* 「存到哪里」浮层：贴在输入框上方展开，表清单可能很长，自己滚。 */
+#persistPop { width: 268px; max-height: 58vh; overflow: auto; }
+.pop > .d { padding: 3px 8px; color: var(--text-3); font-size: 11px; line-height: 1.5; }
+.pop-tables { display: flex; flex-direction: column; gap: 2px; max-height: 168px; overflow: auto; }
+.pop-text {
+  display: block;
+  width: 100%;
+  margin: 4px 0;
+  padding: 5px 7px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--card);
+  color: var(--text-1);
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+}
+.pop-text:focus { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-soft); }
+.pop-apply {
+  display: block;
+  width: 100%;
+  margin: 4px 0;
+  padding: 6px 0;
+  border: 1px solid var(--primary);
+  border-radius: var(--radius);
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.pop-apply:hover { background: var(--primary); color: #fff; }
 
 /* 账号浮层里的设备登录表单（原先在弹窗里，现在随登录入口一起搬进侧边栏） */
 #accountPop { width: 268px; }

@@ -137,6 +137,11 @@ export class DataTableController {
     );
   }
 
+  /** 采集落表：收割行一次投递（新建或指定已有表、按需补列、按 dedupBy 幂等）。 */
+  async landRows(user: CurrentUser, body: Record<string, unknown>) {
+    return ok(await this.table.landRows(user, body));
+  }
+
   async createRow(
     user: CurrentUser,
     id: string,

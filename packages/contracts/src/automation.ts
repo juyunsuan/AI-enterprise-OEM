@@ -4,6 +4,8 @@ import {
   rcAgentSchema,
   rcDeviceSchema,
   rcExtractResultSchema,
+  rcGapReportBodySchema,
+  rcGapViewSchema,
   rcRecordingSchema,
   rcScheduleSchema,
   rcSessionSchema,
@@ -2073,6 +2075,69 @@ const tpBatchBody = {
   confirmCost: z.boolean().default(false),
 };
 
+/* ---------------------------------------------------------------- 采集落表（D3） */
+
+/**
+ * 「收割到的行 → 多维表格」的一次原子落表请求。
+ * 表可以是已有的（tableId）也可以是这次新建的（tableName + fields）；
+ * 缺列时按 fields 声明补列，值按列类型归一，dedupBy 提供幂等锚，整批不超过 500 行。
+ */
+export const dataTableLandFieldSchema = z.object({
+  /** 表头显示名（中文即可，服务端据此归一出列键）。 */
+  name: z.string().min(1).max(40),
+  /** 列键：给定时只收小写字母/数字/下划线，缺省由 name 归一。 */
+  key: z.string().min(1).max(40).optional(),
+  /** 列类型（与建列同一套）；缺省 text。 */
+  type: z
+    .enum(["text", "number", "boolean", "date", "url", "email", "json", "select"])
+    .optional(),
+  /** select 列的候选值。 */
+  choices: z.array(z.string().max(40)).max(50).optional(),
+});
+export type DataTableLandField = z.infer<typeof dataTableLandFieldSchema>;
+
+export const dataTableLandRowsBodySchema = z
+  .object({
+    /** 收割得到的行（键＝列键或表头名；服务端按列做映射与归一）。 */
+    rows: z.array(jsonObject).min(1).max(500),
+    /** 目标表；0＝用 tableName 新建。 */
+    tableId: z.number().int().nonnegative().default(0),
+    tableName: z.string().max(60).optional(),
+    description: z.string().max(200).optional(),
+    /** 期望表头：新建时全部建列，已有表时只补缺失列。 */
+    fields: z.array(dataTableLandFieldSchema).max(40).optional(),
+    /** 幂等锚：按这些列的值组合查重，命中则更新而非重复插入。 */
+    dedupBy: z.array(z.string().max(40)).max(5).optional(),
+    /** 来源标注（写入 `_source` 列，便于区分是哪次采集/哪个站点）。 */
+    source: z.string().max(120).default(""),
+  })
+  .refine((value) => value.tableId > 0 || Boolean(value.tableName?.trim()), {
+    message: "请指定目标表编号或新表名称",
+  });
+export type DataTableLandRowsBody = z.infer<typeof dataTableLandRowsBodySchema>;
+
+/** 落表结果：新建/更新/跳过与本次补的列，一次调用即可向用户交代清楚。 */
+export const dataTableLandRowsResultSchema = z.object({
+  tableId: z.number(),
+  tableName: z.string(),
+  /** 本次新建的表（否则为 false，表示落到已有表）。 */
+  tableCreated: z.boolean().default(false),
+  created: z.number().default(0),
+  updated: z.number().default(0),
+  skipped: z.number().default(0),
+  /** 本次为对齐表头而新建的列。 */
+  addedFields: z
+    .array(z.object({ key: z.string(), name: z.string(), type: z.string() }))
+    .default([]),
+  /** 行里出现但表头没有、且未在 fields 声明的键（已丢弃，提示用户核对）。 */
+  missedKeys: z.array(z.string()).default([]),
+  /** 分批提交次数（>200 行时按批走）。 */
+  batches: z.number().default(1),
+});
+export type DataTableLandRowsResult = z.infer<
+  typeof dataTableLandRowsResultSchema
+>;
+
 export const automationEndpoints = {
   // 多维表格（账号归属，四权限位）
   DataTable_list: {
@@ -2197,6 +2262,18 @@ export const automationEndpoints = {
     query: emptyQuery,
     body: passthroughBody,
     response: envelope(dataTableRowSchema),
+  },
+  /**
+   * 采集落表：一次调用把收割到的行原子写入（新建或指定已有表、按需补列、值归一、幂等查重）。
+   * 行数据全程走这一条结构化通道，不由模型复述。
+   */
+  DataTable_landRows: {
+    method: "post" as const,
+    path: "/enterprise/data-tables/land-rows",
+    params: z.object({}),
+    query: emptyQuery,
+    body: dataTableLandRowsBodySchema,
+    response: envelope(dataTableLandRowsResultSchema),
   },
   DataTable_removeRow: {
     method: "delete" as const,
@@ -2925,6 +3002,39 @@ export const automationEndpoints = {
     body: passthroughBody,
     response: envelope(z.object({ extract: rcExtractResultSchema })),
   },
+  /**
+   * 采集结果 → 多维表格（侧边栏「投递」按钮用）：与 DataTable_landRows 同一份原子落表，
+   * 但走本人私有台账通道，不套无人值守授权闸——是用户在自己的浏览器里点的按钮，不是 Agent 自作主张写数据。
+   */
+  RpaChrome_landRows: {
+    method: "post" as const,
+    path: "/enterprise/rpa/chrome/land-rows",
+    params: z.object({}),
+    query: emptyQuery,
+    body: dataTableLandRowsBodySchema,
+    response: envelope(dataTableLandRowsResultSchema),
+  },
+
+  /**
+   * 能力缺口回报：Agent 判定插件做不到时，把「缺什么、为什么、试过什么」写进台账。
+   * 侧边栏与 /rpa 状态页都读这一份，平台据此排能力补齐的优先级。
+   */
+  RpaChrome_reportGap: {
+    method: "post" as const,
+    path: "/enterprise/rpa/chrome/gaps",
+    params: z.object({}),
+    query: emptyQuery,
+    body: rcGapReportBodySchema,
+    response: envelope(z.object({ gap: rcGapViewSchema })),
+  },
+  RpaChrome_gaps: {
+    method: "get" as const,
+    path: "/enterprise/rpa/chrome/gaps",
+    params: z.object({}),
+    query: z.object({}).passthrough(),
+    body: z.undefined(),
+    response: envelope(z.object({ list: z.array(rcGapViewSchema) })),
+  },
 
   // 浏览器代理计划任务：到点让本人某台在线设备跑一个目标（离线即跳过当轮）。
   RpaChrome_schedules: {
@@ -2960,7 +3070,17 @@ export const automationEndpoints = {
     response: envelope(z.object({ schedule: rcScheduleSchema })),
   },
 
-  // Workbuddy 企业云
+  // Workbuddy 企业版
+  Workbuddy_cloudCommands: { method: "get" as const, path: "/enterprise/workbuddy/accounts/:id/cloud-commands", params: workbuddyAccountParams, query: emptyQuery, body: z.undefined(), response: envelope(z.array(z.record(z.string(), z.unknown()))) },
+  Workbuddy_sendCloudCommand: { method: "post" as const, path: "/enterprise/workbuddy/accounts/:id/cloud-commands", params: workbuddyAccountParams, query: emptyQuery, body: z.object({ agentId: z.string().trim().min(1).max(64), versionId: z.string().trim().max(64).optional(), instruction: z.string().trim().min(1).max(20000), previousCommandId: z.number().int().positive().optional() }).strict(), response: envelope(z.record(z.string(), z.unknown())) },
+  Workbuddy_syncCloudCommand: { method: "get" as const, path: "/enterprise/workbuddy/cloud-commands/:id", params: workbuddyAccountParams, query: emptyQuery, body: z.undefined(), response: envelope(z.record(z.string(), z.unknown())) },
+  Workbuddy_cloudSchedules: { method: "get" as const, path: "/enterprise/workbuddy/accounts/:id/cloud-schedules", params: workbuddyAccountParams, query: emptyQuery, body: z.undefined(), response: envelope(z.array(z.record(z.string(), z.unknown()))) },
+  Workbuddy_createCloudSchedule: { method: "post" as const, path: "/enterprise/workbuddy/accounts/:id/cloud-schedules", params: workbuddyAccountParams, query: emptyQuery, body: passthroughBody, response: envelope(z.record(z.string(), z.unknown())) },
+  Workbuddy_cloudSchedule: { method: "get" as const, path: "/enterprise/workbuddy/cloud-schedules/:id", params: workbuddyAccountParams, query: emptyQuery, body: z.undefined(), response: envelope(z.record(z.string(), z.unknown())) },
+  Workbuddy_updateCloudSchedule: { method: "patch" as const, path: "/enterprise/workbuddy/cloud-schedules/:id", params: workbuddyAccountParams, query: emptyQuery, body: passthroughBody, response: envelope(z.record(z.string(), z.unknown())) },
+  Workbuddy_removeCloudSchedule: { method: "delete" as const, path: "/enterprise/workbuddy/cloud-schedules/:id", params: workbuddyAccountParams, query: emptyQuery, body: z.undefined(), response: envelope(z.object({ id: z.number() })) },
+  Workbuddy_cloudScheduleRuns: { method: "get" as const, path: "/enterprise/workbuddy/cloud-schedules/:id/runs", params: workbuddyAccountParams, query: emptyQuery, body: z.undefined(), response: envelope(z.array(z.record(z.string(), z.unknown()))) },
+  Workbuddy_runCloudSchedule: { method: "post" as const, path: "/enterprise/workbuddy/cloud-schedules/:id/run", params: workbuddyAccountParams, query: emptyQuery, body: z.undefined(), response: envelope(z.record(z.string(), z.unknown())) },
   Workbuddy_accounts: {
     method: "get" as const,
     path: "/enterprise/workbuddy/accounts",

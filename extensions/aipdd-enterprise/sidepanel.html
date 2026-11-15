@@ -48,6 +48,7 @@
       <div class="cmp-top">
         <button class="mode" id="modeBtn" type="button" title="运行模式">Act<span class="caret">▾</span></button>
         <button class="mode" id="runGateBtn" type="button" title="执行方式：确认后执行＝先给方案、等你点确认再动手；自动执行＝分析好方案后直接动手">确认后执行</button>
+        <button class="mode" id="persistBtn" type="button" title="采集到的数据存到哪里：只回对话 / 存采集台账 / 落多维表格">只回对话<span class="caret">▾</span></button>
         <button class="icon-btn sm" id="attachBtn" type="button" title="添加附件（截图 / 文件）">＋</button>
         <button class="ghost" id="enhanceBtn" type="button" title="把一句话扩写成更清晰的目标">增强提示</button>
       </div>
@@ -66,6 +67,7 @@
       <button class="ft-btn" data-drawer="triggers" type="button">触发器</button>
       <button class="ft-btn" data-drawer="recordings" type="button">录制<b class="badge" id="badgeRecordings" hidden></b></button>
       <button class="ft-btn" data-drawer="mcp" type="button">MCP</button>
+      <button class="ft-btn" data-drawer="caps" type="button">能力</button>
       <button class="ft-btn" data-drawer="models" type="button">模型</button>
     </footer>
 
@@ -82,6 +84,7 @@
     <!-- ============ 浮层：模式 / 模型 / 账号 ============ -->
     <div class="pop" id="modePop" hidden></div>
     <div class="pop" id="modelPop" hidden></div>
+    <div class="pop" id="persistPop" hidden></div>
     <div class="pop" id="accountPop" hidden></div>
   </div>
   <script src="sidepanel.js"></script>

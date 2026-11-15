@@ -23,6 +23,7 @@ import {
   KeyOutlined,
   LinkOutlined,
   LockOutlined,
+  MobileOutlined,
   QrcodeOutlined,
   MailOutlined,
   LogoutOutlined,
@@ -49,6 +50,7 @@ import { App, Button, Dropdown, Result, Spin, Tooltip } from "antd";
 import Link from "next/link";
 import { NotificationBell } from "@/components/notification-bell";
 import { WechatMpBindingEntry } from "@/components/wechat-mp-binding";
+import { ClientDownloadEntry } from "@/components/client-download-entry";
 import { ExtensionEntry } from "@/components/extension-entry";
 import { OrgContextSwitcher } from "@/components/org-context-switcher";
 import { PageAssistant } from "@/components/page-assistant";
@@ -105,6 +107,7 @@ export const ROUTE_ICONS = {
   appstore: <AppstoreOutlined />,
   mail: <MailOutlined />,
   qrcode: <QrcodeOutlined />,
+  mobile: <MobileOutlined />,
   chart: <BarChartOutlined />,
   target: <AimOutlined />,
   gift: <GiftOutlined />,
@@ -351,6 +354,7 @@ export function EnterpriseProLayout({ children }: { children: ReactNode }) {
           <NotificationBell key="notifications" />,
           <WechatMpBindingEntry key="wechat-mp" />,
           <ExtensionEntry key="extension" />,
+          <ClientDownloadEntry key="client-download" />,
           <Tooltip title={t("帮助中心")} key="help">
             <Button
               type="text"

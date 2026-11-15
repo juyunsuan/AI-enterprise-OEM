@@ -1,4 +1,5 @@
 import { Prisma } from '../../generated/prisma';
+import type { DataTableLandRowsResult } from '@enterprise/contracts';
 import { LIST_ALL_LIMIT, text } from '../common/api';
 import { BusinessException } from '../common/business.exception';
 import { ErrorCode } from '../common/error-code';
@@ -6,7 +7,7 @@ import { CurrentUser } from '../auth/current-user';
 import { UserLookupService } from '../directory/user-lookup.service';
 import { IdentityService } from '../identity/identity.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { toJsonArray } from '../shared/json-value';
+import { toJsonArray, toJsonObject } from '../shared/json-value';
 
 /** 列类型（与参考实现 AIRecord 的 field_type 一致）。 */
 export const FIELD_TYPES = [
@@ -27,6 +28,12 @@ const FIELD_KEY_MAX = 64;
 const BATCH_ROW_LIMIT = 200;
 /** 导出 CSV 一次最多带出的行数：整表进内存会打满进程，超出部分在文件里明确标注。 */
 const EXPORT_ROW_LIMIT = 50000;
+/** 采集落表单次行数上限（比机器通道写行宽，落表本来就是批量投行的入口）。 */
+const LAND_ROWS_LIMIT = 500;
+/** 幂等查重时一次读入的已有行数上限：超过就要求换表或改追加，不做无界的整表扫描。 */
+const LAND_DEDUP_SCAN_LIMIT = 5000;
+/** 采集来源标注列：区分「这批行是哪次采集/哪个站点来的」，与用户自己填的列互不干扰。 */
+const LAND_SOURCE_KEY = '_source';
 
 export type DataFieldRow = {
   id: number;
@@ -873,6 +880,353 @@ export class DataTableService {
     return created.map(decorateRow);
   }
 
+  // ---------- 采集落表（D3：建表 / 补列 / 查重 / 写入一次做完） ----------
+
+  /**
+   * 把插件收割到的行原子地放进多维表格，一条调用交代清楚结果：
+   * · 目标表可以是已有表（tableId）或新表（tableName）；同名已有表直接复用，避免每次采集都建一张新表；
+   * · 表头按 fields 对齐，缺的列自动补——但只给本人归属的表补，表结构是表主的资产；
+   * · 给了 dedupBy 就按这几列查重，命中即更新（内容没变算跳过），重投同一批不产生重复行；
+   * · 行里多出来的键写不进去，收进 missedKeys 如实回报，不静丢也不整批失败。
+   */
+  async landRows(
+    user: CurrentUser,
+    body: Record<string, unknown>,
+  ): Promise<DataTableLandRowsResult> {
+    const rawRows = Array.isArray(body.rows) ? body.rows : [];
+    if (!rawRows.length) {
+      throw new BusinessException(ErrorCode.BAD_REQUEST, '请提交要写入的行');
+    }
+    if (rawRows.length > LAND_ROWS_LIMIT) {
+      throw new BusinessException(
+        ErrorCode.BAD_REQUEST,
+        `单次最多落 ${LAND_ROWS_LIMIT} 行（本次 ${rawRows.length} 行），请分批或缩小采集范围`,
+      );
+    }
+    for (const item of rawRows) {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) {
+        throw new BusinessException(
+          ErrorCode.BAD_REQUEST,
+          '行数据必须是对象（列键 → 值）',
+        );
+      }
+    }
+    const source = text(body.source).trim().slice(0, 120);
+
+    // 1) 目标表：指定编号 → 校验写权限；只给表名 → 同名已有表复用，没有才新建。
+    let tableId = Math.round(Number(body.tableId) || 0);
+    const wantedName = text(body.tableName).trim().slice(0, 60);
+    let tableCreated = false;
+    if (tableId > 0) {
+      this.requireBit(await this.access(user, tableId), 'create');
+    } else {
+      if (!wantedName) {
+        throw new BusinessException(
+          ErrorCode.BAD_REQUEST,
+          '请指定目标表编号（tableId）或新表名称（tableName）',
+        );
+      }
+      const existing = await this.prisma.dataTable.findFirst({
+        where: { createdBy: user.userId, name: wantedName },
+        orderBy: { id: 'asc' },
+        select: { id: true },
+      });
+      if (existing) {
+        tableId = existing.id;
+        this.requireBit(await this.access(user, tableId), 'create');
+      } else {
+        const created = await this.create(user, {
+          name: wantedName,
+          description: text(body.description).trim().slice(0, 500),
+        });
+        tableId = created.id;
+        tableCreated = true;
+      }
+    }
+
+    // 2) 表头对齐：期望列 + 行里出现的列键并集，缺的补上。
+    const specs = this.landFieldSpecs(body.fields, rawRows);
+    if (source && !specs.some((item) => item.key === LAND_SOURCE_KEY)) {
+      specs.push({
+        name: '来源',
+        key: LAND_SOURCE_KEY,
+        type: 'text',
+        choices: [],
+      });
+    }
+    const access = await this.access(user, tableId);
+    let fields = await this.prisma.dataTableField.findMany({
+      where: { tableId },
+      orderBy: { sortOrder: 'asc' },
+    });
+    const missing = specs.filter(
+      (spec) => !fields.some((field) => field.fieldKey === spec.key),
+    );
+    if (missing.length) {
+      if (!access.owner) {
+        throw new BusinessException(
+          ErrorCode.ROLE_MISMATCH,
+          `表「${access.table.name}」不是本人归属，不能自动补列。请表主先加这些列（${missing
+            .map((item) => item.key)
+            .join('、')}）再落表，或改用本人的表。`,
+        );
+      }
+      await this.addFields(
+        user,
+        tableId,
+        missing.map((item) => ({
+          name: item.name,
+          field_key: item.key,
+          field_type: item.type,
+          choices: item.choices,
+          required: false,
+        })),
+      );
+      fields = await this.prisma.dataTableField.findMany({
+        where: { tableId },
+        orderBy: { sortOrder: 'asc' },
+      });
+    }
+    if (!fields.length) {
+      throw new BusinessException(
+        ErrorCode.BAD_REQUEST,
+        '行里没有任何可对齐的列：请在 fields 里声明列名与列键（英文小写）',
+      );
+    }
+
+    // 3) 键映射 + 值归一（沿用行写入同一份 coerce 与必填校验，界面看到的和落库的是同一口径）。
+    const byKey = new Map(fields.map((field) => [field.fieldKey, field]));
+    const byName = new Map<string, DataFieldRow>();
+    for (const field of fields) {
+      const name = field.name.trim();
+      if (name && !byName.has(name)) byName.set(name, field);
+    }
+    const missedKeys = new Set<string>();
+    const prepared = rawRows.map((item) => {
+      const mapped: Record<string, unknown> = {};
+      for (const [rawKey, value] of Object.entries(
+        item as Record<string, unknown>,
+      )) {
+        const field = byKey.get(rawKey) ?? byName.get(rawKey.trim());
+        if (!field) {
+          missedKeys.add(rawKey);
+          continue;
+        }
+        mapped[field.fieldKey] = value;
+      }
+      if (source && mapped[LAND_SOURCE_KEY] === undefined) {
+        mapped[LAND_SOURCE_KEY] = source;
+      }
+      return this.normalizeData(fields, mapped);
+    });
+
+    // 4) 查重锚：dedupBy 可以是列键也可以是表头名，认不出来就直接拒（幂等锚不能猜）。
+    const dedupKeys: string[] = [];
+    for (const item of Array.isArray(body.dedupBy)
+      ? body.dedupBy.slice(0, 5)
+      : []) {
+      const raw = text(item).trim();
+      if (!raw) continue;
+      const field = byKey.get(raw) ?? byName.get(raw);
+      if (!field) {
+        throw new BusinessException(
+          ErrorCode.BAD_REQUEST,
+          `查重列「${raw}」不在该表列里，请先在 fields 里声明该列`,
+        );
+      }
+      if (!dedupKeys.includes(field.fieldKey)) dedupKeys.push(field.fieldKey);
+    }
+
+    let created = 0;
+    let updated = 0;
+    let skipped = 0;
+    let batches = 0;
+
+    if (!dedupKeys.length) {
+      // 追加语义：按批事务写入，单批仍受机器通道 200 行上限约束。
+      // 逐行 create（而非 createMany）是为了拿到行号通知下游（飞书同步靠 rowId 定位变更），
+      // 与界面批量写行同一口径；单批即一个事务边界。
+      for (const chunk of chunkBy(prepared, BATCH_ROW_LIMIT)) {
+        batches += 1;
+        const rows = await this.prisma.$transaction(
+          chunk.map((item) =>
+            this.prisma.dataTableRow.create({
+              data: {
+                tableId,
+                createdBy: user.userId,
+                data: item as Prisma.InputJsonObject,
+              },
+            }),
+          ),
+        );
+        created += rows.length;
+        for (const row of rows) this.notifyRow(tableId, 'create', row.id);
+      }
+    } else {
+      const total = await this.prisma.dataTableRow.count({
+        where: { tableId },
+      });
+      if (total > LAND_DEDUP_SCAN_LIMIT) {
+        throw new BusinessException(
+          ErrorCode.BAD_REQUEST,
+          `目标表已有 ${total} 行，超过幂等查重上限 ${LAND_DEDUP_SCAN_LIMIT} 行：请落到新表，或去掉 dedupBy 改为追加。`,
+        );
+      }
+      const existing = await this.prisma.dataTableRow.findMany({
+        where: { tableId },
+        orderBy: { id: 'desc' },
+        select: { id: true, data: true },
+      });
+      const signature = (data: Record<string, unknown>) =>
+        dedupKeys.map((key) => dedupValueOf(data[key])).join('\u0001');
+      const hitById = new Map<string, number>();
+      const dataById = new Map<number, Record<string, unknown>>();
+      for (const row of existing) {
+        const data = toJsonObject(row.data);
+        const key = signature(data);
+        if (!hitById.has(key)) hitById.set(key, row.id);
+        dataById.set(row.id, data);
+      }
+      // 同批自带重复先合并成一条（重投同一页不会写出两条相同行）。
+      const distinct = new Map<string, Record<string, unknown>>();
+      for (const item of prepared) {
+        const key = signature(item);
+        const pending = distinct.get(key);
+        if (pending) {
+          distinct.set(key, { ...pending, ...item });
+          skipped += 1;
+          continue;
+        }
+        distinct.set(key, item);
+      }
+      const inserts: Record<string, unknown>[] = [];
+      const patches: { id: number; data: Record<string, unknown> }[] = [];
+      for (const [key, item] of distinct) {
+        const hitId = hitById.get(key);
+        if (hitId === undefined) {
+          inserts.push(item);
+          continue;
+        }
+        const before = dataById.get(hitId) || {};
+        const merged = { ...before, ...item };
+        if (sameRowData(before, merged)) {
+          skipped += 1;
+          continue;
+        }
+        dataById.set(hitId, merged);
+        patches.push({ id: hitId, data: merged });
+      }
+      for (const chunk of chunkBy(inserts, BATCH_ROW_LIMIT)) {
+        batches += 1;
+        const rows = await this.prisma.$transaction(
+          chunk.map((item) =>
+            this.prisma.dataTableRow.create({
+              data: {
+                tableId,
+                createdBy: user.userId,
+                data: item as Prisma.InputJsonObject,
+              },
+            }),
+          ),
+        );
+        created += rows.length;
+        for (const row of rows) this.notifyRow(tableId, 'create', row.id);
+      }
+      for (const chunk of chunkBy(patches, BATCH_ROW_LIMIT)) {
+        batches += 1;
+        await this.prisma.$transaction(
+          chunk.map((item) =>
+            this.prisma.dataTableRow.update({
+              where: { id: item.id },
+              data: { data: item.data as Prisma.InputJsonObject },
+            }),
+          ),
+        );
+        updated += chunk.length;
+        for (const item of chunk) this.notifyRow(tableId, 'update', item.id);
+      }
+    }
+
+    await this.identity.audit(
+      user.userId,
+      '多维表格采集落表',
+      `#${tableId} ${access.table.name} · 新增 ${created} 更新 ${updated} 跳过 ${skipped}`,
+    );
+    return {
+      tableId,
+      tableName: access.table.name,
+      tableCreated,
+      created,
+      updated,
+      skipped,
+      addedFields: missing.map((item) => ({
+        key: item.key,
+        name: item.name,
+        type: item.type,
+      })),
+      missedKeys: [...missedKeys].slice(0, 40),
+      batches: Math.max(1, batches),
+    };
+  }
+
+  /**
+   * 落表列口径：fields 声明优先（key 缺省由列名转写），再补行里出现但没声明的列键。
+   * 中文表头转不出列键（列键只能小写字母/数字/下划线），所以只认已声明的——
+   * 未声明的中文键会进 missedKeys 如实回报，而不是悄悄丢掉整列数据。
+   */
+  private landFieldSpecs(
+    fieldsRaw: unknown,
+    rows: unknown[],
+  ): { name: string; key: string; type: string; choices: string[] }[] {
+    const specs: {
+      name: string;
+      key: string;
+      type: string;
+      choices: string[];
+    }[] = [];
+    const seen = new Set<string>();
+    const push = (item: {
+      name: string;
+      key: string;
+      type: string;
+      choices: string[];
+    }) => {
+      if (!item.key || seen.has(item.key)) return;
+      seen.add(item.key);
+      specs.push(item);
+    };
+    for (const item of Array.isArray(fieldsRaw) ? fieldsRaw.slice(0, 40) : []) {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) continue;
+      const raw = item as Record<string, unknown>;
+      const name = (text(raw.name).trim() || text(raw.key).trim()).slice(0, 40);
+      const key = landFieldKey(text(raw.key).trim(), name);
+      if (!key) {
+        throw new BusinessException(
+          ErrorCode.BAD_REQUEST,
+          `列「${name || '（未命名）'}」给不出合法列键：请指定英文小写的 key（如 phone），列键只能用小写字母、数字与下划线。`,
+        );
+      }
+      const type = text(raw.type).trim().toLowerCase() || 'text';
+      push({
+        name: name || key,
+        key,
+        type: isFieldType(type) ? type : 'text',
+        choices: (Array.isArray(raw.choices) ? raw.choices : [])
+          .map((choice) => text(choice).trim())
+          .filter(Boolean)
+          .slice(0, 50),
+      });
+    }
+    for (const row of rows) {
+      for (const rawKey of Object.keys(row as Record<string, unknown>)) {
+        const key = landFieldKey(rawKey, '');
+        if (key)
+          push({ name: rawKey.slice(0, 40), key, type: 'text', choices: [] });
+      }
+    }
+    return specs.slice(0, 40);
+  }
+
   async updateRow(
     user: CurrentUser,
     tableId: number,
@@ -1189,6 +1543,56 @@ export class DataTableService {
 
 function isFieldType(value: string) {
   return (FIELD_TYPES as readonly string[]).includes(value);
+}
+
+/** 分批：机器通道单批 200 行，落表最多 500 行 ⇒ 最多三批，批数回给调用方交代进度。 */
+function chunkBy<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
+}
+
+/**
+ * 列键转写：显式 key 优先，其次从中文/带空格的列名里剥出 ASCII 部分。
+ * 剥不出（纯中文列名）就返回空串——落表要求调用方补 key，而不是服务端造一个看不懂的列键。
+ */
+function landFieldKey(rawKey: string, name: string): string {
+  const direct = rawKey.trim().toLowerCase();
+  if (
+    direct &&
+    FIELD_KEY_PATTERN.test(direct) &&
+    direct.length <= FIELD_KEY_MAX
+  ) {
+    return direct;
+  }
+  const slug = String(name || rawKey || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, FIELD_KEY_MAX);
+  return FIELD_KEY_PATTERN.test(slug) ? slug : '';
+}
+
+/** 查重锚的取值：数字/布尔转文本后比较，空值统一成空串（缺列与空串是同一个锚）。 */
+function dedupValueOf(value: unknown): string {
+  if (value === undefined || value === null) return '';
+  if (typeof value === 'object') return JSON.stringify(value);
+  return text(value).trim().toLowerCase();
+}
+
+/** 更新前先比内容：完全没变化的行算「跳过」，避免每次重投都刷一遍 updated_at。 */
+function sameRowData(
+  before: Record<string, unknown> | undefined,
+  next: Record<string, unknown>,
+): boolean {
+  const old = before || {};
+  const keys = new Set([...Object.keys(old), ...Object.keys(next)]);
+  for (const key of keys) {
+    if (dedupValueOf(old[key]) !== dedupValueOf(next[key])) return false;
+  }
+  return true;
 }
 
 /**

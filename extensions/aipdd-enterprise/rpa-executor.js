@@ -298,6 +298,24 @@
         return { value: "", count: 0 };
       }
     }
+    if (mode === "all") {
+      // 整组文本数组：给 selector 就按组读，只有 elementIndex 时退化成单元素（如实回一条）。
+      const base = wanted && wanted.selector ? String(wanted.selector) : "";
+      if (!base) {
+        if (!target) return { values: [], count: 0, errorMessage: "mode=all 需要 selector" };
+        return { values: [clip(target.innerText != null ? target.innerText : target.textContent, 2000)], count: 1 };
+      }
+      let nodes = [];
+      try {
+        nodes = Array.from(document.querySelectorAll(base));
+      } catch (_) {
+        nodes = [];
+      }
+      const values = nodes
+        .map((node) => clip(node.innerText != null ? node.innerText : node.textContent, 2000).replace(/\s+/g, " ").trim())
+        .filter(Boolean);
+      return { values, count: nodes.length };
+    }
     if (!target) return { value: "" };
     if (mode === "attribute") {
       const attr = clip(action.value || action.attribute, 40) || "href";
@@ -324,6 +342,520 @@
     const ms = Math.min(30000, Math.max(0, Number(action.ms) || 1000));
     await sleep(ms);
     return { ok: true, elapsedMs: ms };
+  }
+
+  // ---------- 限额与取值口径（与 packages/contracts/src/chrome-rpa.ts 同源，verify-extension-caps.mjs 比对） ----------
+
+  const SNAPSHOT_TEXT_MAX = 12000;
+  const HARVEST_LIMIT_MAX = 200;
+  const HARVEST_FIELDS_MAX = 24;
+  const DISCOVER_TOP_MAX = 8;
+  const FIELD_VALUE_MAX = 300;
+  const FILL_FIELDS_MAX = 40;
+  const UPLOAD_MAX_BYTES = 10 * 1024 * 1024;
+  const WAIT_MAX_MS = 30000;
+  /** 标签邻接取值的落点（与契约 RC_FIELD_TAKES 同源）。 */
+  const FIELD_TAKES = ["self", "next", "parent", "before", "after", "line"];
+  /** 结构探测单次扫描的节点上限：再大就只扫前面这些，避免陌生页把执行器拖死。 */
+  const DISCOVER_SCAN_MAX = 8000;
+
+  /** 内置值形态：class 混淆的 SPA 靠值形态而不是类名定位字段。 */
+  const VALUE_PATTERNS = {
+    phone: /\b0\d{2,3}-\d{7,8}\b/,
+    mobile: /\b1[3-9]\d{9}\b/,
+    email: /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/,
+    url: /https?:\/\/[^\s"'<>（）]+/,
+    date: /\b\d{4}[-/年]\d{1,2}[-/月]\d{1,2}日?/,
+    money: /(?:[¥$€]\s?\d[\d,]*(?:\.\d+)?|\d[\d,]*(?:\.\d+)?\s*(?:元|万|亿))/,
+    idno: /\b\d{17}[\dXx]\b/,
+    postcode: /\b\d{6}\b/,
+  };
+  /** 口令类键名一律拒收（契约 rcSensitiveFieldKey 同口径）。 */
+  const SENSITIVE_KEY_WORDS = [
+    "password",
+    "passwd",
+    "pwd",
+    "token",
+    "secret",
+    "cookie",
+    "credential",
+    "验证码",
+  ];
+
+  const clampInt = (value, min, max, fallback) => {
+    const num = Math.round(Number(value));
+    if (!Number.isFinite(num)) return fallback;
+    return Math.min(max, Math.max(min, num));
+  };
+  const isSensitiveKey = (key) => {
+    const value = String(key || "").toLowerCase();
+    return SENSITIVE_KEY_WORDS.some((word) => value.includes(word));
+  };
+
+  /** 元素取值：属性优先，输入框取 value（口令框永远空），其余取可见文本。 */
+  function nodeValue(el, attribute) {
+    if (!el) return "";
+    if (attribute) return clip(el.getAttribute(attribute), FIELD_VALUE_MAX);
+    const tag = el.tagName ? el.tagName.toLowerCase() : "";
+    if (tag === "input" || tag === "textarea") {
+      if ((el.getAttribute("type") || "").toLowerCase() === "password") return "";
+      return clip(el.value, FIELD_VALUE_MAX).replace(/\s+/g, " ").trim();
+    }
+    const text = el.innerText != null ? el.innerText : el.textContent;
+    return clip(String(text || "").replace(/\s+/g, " ").trim(), FIELD_VALUE_MAX);
+  }
+
+  /** 只属于这个节点的文本：有子元素时不拿整段，否则容器会把整块吞成一个标签。 */
+  function ownText(el) {
+    let direct = "";
+    for (const node of Array.from(el.childNodes)) {
+      if (node.nodeType === 3) direct += node.nodeValue || "";
+    }
+    direct = direct.replace(/\s+/g, " ").trim();
+    if (direct) return direct;
+    return el.children.length ? "" : clip(el.innerText || el.textContent, 200).replace(/\s+/g, " ").trim();
+  }
+
+  function findLabelNode(root, label) {
+    const wanted = String(label || "").trim();
+    if (!wanted) return null;
+    const nodes = Array.from((root || document.body).querySelectorAll("*")).slice(0, 800);
+    for (const el of nodes) {
+      if (!isVisible(el)) continue;
+      const own = ownText(el);
+      if (own && own.includes(wanted)) return el;
+    }
+    return null;
+  }
+
+  /** 标签邻接取值的落点：self/next/parent/before/after/line，命中不到就回空串（缺值如实留空）。 */
+  function takeFromLabel(labelEl, take, label) {
+    if (!labelEl) return "";
+    const wanted = String(label || "").trim();
+    const strip = (text) =>
+      clip(
+        String(text || "")
+          .replace(wanted, "")
+          .replace(/^[：:.\s]+/, "")
+          .trim(),
+        FIELD_VALUE_MAX,
+      );
+    const sibling = (dir) => {
+      const node = dir === "next" ? labelEl.nextElementSibling : labelEl.previousElementSibling;
+      return node ? nodeValue(node, "") : "";
+    };
+    const mode = FIELD_TAKES.includes(take) ? take : "next";
+    if (mode === "self") return strip(ownText(labelEl) || nodeValue(labelEl, ""));
+    if (mode === "next") return sibling("next") || strip(nodeValue(labelEl, ""));
+    if (mode === "before") return sibling("before") || strip(nodeValue(labelEl, ""));
+    const parentText = labelEl.parentElement ? nodeValue(labelEl.parentElement, "") : "";
+    if (mode === "parent") return strip(parentText);
+    if (mode === "after") {
+      const after = wanted ? parentText.slice(parentText.indexOf(wanted) + wanted.length) : parentText;
+      return clip(String(after || "").replace(/^[：:.\s]+/, "").trim(), FIELD_VALUE_MAX);
+    }
+    const line = labelEl.closest && labelEl.closest("li,tr,dd,dt,p,div,section,article");
+    return clip(
+      String((line ? line.innerText || line.textContent : parentText) || "").replace(/\s+/g, " ").trim(),
+      FIELD_VALUE_MAX,
+    );
+  }
+
+  /** 单字段取值：选择器候选 → 标签邻接 → 内置值形态，叠用命中即取。 */
+  function harvestFieldValue(field, itemEl) {
+    const attribute = clip(field.attribute, 40);
+    for (const raw of Array.isArray(field.candidates) ? field.candidates.slice(0, 8) : []) {
+      const selector = clip(raw, 300);
+      if (!selector) continue;
+      let hit = null;
+      try {
+        hit = itemEl.querySelector(selector);
+      } catch (_) {
+        hit = null;
+      }
+      if (!hit || !isVisible(hit)) continue;
+      const value = nodeValue(hit, attribute);
+      if (value) return value;
+    }
+    const label = clip(field.afterLabel, 40);
+    if (label) {
+      const labelEl = findLabelNode(itemEl, label);
+      if (labelEl) {
+        const value = attribute
+          ? clip(labelEl.getAttribute(attribute), FIELD_VALUE_MAX)
+          : takeFromLabel(labelEl, field.take, label);
+        if (value) return value;
+      }
+    }
+    const pattern = VALUE_PATTERNS[String(field.pattern || "")];
+    if (pattern) {
+      const haystack = nodeValue(itemEl, "");
+      const hit = haystack.match(pattern);
+      if (hit) return clip(hit[0], FIELD_VALUE_MAX);
+    }
+    return "";
+  }
+
+  /** 兄弟节点的结构签名：标签 + 排序后的 class 词集 + 子节点标签序列 + 子节点数。 */
+  function structureSignature(el) {
+    const tag = el.tagName.toLowerCase();
+    const classes = typeof el.className === "string"
+      ? el.className.split(/\s+/).filter(Boolean).sort().join(".")
+      : "";
+    const kids = Array.from(el.children)
+      .map((child) => child.tagName.toLowerCase())
+      .join(">");
+    return `${tag}${classes ? `.${classes}` : ""}|${kids}|${el.children.length}`;
+  }
+
+  /**
+   * discover：把页面上「重复出现的元素组」列成候选（纯确定性，不经模型）。
+   * 打分＝组数 × 文本量 × 特异度，取前 top 个；模型只决定选哪一组、字段是第几个子节点。
+   */
+  function discoverGroups(root, top, minCount) {
+    const scope = root === document ? document.body : root;
+    if (!scope) return [];
+    const nodes = Array.from(scope.querySelectorAll("*")).slice(0, DISCOVER_SCAN_MAX);
+    const buckets = new Map();
+    for (const el of nodes) {
+      if (!el.parentElement) continue;
+      if (!isVisible(el)) continue;
+      const signature = structureSignature(el);
+      const key = `${parentId(el.parentElement)}\u0001${signature}`;
+      const bucket = buckets.get(key);
+      if (bucket) bucket.items.push(el);
+      else buckets.set(key, { parent: el.parentElement, signature, items: [el] });
+    }
+    const scored = [];
+    for (const bucket of buckets.values()) {
+      if (bucket.items.length < minCount) continue;
+      const texts = bucket.items.map((item) => nodeValue(item, "")).filter(Boolean);
+      const volume = texts.reduce((sum, item) => sum + item.length, 0);
+      const specificity = bucket.signature.split(".").length;
+      scored.push({
+        count: bucket.items.length,
+        item: cssPath(bucket.items[0]),
+        signature: bucket.signature,
+        sampleText: texts.slice(0, 6).map((item) => clip(item, 300)),
+        fieldPaths: Array.from(bucket.items[0].children)
+          .slice(0, 30)
+          .map((child, index) => ({
+            i: index,
+            role: roleOf(child),
+            text: clip(nodeValue(child, ""), 300),
+          })),
+        score: bucket.items.length * (volume / Math.max(1, texts.length)) * specificity,
+      });
+    }
+    scored.sort((a, b) => b.score - a.score);
+    return scored.slice(0, top).map(({ score, ...rest }) => rest);
+  }
+
+  let parentSeq = 0;
+  const parentIds = new WeakMap();
+  function parentId(el) {
+    const known = parentIds.get(el);
+    if (known) return known;
+    parentSeq += 1;
+    parentIds.set(el, parentSeq);
+    return parentSeq;
+  }
+
+  function pickItemNodes(selectors, root) {
+    let best = [];
+    let used = "";
+    for (const selector of selectors) {
+      let found = [];
+      try {
+        found = Array.from(root.querySelectorAll(selector));
+      } catch (_) {
+        found = [];
+      }
+      const visible = found.filter(isVisible);
+      if (visible.length > best.length) {
+        best = visible;
+        used = selector;
+      }
+    }
+    return { nodes: best, used };
+  }
+
+  function scrollDeeper(root) {
+    const target = root === document ? self : root;
+    const step = Math.round((target === self ? self.innerHeight : root.clientHeight) * 0.9) || 600;
+    try {
+      target.scrollBy({ top: step, behavior: "instant" });
+    } catch (_) {
+      /* 不可滚动就只收当前可见条目 */
+    }
+  }
+
+  /**
+   * harvest：一条指令把「重复条目 × 字段」收成行数组（方案 §五 A/G）。
+   * 全程确定性、不经模型；缺字段留空并如实进 missed，超上限带 truncated，绝不静丢。
+   */
+  async function runHarvest(action) {
+    const mode = String(action.mode) === "discover" ? "discover" : "item";
+    let root = document;
+    let note = "";
+    const region = clip(action.region, 300);
+    if (region) {
+      const found = query(region);
+      if (found) root = found === document.documentElement ? document : found;
+      else note = `区域「${region}」没命中，已按整页收`;
+    }
+    if (mode === "discover") {
+      const groups = discoverGroups(
+        root,
+        clampInt(action.top, 1, DISCOVER_TOP_MAX, 5),
+        clampInt(action.minCount, 2, 20, 3),
+      );
+      const tail = groups.length
+        ? "把其中一组的 item 当条目选择器，按 fieldPaths 定字段再来一次 harvest"
+        : "页面上没探到重复出现的元素组（非列表页、结构被打散或在框架内），改用 snapshot 正文抽取或交人工";
+      return {
+        url: location.href,
+        total: groups.reduce((max, item) => Math.max(max, item.count), 0),
+        items: [],
+        missed: [],
+        groups,
+        truncated: false,
+        note: note ? `${note}；${tail}` : tail,
+      };
+    }
+
+    const recipe = action.item && typeof action.item === "object" ? action.item : {};
+    const selectors = [
+      clip(recipe.selector, 300),
+      ...(Array.isArray(recipe.candidates) ? recipe.candidates.map((item) => clip(item, 300)) : []),
+    ].filter(Boolean);
+    const uniqueSelectors = [...new Set(selectors)];
+    if (!uniqueSelectors.length) {
+      return { failed: true, code: "NO_MATCH", errorMessage: "收割配方缺条目选择器：先 harvest mode:discover 探一组，再带 item.selector 来收" };
+    }
+    const fields = (Array.isArray(action.fields) ? action.fields : []).slice(0, HARVEST_FIELDS_MAX);
+    if (!fields.length) {
+      return { failed: true, code: "NO_MATCH", errorMessage: "收割配方缺字段（fields）：给出 key 与候选选择器／afterLabel／pattern" };
+    }
+    const dropped = fields
+      .map((field) => clip(field && field.key, 40))
+      .filter((key) => key && isSensitiveKey(key));
+    const usable = fields.filter((field) => {
+      const key = clip(field && field.key, 40);
+      return key && !isSensitiveKey(key);
+    });
+    if (!usable.length) {
+      return { failed: true, code: "NO_MATCH", errorMessage: "收割字段全部是口令类键名，已按安全边界拒收" };
+    }
+
+    const limit = clampInt(action.limit, 1, HARVEST_LIMIT_MAX, HARVEST_LIMIT_MAX);
+    const picked = pickItemNodes(uniqueSelectors, root);
+    if (!picked.nodes.length) {
+      return {
+        failed: true,
+        code: "PLATFORM_CHANGED",
+        errorMessage: `条目选择器全部落空（${uniqueSelectors.slice(0, 3).join(" / ")}）：页面可能改版、被风控或在框架内`,
+      };
+    }
+    const items = [];
+    const seen = new Set();
+    const hits = new Set();
+    let truncated = false;
+    const collect = (nodes) => {
+      for (const el of nodes) {
+        if (items.length >= limit) {
+          truncated = true;
+          return;
+        }
+        const row = {};
+        for (const field of usable) {
+          const key = clip(field.key, 40);
+          const value = harvestFieldValue(field, el);
+          if (!value) continue;
+          row[key] = value;
+          hits.add(key);
+        }
+        const signature = JSON.stringify(row);
+        if (seen.has(signature)) continue;
+        seen.add(signature);
+        items.push(row);
+      }
+    };
+    collect(picked.nodes);
+
+    const scrollCfg = action.scroll && typeof action.scroll === "object" ? action.scroll : {};
+    const rounds = clampInt(scrollCfg.rounds, 0, 20, 0);
+    const roundMs = clampInt(scrollCfg.ms, 0, 5000, 1200);
+    let stale = 0;
+    for (let round = 0; round < rounds && !truncated && stale < 2; round += 1) {
+      const before = items.length;
+      scrollDeeper(root);
+      await sleep(roundMs);
+      collect(pickItemNodes(uniqueSelectors, root).nodes);
+      stale = items.length === before ? stale + 1 : 0;
+    }
+
+    const missed = usable
+      .filter((field) => field.optional !== true && !hits.has(clip(field.key, 40)))
+      .map((field) => clip(field.key, 40));
+    const notes = [note];
+    notes.push(`条目选择器=${picked.used}，收 ${items.length} 行`);
+    if (truncated) notes.push(`已达单次上限 ${limit} 行，剩余请再跑一轮（按 dedupBy 幂等）`);
+    if (rounds) notes.push(`滚动 ${rounds} 轮上限内`);
+    if (dropped.length) notes.push(`口令类键名已拒收：${dropped.join("、")}`);
+    if (missed.length) notes.push(`整批都没取到：${missed.join("、")}`);
+    return {
+      url: location.href,
+      total: items.length,
+      items,
+      missed,
+      groups: [],
+      truncated,
+      note: notes.filter(Boolean).join("；").slice(0, 500),
+    };
+  }
+
+  /** wait_for：等文本出现／消失、等地址变化（SPA 异步渲染比死等秒数稳）。 */
+  async function runWaitFor(action) {
+    const modes = ["text", "text_gone", "url"];
+    const mode = modes.includes(String(action.mode)) ? String(action.mode) : "text";
+    const timeoutMs = clampInt(action.timeoutMs, 0, WAIT_MAX_MS, 10000);
+    const wanted = clip(action.text, 200);
+    const urlIncludes = clip(action.urlIncludes, 300);
+    if ((mode === "text" || mode === "text_gone") && !wanted) {
+      return { ok: false, mode, elapsedMs: 0, errorMessage: "等文本出现／消失要给出 text" };
+    }
+    if (mode === "url" && !urlIncludes) {
+      return { ok: false, mode, elapsedMs: 0, errorMessage: "等地址变化要给出 urlIncludes" };
+    }
+    const hit = () => {
+      if (mode === "url") return location.href.includes(urlIncludes);
+      const body = document.body ? document.body.innerText || document.body.textContent || "" : "";
+      const found = String(body).includes(wanted);
+      return mode === "text_gone" ? !found : found;
+    };
+    const start = Date.now();
+    for (;;) {
+      if (hit()) return { ok: true, mode, elapsedMs: Date.now() - start };
+      if (Date.now() - start >= timeoutMs) {
+        const label = mode === "url" ? `地址含「${urlIncludes}」` : mode === "text_gone" ? `「${wanted}」消失` : `「${wanted}」出现`;
+        return { ok: false, mode, elapsedMs: Date.now() - start, errorMessage: `等${label}超时（${timeoutMs}ms）：页面可能在登录、验证码或风控` };
+      }
+      await sleep(200);
+    }
+  }
+
+  /** fill_form：一次填多字段并如实回报未命中项（20 步表单压到 1 步）。 */
+  async function runFillForm(action) {
+    const list = (Array.isArray(action.fields) ? action.fields : []).slice(0, FILL_FIELDS_MAX);
+    if (!list.length) {
+      return { failed: true, code: "NO_MATCH", errorMessage: "fill_form 需要 fields：[{elementIndex 或 selector, value}]" };
+    }
+    const filled = [];
+    const missed = [];
+    let lastElement = null;
+    for (let index = 0; index < list.length; index += 1) {
+      const field = list[index] || {};
+      const label = clip(field.name || field.label || field.key, 60);
+      const target =
+        field.elementIndex !== undefined
+          ? { elementIndex: Number(field.elementIndex) }
+          : field.selector
+            ? { selector: String(field.selector) }
+            : null;
+      const el = target ? resolveTarget(target) : null;
+      if (!el) {
+        missed.push(label || `第 ${index + 1} 项`);
+        continue;
+      }
+      lastElement = el;
+      const value = clip(field.value, 2000);
+      const tag = el.tagName ? el.tagName.toLowerCase() : "";
+      const inputType = (el.getAttribute && el.getAttribute("type") || "").toLowerCase();
+      let sub;
+      if (tag === "select") sub = { act: "select", value };
+      else if (inputType === "checkbox" || inputType === "radio") sub = { act: "check", value: value !== "false" && value !== "" };
+      else sub = { act: "type", value, clearFirst: field.clearFirst !== false };
+      const done = await runAct({ ...sub, target });
+      if (done.matched === false) missed.push(label || `第 ${index + 1} 项`);
+      else filled.push({ name: label || clip(nameOf(el), 60), effect: done.effect });
+    }
+    let submitted = false;
+    if (action.submit === true) {
+      const form = lastElement && (lastElement.form || (lastElement.closest && lastElement.closest("form")));
+      if (form && typeof form.requestSubmit === "function") {
+        form.requestSubmit();
+        submitted = true;
+      } else if (lastElement) {
+        clickElement(lastElement);
+        submitted = true;
+      }
+    }
+    const parts = [`填了 ${filled.length} 项`];
+    if (missed.length) parts.push(`未命中：${missed.join("、")}`);
+    if (submitted) parts.push("已提交表单");
+    return { filled, missed, submitted, note: parts.join("；").slice(0, 500) };
+  }
+
+  function decodeBase64(value) {
+    const clean = String(value || "").replace(/^data:[^,]+,/, "").replace(/\s+/g, "");
+    const binary = self.atob ? self.atob(clean) : "";
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+    return bytes;
+  }
+
+  /** upload_file：把文件注入 input[type=file]（内容由后台取回并校验过大小与来源）。 */
+  function runUploadFile(action) {
+    const el = resolveTarget(targetOf(action));
+    if (!el) {
+      return { failed: true, code: "NO_MATCH", errorMessage: "没有匹配到上传控件，先 snapshot 找 input[type=file] 的 elementIndex" };
+    }
+    const tag = el.tagName ? el.tagName.toLowerCase() : "";
+    if (tag !== "input" || (el.getAttribute("type") || "").toLowerCase() !== "file") {
+      return { failed: true, code: "NO_MATCH", errorMessage: "目标不是 input[type=file]，无法注入文件" };
+    }
+    const bytes = decodeBase64(action.content);
+    if (!bytes.byteLength) {
+      return { failed: true, code: "EXEC_ERROR", errorMessage: "文件内容为空" };
+    }
+    if (bytes.byteLength > UPLOAD_MAX_BYTES) {
+      return { failed: true, code: "TOO_LARGE", errorMessage: `文件 ${bytes.byteLength} 字节，超过 ${Math.round(UPLOAD_MAX_BYTES / 1024 / 1024)}MB 上限` };
+    }
+    const name = clip(action.fileName, 200) || "upload.bin";
+    const file = new File([bytes], name, {
+      type: clip(action.mimeType, 100) || "application/octet-stream",
+    });
+    const transfer = new DataTransfer();
+    transfer.items.add(file);
+    el.files = transfer.files;
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+    el.dispatchEvent(new Event("change", { bubbles: true }));
+    return { uploaded: true, name, size: bytes.byteLength };
+  }
+
+  /** 元素几何：元素截图由后台截图后按这里回的矩形裁剪（先滚到可见再量）。 */
+  async function runRect(action) {
+    const el = resolveTarget(targetOf(action));
+    if (!el) return { failed: true, code: "NO_MATCH", errorMessage: "没有匹配到目标元素" };
+    try {
+      el.scrollIntoView({ block: "center", inline: "center" });
+    } catch (_) {
+      /* 不可滚动时按当前位置量 */
+    }
+    await sleep(120);
+    const rect = el.getBoundingClientRect();
+    return {
+      rect: {
+        left: Math.max(0, Math.round(rect.left)),
+        top: Math.max(0, Math.round(rect.top)),
+        width: Math.max(1, Math.round(rect.width)),
+        height: Math.max(1, Math.round(rect.height)),
+      },
+      devicePixelRatio: self.devicePixelRatio || 1,
+      viewport: { width: self.innerWidth, height: self.innerHeight },
+      url: location.href,
+    };
   }
 
   // ---------- 顶部横幅（AI 正在控制此页面 · 停止）----------
@@ -439,7 +971,7 @@
         const name = String(action.action || "");
         let data;
         if (name === "snapshot") {
-          data = buildSnapshot(Math.min(6000, Math.max(200, Number(action.maxChars) || 2000)));
+          data = buildSnapshot(Math.min(SNAPSHOT_TEXT_MAX, Math.max(200, Number(action.maxChars) || 2000)));
         } else if (name === "read") {
           data = runRead(action);
         } else if (name === "act") {
@@ -466,6 +998,27 @@
             });
             return;
           }
+        } else if (name === "wait_for") {
+          data = await runWaitFor(action);
+          if (data.ok === false) {
+            sendResponse({
+              ok: false,
+              data,
+              errorMessage: data.errorMessage || "等待条件超时",
+              code: "WAIT_TIMEOUT",
+              elapsedMs: Date.now() - started,
+            });
+            return;
+          }
+        } else if (name === "harvest") {
+          data = await runHarvest(action);
+        } else if (name === "fill_form") {
+          data = await runFillForm(action);
+        } else if (name === "upload_file") {
+          data = runUploadFile(action);
+        } else if (name === "rect") {
+          // 内部动作：元素截图前量矩形用（由后台的 screenshot 分支调用，不在动作闭集里）。
+          data = await runRect(action);
         } else if (name === "banner") {
           if (action.show === false) hideBanner();
           else showBanner();
@@ -478,7 +1031,18 @@
             ok: false,
             data: {},
             errorMessage: `执行器不认识的动作：${name}`,
-            code: "UNKNOWN_ACTION",
+            code: "UNSUPPORTED_ACTION",
+            elapsedMs: Date.now() - started,
+          });
+          return;
+        }
+        // 配方/目标层面的拒收：如实带回错误码，不当成成功回执。
+        if (data && data.failed === true) {
+          sendResponse({
+            ok: false,
+            data,
+            errorMessage: data.errorMessage || "收割配方未能执行",
+            code: data.code || "NO_MATCH",
             elapsedMs: Date.now() - started,
           });
           return;

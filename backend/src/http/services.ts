@@ -32,6 +32,23 @@ import { FlexService } from '../flex/flex.service';
 import { FlexController } from '../flex/flex.controller';
 import { GeoService } from '../geo/geo.service';
 import { GeoController } from '../geo/geo.controller';
+import { GeoSiteSettingsService } from '../geo-site/geo-site.settings.service';
+import { GeoSiteService } from '../geo-site/geo-site.service';
+import { GeoSiteDomainService } from '../geo-site/geo-site-domain.service';
+import { GeoSiteBillingService } from '../geo-site/geo-site.billing.service';
+import { GeoSiteController } from '../geo-site/geo-site.controller';
+import {
+  GeoSiteContentController,
+  GeoSiteMenuController,
+  GeoSitePageController,
+  GeoSiteTemplateController,
+} from '../geo-site/geo-site-cms.controller';
+import { GeoSiteContentService } from '../geo-site/geo-site-content.service';
+import { GeoSiteMenuService } from '../geo-site/geo-site-menu.service';
+import { GeoSitePageService } from '../geo-site/geo-site-page.service';
+import { GeoSiteTemplateService } from '../geo-site/geo-site-template.service';
+import { GeoSiteRenderDataService } from '../geo-site/geo-site.render-data.service';
+import { GeoSiteScheduler } from '../geo-site/geo-site.scheduler';
 import { IdentityController } from '../identity/identity.controller';
 import { QxySettingsService } from '../qixiangyun/qxy-settings.service';
 import { QxyClient } from '../qixiangyun/qxy.client';
@@ -102,6 +119,9 @@ import { WorkbuddyAgentService } from '../workbuddy/workbuddy-agent.service';
 import { WorkbuddyPlanService } from '../workbuddy/workbuddy-plan.service';
 import { WorkbuddyLlmService } from '../workbuddy/workbuddy-llm.service';
 import { WorkbuddyController } from '../workbuddy/workbuddy.controller';
+import { WorkbuddyCloudService } from '../workbuddy/workbuddy-cloud.service';
+import { BotHostService } from '../bot-host/bot-host.service';
+import { BotHostController } from '../bot-host/bot-host.controller';
 import { AiCallCrypto } from '../ai-call/ai-call-crypto';
 import { AiCallAccountService } from '../ai-call/ai-call-account.service';
 import { AiCallController } from '../ai-call/ai-call.controller';
@@ -189,6 +209,11 @@ import { WechatMpPushService } from '../wechat-mp/wechat-mp.push.service';
 import { WechatMpInboundService } from '../wechat-mp/wechat-mp.inbound.service';
 import { WechatMpController } from '../wechat-mp/wechat-mp.controller';
 import { WechatMpRetryScheduler } from '../wechat-mp/wechat-mp.scheduler';
+import { MiniProgramSettingsService } from '../miniprogram/miniprogram.settings';
+import { MiniProgramClient } from '../miniprogram/miniprogram.client';
+import { MiniProgramCiService } from '../miniprogram/miniprogram-ci.service';
+import { MiniProgramService } from '../miniprogram/miniprogram.service';
+import { MiniProgramController } from '../miniprogram/miniprogram.controller';
 import { SnsService } from '../sns/sns.service';
 import { SnsController } from '../sns/sns.controller';
 import { OrgStaffService } from '../org-staff/org-staff.service';
@@ -547,6 +572,67 @@ export function createServices() {
     geoSettingsService,
   );
   const geoController = new GeoController(geoService, geoSettingsService);
+  // GEO 独立站建站器：站点内容/发布 + 自定义域名校验 + 按月扣积分出账。
+  // 出账与域名复检调度器由 main.ts 启停，公开投递通道由 app.ts 注册。
+  const geoSiteSettingsService = new GeoSiteSettingsService(
+    prismaService,
+    identityService,
+  );
+  const geoSiteService = new GeoSiteService(
+    prismaService,
+    identityService,
+    geoSiteSettingsService,
+  );
+  const geoSiteDomainService = new GeoSiteDomainService(
+    prismaService,
+    identityService,
+    geoSiteSettingsService,
+  );
+  const geoSiteController = new GeoSiteController(
+    geoSiteService,
+    geoSiteDomainService,
+    geoSiteSettingsService,
+  );
+  // 站点 CMS：页面 / 菜单 / 内容库 + 公开页取数装配。
+  // 三个服务都要回查站点归属，站点服务又要在发布与删除时驱动它们，
+  // 所以构造完再用 attachCms 回填这条环。
+  const geoSitePageService = new GeoSitePageService(
+    prismaService,
+    geoSiteService,
+    geoSiteSettingsService,
+  );
+  const geoSiteMenuService = new GeoSiteMenuService(
+    prismaService,
+    geoSiteService,
+  );
+  const geoSiteContentService = new GeoSiteContentService(
+    prismaService,
+    geoSiteService,
+  );
+  // 模板库套用到页面要复用页面服务的保存与校验，所以它排在页面服务之后
+  const geoSiteTemplateService = new GeoSiteTemplateService(
+    prismaService,
+    geoSiteService,
+    geoSitePageService,
+  );
+  geoSiteService.attachCms({
+    pages: geoSitePageService,
+    menus: geoSiteMenuService,
+    contents: geoSiteContentService,
+  });
+  const geoSiteRenderDataService = new GeoSiteRenderDataService(
+    prismaService,
+    geoSiteSettingsService,
+    geoSiteContentService,
+  );
+  const geoSitePageController = new GeoSitePageController(geoSitePageService);
+  const geoSiteMenuController = new GeoSiteMenuController(geoSiteMenuService);
+  const geoSiteContentController = new GeoSiteContentController(
+    geoSiteContentService,
+  );
+  const geoSiteTemplateController = new GeoSiteTemplateController(
+    geoSiteTemplateService,
+  );
   const identityController = new IdentityController(identityService);
   const qxyClient = new QxyClient(qxySettingsService);
   const qxyService = new QxyService(
@@ -769,6 +855,7 @@ export function createServices() {
     rpaChromeDeviceService,
     storageService,
     rpaTaskService,
+    dataTableService,
   );
   // 浏览器代理的本账号私有资产台账：插件（设备通道）与界面端点共用。
   const rpaChromeLibraryService = new RpaChromeLibraryService(prismaService);
@@ -810,12 +897,21 @@ export function createServices() {
     identityService,
     modelKeyService,
   );
+  const workbuddyCloudService = new WorkbuddyCloudService(
+    prismaService,
+    workbuddyAccountService,
+  );
   const workbuddyController = new WorkbuddyController(
     workbuddyAccountService,
     workbuddyAgentService,
     workbuddyLlmService,
     workbuddyPlanService,
+    workbuddyCloudService,
   );
+  // Bot 主机（Agent-Bot）：本机装 WorkBuddy + BotBuddy 客户端，
+  // 平台按心跳下发指令、客户端串行执行；设备通道免登录，只认主机令牌。
+  const botHostService = new BotHostService(prismaService, hrmScopeService);
+  const botHostController = new BotHostController(botHostService);
   const aiCallCrypto = new AiCallCrypto();
   const aiCallAccountService = new AiCallAccountService(
     prismaService,
@@ -1219,6 +1315,26 @@ export function createServices() {
     identityService,
   );
   const wechatMpScheduler = new WechatMpRetryScheduler(wechatMpPushService);
+  // 用户版小程序：后台托管代码包台账 + 小程序码，公开通道（启动配置 / 免登）由 app.ts 取用。
+  const miniProgramSettingsService = new MiniProgramSettingsService(
+    prismaService,
+  );
+  const miniProgramClient = new MiniProgramClient(miniProgramSettingsService);
+  const miniProgramCiService = new MiniProgramCiService();
+  const miniProgramService = new MiniProgramService(
+    prismaService,
+    ossService,
+    miniProgramSettingsService,
+    miniProgramClient,
+    identityService,
+    miniProgramCiService,
+  );
+  const miniProgramController = new MiniProgramController(
+    miniProgramSettingsService,
+    miniProgramService,
+    miniProgramClient,
+    identityService,
+  );
   const notificationService = new NotificationService(
     prismaService,
     snsService,
@@ -1575,6 +1691,16 @@ export function createServices() {
     accountCrypto,
   );
   const pointsService = new PointsService(prismaService, pointsSettingsService);
+  // GEO 独立站按月出账：依赖积分台账，构造晚于 pointsService。
+  const geoSiteBillingService = new GeoSiteBillingService(
+    prismaService,
+    pointsService,
+    geoSiteSettingsService,
+  );
+  const geoSiteScheduler = new GeoSiteScheduler(
+    geoSiteBillingService,
+    geoSiteDomainService,
+  );
   // 视频模版社区：发布、付费查看（查看者扣分 / 发布者入账）、评分与复刻生成；
   // AIWORKIN 平台模版的展示开关与定时补充由后台设置驱动，调度器在 main.ts 启动。
   const videoTemplateService = new VideoTemplateService(
@@ -2528,8 +2654,22 @@ export function createServices() {
     },
     external: externalService,
     collection: geoCollectionService,
+    // GEO 独立站：公开投递通道取 domain 解析站点，scheduler 由 main.ts 启停。
+    geoSite: {
+      site: geoSiteService,
+      domain: geoSiteDomainService,
+      settings: geoSiteSettingsService,
+      billing: geoSiteBillingService,
+      scheduler: geoSiteScheduler,
+      // CMS：公开投递通道（geo-site.public.ts）用 render 装配整页数据
+      page: geoSitePageService,
+      menu: geoSiteMenuService,
+      content: geoSiteContentService,
+      render: geoSiteRenderDataService,
+    },
     rpaTaskService,
     workbuddyPlanService,
+    workbuddyCloudService,
     contentAgentScheduleService,
     agentMemory: agentMemoryService,
     skillGenerator: skillGeneratorService,
@@ -2544,6 +2684,13 @@ export function createServices() {
       inbound: wechatMpInboundService,
       controller: wechatMpController,
       scheduler: wechatMpScheduler,
+    },
+    // 用户版小程序：后台代码包台账与用户绑定；公开通道（启动配置 / 免登）由 app.ts 取用。
+    miniprogram: {
+      settings: miniProgramSettingsService,
+      client: miniProgramClient,
+      service: miniProgramService,
+      controller: miniProgramController,
     },
     orgStaff: orgStaffService,
     serviceDesk: serviceDeskService,
@@ -2725,6 +2872,8 @@ export function createServices() {
       // 模型广场目录：插件侧边栏 Agent 的「模型下拉 + 额度条」从这里取已上架模型与余额。
       catalog: modelCatalogService,
     },
+    // Bot 主机：客户端通道（根 app 公开路由，只认主机令牌）与界面端点共用同一份服务实例。
+    botHost: botHostService,
     controllers: {
       healthController,
       adminController,
@@ -2736,6 +2885,11 @@ export function createServices() {
       externalController,
       flexController,
       geoController,
+      geoSiteController,
+      geoSitePageController,
+      geoSiteMenuController,
+      geoSiteContentController,
+      geoSiteTemplateController,
       seoController,
       identityController,
       invoiceController,
@@ -2760,6 +2914,7 @@ export function createServices() {
       rpaOpenController,
       rpaChromeController,
       workbuddyController,
+      botHostController,
       aiCallController,
       aiCallOpenController,
       leadProspectingController,
@@ -2778,6 +2933,7 @@ export function createServices() {
       mailboxController,
       notificationController,
       wechatMpController,
+      miniProgramController,
       snsController,
       orgStaffController,
       serviceDeskController,

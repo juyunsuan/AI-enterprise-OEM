@@ -1,0 +1,73 @@
+import { endpoints } from "@enterprise/contracts";
+import { endpoint } from "./endpoint";
+
+/** GEO 独立站建站器：企业侧 GeoSite_*，平台侧 GeoSiteAdmin_*。 */
+export const geoSiteApi = {
+  meta: endpoint(endpoints.GeoSite_meta),
+  list: endpoint(endpoints.GeoSite_list),
+  create: endpoint(endpoints.GeoSite_create),
+  detail: endpoint(endpoints.GeoSite_detail),
+  update: endpoint(endpoints.GeoSite_update),
+  saveContent: endpoint(endpoints.GeoSite_saveContent),
+  publish: endpoint(endpoints.GeoSite_publish),
+  unpublish: endpoint(endpoints.GeoSite_unpublish),
+  duplicate: endpoint(endpoints.GeoSite_duplicate),
+  remove: endpoint(endpoints.GeoSite_remove),
+  domains: endpoint(endpoints.GeoSite_domains),
+  bindDomain: endpoint(endpoints.GeoSite_bindDomain),
+  verifyDomain: endpoint(endpoints.GeoSite_verifyDomain),
+  removeDomain: endpoint(endpoints.GeoSite_removeDomain),
+  setPrimaryDomain: endpoint(endpoints.GeoSite_setPrimaryDomain),
+  billing: endpoint(endpoints.GeoSite_billing),
+  publishLog: endpoint(endpoints.GeoSite_publishLog),
+  adminSettings: endpoint(endpoints.GeoSiteAdmin_getSettings),
+  adminSaveSettings: endpoint(endpoints.GeoSiteAdmin_saveSettings),
+  adminPage: endpoint(endpoints.GeoSiteAdmin_page),
+  adminOffline: endpoint(endpoints.GeoSiteAdmin_offline),
+  adminOnline: endpoint(endpoints.GeoSiteAdmin_online),
+  adminStats: endpoint(endpoints.GeoSiteAdmin_stats),
+  adminDomainGuide: endpoint(endpoints.GeoSiteAdmin_domainGuide),
+  adminDomains: endpoint(endpoints.GeoSiteAdmin_domainList),
+  adminCheckDomain: endpoint(endpoints.GeoSiteAdmin_domainCheck),
+  adminRemoveDomain: endpoint(endpoints.GeoSiteAdmin_domainRemove),
+  adminResolveHost: endpoint(endpoints.GeoSiteAdmin_domainResolve),
+};
+
+/**
+ * 站点 CMS：页面 / 菜单 / 内容库三块，路径都在 `/enterprise/geo/site/...` 下，
+ * 归属校验由后端按 siteId 反查 owner，前端只认站点 id。
+ */
+export const geoSiteCmsApi = {
+  pageBootstrap: endpoint(endpoints.GeoSitePage_bootstrap),
+  pageList: endpoint(endpoints.GeoSitePage_list),
+  pageDetail: endpoint(endpoints.GeoSitePage_detail),
+  pageCreate: endpoint(endpoints.GeoSitePage_create),
+  pageUpdate: endpoint(endpoints.GeoSitePage_update),
+  pageCopyToLanguage: endpoint(endpoints.GeoSitePage_copyToLanguage),
+  pageSaveContent: endpoint(endpoints.GeoSitePage_saveContent),
+  pageSaveScripts: endpoint(endpoints.GeoSitePage_saveScripts),
+  pageReorder: endpoint(endpoints.GeoSitePage_reorder),
+  pageSetHome: endpoint(endpoints.GeoSitePage_setHome),
+  pagePublish: endpoint(endpoints.GeoSitePage_publish),
+  pageOffline: endpoint(endpoints.GeoSitePage_offline),
+  pageRemove: endpoint(endpoints.GeoSitePage_remove),
+  menuList: endpoint(endpoints.GeoSiteMenu_list),
+  menuCreate: endpoint(endpoints.GeoSiteMenu_create),
+  menuUpdate: endpoint(endpoints.GeoSiteMenu_update),
+  menuRemove: endpoint(endpoints.GeoSiteMenu_remove),
+  menuSaveTree: endpoint(endpoints.GeoSiteMenu_saveTree),
+  contentList: endpoint(endpoints.GeoSiteContent_list),
+  contentDetail: endpoint(endpoints.GeoSiteContent_detail),
+  contentPickers: endpoint(endpoints.GeoSiteContent_pickers),
+  contentCreate: endpoint(endpoints.GeoSiteContent_create),
+  contentUpdate: endpoint(endpoints.GeoSiteContent_update),
+  contentSaveBody: endpoint(endpoints.GeoSiteContent_saveBody),
+  contentPublish: endpoint(endpoints.GeoSiteContent_publish),
+  contentOffline: endpoint(endpoints.GeoSiteContent_offline),
+  contentRemove: endpoint(endpoints.GeoSiteContent_remove),
+  templateList: endpoint(endpoints.GeoSiteTemplate_list),
+  templateDetail: endpoint(endpoints.GeoSiteTemplate_detail),
+  templateSave: endpoint(endpoints.GeoSiteTemplate_save),
+  templateApply: endpoint(endpoints.GeoSiteTemplate_apply),
+  templateRemove: endpoint(endpoints.GeoSiteTemplate_remove),
+};

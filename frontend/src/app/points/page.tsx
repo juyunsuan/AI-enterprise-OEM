@@ -67,6 +67,7 @@ const TX_SCENE_LABEL: Record<string, string> = {
   oa: "OA 提交",
   ai_customer: "AI 客服",
   crm: "CRM 席位",
+  geo_site: "GEO 独立站月费",
   gift: "积分赠送",
   admin: "管理员调整",
   recharge_bonus: "充值赠送",

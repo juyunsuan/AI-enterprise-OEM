@@ -16,6 +16,7 @@ import {
   RobotOutlined,
   SettingOutlined,
   ShoppingCartOutlined,
+  SkinOutlined,
   SmileOutlined,
   SolutionOutlined,
   TagOutlined,
@@ -24,6 +25,7 @@ import {
 import { Button } from "antd";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
+import { useState } from "react";
 import { notificationsApi, serviceDeskApi } from "@/api/collab";
 import { aipddKeyApi } from "@/api/aipdd-key";
 import { growthApi } from "@/api/growth";
@@ -33,6 +35,8 @@ import { taskCenterApi } from "@/api/task-center";
 import { dashboardScope } from "@/lib/dashboard-scope";
 import { attentionFromSources } from "@/lib/attention";
 import { ADMIN_PATH_PREFIX } from "@/config/routes";
+import { usePersonalization } from "@/lib/personalization";
+import type { DashboardSectionKey } from "@/config/dashboard-sections";
 import { useBusinessQueries, useBusinessQuery } from "@/query/business";
 import { identityLabel } from "@/lib/identity";
 import { useSession } from "@/lib/session";
@@ -54,7 +58,7 @@ import {
   type AttentionItem,
 } from "../_components/executive-attention";
 import { DashboardShortcuts } from "../_components/dashboard-shortcuts";
-import { PersonalizationSettings } from "../_components/personalization-settings";
+import { PersonalizationDrawer } from "../_components/personalization-settings";
 import { ExecutiveNotifications } from "../_components/executive-notifications";
 import { GrowthCockpitPanel } from "../_components/growth-cockpit";
 import { MyTasksTop } from "../_components/my-tasks-top";
@@ -113,6 +117,10 @@ function countPending(
 export default function DashboardPage() {
   const router = useRouter();
   const { me } = useSession();
+  const { hiddenSections } = usePersonalization();
+  const [personalOpen, setPersonalOpen] = useState(false);
+  /** 板块显隐是账号级：抽屉里关掉的板块整块不渲染，未列出的一律显示。 */
+  const shown = (key: DashboardSectionKey) => !hiddenSections.includes(key);
   const scope = dashboardScope(me);
   const query = useBusinessQuery(
     "dashboard", "overview", {},
@@ -495,6 +503,12 @@ export default function DashboardPage() {
             >
               积分充值
             </Button>
+            <Button
+              icon={<SkinOutlined />}
+              onClick={() => setPersonalOpen(true)}
+            >
+              个性化设置
+            </Button>
             {isAdmin ? (
               <Button
                 type="primary"
@@ -516,42 +530,44 @@ export default function DashboardPage() {
         }
       />
 
-      <StatGrid>
-        {heroStats.map((s) => {
-          const to = s.to;
-          return (
-            <StatCard
-              key={s.label}
-              label={s.label}
-              value={s.value}
-              hint={s.hint}
-              onClick={to ? () => router.push(to) : undefined}
-            />
-          );
-        })}
-      </StatGrid>
+      {shown("statistics") ? (
+        <StatGrid>
+          {heroStats.map((s) => {
+            const to = s.to;
+            return (
+              <StatCard
+                key={s.label}
+                label={s.label}
+                value={s.value}
+                hint={s.hint}
+                onClick={to ? () => router.push(to) : undefined}
+              />
+            );
+          })}
+        </StatGrid>
+      ) : null}
 
       {/* 快捷导航：统计卡之下、其余面板之前的第一个板块 */}
-      <DashboardShortcuts />
+      {shown("shortcuts") ? <DashboardShortcuts /> : null}
 
-      {/* 个性化设置：菜单显隐（账号级）+ 整体风格（本机），取代原先右上角齿轮的右侧风格设置层 */}
-      <PersonalizationSettings />
+      {/* 个性化设置：右上角按钮打开抽屉，里面管菜单显隐、首页板块显隐与整体风格 */}
+      <PersonalizationDrawer open={personalOpen} onClose={() => setPersonalOpen(false)} />
 
       {/* 平台管理员：原「总览」板块并入驾驶舱，数据总览 / 待办审核 / 服务类型分布直接在这里看 */}
-      {isAdmin ? (
+      {isAdmin && shown("overview") ? (
         <OverviewTab onGoSection={(key) => router.push(`${ADMIN_PATH_PREFIX}/${key}`)} />
       ) : null}
 
-      {isEnterprise && growthQuery.data ? (
+      {shown("growth") && isEnterprise && growthQuery.data ? (
         <GrowthCockpitPanel data={growthQuery.data} />
-      ) : isEnterprise && growthQuery.error ? (
+      ) : shown("growth") && isEnterprise && growthQuery.error ? (
         <Notice variant="warn">
           增长驾驶舱暂不可用：{growthQuery.error.message}
           <Button onClick={() => void growthQuery.refetch()}>重试</Button>
         </Notice>
       ) : null}
 
-      {isAdmin ? null : (
+      {isAdmin || !shown("todos") ? null : (
         <Panel
           title="我的待办"
           titleBadge={
@@ -593,23 +609,27 @@ export default function DashboardPage() {
         </Panel>
       )}
 
-      <MyTasksTop />
+      {shown("tasks") ? <MyTasksTop /> : null}
 
-      <div className="exec-grid">
-        <ExecutiveNotifications
-          rows={notificationsQuery.data?.items || []}
-          count={unreadCount}
-          loading={notificationsQuery.isPending}
-          failed={Boolean(notificationsQuery.error)}
-          onOpen={openNotification}
-        />
-        <ExecutiveAttention
-          items={attention}
-          loading={taskSummaryQuery.isFetching || (isStaff && teamQuery.isFetching)}
-        />
-      </div>
+      {shown("attention") ? (
+        <div className="exec-grid">
+          <ExecutiveNotifications
+            rows={notificationsQuery.data?.items || []}
+            count={unreadCount}
+            loading={notificationsQuery.isPending}
+            failed={Boolean(notificationsQuery.error)}
+            onOpen={openNotification}
+          />
+          <ExecutiveAttention
+            items={attention}
+            loading={taskSummaryQuery.isFetching || (isStaff && teamQuery.isFetching)}
+          />
+        </div>
+      ) : null}
 
-      {applications.length ? <ExecutiveApplications items={applications} /> : null}
+      {shown("applications") && applications.length ? (
+        <ExecutiveApplications items={applications} />
+      ) : null}
     </>
   );
 }

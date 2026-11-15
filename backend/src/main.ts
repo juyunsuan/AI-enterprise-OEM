@@ -5,7 +5,9 @@ import { createApp } from './http/app';
 import { createServices } from './http/services';
 import { RpaTaskScheduler } from './rpa/rpa-task.scheduler';
 import { RpaChromeScheduleScheduler } from './rpa/rpa-chrome-schedule.scheduler';
+import { BotHostScheduleScheduler } from './bot-host/bot-host-schedule.scheduler';
 import { WorkbuddyPlanScheduler } from './workbuddy/workbuddy-plan.scheduler';
+import { WorkbuddyCloudScheduler } from './workbuddy/workbuddy-cloud.scheduler';
 import { ContentAgentScheduleScheduler } from './content/agent-schedule.scheduler';
 import { OkrDailyScheduler } from './okr/okr.scheduler';
 import { OaReminderScheduler } from './oa/oa.scheduler';
@@ -24,8 +26,14 @@ async function bootstrap() {
   const chromeScheduleScheduler = new RpaChromeScheduleScheduler(
     services.rpaChrome.schedule,
   );
+  // Bot 主机：到点给本人某台主机下发一轮指令，并收口客户端没回话的超时指令。
+  const botHostScheduler = new BotHostScheduleScheduler(services.botHost);
   const workbuddyScheduler = new WorkbuddyPlanScheduler(
     services.workbuddyPlanService,
+  );
+  // Workbuddy 企业云定时：到点按所属账号直接下发，错过不补跑、失败只留痕
+  const workbuddyCloudScheduler = new WorkbuddyCloudScheduler(
+    services.workbuddyCloudService,
   );
   const agentScheduler = new ContentAgentScheduleScheduler(
     services.contentAgentScheduleService,
@@ -63,6 +71,8 @@ async function bootstrap() {
   );
   // 商务社交：AIworkin 同步任务出站投递与重试
   const socialSyncScheduler = services.socialSync.scheduler;
+  // GEO 独立站：每月 1 日出账、欠费宽限停服与复活、域名到期复检
+  const geoSiteScheduler = services.geoSite.scheduler;
   try {
     await services.prisma.$connect();
     // OSS 配置缓存：后台保存过则用库里的配置，否则回退 .env（URL 生成是同步调用）
@@ -70,7 +80,9 @@ async function bootstrap() {
     await services.external.onModuleInit();
     rpaScheduler.onModuleInit();
     chromeScheduleScheduler.onModuleInit();
+    botHostScheduler.onModuleInit();
     workbuddyScheduler.onModuleInit();
+    workbuddyCloudScheduler.onModuleInit();
     agentScheduler.onModuleInit();
     okrScheduler.onModuleInit();
     oaScheduler.onModuleInit();
@@ -87,10 +99,13 @@ async function bootstrap() {
     workflowScheduler.onModuleInit();
     taskAssignmentScheduler.onModuleInit();
     socialSyncScheduler.onModuleInit();
+    geoSiteScheduler.onModuleInit();
   } catch (error) {
     rpaScheduler.onModuleDestroy();
     chromeScheduleScheduler.onModuleDestroy();
+    botHostScheduler.onModuleDestroy();
     workbuddyScheduler.onModuleDestroy();
+    workbuddyCloudScheduler.onModuleDestroy();
     agentScheduler.onModuleDestroy();
     okrScheduler.onModuleDestroy();
     oaScheduler.onModuleDestroy();
@@ -107,6 +122,7 @@ async function bootstrap() {
     workflowScheduler.onModuleDestroy();
     taskAssignmentScheduler.onModuleDestroy();
     socialSyncScheduler.onModuleDestroy();
+    geoSiteScheduler.onModuleDestroy();
     await services.prisma.$disconnect();
     throw error;
   }
@@ -122,7 +138,9 @@ async function bootstrap() {
     closing = true;
     rpaScheduler.onModuleDestroy();
     chromeScheduleScheduler.onModuleDestroy();
+    botHostScheduler.onModuleDestroy();
     workbuddyScheduler.onModuleDestroy();
+    workbuddyCloudScheduler.onModuleDestroy();
     agentScheduler.onModuleDestroy();
     okrScheduler.onModuleDestroy();
     oaScheduler.onModuleDestroy();
@@ -139,6 +157,7 @@ async function bootstrap() {
     workflowScheduler.onModuleDestroy();
     taskAssignmentScheduler.onModuleDestroy();
     socialSyncScheduler.onModuleDestroy();
+    geoSiteScheduler.onModuleDestroy();
     server.close(() => {
       void services.prisma.$disconnect().finally(() => process.exit(0));
     });

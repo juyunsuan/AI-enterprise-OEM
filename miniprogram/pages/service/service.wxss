@@ -1,0 +1,53 @@
+.filters {
+  display: flex;
+  gap: 16rpx;
+  margin-bottom: 20rpx;
+}
+
+.chip {
+  padding: 10rpx 26rpx;
+  border-radius: 999rpx;
+  background: #fff;
+  color: var(--muted);
+  font-size: 26rpx;
+  border: 1rpx solid var(--line);
+}
+
+.chip-on {
+  background: var(--brand);
+  color: #fff;
+  border-color: var(--brand);
+}
+
+.conv-name {
+  font-size: 30rpx;
+  font-weight: 500;
+  flex: 1;
+  margin-right: 16rpx;
+}
+
+.conv-meta {
+  margin: 14rpx 0 8rpx;
+}
+
+.conv-last {
+  flex: 1;
+  margin-right: 16rpx;
+}
+
+.badge {
+  min-width: 36rpx;
+  height: 36rpx;
+  padding: 0 10rpx;
+  border-radius: 999rpx;
+  background: #f53f3f;
+  color: #fff;
+  font-size: 22rpx;
+  line-height: 36rpx;
+  text-align: center;
+}
+
+.loading {
+  text-align: center;
+  padding: 20rpx;
+}

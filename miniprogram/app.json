@@ -1,0 +1,42 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/login/login",
+    "pages/tasks/tasks",
+    "pages/task-detail/task-detail",
+    "pages/oa/oa",
+    "pages/oa-detail/oa-detail",
+    "pages/service/service",
+    "pages/service-chat/service-chat",
+    "pages/notifications/notifications",
+    "pages/notification-detail/notification-detail",
+    "pages/me/me"
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#3370ff",
+    "navigationBarTitleText": "AIworkin",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#f5f6f8",
+    "backgroundTextStyle": "dark",
+    "enablePullDownRefresh": false
+  },
+  "tabBar": {
+    "color": "#8a8f99",
+    "selectedColor": "#3370ff",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "工作台"
+      },
+      {
+        "pagePath": "pages/me/me",
+        "text": "我的"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

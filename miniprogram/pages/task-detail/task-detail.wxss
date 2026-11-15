@@ -1,0 +1,36 @@
+.kv {
+  display: flex;
+  justify-content: space-between;
+  padding: 12rpx 0;
+}
+
+.kv-k {
+  color: var(--muted);
+  font-size: 26rpx;
+}
+
+.kv-v {
+  font-size: 26rpx;
+  max-width: 60%;
+  text-align: right;
+}
+
+.desc {
+  margin-top: 16rpx;
+  padding: 20rpx;
+  background: #fafbfc;
+  border-radius: 12rpx;
+  font-size: 26rpx;
+  line-height: 1.6;
+  color: #4e5969;
+  white-space: pre-wrap;
+}
+
+.actions {
+  padding: 8rpx 0 24rpx;
+}
+
+.btn-block {
+  display: flex;
+  width: 100%;
+}

@@ -1,0 +1,44 @@
+<view class="chat">
+  <scroll-view
+    class="messages"
+    scroll-y
+    scroll-into-view="{{scrollTo}}"
+    scroll-with-animation
+  >
+    <view class="visitor-card" wx:if="{{visitor}}">
+      <view>{{visitor.nickname || '访客'}}<text class="muted" wx:if="{{visitor.contact}}"> · {{visitor.contact}}</text></view>
+      <view class="muted">{{conversation.subject || conversation.siteName}}</view>
+    </view>
+
+    <view
+      class="msg {{item.mine ? 'msg-mine' : ''}} {{item.senderType === 'system' ? 'msg-system' : ''}}"
+      wx:for="{{messages}}"
+      wx:key="id"
+      id="msg-{{item.id}}"
+    >
+      <block wx:if="{{item.senderType === 'system'}}">
+        <view class="system-text">{{item.content}}</view>
+      </block>
+      <block wx:else>
+        <view class="bubble">
+          <view class="sender muted" wx:if="{{!item.mine}}">{{item.senderName}}</view>
+          <view class="bubble-text">{{item.content}}</view>
+        </view>
+      </block>
+    </view>
+
+    <view id="msg-bottom" class="bottom-anchor"></view>
+  </scroll-view>
+
+  <view class="composer">
+    <input
+      class="composer-input"
+      value="{{draft}}"
+      placeholder="输入回复内容"
+      confirm-type="send"
+      bindinput="onDraft"
+      bindconfirm="onSend"
+    />
+    <view class="btn {{sending ? 'btn-disabled' : ''}}" bindtap="onSend">发送</view>
+  </view>
+</view>

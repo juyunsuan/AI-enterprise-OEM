@@ -69,6 +69,8 @@ export class BrowserAgentToolsService {
         return this.stop(user, args);
       case 'browser_extract':
         return this.extract(user, args);
+      case 'browser_collect_to_table':
+        return this.collectToTable(user, args);
       case 'browser_skill_list':
         return this.skillList(user, args);
       case 'browser_skill_run':
@@ -113,6 +115,56 @@ export class BrowserAgentToolsService {
       startUrl: text(args['start_url']).trim(),
       maxSteps: 0,
     });
+  }
+
+  /**
+   * 一句话采集进表（D8）：把目标、表头与幂等锚拼成会话目标，并给会话挂上 persist=table 的落表口径。
+   * 收割到的行由引擎从插件回执直传 `DataTable_landRows`，不经模型复述；定时重跑靠 dedup 锚不产生重复行。
+   */
+  private async collectToTable(
+    user: CurrentUser,
+    args: Record<string, unknown>,
+  ): Promise<BrowserToolResult> {
+    const goal = text(args['goal']).trim().slice(0, GOAL_MAX);
+    if (!goal) return failOf('请说明要采集什么（goal）');
+    const tableId = Math.max(0, Math.round(Number(args['table_id']) || 0));
+    const tableName = text(args['table_name']).trim().slice(0, 60);
+    if (!tableId && !tableName) {
+      return failOf(
+        '请指定目标多维表格：table_id（已有表编号）或 table_name（新表名称，同名已有表直接复用）',
+      );
+    }
+    const fields = asLandFields(args['fields']);
+    const dedupBy = asDedupKeys(args['dedup_by']);
+    const target = tableId ? `已有表 #${tableId}` : `多维表格「${tableName}」`;
+    const composed = [
+      goal,
+      `采集结果整批放进${target}，表头要和字段对上。`,
+      fields.length
+        ? `表头口径：${fields.map((field) => field.name).join('、')}。`
+        : '表头按页面的重复结构提炼（名称/地址/电话这类可见字段），拿不准就先问用户。',
+      dedupBy.length
+        ? `幂等锚：按 ${dedupBy.join(' + ')} 查重，命中同值更新该行而不是重复插入。`
+        : '',
+    ]
+      .filter(Boolean)
+      .join('\n\n')
+      .slice(0, GOAL_MAX);
+    const started = await this.startOn(user, {
+      goal: composed,
+      mode: 'act',
+      clientId: text(args['client_id']).trim(),
+      startUrl: text(args['start_url']).trim(),
+      maxSteps: Math.round(Number(args['max_steps']) || 0),
+      persist: 'table',
+      tableId,
+      tableName: tableId ? '' : tableName,
+      fields,
+      dedupBy,
+    });
+    return started.ok
+      ? okOf({ ...started, table: { tableId, tableName, fields, dedupBy } })
+      : started;
   }
 
   private async status(
@@ -284,6 +336,12 @@ export class BrowserAgentToolsService {
       clientId: string;
       startUrl: string;
       maxSteps: number;
+      /** 采集产物去向（缺省 none＝只在会话里展示，不落任何表）。 */
+      persist?: string;
+      tableId?: number;
+      tableName?: string;
+      fields?: { name: string; key?: string; type?: string }[];
+      dedupBy?: string[];
     },
   ): Promise<BrowserToolResult> {
     const picked = await this.onlineDevice(user, input.clientId);
@@ -296,6 +354,11 @@ export class BrowserAgentToolsService {
         mode: input.mode,
         ...(input.startUrl ? { startUrl: input.startUrl } : {}),
         ...(input.maxSteps ? { maxSteps: input.maxSteps } : {}),
+        ...(input.persist ? { persist: input.persist } : {}),
+        ...(input.tableId ? { tableId: input.tableId } : {}),
+        ...(input.tableName ? { tableName: input.tableName } : {}),
+        ...(input.fields?.length ? { fields: input.fields } : {}),
+        ...(input.dedupBy?.length ? { dedupBy: input.dedupBy } : {}),
       });
       return okOf({
         sessionId: session.id,
@@ -306,6 +369,8 @@ export class BrowserAgentToolsService {
         mode: session.mode,
         modeLabel: session.modeLabel,
         goal: session.goal,
+        persist: session.persist,
+        tableId: session.tableId,
         message: `已在设备「${session.deviceName}」上发起浏览器代理会话 #${session.id}，用 browser_agent_status / browser_agent_result 跟进。`,
       });
     } catch (error) {
@@ -377,4 +442,38 @@ function siteUrl(site: string): string {
   const value = site.trim();
   if (!value) return '';
   return /^https?:\/\//i.test(value) ? value : `https://${value}`;
+}
+
+/** 期望表头（MCP 入参）→ 落表口径的 fields：无名即丢，最多 40 列。 */
+function asLandFields(raw: unknown) {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .slice(0, 40)
+    .map((item) => {
+      const field = (item && typeof item === 'object' ? item : {}) as Record<
+        string,
+        unknown
+      >;
+      const name = text(field['name']).trim().slice(0, 40);
+      if (!name) return null;
+      const key = text(field['key']).trim().slice(0, 40);
+      const type = text(field['type']).trim().slice(0, 16);
+      return {
+        name,
+        ...(key ? { key } : {}),
+        ...(type ? { type } : {}),
+      };
+    })
+    .filter((item): item is { name: string; key?: string; type?: string } =>
+      Boolean(item),
+    );
+}
+
+/** 幂等锚列（MCP 入参）→ 字符串数组：最多 5 列，空串丢掉。 */
+function asDedupKeys(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item) => text(item).trim().slice(0, 40))
+    .filter(Boolean)
+    .slice(0, 5);
 }

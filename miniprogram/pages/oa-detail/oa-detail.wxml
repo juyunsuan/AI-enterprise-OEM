@@ -1,0 +1,48 @@
+<view class="page" wx:if="{{application}}">
+  <view class="card">
+    <view class="row between">
+      <view class="title">{{application.title}}</view>
+      <view class="tag">{{application.statusLabel}}</view>
+    </view>
+    <view class="muted" style="margin-top: 12rpx">{{application.number}} · {{application.templateName}}</view>
+    <view class="divider"></view>
+    <view class="kv"><view class="kv-k">申请人</view><view class="kv-v">{{application.applicantName}}</view></view>
+    <view class="kv" wx:if="{{application.department}}"><view class="kv-k">部门</view><view class="kv-v">{{application.department}}</view></view>
+    <view class="kv" wx:if="{{amountText}}"><view class="kv-k">金额</view><view class="kv-v">{{amountText}}</view></view>
+    <view class="kv"><view class="kv-k">当前节点</view><view class="kv-v">{{application.currentNodeName || '—'}}</view></view>
+  </view>
+
+  <view class="card" wx:if="{{displayFields.length}}">
+    <view class="title">单据内容</view>
+    <view class="kv" wx:for="{{displayFields}}" wx:key="label">
+      <view class="kv-k">{{item.label}}</view>
+      <view class="kv-v">{{item.value}}</view>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{records.length}}">
+    <view class="title">审批记录</view>
+    <view class="record" wx:for="{{records}}" wx:key="id">
+      <view class="row between">
+        <view>{{item.operatorName}} · {{item.actionLabel}}</view>
+        <view class="muted">{{item.createdAtText}}</view>
+      </view>
+      <view class="muted" wx:if="{{item.comment}}">{{item.comment}}</view>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{canApprove}}">
+    <view class="field-label">审批意见</view>
+    <textarea class="textarea" value="{{comment}}" placeholder="驳回时必填" bindinput="onComment" maxlength="500" />
+    <view class="row gap" style="margin-top: 20rpx">
+      <view class="btn btn-block" bindtap="onApprove">通过</view>
+      <view class="btn btn-block btn-danger" bindtap="onReject">驳回</view>
+    </view>
+    <view class="transfer">
+      <input class="input" value="{{targetUserId}}" placeholder="转交人账号 ID（可选）" bindinput="onTarget" />
+      <view class="btn btn-plain" bindtap="onTransfer">转交</view>
+    </view>
+  </view>
+  <view class="footer-gap"></view>
+</view>
+<view class="empty" wx:if="{{!application && !loading}}">单据不存在或无权查看</view>

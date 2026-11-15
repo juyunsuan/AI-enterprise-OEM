@@ -1,0 +1,35 @@
+<view class="page">
+  <view class="filters">
+    <view
+      class="chip {{item.on ? 'chip-on' : ''}}"
+      wx:for="{{filters}}"
+      wx:key="key"
+      bindtap="onFilter"
+      data-key="{{item.key}}"
+    >{{item.label}}</view>
+    <view class="spacer"></view>
+    <view class="chip" bindtap="onReadAll">全部已读</view>
+  </view>
+
+  <view
+    class="card notice {{item.read ? 'notice-read' : ''}}"
+    wx:for="{{list}}"
+    wx:key="id"
+    bindtap="openDetail"
+    data-id="{{item.id}}"
+  >
+    <view class="row between">
+      <view class="notice-title ellipsis">{{item.title}}</view>
+      <view class="dot" wx:if="{{!item.read}}"></view>
+    </view>
+    <view class="muted notice-body">{{item.body}}</view>
+    <view class="row between notice-meta">
+      <view class="tag tag-plain">{{item.categoryLabel}}</view>
+      <view class="muted">{{item.createdAtText}}</view>
+    </view>
+  </view>
+
+  <view class="empty" wx:if="{{!loading && !list.length}}">暂无消息</view>
+  <view class="muted loading" wx:if="{{loading}}">加载中…</view>
+  <view class="muted loading" wx:if="{{finished && list.length}}">没有更多了</view>
+</view>

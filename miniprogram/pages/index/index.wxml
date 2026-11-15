@@ -1,0 +1,54 @@
+<view class="page">
+  <view wx:if="{{!loggedIn}}" class="card">
+    <view class="title">未登录</view>
+    <view class="muted" style="margin-top: 12rpx">登录后即可在手机上处理待办、审批与客服会话。</view>
+    <view class="btn btn-block" bindtap="goLogin">去登录</view>
+  </view>
+
+  <block wx:else>
+    <view class="hero" style="background: {{themeColor}}">
+      <view class="hero-row">
+        <view>
+          <view class="hero-hello">{{greeting}}，{{profile.nickname || profile.username || '同事'}}</view>
+          <view class="hero-sub">{{appName}} · 移动办公</view>
+        </view>
+        <view class="bell" bindtap="goNotifications" wx:if="{{showNotifications}}">
+          <text>消息</text>
+          <view class="dot" wx:if="{{unread > 0}}">{{unread > 99 ? '99+' : unread}}</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="stats">
+      <view class="stat" wx:for="{{stats}}" wx:key="key">
+        <view class="stat-value {{item.danger ? 'stat-danger' : ''}}">{{item.value}}</view>
+        <view class="stat-label">{{item.label}}</view>
+      </view>
+    </view>
+
+    <view class="card" wx:if="{{entries.length}}">
+      <view class="title">待办入口</view>
+      <view class="entry" wx:for="{{entries}}" wx:key="key" bindtap="openEntry" data-url="{{item.url}}">
+        <view class="entry-main">
+          <view class="entry-name">{{item.name}}</view>
+          <view class="muted">{{item.desc}}</view>
+        </view>
+        <view class="entry-tail">
+          <view class="tag {{item.badge > 0 ? '' : 'tag-plain'}}" wx:if="{{item.badge >= 0}}">{{item.badge > 99 ? '99+' : item.badge}}</view>
+          <view class="arrow">›</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="empty" wx:if="{{bootstrapError}}">
+      无法读取小程序配置：{{bootstrapError}}
+      <view class="muted" style="margin-top: 16rpx">请在「我的 → 服务器地址」填写并保存接口域名后重试。</view>
+    </view>
+    <view class="empty" wx:elif="{{!enabled}}">
+      小程序未启用：请联系平台管理员在后台开启。
+    </view>
+    <view class="empty" wx:elif="{{!entries.length}}">
+      尚未开放任何模块，请联系平台管理员在后台开启。
+    </view>
+  </block>
+</view>

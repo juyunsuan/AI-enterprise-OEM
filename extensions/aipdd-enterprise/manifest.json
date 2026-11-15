@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "AIPDD Enterprise",
-  "version": "1.4.0",
-  "description": "多平台内容分发 + AI 获客 + 本地 Chrome 控制：从 AIPDD Enterprise 营销工具接收任务，在你的浏览器里已登录的微博 / 小红书 / 抖音 / 知乎 / 今日头条 / 快手 / 视频号 / 知识星球 / 公众号 / 百家号 / B站 / 简书 / 豆瓣创作页自动填充并发布；在平台公开搜索页与评论区采集线索、执行已确认的触达；也可作为本地 Chrome 设备登录本系统，由云端 Agent 逐步决策、插件在本机执行。账号凭据不出本机，不读 Cookie、不绕过验证码。",
+  "version": "1.6.0",
+  "description": "多平台内容分发 + AI 获客 + 本地 Chrome 控制：从 AIPDD Enterprise 营销工具接收任务，在你的浏览器里已登录的微博 / 小红书 / 抖音 / 知乎 / 今日头条 / 快手 / 视频号 / 知识星球 / 公众号 / 百家号 / B站 / 简书 / 豆瓣创作页自动填充并发布；在平台公开搜索页与评论区采集线索、执行已确认的触达；也可作为本地 Chrome 设备登录本系统，由云端 Agent 逐步决策、插件在本机执行，并支持把网页列表按字段清单收割、去重后落到多维表格。账号凭据不出本机，不读 Cookie、不绕过验证码。",
   "permissions": ["tabs", "storage", "alarms", "sidePanel", "scripting"],
   "icons": {
     "16": "icons/icon-16.png",

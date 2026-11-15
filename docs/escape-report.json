@@ -1,22 +1,21 @@
 {
   "tool": "escape-audit",
   "version": 2,
-  "commit": "84d68d7",
-  "date": "2026-11-11",
+  "commit": "48a317b",
+  "date": "2026-11-14",
   "root": "E:\\wwwroot\\oem-enterprise",
-  "files": 1674,
-  "candidates": 2202,
-  "untracked": 209,
+  "files": 1815,
+  "candidates": 2503,
+  "untracked": 127,
   "missing": [
-    "extensions/aipdd-enterprise/popup.js",
-    "frontend/src/app/social/_components/listing-tab.tsx"
+    "frontend/src/app/workbuddy/_components/model-setting.tsx"
   ],
   "excluded": {
     "dir": 0,
     "instrument": 2
   },
-  "loc": 607430,
-  "prodLoc": 544410,
+  "loc": 658248,
+  "prodLoc": 586121,
   "total": 6,
   "prodTotal": 4,
   "unallowlisted": 0,
@@ -83,28 +82,28 @@
   },
   "byRole": {
     "prod": {
-      "files": 1395,
-      "loc": 544410,
+      "files": 1494,
+      "loc": 586121,
       "total": 4
     },
     "test": {
-      "files": 158,
-      "loc": 29799,
+      "files": 172,
+      "loc": 33149,
       "total": 0
     },
     "script": {
-      "files": 121,
-      "loc": 33221,
+      "files": 149,
+      "loc": 38978,
       "total": 2
     }
   },
   "workspaces": [
     {
       "ws": "frontend",
-      "files": 647,
-      "loc": 210767,
-      "prodFiles": 638,
-      "prodLoc": 210179,
+      "files": 687,
+      "loc": 222943,
+      "prodFiles": 677,
+      "prodLoc": 222315,
       "total": 4,
       "prodTotal": 3,
       "density": 0.01,
@@ -131,10 +130,10 @@
     },
     {
       "ws": "backend",
-      "files": 863,
-      "loc": 310145,
-      "prodFiles": 695,
-      "prodLoc": 278539,
+      "files": 914,
+      "loc": 333059,
+      "prodFiles": 733,
+      "prodLoc": 298143,
       "total": 2,
       "prodTotal": 1,
       "density": 0,
@@ -160,9 +159,39 @@
       }
     },
     {
+      "ws": "bot-host-client",
+      "files": 25,
+      "loc": 7934,
+      "prodFiles": 19,
+      "prodLoc": 6590,
+      "total": 0,
+      "prodTotal": 0,
+      "density": 0,
+      "cats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      },
+      "prodCats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      }
+    },
+    {
       "ws": "extensions",
       "files": 11,
-      "loc": 7354,
+      "loc": 9158,
       "prodFiles": 0,
       "prodLoc": 0,
       "total": 0,
@@ -220,11 +249,41 @@
       }
     },
     {
+      "ws": "miniprogram",
+      "files": 18,
+      "loc": 1535,
+      "prodFiles": 0,
+      "prodLoc": 0,
+      "total": 0,
+      "prodTotal": 0,
+      "density": 0,
+      "cats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      },
+      "prodCats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      }
+    },
+    {
       "ws": "packages/contracts",
-      "files": 62,
-      "loc": 55692,
-      "prodFiles": 62,
-      "prodLoc": 55692,
+      "files": 65,
+      "loc": 59073,
+      "prodFiles": 65,
+      "prodLoc": 59073,
       "total": 0,
       "prodTotal": 0,
       "density": 0,
@@ -251,8 +310,8 @@
     },
     {
       "ws": "scripts",
-      "files": 90,
-      "loc": 23369,
+      "files": 94,
+      "loc": 24443,
       "prodFiles": 0,
       "prodLoc": 0,
       "total": 0,
@@ -284,7 +343,7 @@
     {
       "file": "backend/src/http/automation-routes.ts",
       "role": "prod",
-      "loc": 2016,
+      "loc": 2182,
       "total": 1,
       "cats": {
         "asNever": 0,

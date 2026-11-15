@@ -1,0 +1,43 @@
+<view class="page" wx:if="{{task}}">
+  <view class="card">
+    <view class="row between">
+      <view class="title">{{task.title}}</view>
+      <view class="tag {{task.overdue ? 'tag-danger' : ''}}">{{task.overdue ? '已逾期' : task.statusLabel}}</view>
+    </view>
+    <view class="muted" style="margin-top: 12rpx">{{task.sourceLabel}} · {{task.categoryLabel}} · {{task.priorityLabel}}优先级</view>
+    <view class="divider"></view>
+    <view class="kv"><view class="kv-k">来源状态</view><view class="kv-v">{{task.sourceStatusLabel || task.sourceStatus}}</view></view>
+    <view class="kv"><view class="kv-k">截止时间</view><view class="kv-v">{{task.dueAtText || '—'}}</view></view>
+    <view class="kv"><view class="kv-k">创建时间</view><view class="kv-v">{{task.createdAtText}}</view></view>
+    <view class="kv" wx:if="{{task.closeNote}}"><view class="kv-k">完成说明</view><view class="kv-v">{{task.closeNote}}</view></view>
+    <view class="desc" wx:if="{{task.description}}">{{task.description}}</view>
+  </view>
+
+  <view class="card" wx:if="{{fields.length}}">
+    <view class="title">{{task.formSchema.title || '填写表单'}}</view>
+    <view class="field" wx:for="{{fields}}" wx:key="key">
+      <view class="field-label">{{item.label}}{{item.required ? ' *' : ''}}</view>
+      <input
+        class="input"
+        value="{{item.value}}"
+        placeholder="请输入{{item.label}}"
+        data-key="{{item.key}}"
+        bindinput="onFieldInput"
+        disabled="{{closed}}"
+      />
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{!closed}}">
+    <view class="field-label">处理说明（可选）</view>
+    <input class="input" value="{{note}}" placeholder="补充说明" bindinput="onNote" />
+  </view>
+
+  <view class="actions">
+    <view class="btn btn-block" wx:if="{{canSubmit}}" bindtap="onSubmit">提交并完成</view>
+    <view class="btn btn-block" wx:elif="{{!closed}}" bindtap="onClose">标记完成</view>
+    <view class="btn btn-block btn-plain" wx:else bindtap="onReopen">重新打开</view>
+  </view>
+  <view class="footer-gap"></view>
+</view>
+<view class="empty" wx:if="{{!task && !loading}}">任务不存在或无权查看</view>

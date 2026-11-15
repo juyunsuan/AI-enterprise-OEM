@@ -3,7 +3,11 @@ import {
   RC_DEVICE_STATUS_LABELS,
   RC_SESSION_STATUSES,
   RC_SESSION_STATUS_LABELS,
+  type DataTableLandField,
+  type DataTableLandRowsResult,
   type RcDeviceView,
+  type RcExtractResultView,
+  type RcGapView,
   type RcSessionView,
   type RcSettings,
   type RcStepView,
@@ -30,14 +34,34 @@ const api = {
   retryStep: endpoint(endpoints.RpaChrome_retryStep),
   settings: endpoint(endpoints.RpaChrome_settings),
   saveSettings: endpoint(endpoints.RpaChrome_saveSettings),
+  extracts: endpoint(endpoints.RpaChrome_extracts),
+  gaps: endpoint(endpoints.RpaChrome_gaps),
+  tables: endpoint(endpoints.DataTable_list),
+  landRows: endpoint(endpoints.DataTable_landRows),
 };
 
-export type { RcDeviceView, RcSessionView, RcSettings, RcStepView };
+export type {
+  RcDeviceView,
+  RcExtractResultView,
+  RcGapView,
+  RcSessionView,
+  RcSettings,
+  RcStepView,
+};
+/** 落表复用的契约类型：界面不必直接引契约，从这一层取。 */
+export type { DataTableLandField, DataTableLandRowsResult } from "@enterprise/contracts";
 export {
   RC_ACTION_LABELS,
   RC_DEVICE_STATUS_LABELS,
   RC_SESSION_STATUSES,
   RC_SESSION_STATUS_LABELS,
+};
+
+/** 落表候选：界面只需要表名与行数，其余字段按契约另取。 */
+export type RcLandTableOption = {
+  id: number;
+  name: string;
+  rowCount: number;
 };
 
 /** 设备在线态 → antd Badge 状态点：绿=在线，灰=离线，红=已停用（被撤销/停用）。 */
@@ -110,6 +134,29 @@ export const rpaChromeApi = {
   settings: () => load<RcSettings>(api.settings({})),
   saveSettings: (body: Record<string, unknown>) =>
     mutate(api.saveSettings({ body })),
+
+  /** 采集台账：某次浏览器代理收割的结构化行（persist=extract 的产物）。 */
+  extracts: (agentId?: number) =>
+    load<{ list: RcExtractResultView[] }>(
+      api.extracts({ query: { limit: 100, ...(agentId ? { agentId } : {}) } }),
+    ),
+  /** 能力缺口台账：Agent 想做但这台插件做不到的事（N18，驱动插件迭代）。 */
+  gaps: () => load<{ list: RcGapView[] }>(api.gaps({ query: { limit: 50 } })),
+
+  /** 多维表格候选（采集结果落表的落点）；只取界面需要的三个字段。 */
+  tableOptions: () => load<RcLandTableOption[]>(api.tables({})),
+  /**
+   * 采集结果落表：一次调用完成「定位/新建表 + 补齐表头 + 按幂等锚查重写入」。
+   * tableId 传 0 时按 tableName 找同名表，找不到就新建。
+   */
+  landRows: (body: {
+    rows: Record<string, unknown>[];
+    tableId: number;
+    tableName?: string;
+    fields?: DataTableLandField[];
+    dedupBy?: string[];
+    source?: string;
+  }) => mutate<DataTableLandRowsResult>(api.landRows({ body })),
 };
 
 /** 在线设备清单（顶栏状态灯与任务表单共用）。 */

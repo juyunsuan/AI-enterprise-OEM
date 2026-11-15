@@ -2,7 +2,6 @@
 
 import { App, Button, Drawer, Form, Input, Modal, Select, Space, Table, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { usePasswordConfirm } from "@/components/confirm-with-password";
 import { EmptyState, Notice, Panel } from "@/components/ui/panel";
@@ -57,11 +56,10 @@ const PAGE_SIZE = 20;
  * 名称 / 描述 / 头像可直接改；模型与 Manifest 属于版本内容，只能通过「新建版本」发布
  * （腾讯云 ModifyAgent 不接受这两项）。
  */
-export function AgentPanel({ accounts }: { accounts: PlanAccount[] }) {
+export function AgentPanel({ account }: { account: PlanAccount }) {
   const { message } = App.useApp();
   const { request, modal } = usePasswordConfirm();
-  const active = accounts.filter((item) => item.status === "active");
-  const [accountId, setAccountId] = useState<number | undefined>(active[0]?.id);
+  const accountId = account.status === "active" ? account.id : undefined;
   const [items, setItems] = useState<WbAgentItem[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -94,14 +92,6 @@ export function AgentPanel({ accounts }: { accounts: PlanAccount[] }) {
   const [versionSaving, setVersionSaving] = useState(false);
 
   const reload = useCallback(() => setRefreshToken((value) => value + 1), []);
-
-  // 账号列表异步到达，或原账号被停用/删除时，自动落到第一个启用账号
-  useEffect(() => {
-    if (accountId && active.some((item) => item.id === accountId)) return;
-    setAccountId(active[0]?.id);
-    setPage(1);
-    setKeyword("");
-  }, [accountId, active]);
 
   useEffect(() => {
     if (!accountId) {
@@ -431,20 +421,6 @@ export function AgentPanel({ accounts }: { accounts: PlanAccount[] }) {
       titleBadge={`${total} 个`}
       extra={
         <Space>
-          <Select
-            style={{ width: 220 }}
-            value={accountId}
-            placeholder="选择 Workbuddy Enterprise 账号"
-            options={active.map((item) => ({
-              value: item.id,
-              label: item.name,
-            }))}
-            onChange={(value) => {
-              setAccountId(value);
-              setPage(1);
-              setKeyword("");
-            }}
-          />
           <Input.Search
             allowClear
             style={{ width: 220 }}
@@ -467,12 +443,9 @@ export function AgentPanel({ accounts }: { accounts: PlanAccount[] }) {
         </Space>
       }
     >
-      {active.length ? null : (
-        <Notice variant="warn">
-          还没有启用的 Workbuddy Enterprise 账号：先到「Workbuddy Enterprise 账号」页签绑定并启用腾讯云密钥。{" "}
-          <Link href="/workbuddy?tab=accounts">去绑定账号</Link>
-        </Notice>
-      )}
+      {!accountId ? (
+        <Notice variant="warn">该账号已停用，请先启用后再管理云端 Agent。</Notice>
+      ) : null}
       {error ? (
         <div style={{ marginBottom: 10 }}>
           <Notice variant="error">{error}</Notice>
@@ -499,8 +472,8 @@ export function AgentPanel({ accounts }: { accounts: PlanAccount[] }) {
         <EmptyState
           text={
             accountId
-              ? "该账号下还没有 Agent：点右上角「新建 Agent」创建，或换一把凭据看看"
-              : "选择一个 Workbuddy Enterprise 账号以查看它名下的 Agent"
+              ? "该账号下还没有 Agent：点右上角「新建 Agent」创建"
+              : "启用该账号后可查看它名下的 Agent"
           }
         />
       )}

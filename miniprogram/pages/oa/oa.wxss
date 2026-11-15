@@ -1,0 +1,15 @@
+.oa-title {
+  font-size: 30rpx;
+  font-weight: 500;
+  flex: 1;
+  margin-right: 16rpx;
+}
+
+.oa-meta {
+  margin: 14rpx 0 8rpx;
+}
+
+.loading {
+  text-align: center;
+  padding: 20rpx;
+}

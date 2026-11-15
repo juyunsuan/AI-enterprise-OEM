@@ -15,7 +15,7 @@ import { GapsMailTemplatesTab } from "./_components/gaps-templates";
 type View = "accounts" | "inbox" | "drafts" | "scripts" | "templates";
 
 /**
- * AI邮箱服务（「工作台」栏目 · 排在 Workbuddy 企业云之前）：
+ * AI邮箱服务（「工作台」栏目 · 排在 Workbuddy 企业版之前）：
  * 多邮箱 POP3 / IMAP 收信、SMTP 发信，正文与附件不落库；
  * 回复方式选「只写草稿」或「写草稿并自动回复」，Agent 定时任务通过邮件工具按话术起草。
  */

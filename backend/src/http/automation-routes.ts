@@ -1,6 +1,7 @@
 import { Context } from 'hono';
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import { createRoute } from '@hono/zod-openapi';
+import { readFile } from 'node:fs/promises';
 import { endpoints, z } from '@enterprise/contracts';
 import type { CurrentUser } from '../auth/current-user';
 import type { Services } from './services';
@@ -176,6 +177,8 @@ export function registerAutomationRoutes(
     // ---------- 多维表格（界面侧） ----------
     DataTable_list: async (i) => c.dataTableController.list(i.user),
     DataTable_create: async (i) => c.dataTableController.create(i.user, i.json),
+    DataTable_landRows: async (i) =>
+      c.dataTableController.landRows(i.user, i.json),
     DataTable_get: async (i) =>
       c.dataTableController.get(i.user, i.param['id']),
     DataTable_update: async (i) =>
@@ -393,6 +396,9 @@ export function registerAutomationRoutes(
     RpaChrome_settings: async (i) => c.rpaChromeController.settings(i.user),
     RpaChrome_saveSettings: async (i) =>
       c.rpaChromeController.saveSettings(i.user, i.json),
+    RpaChrome_gaps: async (i) => c.rpaChromeController.gaps(i.user, i.query),
+    RpaChrome_reportGap: async (i) =>
+      c.rpaChromeController.reportGap(i.user, i.json),
     RpaChrome_agents: async (i) =>
       c.rpaChromeController.agents(i.user, i.query),
     RpaChrome_agent: async (i) =>
@@ -416,6 +422,8 @@ export function registerAutomationRoutes(
       c.rpaChromeController.extracts(i.user, i.query),
     RpaChrome_saveExtract: async (i) =>
       c.rpaChromeController.saveExtract(i.user, i.json),
+    RpaChrome_landRows: async (i) =>
+      c.rpaChromeController.landRows(i.user, i.json),
     RpaChrome_schedules: async (i) =>
       c.rpaChromeController.schedules(i.user, i.query),
     RpaChrome_saveSchedule: async (i) =>
@@ -426,6 +434,26 @@ export function registerAutomationRoutes(
       c.rpaChromeController.runSchedule(i.user, i.param['id']),
 
     // ---------- Workbuddy ----------
+    Workbuddy_cloudCommands: async (i) =>
+      c.workbuddyController.cloudCommands(i.user, i.param['id']),
+    Workbuddy_sendCloudCommand: async (i) =>
+      c.workbuddyController.sendCloudCommand(i.user, i.param['id'], i.json),
+    Workbuddy_syncCloudCommand: async (i) =>
+      c.workbuddyController.syncCloudCommand(i.user, i.param['id']),
+    Workbuddy_cloudSchedules: async (i) =>
+      c.workbuddyController.cloudSchedules(i.user, i.param['id']),
+    Workbuddy_createCloudSchedule: async (i) =>
+      c.workbuddyController.createCloudSchedule(i.user, i.param['id'], i.json),
+    Workbuddy_cloudSchedule: async (i) =>
+      c.workbuddyController.cloudSchedule(i.user, i.param['id']),
+    Workbuddy_updateCloudSchedule: async (i) =>
+      c.workbuddyController.updateCloudSchedule(i.user, i.param['id'], i.json),
+    Workbuddy_removeCloudSchedule: async (i) =>
+      c.workbuddyController.removeCloudSchedule(i.user, i.param['id']),
+    Workbuddy_cloudScheduleRuns: async (i) =>
+      c.workbuddyController.cloudScheduleRuns(i.user, i.param['id']),
+    Workbuddy_runCloudSchedule: async (i) =>
+      c.workbuddyController.runCloudSchedule(i.user, i.param['id']),
     Workbuddy_accounts: async (i) => c.workbuddyController.listAccounts(i.user),
     Workbuddy_addAccount: async (i) =>
       c.workbuddyController.createAccount(i.user, i.json),
@@ -495,6 +523,43 @@ export function registerAutomationRoutes(
       c.workbuddyController.followUp(i.user, i.param['id'], i.json),
     Workbuddy_cancelTask: async (i) =>
       c.workbuddyController.cancelTask(i.user, i.param['id']),
+
+    // ---------- Bot 主机（Agent-Bot：BotBuddy 客户端领指令在本机执行） ----------
+    BotHost_list: async (i) => c.botHostController.list(i.user),
+    BotHost_pair: async (i) => c.botHostController.pair(i.user, i.json),
+    BotHost_setStatus: async (i) =>
+      c.botHostController.setStatus(i.user, i.param['hostId'], i.json),
+    BotHost_remove: async (i) =>
+      c.botHostController.remove(i.user, i.param['hostId']),
+    BotHost_rotateToken: async (i) =>
+      c.botHostController.rotateToken(i.user, i.param['hostId']),
+    BotHost_channels: async (i) =>
+      c.botHostController.channels(i.user, i.param['hostId']),
+    BotHost_workspaces: async (i) =>
+      c.botHostController.workspaces(i.user, i.param['hostId']),
+    BotHost_modelGrant: async (i) =>
+      c.botHostController.modelGrant(i.user, i.param['hostId']),
+    BotHost_saveModelGrant: async (i) =>
+      c.botHostController.saveModelGrant(i.user, i.param['hostId'], i.json),
+    BotHost_removeModelGrant: async (i) =>
+      c.botHostController.removeModelGrant(i.user, i.param['hostId']),
+    BotHost_conversation: async (i) =>
+      c.botHostController.conversation(i.user, i.param['hostId']),
+    BotHost_send: async (i) =>
+      c.botHostController.send(i.user, i.param['hostId'], i.json),
+    BotHost_cancel: async (i) =>
+      c.botHostController.cancel(i.user, i.param['commandCode']),
+    BotHost_schedules: async (i) => c.botHostController.schedules(i.user),
+    BotHost_createSchedule: async (i) =>
+      c.botHostController.createSchedule(i.user, i.json),
+    BotHost_updateSchedule: async (i) =>
+      c.botHostController.updateSchedule(i.user, i.param['id'], i.json),
+    BotHost_removeSchedule: async (i) =>
+      c.botHostController.removeSchedule(i.user, i.param['id']),
+    BotHost_runSchedule: async (i) =>
+      c.botHostController.runSchedule(i.user, i.param['id']),
+    BotHost_scheduleRuns: async (i) =>
+      c.botHostController.scheduleRuns(i.user, i.param['id']),
 
     // ---------- AI 调用账号 ----------
     AiCall_accounts: async (i) => c.aiCallController.list(i.user, i.query),
@@ -1292,6 +1357,17 @@ export function registerAutomationRoutes(
     moduleHandlers('Mkt_', c.mktController),
     // SEO 工作台（营销工具）：契约 Seo_* 一一对应控制器方法
     moduleHandlers('Seo_', c.seoController),
+    // GEO 独立站建站器：企业侧 GeoSite_*（站点/内容/发布/域名/账单）与
+    // 平台侧 GeoSiteAdmin_*（设置/台账/下线/统计）共用一个控制器。
+    moduleHandlers('GeoSite_', c.geoSiteController),
+    moduleHandlers('GeoSiteAdmin_', c.geoSiteController),
+    // 站点 CMS：页面 / 菜单 / 内容库三组前缀各一个控制器——
+    // 三块都有 list/create/remove，共用一个实例会让方法名互相覆盖。
+    moduleHandlers('GeoSitePage_', c.geoSitePageController),
+    moduleHandlers('GeoSiteMenu_', c.geoSiteMenuController),
+    moduleHandlers('GeoSiteContent_', c.geoSiteContentController),
+    // 模板库（区块另存 + 整页另存）单独一个前缀：与页面/内容同名方法会互相覆盖
+    moduleHandlers('GeoSiteTemplate_', c.geoSiteTemplateController),
     // L3 AI 简历代投（§5.6）
     moduleHandlers('Recruit_', c.recruitController),
     // AI 获客（营销工具）：线索雷达/触达/档案/剧本/跟进/质检/看板
@@ -1301,6 +1377,9 @@ export function registerAutomationRoutes(
     // 微信服务号：用户绑定与平台设置/菜单/绑定管理/推送记录。
     moduleHandlers('WechatMp_', c.wechatMpController),
     moduleHandlers('WechatMpAdmin_', c.wechatMpController),
+    // 用户版小程序：用户绑定 + 平台后台「小程序管理」（代码包台账 / 小程序码 / 内置包）。
+    moduleHandlers('MiniProgram_', c.miniProgramController),
+    moduleHandlers('MiniProgramAdmin_', c.miniProgramController),
     // 通用协作底座（§5.2）：评论/@/标签/收藏/资源链接
     moduleHandlers('Collab_', c.collabController),
     // §5.8 横切机制：各组都有 list/save/remove，因此按契约前缀分组注册。
@@ -1548,6 +1627,8 @@ export function registerAutomationRoutes(
   registerContentSkillImport(app, services);
   registerContentPluginImport(app, services);
   registerUpgradePackageUpload(app, services);
+  registerMiniProgramUploads(app, services);
+  registerMiniProgramBuiltinDownload(app, services);
   registerAiCodeRoutes(app, services);
   registerWorkflowRunStream(app, services);
   registerRpaChromeScreenshot(app, services);
@@ -1878,6 +1959,70 @@ function registerHardwareKitUpload(
       }
       const result = await services.hardware.adminKitUpload(file);
       return context.json({ code: 0, message: 'ok', data: result });
+    },
+  );
+}
+
+/** 用户版小程序代码包上传：multipart 不进 JSON 契约，字节进本站 OSS，元数据由 Admin 端点落库。 */
+function registerMiniProgramUploads(
+  app: OpenAPIHono<ApiEnv>,
+  services: Services,
+) {
+  app.post(
+    '/enterprise/admin/miniprogram/releases/upload',
+    async (context: Context<ApiEnv>) => {
+      services.identity.requireAdmin(context.get('user')!);
+      const form = await context.req.formData();
+      const file = form.get('file');
+      if (!(file instanceof File)) {
+        throw new BusinessException(
+          ErrorCode.BAD_REQUEST,
+          '请选择要上传的小程序代码包',
+        );
+      }
+      const result = await services.miniprogram.service.uploadPackage(file);
+      return context.json({ code: 0, message: 'ok', data: result });
+    },
+  );
+  app.post(
+    '/enterprise/admin/miniprogram/qrcode/upload',
+    async (context: Context<ApiEnv>) => {
+      services.identity.requireAdmin(context.get('user')!);
+      const form = await context.req.formData();
+      const file = form.get('file');
+      if (!(file instanceof File)) {
+        throw new BusinessException(
+          ErrorCode.BAD_REQUEST,
+          '请选择要上传的小程序码图片',
+        );
+      }
+      const result = await services.miniprogram.service.uploadQrcodeImage(file);
+      return context.json({ code: 0, message: 'ok', data: result });
+    },
+  );
+}
+
+/** 平台内置小程序包下载：返回 zip 字节（服务器 `update/miniprogram/*.zip`），不进 JSON 契约。 */
+function registerMiniProgramBuiltinDownload(
+  app: OpenAPIHono<ApiEnv>,
+  services: Services,
+) {
+  app.get(
+    '/enterprise/admin/miniprogram/builtin/:file/download',
+    async (context: Context<ApiEnv>) => {
+      services.identity.requireAdmin(context.get('user')!);
+      const { path, fileName } = await services.miniprogram.service.builtinFile(
+        context.req.param('file')!,
+      );
+      const bytes = await readFile(path);
+      const encoded = encodeURIComponent(fileName);
+      return new Response(new Uint8Array(bytes), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/zip',
+          'Content-Disposition': `attachment; filename="${encoded}"; filename*=UTF-8''${encoded}`,
+        },
+      });
     },
   );
 }

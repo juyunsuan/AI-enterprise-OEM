@@ -1,0 +1,30 @@
+<view class="page">
+  <view class="filters">
+    <view
+      class="chip {{item.key === activeFilter ? 'chip-on' : ''}}"
+      wx:for="{{filters}}"
+      wx:key="key"
+      bindtap="onFilter"
+      data-key="{{item.key}}"
+    >{{item.label}}</view>
+  </view>
+
+  <view class="card conv" wx:for="{{list}}" wx:key="id" bindtap="openChat" data-id="{{item.id}}">
+    <view class="row between">
+      <view class="conv-name ellipsis">{{item.visitorName || '访客'}}</view>
+      <view class="muted">{{item.lastMessageAtText}}</view>
+    </view>
+    <view class="row between conv-meta">
+      <view class="muted ellipsis">{{item.subject || item.siteName}}</view>
+      <view class="tag {{item.status === 'waiting' ? 'tag-warn' : 'tag-plain'}}">{{item.statusLabel}}</view>
+    </view>
+    <view class="row between">
+      <view class="muted ellipsis conv-last">{{item.lastMessage}}</view>
+      <view class="badge" wx:if="{{item.unread > 0}}">{{item.unread > 99 ? '99+' : item.unread}}</view>
+    </view>
+  </view>
+
+  <view class="empty" wx:if="{{!loading && !list.length}}">暂无会话</view>
+  <view class="muted loading" wx:if="{{loading}}">加载中…</view>
+  <view class="muted loading" wx:if="{{finished && list.length}}">没有更多了</view>
+</view>

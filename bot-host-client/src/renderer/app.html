@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:;" />
+  <title>BotBuddy</title>
+  <link rel="stylesheet" href="app.css" />
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="brand-logo">BB</span>
+        <span>
+          <span class="brand-name">BotBuddy</span><br />
+          <span class="brand-sub">本机 Agent 主机</span>
+        </span>
+      </div>
+
+      <nav class="nav">
+        <div class="nav-group">
+          <div class="nav-group-title">主机</div>
+          <button class="nav-item active" data-go="overview"><span class="nav-dot"></span>概览</button>
+          <button class="nav-item" data-go="binding"><span class="nav-dot"></span>设备绑定</button>
+        </div>
+        <div class="nav-group">
+          <div class="nav-group-title">Agent</div>
+          <button class="nav-item" data-go="chat"><span class="nav-dot"></span>对话</button>
+          <button class="nav-item" data-go="models"><span class="nav-dot"></span>模型渠道</button>
+          <button class="nav-item" data-go="skills"><span class="nav-dot"></span>技能<span id="navSkillCount" class="nav-badge">0</span></button>
+          <button class="nav-item" data-go="personas"><span class="nav-dot"></span>数字分身<span id="navPersonaCount" class="nav-badge">0</span></button>
+          <button class="nav-item" data-go="memory"><span class="nav-dot"></span>长期记忆</button>
+          <button class="nav-item" data-go="plugins"><span class="nav-dot"></span>插件</button>
+        </div>
+        <div class="nav-group">
+          <div class="nav-group-title">运行</div>
+          <button class="nav-item" data-go="workspace"><span class="nav-dot"></span>工作区与权限</button>
+          <button class="nav-item" data-go="logs"><span class="nav-dot"></span>任务与日志</button>
+        </div>
+      </nav>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <span class="topbar-title" id="pageTitle">概览</span>
+        <span id="connPill" class="pill muted"><span class="dot"></span>未绑定</span>
+        <span class="topbar-spacer"></span>
+        <span class="topbar-meta" id="topbarMeta">—</span>
+      </header>
+
+      <main class="content">
+        <!-- 概览 -->
+        <section class="pane active" data-pane="overview">
+          <div class="grid-2">
+            <div class="card">
+              <div class="card-head">
+                <span class="card-title">平台连接</span>
+                <span class="card-actions"><button id="goBinding" class="btn small ghost">设备绑定</button></span>
+              </div>
+              <div class="kv">
+                <div class="kv-row"><span class="k">登录账号</span><span id="ovUser" class="v">未登录</span></div>
+                <div class="kv-row"><span class="k">绑定主机</span><span id="ovHost" class="v">未绑定</span></div>
+                <div class="kv-row"><span class="k">平台积分</span><span id="ovPoints" class="v">—</span></div>
+                <div class="kv-row"><span class="k">平台地址</span><span id="ovBaseUrl" class="v mono">—</span></div>
+                <div class="kv-row"><span class="k">最近心跳</span><span id="ovHeartbeat" class="v">—</span></div>
+                <div class="kv-row"><span class="k">设备名</span><span id="ovDevice" class="v">—</span></div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-head">
+                <span class="card-title">本机 Agent</span>
+                <span class="card-actions"><button id="goModels" class="btn small ghost">配置</button></span>
+              </div>
+              <div class="kv">
+                <div class="kv-row"><span class="k">状态</span><span id="ovAgentState" class="v">—</span></div>
+                <div class="kv-row"><span class="k">模型</span><span id="ovAgentModel" class="v">—</span></div>
+                <div class="kv-row"><span class="k">技能 / 分身</span><span id="ovAgentCounts" class="v">—</span></div>
+                <div class="kv-row"><span class="k">默认工作区</span><span id="ovWorkspace" class="v mono">—</span></div>
+              </div>
+              <p id="ovAgentHint" class="card-note"></p>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <span class="card-title">最近任务</span>
+              <span class="card-actions"><button id="goLogs" class="btn small ghost">全部</button></span>
+            </div>
+            <ul id="ovTaskList" class="task-list"><li class="muted">暂无任务</li></ul>
+          </div>
+        </section>
+
+        <!-- 设备绑定 -->
+        <section class="pane" data-pane="binding">
+          <div class="card">
+            <div class="card-head">
+              <span class="card-title">登录平台账号</span>
+              <span class="card-hint">连接码只发给登录后的账号，账号和码必须对得上</span>
+            </div>
+            <div id="loginForm">
+              <div class="kv spaced">
+                <div class="kv-row"><span class="k">平台地址</span>
+                  <span class="field-row fill">
+                    <input id="baseUrl" type="text" spellcheck="false" placeholder="http:// 或 https:// 开头的站点地址" />
+                    <button id="saveBaseUrl" class="btn small">保存</button>
+                  </span>
+                </div>
+                <div class="kv-row"><span class="k">账号</span>
+                  <span class="field-row fill">
+                    <input id="loginUser" type="text" spellcheck="false" autocomplete="username" placeholder="用户名 / 邮箱 / 手机号" />
+                  </span>
+                </div>
+                <div class="kv-row"><span class="k">密码</span>
+                  <span class="field-row fill">
+                    <input id="loginPass" type="password" spellcheck="false" autocomplete="current-password" placeholder="平台登录密码" />
+                    <button id="doLogin" class="btn primary">登录</button>
+                  </span>
+                </div>
+              </div>
+              <p id="loginHint" class="card-note">登录成功后本机会拿到平台模型设置与积分余额；退出登录不影响已配对的主机。</p>
+            </div>
+            <div id="loggedInBox" class="hidden">
+              <div class="kv">
+                <div class="kv-row"><span class="k">登录账号</span><span id="loginName" class="v">—</span></div>
+                <div class="kv-row"><span class="k">平台地址</span><span id="loginBaseUrl" class="v mono">—</span></div>
+                <div class="kv-row"><span class="k">积分余额</span><span id="loginPoints" class="v">—</span></div>
+              </div>
+              <p class="card-note">要换账号或换站点，先退出登录再重新登录。</p>
+              <button id="doLogout" class="btn small ghost">退出登录</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <span class="card-title">绑定到平台</span>
+              <span id="bindLockHint" class="card-hint">登录平台账号后自动生成连接码</span>
+            </div>
+            <div class="bind-hero">
+              <div id="pairCode" class="bind-code empty">------</div>
+              <div class="bind-info">
+                <div class="t" id="pairTitle">先登录平台账号</div>
+                <div class="d" id="pairDesc">登录后会自动申请 6 位连接码，再到平台「Bot 主机」页认领</div>
+              </div>
+              <button id="pairRefresh" class="btn primary" disabled>刷新连接码</button>
+            </div>
+            <div class="kv spaced">
+              <div class="kv-row"><span class="k">设备名</span>
+                <span class="field-row fill">
+                  <input id="deviceName" type="text" spellcheck="false" />
+                  <button id="saveDeviceName" class="btn small">保存</button>
+                </span>
+              </div>
+              <div class="kv-row"><span class="k">当前状态</span><span id="bindStatus" class="v">未绑定</span></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <span class="card-title">手动填写主机令牌</span>
+              <span class="card-hint">平台侧拿不到连接码时用这条兜底</span>
+            </div>
+            <div class="field-row">
+              <input id="tokenInput" type="password" spellcheck="false" placeholder="粘贴平台给出的 bot_ 开头令牌" />
+              <button id="saveToken" class="btn">绑定</button>
+            </div>
+            <p id="tokenHint" class="card-note">令牌等同本机身份，别发给别人。</p>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <span class="card-title">环境自检</span>
+              <span class="card-actions"><button id="runCheck" class="btn small">重新检测</button></span>
+            </div>
+            <div id="checkList" class="check-list"><div class="empty">尚未检测</div></div>
+          </div>
+        </section>
+
+        <!-- 对话 -->
+        <section class="pane" data-pane="chat">
+          <div class="chat-shell">
+            <aside class="chat-side">
+              <div class="chat-side-head">
+                <span class="chat-side-title">会话</span>
+                <button id="newChat" class="btn small">新对话</button>
+              </div>
+              <div id="chatList" class="chat-list"></div>
+            </aside>
+            <div class="chat-main">
+              <div class="chat-head">
+                <div class="chat-head-main">
+                  <div id="chatTitle" class="chat-title">新对话</div>
+                  <div id="chatMeta" class="chat-meta">本机 Agent</div>
+                </div>
+                <div class="chat-actions">
+                  <span id="chatState" class="pill muted"><span class="dot"></span>待命</span>
+                  <button id="chatStop" class="btn small ghost" disabled>停止</button>
+                </div>
+              </div>
+              <div id="chatThread" class="chat-thread"></div>
+              <div class="chat-composer">
+                <div class="ctx-zone">
+                  <div class="ctx-bar">
+                    <button id="chatAddBtn" class="ctx-add" type="button" title="添加技能、插件、数字分身、工作区">
+                      <span class="ctx-add-plus">＋</span>
+                    </button>
+                    <div id="chatCtxChips" class="ctx-chips"></div>
+                    <button id="chatRefBtn" class="ctx-icon-btn" type="button" title="添加参考文件">
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21.44 11.05l-8.49 8.49a5 5 0 0 1-7.07-7.07l8.49-8.49a3.5 3.5 0 1 1 4.95 4.95l-8.49 8.49a2 2 0 0 1-2.83-2.83l7.78-7.78" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div id="chatAddPop" class="ctx-pop hidden"></div>
+                </div>
+                <div id="chatAttachments" class="chat-attachments hidden"></div>
+                <textarea id="chatInput" rows="3" spellcheck="false"
+                  placeholder="给本机 Agent 发消息：它会用你的模型渠道、技能与工作区直接干活；可挂数字分身，也能带上本机参考文件"></textarea>
+                <div class="chat-send-row">
+                  <span id="chatHint" class="chat-hint">Enter 发送 · Shift+Enter 换行</span>
+                  <div class="chat-send-actions">
+                    <div class="ctx-zone ctx-zone-right">
+                      <button id="chatModelBtn" class="ctx-model" type="button" title="本会话使用的模型（只列本机配置的 LLM 渠道）">
+                        <span id="chatModelVal">未配置模型</span><i class="ctx-caret">⌄</i>
+                      </button>
+                      <div id="chatModelPop" class="ctx-pop ctx-pop-right hidden"></div>
+                    </div>
+                    <button id="chatSend" class="btn primary">发送</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 模型渠道 -->
+        <section class="pane" data-pane="models">
+          <div class="card">
+            <div class="card-head">
+              <span class="card-title">模型渠道</span>
+              <span class="card-hint">本机直连，平台看不到你的密钥</span>
+              <span class="card-actions">
+                <button id="probe" class="btn small">测试连通</button>
+                <button id="newChannel" class="btn small primary">新增渠道</button>
+              </span>
+            </div>
+            <div id="channelList" class="list"></div>
+            <p id="probeHint" class="card-note"></p>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <span class="card-title">编辑渠道</span>
+              <span class="card-hint" id="channelMode">新增</span>
+            </div>
+            <div class="form">
+              <label class="field"><span class="k">渠道名</span>
+                <input id="chName" type="text" spellcheck="false" placeholder="例如：内网网关" /></label>
+              <label class="field"><span class="k">协议</span>
+                <select id="chProtocol">
+                  <option value="openai">OpenAI 兼容（/chat/completions）</option>
+                  <option value="anthropic">Anthropic（/messages）</option>
+                </select></label>
+              <label class="field"><span class="k">渠道地址<em>*</em></span>
+                <input id="chBaseUrl" type="text" spellcheck="false" placeholder="https://api.deepseek.com" /></label>
+              <label class="field"><span class="k">API Key</span>
+                <input id="chApiKey" type="password" spellcheck="false" placeholder="本机模型服务可留空" /></label>
+              <label class="field"><span class="k">模型名<em>*</em></span>
+                <input id="chModel" type="text" spellcheck="false" placeholder="deepseek-chat" /></label>
+            </div>
+            <div class="actions spaced">
+              <button id="saveChannel" class="btn primary">保存渠道</button>
+              <button id="cancelChannel" class="btn ghost">清空表单</button>
+            </div>
+            <p id="channelHint" class="card-note"></p>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><span class="card-title">采样参数</span></div>
+            <div class="form">
+              <label class="field"><span class="k">temperature</span>
+                <input id="temperature" type="number" min="0" max="2" step="0.1" /></label>
+              <label class="field"><span class="k">max tokens</span>
+                <input id="maxTokens" type="number" min="256" max="32000" step="256" /></label>
+            </div>
+            <div class="actions spaced"><button id="saveParams" class="btn">保存参数</button></div>
+          </div>
+        </section>
+
+        <!-- 技能 -->
+        <section class="pane" data-pane="skills">
+          <div class="card">
+            <div class="card-head">
+              <span class="card-title">技能</span>
+              <span class="card-hint">不勾选＝全部可用；勾选后只带这些进上下文</span>
+              <span class="card-actions"><button id="newSkill" class="btn small primary">新建技能</button></span>
+            </div>
+            <div id="skillList" class="list"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <span class="card-title">编辑技能</span>
+              <span class="card-hint" id="skillMode">新建</span>
+            </div>
+            <div class="form">
+              <label class="field"><span class="k">技能 id<em>*</em></span>
+                <input id="skId" type="text" spellcheck="false" placeholder="code-review" /></label>
+              <label class="field"><span class="k">名称</span>
+                <input id="skName" type="text" spellcheck="false" placeholder="代码审查" /></label>
+              <label class="field"><span class="k">一句话说明</span>
+                <input id="skDesc" type="text" spellcheck="false" placeholder="审查改动、指出风险" /></label>
+            </div>
+            <textarea id="skBody" class="editor" placeholder="技能正文：Agent 需要时用 load_skill 读取这段说明再照做。"></textarea>
+            <div class="actions spaced">
+              <button id="saveSkill" class="btn primary">保存技能</button>
+              <button id="cancelSkill" class="btn ghost">清空表单</button>
+            </div>
+            <p id="skillHint" class="card-note"></p>
+          </div>
+        </section>
+
+        <!-- 数字分身 -->
+        <section class="pane" data-pane="personas">
+          <div class="card">
+            <div class="card-head">
+              <span class="card-title">数字分身</span>
+              <span class="card-hint">选中一个＝它的正文作为附加人设进每次对话</span>
+              <span class="card-actions"><button id="newPersona" class="btn small primary">新建分身</button></span>
+            </div>
+            <div id="personaList" class="list"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <span class="card-title">编辑分身</span>
+              <span class="card-hint" id="personaMode">新建</span>
+            </div>
+            <div class="form">
+              <label class="field"><span class="k">分身 id<em>*</em></span>
+                <input id="peId" type="text" spellcheck="false" placeholder="tech-writer" /></label>
+              <label class="field"><span class="k">名称</span>
+                <input id="peName" type="text" spellcheck="false" placeholder="技术写手" /></label>
+              <label class="field"><span class="k">一句话说明</span>
+                <input id="peDesc" type="text" spellcheck="false" placeholder="把结论写成对外可读的文档" /></label>
+            </div>
+            <textarea id="peBody" class="editor" placeholder="人设与口径：说话风格、必须遵守的规则、输出格式。"></textarea>
+            <div class="actions spaced">
+              <button id="savePersona" class="btn primary">保存分身</button>
+              <button id="cancelPersona" class="btn ghost">清空表单</button>
+            </div>
+            <p id="personaHint" class="card-note"></p>
+          </div>
+        </section>
+
+        <!-- 记忆 -->
+        <section class="pane" data-pane="memory">
+          <div class="card">
+            <div class="card-head">
+              <span class="card-title">长期记忆</span>
+              <span class="card-hint">每轮都会进系统提示词；只留真正会反复用的结论</span>
+            </div>
+            <textarea id="memory" class="editor tall" placeholder="Agent 每次调用 remember 工具都会往这里追加一行。可直接编辑。"></textarea>
+            <div class="actions spaced">
+              <button id="saveMemory" class="btn primary">保存记忆</button>
+              <button id="clearMemory" class="btn ghost">清空</button>
+            </div>
+            <p id="memoryHint" class="card-note"></p>
+          </div>
+        </section>
+
+        <!-- 工作区与权限 -->
+
+        <!-- 插件：Agent 插件 + Chrome 桥接 -->
+        <section class="pane" data-pane="plugins">
+          <div class="card">
+            <div class="card-head">
+              <span class="card-title">Agent 插件</span>
+              <span class="card-hint">给 Agent 加自定义工具：HTTP 接口或本机命令</span>
+              <span class="card-actions"><button id="newPlugin" class="btn small primary">新建插件</button></span>
+            </div>
+            <div id="pluginList" class="list"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <span class="card-title">编辑插件</span>
+              <span class="card-hint" id="pluginMode">新建</span>
+            </div>
+            <div class="form">
+              <label class="field"><span class="k">名称<em>*</em></span>
+                <input id="plgName" type="text" spellcheck="false" placeholder="查天气" /></label>
+              <label class="field"><span class="k">类型</span>
+                <select id="plgKind" class="fill">
+                  <option value="http">HTTP 接口</option>
+                  <option value="command">本机命令（需 allow-all 权限档）</option>
+                </select></label>
+              <label class="field"><span class="k">说明（给模型看）</span>
+                <input id="plgDesc" type="text" spellcheck="false" placeholder="按城市查当天天气" /></label>
+            </div>
+            <label class="field"><span class="k">参数（JSON：{名称:{type,description,required}}）</span>
+              <textarea id="plgParams" class="editor short" spellcheck="false" placeholder='{"city":{"type":"string","description":"城市名","required":true}}'></textarea></label>
+            <label class="field"><span class="k">请求配置（JSON：HTTP 填 method/url/headers/body，命令填 command；模板用 {{参数名}}）</span>
+              <textarea id="plgConfig" class="editor short" spellcheck="false" placeholder='{"method":"GET","url":"https://api.example.com/weather?city={{city}}"}'></textarea></label>
+            <div class="actions spaced">
+              <button id="savePlugin" class="btn primary">保存插件</button>
+              <button id="cancelPlugin" class="btn ghost">清空表单</button>
+            </div>
+            <p id="pluginHint" class="card-note"></p>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <span class="card-title">Chrome 插件桥接</span>
+              <span class="card-hint">让 Agent 通过本机浏览器查页面、点按钮、填表单</span>
+              <span class="card-actions"><button id="bridgeRestart" class="btn small">重启桥接</button></span>
+            </div>
+            <div class="kv">
+              <div class="kv-row"><span class="k">状态</span><span id="bridgeState" class="v">—</span></div>
+              <div class="kv-row"><span class="k">桥接地址</span><span id="bridgeAddr" class="v mono">—</span></div>
+              <div class="kv-row"><span class="k">桥接令牌</span><span id="bridgeToken" class="v mono">—</span></div>
+              <div class="kv-row"><span class="k">监听端口</span><input id="bridgePort" type="number" min="1024" max="65535" class="fill" style="max-width:120px" /></div>
+            </div>
+            <div class="actions spaced">
+              <button id="copyBridge" class="btn small">复制桥接信息</button>
+              <button id="openBridgeFolder" class="btn small ghost">打开插件目录</button>
+            </div>
+            <p class="card-note">
+              安装方法：本客户端目录下的 <code>chrome-bridge-extension</code> 文件夹拖进 chrome://extensions（开发者模式 → 加载已解压的扩展程序），
+              首次打开扩展把上面的「桥接地址 + 令牌」填进去即可。桥接只监听本机 127.0.0.1，浏览器数据和 Cookie 不经过平台。
+            </p>
+          </div>
+        </section>
+
+        <section class="pane" data-pane="workspace">
+          <div class="card">
+            <div class="card-head">
+              <span class="card-title">工作区</span>
+              <span class="card-actions"><button id="addWs" class="btn small primary">添加目录</button></span>
+            </div>
+            <div id="wsList" class="chips"></div>
+            <p class="card-note">默认工作区开箱即用，不选工作区就在这里干活；添加的目录也会出现在平台的工作区下拉里。</p>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><span class="card-title">权限档</span></div>
+            <div class="kv">
+              <div class="kv-row"><span class="k">权限</span>
+                <select id="policy" class="fill">
+                  <option value="deny">只读（默认，写文件与命令一律拒绝）</option>
+                  <option value="allow-edits">允许改当前工作区内的文件</option>
+                  <option value="allow-all">允许改文件并执行命令</option>
+                </select>
+              </div>
+            </div>
+            <p id="policyHint" class="card-note"></p>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><span class="card-title">本机文件</span></div>
+            <div class="kv">
+              <div class="kv-row"><span class="k">数据库</span><span id="pathDb" class="v mono">—</span></div>
+              <div class="kv-row"><span class="k">客户端版本</span><span id="pathVersion" class="v">—</span></div>
+            </div>
+            <p class="card-note">渠道密钥、技能、分身、记忆都只存在这个文件里。</p>
+          </div>
+        </section>
+
+        <!-- 任务与日志 -->
+        <section class="pane" data-pane="logs">
+          <div class="grid-2">
+            <div class="card">
+              <div class="card-head">
+                <span class="card-title">最近任务</span>
+                <span class="card-actions"><button id="reloadTasks" class="btn small ghost">刷新</button></span>
+              </div>
+              <ul id="taskList" class="task-list"><li class="muted">暂无任务</li></ul>
+            </div>
+            <div class="card">
+              <div class="card-head">
+                <span class="card-title">运行操作</span>
+              </div>
+              <div class="actions">
+                <button id="reconnect" class="btn">立即重连</button>
+                <button id="recheck" class="btn">环境自检</button>
+                <button id="quit" class="btn danger">退出客户端</button>
+              </div>
+              <p class="card-note">关闭窗口只是收进托盘，客户端会继续接活；退出才真正停掉心跳。</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <span class="card-title">日志</span>
+              <span class="card-actions"><button id="reloadLogs" class="btn small ghost">刷新</button></span>
+            </div>
+            <pre id="logText" class="log-text">加载中…</pre>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

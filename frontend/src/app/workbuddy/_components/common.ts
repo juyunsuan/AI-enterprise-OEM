@@ -1,12 +1,11 @@
 import { endpoints } from "@enterprise/contracts";
 import { endpoint } from "@/api/endpoint";
 import { fmtTime } from "@/lib/datetime";
-import { scheduleText } from "@/lib/schedule";
 
 /**
- * Workbuddy 企业云界面层：Workbuddy Enterprise 账号（腾讯云凭据）/ Agent / 计划任务。
+ * Workbuddy 企业版界面层：Enterprise 账号（腾讯云凭据）/ 账号对话 / 定时任务 / AI 调用账号。
  * 后端 /enterprise/workbuddy/*，全部按账号归属——每把 Key 只看得到那个企业的 Agent，
- * 管理员也不代看他人密钥。计划任务的口水话澄清走「API Key 管理」里的平台 sk- Key。
+ * 管理员也不代看他人密钥。
  */
 
 export { fmtTime };
@@ -176,74 +175,6 @@ export type WbConnectorItem = {
   Status?: string;
 };
 
-export type PlanStep = { title: string; instruction: string };
-
-/** 任务书：目标 / 交付物 / 验收标准 / 可独立执行的步骤（由 AI 澄清产出，后端归一）。 */
-export type WbPlanSpec = {
-  goal: string;
-  deliverable: string;
-  acceptance: string;
-  steps: PlanStep[];
-};
-
-export type WbPlan = {
-  id: number;
-  createdBy: string;
-  title: string;
-  rawInput: string;
-  spec: WbPlanSpec;
-  stepCount: number;
-  ready: boolean;
-  taskCount: number;
-  strategy: string;
-  accountIds: number[];
-  status: string;
-  summary: string;
-  lastError: string;
-  /** 新建时的分类：ai 沟通确定 / direct 明确生成 / scheduled 定时任务。 */
-  kind: string;
-  scheduleType: string;
-  scheduleConfig: Record<string, unknown>;
-  scheduledAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type WbTask = {
-  id: number;
-  planId: number;
-  seq: number;
-  accountId: number;
-  agentId: string;
-  versionId: string;
-  /** 派发后才有：腾讯云会话 ID 与 A2A 任务态。 */
-  sessionId: string;
-  instruction: string;
-  status: string;
-  /** 与所属计划同分类，任务列表按它筛选。 */
-  kind: string;
-  lastEventSeq: number;
-  state: string;
-  lastError: string;
-  startedAt: string | null;
-  finishedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type WbTaskEvent = {
-  id: number;
-  taskId: number;
-  seq: number;
-  eventType: string;
-  content: string;
-  toolName: string;
-  toolInput: string;
-  toolOutput: string;
-  tokenUsage: { input?: number; output?: number; total?: number } | null;
-  occurredAt: string;
-};
-
 export type PlanAccount = { id: number; name: string; status: string };
 
 export type WbLlmSetting = {
@@ -253,37 +184,23 @@ export type WbLlmSetting = {
   baseUrl: string;
 };
 
-export type ClarifyMessage = { role: "user" | "assistant"; content: string };
-
-export type ClarifyResult = {
-  reply: string;
-  spec: WbPlanSpec;
-  ready: boolean;
-  specError?: string;
-  elapsedMs: number;
-};
-
 export type DispatchTarget = {
   accountId: number;
   agentId: string;
   versionId?: string;
 };
 
-export type DispatchResult = {
-  dispatched: number;
-  failed: number;
-  plan: WbPlan;
-  errors: string[];
-};
-
-export type SyncResult = {
-  synced: number;
-  errors?: string[];
-  plan: WbPlan;
-};
-
 const api = {
   accounts: endpoint(endpoints.Workbuddy_accounts),
+  cloudCommands: endpoint(endpoints.Workbuddy_cloudCommands),
+  sendCloudCommand: endpoint(endpoints.Workbuddy_sendCloudCommand),
+  syncCloudCommand: endpoint(endpoints.Workbuddy_syncCloudCommand),
+  cloudSchedules: endpoint(endpoints.Workbuddy_cloudSchedules),
+  createCloudSchedule: endpoint(endpoints.Workbuddy_createCloudSchedule),
+  updateCloudSchedule: endpoint(endpoints.Workbuddy_updateCloudSchedule),
+  removeCloudSchedule: endpoint(endpoints.Workbuddy_removeCloudSchedule),
+  cloudScheduleRuns: endpoint(endpoints.Workbuddy_cloudScheduleRuns),
+  runCloudSchedule: endpoint(endpoints.Workbuddy_runCloudSchedule),
   createAccount: endpoint(endpoints.Workbuddy_addAccount),
   updateAccount: endpoint(endpoints.Workbuddy_updateAccount),
   deleteAccount: endpoint(endpoints.Workbuddy_removeAccount),
@@ -303,21 +220,6 @@ const api = {
   skills: endpoint(endpoints.Workbuddy_catalogSkills),
   experts: endpoint(endpoints.Workbuddy_catalogExperts),
   connectors: endpoint(endpoints.Workbuddy_catalogConnectors),
-  plans: endpoint(endpoints.Workbuddy_plans),
-  plan: endpoint(endpoints.Workbuddy_plan),
-  createPlan: endpoint(endpoints.Workbuddy_createPlan),
-  updatePlan: endpoint(endpoints.Workbuddy_updatePlan),
-  deletePlan: endpoint(endpoints.Workbuddy_removePlan),
-  clarify: endpoint(endpoints.Workbuddy_clarify),
-  materialize: endpoint(endpoints.Workbuddy_materialize),
-  addTask: endpoint(endpoints.Workbuddy_addPlanTask),
-  dispatch: endpoint(endpoints.Workbuddy_dispatchPlan),
-  sync: endpoint(endpoints.Workbuddy_syncPlan),
-  updateTask: endpoint(endpoints.Workbuddy_updateTask),
-  deleteTask: endpoint(endpoints.Workbuddy_removeTask),
-  taskEvents: endpoint(endpoints.Workbuddy_taskEvents),
-  followUp: endpoint(endpoints.Workbuddy_followUpTask),
-  cancelTask: endpoint(endpoints.Workbuddy_cancelTask),
 };
 
 /** 取数：失败不抛错，交页面提示（与 rpa/_components/common.ts 同口径）。 */
@@ -340,8 +242,66 @@ async function mutate<T>(work: Promise<unknown>): Promise<T> {
 type AgentList = { total: number; items: WbAgentItem[]; offset: number; limit: number };
 type VersionList = { total: number; items: WbVersion[]; offset: number; limit: number };
 
+export type WbCloudCommand = {
+  id: number;
+  agentId: string;
+  versionId: string;
+  sessionId: string;
+  payload: { instruction?: string } | null;
+  status: string;
+  error: string;
+  progressText: string;
+  scheduleId: number;
+  createdAt: string;
+  finishedAt: string | null;
+};
+
+export type WbCloudSchedule = {
+  id: number;
+  accountId: number;
+  title: string;
+  instruction: string;
+  payload: { agentId?: string; versionId?: string } | null;
+  scheduleType: string;
+  scheduleConfig: Record<string, unknown>;
+  scheduledAt: string | null;
+  status: string;
+  lastRunAt: string | null;
+  lastStatus: string;
+  lastError: string;
+  runCount: number;
+};
+
+export type WbCloudScheduleRun = {
+  id: number;
+  status: string;
+  commandCode: string;
+  error: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+  createdAt: string;
+};
+
 export const workbuddyApi = {
   accounts: () => load<WbAccount[]>(api.accounts({})),
+  cloudCommands: (id: number) =>
+    load<WbCloudCommand[]>(api.cloudCommands({ params: { id: String(id) } })),
+  sendCloudCommand: (id: number, body: { agentId: string; versionId?: string; instruction: string; previousCommandId?: number }) =>
+    mutate<WbCloudCommand>(api.sendCloudCommand({ params: { id: String(id) }, body })),
+  syncCloudCommand: (id: number) =>
+    mutate<WbCloudCommand>(api.syncCloudCommand({ params: { id: String(id) } })),
+  cloudSchedules: (id: number) =>
+    load<WbCloudSchedule[]>(api.cloudSchedules({ params: { id: String(id) } })),
+  createCloudSchedule: (id: number, body: Record<string, unknown>) =>
+    mutate<WbCloudSchedule>(api.createCloudSchedule({ params: { id: String(id) }, body })),
+  updateCloudSchedule: (id: number, body: Record<string, unknown>) =>
+    mutate<WbCloudSchedule>(api.updateCloudSchedule({ params: { id: String(id) }, body })),
+  removeCloudSchedule: (id: number) =>
+    mutate<{ id: number }>(api.removeCloudSchedule({ params: { id: String(id) } })),
+  cloudScheduleRuns: (id: number) =>
+    load<WbCloudScheduleRun[]>(api.cloudScheduleRuns({ params: { id: String(id) } })),
+  runCloudSchedule: (id: number) =>
+    mutate<WbCloudSchedule>(api.runCloudSchedule({ params: { id: String(id) } })),
   createAccount: (body: Record<string, unknown>) =>
     mutate<WbAccount>(api.createAccount({ body })),
   updateAccount: (id: number, body: Record<string, unknown>) =>
@@ -395,76 +355,7 @@ export const workbuddyApi = {
   connectors: (accountId: number, keyword?: string) =>
     load<WbConnectorItem[]>(api.connectors({ query: { accountId, keyword } })),
 
-  plans: (status?: string) =>
-    load<{ items: WbPlan[]; counts: Record<string, number> }>(
-      api.plans({ query: { status } }),
-    ),
-  plan: (id: number) =>
-    load<{ plan: WbPlan; tasks: WbTask[]; accounts: PlanAccount[] }>(
-      api.plan({ params: { id: String(id) } }),
-    ),
-  createPlan: (body: Record<string, unknown>) =>
-    mutate<WbPlan>(api.createPlan({ body })),
-  updatePlan: (id: number, body: Record<string, unknown>) =>
-    mutate<WbPlan>(api.updatePlan({ params: { id: String(id) }, body })),
-  deletePlan: (id: number) =>
-    mutate<{ id: number }>(api.deletePlan({ params: { id: String(id) } })),
-  clarify: (body: {
-    messages: ClarifyMessage[];
-    spec?: WbPlanSpec;
-    model?: string;
-  }) => mutate<ClarifyResult>(api.clarify({ body })),
-  materialize: (id: number, body: Record<string, unknown>) =>
-    mutate<WbPlan>(api.materialize({ params: { id: String(id) }, body })),
-  addTask: (id: number, body: Record<string, unknown>) =>
-    mutate<WbTask>(api.addTask({ params: { id: String(id) }, body })),
-  dispatch: (id: number) => mutate<DispatchResult>(api.dispatch({ params: { id: String(id) } })),
-  sync: (id: number) => mutate<SyncResult>(api.sync({ params: { id: String(id) } })),
-
-  updateTask: (id: number, body: Record<string, unknown>) =>
-    mutate<WbTask>(api.updateTask({ params: { id: String(id) }, body })),
-  deleteTask: (id: number) =>
-    mutate<{ id: number }>(api.deleteTask({ params: { id: String(id) } })),
-  taskEvents: (id: number) =>
-    load<{ task: WbTask; events: WbTaskEvent[] }>(
-      api.taskEvents({ params: { id: String(id) } }),
-    ),
-  followUp: (id: number, body: { instruction: string }) =>
-    mutate<WbTask>(api.followUp({ params: { id: String(id) }, body })),
-  cancelTask: (id: number) =>
-    mutate<WbTask>(api.cancelTask({ params: { id: String(id) } })),
 };
-
-/** 聊天里不显示任务书标记行（任务书已单独预览）。 */
-export function stripSpecMarker(reply: string) {
-  return String(reply || "")
-    .replace(/SPEC_JSON\s*:.*$/gm, "")
-    .trim();
-}
-
-/** 计划一句话：分类 + 状态 + 任务书 + 派发方式，列表里给个可扫读的副标题。 */
-export function planHint(plan: WbPlan) {
-  const parts = [
-    PLAN_KIND_LABEL[plan.kind] || PLAN_KIND_LABEL.ai,
-    PLAN_STATUS_LABEL[plan.status] || plan.status,
-  ];
-  parts.push(plan.stepCount ? `任务书 ${plan.stepCount} 步` : "任务书未成形");
-  if (plan.taskCount) parts.push(`任务 ${plan.taskCount} 条`);
-  if (plan.strategy === "fan_out") parts.push(STRATEGY_LABEL.fan_out);
-  if (plan.kind === "scheduled") parts.push(scheduleText(plan));
-  return parts.join(" · ");
-}
-
-/** 任务归属：账号名 + Agent 短 ID，列表里能看出这一步铺到了哪把 Key。 */
-export function targetText(
-  task: Pick<WbTask, "accountId" | "agentId">,
-  accounts: PlanAccount[],
-) {
-  const name =
-    accounts.find((item) => item.id === task.accountId)?.name ||
-    `账号 #${task.accountId}`;
-  return `${name} · ${task.agentId.slice(0, 12)}${task.agentId.length > 12 ? "…" : ""}`;
-}
 
 /** Manifest 输入框：顺手校验 JSON 并给出字节数（腾讯云单版本上限 256 KiB）。 */
 export function manifestState(raw: string): {

@@ -1,4 +1,5 @@
 import type { PrismaService } from '../prisma/prisma.service';
+import type { DataTableService } from '../data-table/data-table.service';
 import type { RpaChromeDeviceService } from './chrome-device.service';
 import type { RpaTaskService } from './rpa-task.service';
 import type { StorageService } from '../storage/storage.service';
@@ -27,6 +28,7 @@ function setup(
     stub<RpaChromeDeviceService>(),
     stub<StorageService>(),
     stub<RpaTaskService>(),
+    stub<DataTableService>(),
   );
   return { service, prisma };
 }

@@ -17,12 +17,14 @@ import {
 export const BROWSER_TASK_PROTOCOL_VERSION = 2;
 
 /**
- * 协议能力协商位：v2 起新增浏览器代理（侧边栏 Agent）。
+ * 协议能力协商位：v2 起新增浏览器代理（侧边栏 Agent）；
+ * `chrome:harvest`＝1.5.1 的清单收割与落表原语（harvest / wait_for / fill_form / upload_file / list_tabs / tab_select）。
  * 页面/插件握手时逐个比对，缺哪个能力就回落旧链路，不因为多出能力就整体降级。
  */
 export const BROWSER_TASK_PROTOCOL_CAPABILITIES = [
   "task:envelope",
   "chrome:agent",
+  "chrome:harvest",
 ] as const;
 export type BrowserTaskProtocolCapability =
   (typeof BROWSER_TASK_PROTOCOL_CAPABILITIES)[number];
@@ -104,6 +106,10 @@ export const BROWSER_TASK_ERROR_CODES = [
   "PROTOCOL_MISMATCH",
   "UNKNOWN_CAPABILITY",
   "UNSUPPORTED_ACTION",
+  /** 能力/原语在这台插件上不存在（版本或指纹不匹配）：不重试，改走降级或直接回报。 */
+  "CAPABILITY_MISSING",
+  /** 站点在该能力的支持矩阵里是「本期不支持」：附带原因与替代做法，不静默失败。 */
+  "UNSUPPORTED_SITE",
   "TASK_REJECTED",
   "UNTRUSTED_SITE",
   "NEED_LOGIN",
@@ -113,7 +119,39 @@ export const BROWSER_TASK_ERROR_CODES = [
   "TIMEOUT",
   "UNKNOWN_RESULT",
   "CANCELLED",
+  /** 动作命中敏感闸，等本人在插件里点「允许本次」。 */
+  "NEED_CONFIRM",
+  /** 没有可操作的标签页（会话还没认领页面）。 */
+  "NO_TAB",
+  /** 插件未登录 / 设备令牌失效。 */
+  "NO_TOKEN",
   "INTERNAL",
+  /**
+   * 以下为「页面动作」级错误码（S4：插件 rpa-executor/chrome-rpa 与云端同用一份词汇）。
+   * 这些是确定性动作的正常失败形态，可重规划，不等于插件有故障。
+   */
+  /** 选择器/元素没匹配到（页面结构变了或元素已消失）：让 Agent 重观测再决定。 */
+  "NO_MATCH",
+  /** 文件/内容超出上限（上传 ≤10MB、单字段 ≤200 字等）。 */
+  "TOO_LARGE",
+  /** 只允许 http(s) 地址（open_tab / upload_file 的入参校验）。 */
+  "BAD_URL",
+  /** 域名命中高危黑名单（blockedHosts）：拒绝接管，不重试。 */
+  "BLOCKED_HOST",
+  /** 页签不归本会话所有：只允许关/切本会话自己开的页。 */
+  "NOT_OWNED",
+  /** 打开页面失败（网络/权限），可重试一次。 */
+  "OPEN_FAILED",
+  /** 文件上传链路失败（下载文件、注入 input[type=file]）。 */
+  "UPLOAD_FAILED",
+  /** 内容脚本注入失败：目标页可能被浏览器策略禁止注入。 */
+  "INJECT_FAILED",
+  /** 截图失败（无可截图页或 captureVisibleTab 被拒）。 */
+  "SHOT_FAILED",
+  /** 等待超时：等元素出现/等文本/等 URL 变化没在时限内满足。 */
+  "WAIT_TIMEOUT",
+  /** 插件内部执行异常（执行器抛错）：非业务失败，如实上报。 */
+  "EXEC_ERROR",
 ] as const;
 export type BrowserTaskErrorCode = (typeof BROWSER_TASK_ERROR_CODES)[number];
 export const BROWSER_TASK_ERROR_LABELS: Record<string, string> = {
@@ -121,6 +159,8 @@ export const BROWSER_TASK_ERROR_LABELS: Record<string, string> = {
   PROTOCOL_MISMATCH: "插件协议版本不兼容",
   UNKNOWN_CAPABILITY: "插件不支持该能力",
   UNSUPPORTED_ACTION: "插件不支持该动作",
+  CAPABILITY_MISSING: "该动作这台插件版本不支持",
+  UNSUPPORTED_SITE: "该站点本期不支持",
   TASK_REJECTED: "任务被插件拒绝",
   UNTRUSTED_SITE: "该站点不在该能力的执行范围内",
   NEED_LOGIN: "目标平台需重新登录",
@@ -130,7 +170,21 @@ export const BROWSER_TASK_ERROR_LABELS: Record<string, string> = {
   TIMEOUT: "执行超时",
   UNKNOWN_RESULT: "结果未知，请人工核对",
   CANCELLED: "已取消",
+  NEED_CONFIRM: "敏感动作，等你在插件里确认",
+  NO_TAB: "没有可操作的页面",
+  NO_TOKEN: "插件未登录本系统",
   INTERNAL: "插件内部错误",
+  NO_MATCH: "没有匹配到目标元素",
+  TOO_LARGE: "文件或内容超出上限",
+  BAD_URL: "地址不合法（只允许 http/https）",
+  BLOCKED_HOST: "该域名在拒绝接管的黑名单里",
+  NOT_OWNED: "该页签不属于本会话",
+  OPEN_FAILED: "打开页面失败",
+  UPLOAD_FAILED: "文件上传失败",
+  INJECT_FAILED: "内容脚本注入失败",
+  SHOT_FAILED: "截图失败",
+  WAIT_TIMEOUT: "等待条件超时",
+  EXEC_ERROR: "插件执行出错",
 };
 
 /** 该错误码是否应停止任务并等待人工处理（不自动重试）。 */
@@ -139,7 +193,10 @@ export function browserErrorStopsTask(code: string): boolean {
     code === "NEED_LOGIN" ||
     code === "CAPTCHA" ||
     code === "RISK_CONTROL" ||
-    code === "UNTRUSTED_SITE"
+    code === "UNTRUSTED_SITE" ||
+    // 站点明确不在支持矩阵、或这台插件版本做不到：重试没有意义，只会烧步数。
+    code === "UNSUPPORTED_SITE" ||
+    code === "CAPABILITY_MISSING"
   );
 }
 

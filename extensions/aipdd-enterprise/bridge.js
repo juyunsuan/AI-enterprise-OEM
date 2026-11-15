@@ -14,7 +14,12 @@
 
   // ---------- 统一通信协议（§10.7 / §10.10）----------
   // 协议版本与契约 BROWSER_TASK_PROTOCOL_VERSION 对齐；页面按 pong 里的版本决定走新通道还是旧消息名。
-  const PROTOCOL_VERSION = 1;
+  const PROTOCOL_VERSION = 2;
+
+  // 本桥能真正派发的协议能力位：只有统一任务信封（分发/获客经 TASK_ROUTES 落到既有后台链路）。
+  // chrome:agent / chrome:harvest 由「设备通道 + 侧边栏」协商（心跳上报原语指纹），页面桥不发也不该发这两类动作——
+  // 记在这里是为了不把「页面能协商的」与「设备会什么」混成一件事（S3）。
+  const BRIDGE_CAPABILITIES = ["task:envelope"];
 
   // 「能力:动作」→ 后台消息路由：只放行已登记动作，未知能力/动作一律拒绝（不下发脚本）。
   const TASK_ROUTES = {
@@ -214,6 +219,8 @@
         version: chrome.runtime.getManifest().version,
         // 协议版本：页面据此决定走统一通道（task/receipt）还是回落旧消息名。
         protocolVersion: PROTOCOL_VERSION,
+        // 本桥真正能派发的能力位：页面据此判断哪些能力走桥，哪些得走设备通道（S3）。
+        capabilities: BRIDGE_CAPABILITIES,
       });
       return;
     }

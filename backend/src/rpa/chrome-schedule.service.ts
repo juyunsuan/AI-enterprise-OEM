@@ -4,6 +4,7 @@ import {
   RC_AGENT_MODES,
   RC_SCHEDULE_LAST_STATUS_LABELS,
   RC_SCHEDULE_STATUS_LABELS,
+  RC_PERSIST_MODE_LABELS,
   rcSessionTerminal,
   type RcScheduleView,
 } from '@enterprise/contracts';
@@ -23,6 +24,12 @@ import { PrismaService } from '../prisma/prisma.service';
 import { asJsonArray, toJsonArray } from '../shared/json-value';
 import type { ChromeAgentService } from './chrome-agent.service';
 import { normalizeChromeAction } from './chrome-device.service';
+import {
+  landingBodyOf,
+  landingOf,
+  normalizeLanding,
+  pickPersist,
+} from './chrome-landing';
 
 /**
  * 浏览器代理的计划任务（docs/浏览器代理插件升级方案.md §七 P5）：
@@ -132,6 +139,16 @@ export class RpaChromeScheduleService {
         '周期配置算不出下一次执行时刻，请检查频率与时刻',
       );
     }
+    // 落表口径随计划存档：每轮重跑都写回同一张表，靠幂等锚做到「跑两次不多出行」
+    const persist = pickPersist(body.persist);
+    const tableId = Math.max(0, Math.round(Number(body.tableId) || 0));
+    const landing = normalizeLanding(body);
+    if (persist === 'table' && !tableId && !landing?.tableName) {
+      throw new BusinessException(
+        ErrorCode.BAD_REQUEST,
+        '定时采集落多维表格请先指定已有表，或给出新表名称',
+      );
+    }
     const data = {
       clientId,
       title,
@@ -139,6 +156,9 @@ export class RpaChromeScheduleService {
       mode,
       startUrl: text(body.startUrl).trim().slice(0, 2000),
       script: toJsonArray(script),
+      persist,
+      tableId,
+      landing: landing ? (landing as Prisma.InputJsonValue) : Prisma.DbNull,
       model: text(body.model).trim().slice(0, 128),
       maxSteps,
       scheduleType: fields.scheduleType,
@@ -258,6 +278,8 @@ export class RpaChromeScheduleService {
         maxSteps: row.maxSteps,
         modelKey: row.model,
         actions: asJsonArray(row.script),
+        // 落表口径随计划下发：这一轮的 harvest 回执由引擎按它幂等写回同一张表
+        ...landingBodyOf(row),
       });
       await this.prisma.rpaChromeSchedule.update({
         where: { id: row.id },
@@ -344,6 +366,10 @@ export class RpaChromeScheduleService {
       modeLabel: RC_AGENT_MODE_LABELS[row.mode] || row.mode,
       startUrl: row.startUrl,
       scriptSteps: asJsonArray(row.script).length,
+      persist: row.persist,
+      persistLabel: RC_PERSIST_MODE_LABELS[row.persist] || row.persist,
+      tableId: row.tableId,
+      landing: landingOf(row.landing),
       model: row.model,
       maxSteps: row.maxSteps,
       scheduleType: row.scheduleType,

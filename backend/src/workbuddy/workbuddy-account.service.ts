@@ -16,7 +16,7 @@ import {
 } from './workbuddy-shared';
 
 /**
- * 用户自带的腾讯云凭据（Workbuddy 企业云是 SaaS，谁绑的 key 就看谁企业的 Agent）。
+ * 用户自带的腾讯云凭据（Workbuddy 企业版是 SaaS，谁绑的 key 就看谁企业的 Agent）。
  * 一个用户可绑多条：同一份计划把指令铺给多把 key 并行跑，用来加速。
  * SecretKey 只以密文落库，只有派发执行与连通性校验这两条链路会解密。
  */

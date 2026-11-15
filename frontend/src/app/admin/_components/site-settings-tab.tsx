@@ -187,6 +187,7 @@ export function SiteSettingsTab() {
           hiddenBoardTabs: values.hiddenBoardTabs || [],
           defaultLanguage: values.defaultLanguage || "zh-CN",
           extensionEntryEnabled: values.extensionEntryEnabled !== false,
+          clientDownloadUrl: String(values.clientDownloadUrl || "").trim(),
           // 后端只保留「协议 + 域名」，这里先把用户输入的原值交出去（清空即回落当前访问域名）
           siteUrl: String(values.siteUrl || "").trim(),
         },
@@ -283,6 +284,17 @@ export function SiteSettingsTab() {
             extra="开启后所有登录用户在顶栏看到统一的插件入口（下载、安装、使用说明、更新记录），与营销、获客等业务开关解耦；平台未发布插件包时入口不展示。"
           >
             <Switch />
+          </Form.Item>
+          <Form.Item
+            name="clientDownloadUrl"
+            label="客户端下载地址"
+            extra="填了就在顶栏「下载客户端」图标处打开这个地址（如 https://cdn.example.com/BotBuddy-Setup.exe 或站内 /downloads/xxx.exe）；只认 http/https 或站内路径，留空＝顶栏不显示下载图标。"
+          >
+            <Input
+              placeholder="https://cdn.example.com/BotBuddy-Setup.exe"
+              maxLength={512}
+              allowClear
+            />
           </Form.Item>
           <Space>
             <Button type="primary" htmlType="submit" loading={save.isPending}>

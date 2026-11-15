@@ -15,6 +15,10 @@
   const MAX_MESSAGES = 200;
   const HISTORY_LINES = 6;
   const STEP_TIMEOUT_SECONDS_FALLBACK = 60;
+  // 观测正文预算（方案 K3）：act 看操作面够用，crawl/extract 要看到整页列表，否则长条目会被静默截断。
+  const OBSERVE_MAX_CHARS = { act: 6000, crawl: 12000, extract: 12000 };
+  const PERSIST_MODES = ["none", "extract", "table"];
+  const PERSIST_LABELS = { none: "只回对话", extract: "存采集台账", table: "落多维表格" };
   // 插件本地偏好（唯一键）：目前只有「执行方式」——autoRun=true 自动执行，false 确认后执行。
   const PREFS_KEY = "AIPDD_AGENT_PREFS";
 
@@ -42,6 +46,10 @@
     errorMsg: "",
     startedAt: 0,
     endedAt: 0,
+    // 采集产物流向（D8）：none 只在会话里展示 / extract 落采集台账 / table 落多维表格。
+    persist: "none",
+    tableId: 0,
+    landing: { tableName: "", fields: [], dedupBy: [] },
   };
 
   // 录制态：录在页面里（rpa-executor.js），这里只留「哪一页、录了几步」的账。
@@ -57,6 +65,18 @@
   const errMsg = (error) => String((error && error.message) || error || "未知错误");
   const clip = (value, max) => String(value == null ? "" : value).slice(0, max);
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, Math.max(0, ms)));
+
+  /** 缺口回报要带的插件版本：与心跳同一来源，平台台账据此判断是不是老版本缺能力。 */
+  const manifestVersion = () => String(chrome.runtime.getManifest().version || "");
+
+  /** 页面地址 → hostname（解析失败就回空，平台按「与站点无关」记档）。 */
+  function hostOfUrl(url) {
+    try {
+      return new URL(String(url || "")).hostname.toLowerCase();
+    } catch (_) {
+      return "";
+    }
+  }
 
   function pushMessage(message) {
     seq += 1;
@@ -98,7 +118,46 @@
       errorMsg: state.errorMsg,
       startedAt: state.startedAt,
       endedAt: state.endedAt,
+      persist: state.persist,
+      persistLabel: PERSIST_LABELS[state.persist] || state.persist,
+      tableId: state.tableId,
+      // 落表口径摘要：侧边栏「存到哪里」据此显示当前表名/表头/查重锚，不整包回传字段清单。
+      landing: {
+        tableName: state.landing.tableName,
+        fieldCount: state.landing.fields.length,
+        dedupBy: state.landing.dedupBy.slice(),
+      },
       recording: { on: recording.on, count: recording.count, tabId: recording.tabId },
+    };
+  }
+
+  /** 采集产物流向：只认闭集档位，其余按 none（话里没要求存就不落库）。 */
+  function pickPersistMode(raw) {
+    const value = clip(raw, 16).trim().toLowerCase();
+    return PERSIST_MODES.includes(value) ? value : "none";
+  }
+
+  /** 落表口径（表名/表头/幂等锚）：与契约 rcLandingSpecSchema 同形，插件只做长度收敛。 */
+  function pickLanding(input) {
+    const fields = (Array.isArray(input && input.fields) ? input.fields : [])
+      .slice(0, 40)
+      .map((item) => {
+        const field = item && typeof item === "object" ? item : {};
+        const name = clip(field.name, 40).trim();
+        if (!name) return null;
+        const key = clip(field.key, 40).trim();
+        const type = clip(field.type, 16).trim();
+        return { name, ...(key ? { key } : {}), ...(type ? { type } : {}) };
+      })
+      .filter(Boolean);
+    const dedupBy = (Array.isArray(input && input.dedupBy) ? input.dedupBy : [])
+      .map((item) => clip(item, 40).trim())
+      .filter(Boolean)
+      .slice(0, 5);
+    return {
+      tableName: clip(input && input.tableName, 60).trim(),
+      fields,
+      dedupBy,
     };
   }
 
@@ -129,6 +188,21 @@
     return { ok: true, status: snapshot() };
   }
 
+  /** 采集产物流向：会话中途也能改（选表/换档位），下一决策步生效。 */
+  function setPersist(input) {
+    const src = input && typeof input === "object" ? input : {};
+    if (src.persist !== undefined) state.persist = pickPersistMode(src.persist);
+    if (src.tableId !== undefined) state.tableId = Math.max(0, Math.round(Number(src.tableId) || 0));
+    const landing = pickLanding(src);
+    // 合并语义：界面一次只改一个字段（选表 / 起名 / 查重列），不能用部分字段把整份落表口径覆盖掉。
+    state.landing = {
+      tableName: src.tableName !== undefined ? landing.tableName : state.landing.tableName,
+      fields: landing.fields.length ? landing.fields : state.landing.fields,
+      dedupBy: src.dedupBy !== undefined ? landing.dedupBy : state.landing.dedupBy,
+    };
+    return { ok: true, status: snapshot() };
+  }
+
   /** 侧边栏 Header 引导：可用模型 + 额度 + 安全设置（同一设备令牌）。 */
   async function bootstrap() {
     try {
@@ -136,9 +210,20 @@
       if (data && data.limits) {
         state.maxSteps = Math.max(1, Math.round(Number(data.limits.maxSteps) || 25));
       }
-      return { ok: true, models: data.models || [], balance: Number(data.balance) || 0, rate: Number(data.rate) || 0, defaultModelKey: data.defaultModelKey || "", limits: data.limits || null };
+      return {
+        ok: true,
+        models: data.models || [],
+        balance: Number(data.balance) || 0,
+        rate: Number(data.rate) || 0,
+        defaultModelKey: data.defaultModelKey || "",
+        limits: data.limits || null,
+        // 能力面板（方案 C2）：这台插件此刻会什么 + 版本指纹，面板据此展示并拦截不支持的动作。
+        primitives: Array.isArray(data.primitives) ? data.primitives : [],
+        caps: data.caps || null,
+        local: self.AIPDD_RPA.caps ? self.AIPDD_RPA.caps() : null,
+      };
     } catch (error) {
-      return { ok: false, errorMsg: errMsg(error), models: [], balance: 0, rate: 0, limits: null };
+      return { ok: false, errorMsg: errMsg(error), models: [], balance: 0, rate: 0, limits: null, primitives: [], caps: null };
     }
   }
 
@@ -164,7 +249,10 @@
   async function observe() {
     const tabId = await self.AIPDD_RPA.agentEnsureTab(localSessionId);
     if (!tabId) return null;
-    const result = await self.AIPDD_RPA.agentExec(localSessionId, { action: "snapshot" });
+    const result = await self.AIPDD_RPA.agentExec(localSessionId, {
+      action: "snapshot",
+      maxChars: OBSERVE_MAX_CHARS[state.mode] || OBSERVE_MAX_CHARS.act,
+    });
     if (result && result.ok && result.data) return { tabId, ...result.data };
     const tab = await currentTab();
     return { tabId, url: clip(tab && tab.url, 500), title: clip(tab && tab.title, 200), elements: [], note: clip(result && result.errorMessage, 300) };
@@ -226,6 +314,77 @@
     }
   }
 
+  /**
+   * 收割到的行直传落库（方案 D8）：行数据不经模型复述，插件按会话口径调平台工具。
+   * persist=table 落多维表格（指定表或按名建表），persist=extract 落采集台账；
+   * 每步一个 code，重放/回灌不会把同一批行落两次。
+   */
+  async function landHarvest(stepIndex, result) {
+    if (state.persist === "none") return null;
+    const data = (result && result.data) || {};
+    const rows = (Array.isArray(data.items) ? data.items : [])
+      .filter((row) => row && typeof row === "object" && Object.keys(row).length)
+      .slice(0, 500);
+    if (!rows.length) return null;
+    const url = clip(data.url, 2000);
+    const code = `land:${localSessionId}:${stepIndex}`;
+
+    if (state.persist === "extract") {
+      const note = clip(data.note, 500);
+      const called = await callTool({
+        tool: "RpaChrome_saveExtract",
+        args: {
+          body: {
+            url,
+            schemaNote: clip(state.goal, 2000),
+            data: { total: Number(data.total) || rows.length, ...(note ? { note } : {}) },
+            rows,
+          },
+        },
+        code,
+      });
+      pushMessage({
+        role: "system",
+        kind: called.ok ? "result" : "error",
+        content: called.ok
+          ? `已存采集台账：${rows.length} 行（可在「采集结果」里查看）。`
+          : `采集结果存台账失败：${called.errorMessage || "未知错误"}`,
+      });
+      return called;
+    }
+
+    if (!state.tableId && !state.landing.tableName) {
+      pushMessage({
+        role: "system",
+        kind: "note",
+        content: `收割到 ${rows.length} 行，但还没指定目标多维表格：请在「存到哪里」里选一张已有表或给出新表名。`,
+      });
+      return null;
+    }
+    const body = {
+      rows,
+      tableId: state.tableId,
+      fields: state.landing.fields,
+      dedupBy: state.landing.dedupBy,
+      source: clip(`浏览器代理 · ${url}`, 120),
+    };
+    if (state.landing.tableName) body.tableName = state.landing.tableName;
+    // 走本人台账通道（RpaChrome_*）而不是通用写工具闸：这是用户在自己浏览器里点的落表，
+    // 不是 Agent 无人值守写业务数据；同一份后端原子落表实现，两种发起入口。
+    const called = await callTool({ tool: "RpaChrome_landRows", args: { body }, code });
+    const landed = (called && called.data) || {};
+    pushMessage({
+      role: "system",
+      kind: called.ok ? "result" : "error",
+      content: called.ok
+        ? `已落多维表格「${clip(landed.tableName, 60)}」：新增 ${Number(landed.created) || 0} 行、更新 ${Number(landed.updated) || 0} 行、跳过 ${Number(landed.skipped) || 0} 行。`
+        : `落表失败：${called.errorMessage || "未知错误"}`,
+      payload: called.ok ? { tableId: Number(landed.tableId) || 0, tableUrl: `/data-table?table=${Number(landed.tableId) || 0}`, rows: rows.length } : {},
+    });
+    if (called.ok && Number(landed.tableId) > 0) state.tableId = Number(landed.tableId);
+    return called;
+  }
+
   /** 卡片里只留可读的结果摘要：太大就截断成预览，避免消息流被整页 JSON 撑爆。 */
   function clipData(data, max) {
     try {
@@ -264,6 +423,93 @@
     return { ok: true, status: snapshot() };
   }
 
+  /**
+   * 连跑校验（N14=A）：按只读断言核「这一步做完是不是真到位了」。
+   * 只读、不新开执行面；任一断言不成立即算偏离。
+   */
+  async function verifyExpect(expect) {
+    if (!expect || typeof expect !== "object") return { ok: true, why: "" };
+    const why = [];
+    const urlIncludes = clip(expect.urlIncludes, 200);
+    const wantText = clip(expect.text, 200);
+    const wantSelector = clip(expect.selector, 300);
+    const wantGone = clip(expect.gone, 300);
+    if (urlIncludes) {
+      const info = self.AIPDD_RPA.agentTabInfo ? await self.AIPDD_RPA.agentTabInfo(localSessionId) : null;
+      const url = String((info && info.url) || "").toLowerCase();
+      if (!url.includes(urlIncludes.toLowerCase())) why.push(`地址未包含「${urlIncludes}」`);
+    }
+    const countOf = async (selector) => {
+      const read = await self.AIPDD_RPA.agentExec(localSessionId, { action: "read", mode: "count", selector });
+      return { ok: Boolean(read && read.ok), count: Number(read && read.data && read.data.count) || 0 };
+    };
+    if (wantSelector) {
+      const hit = await countOf(wantSelector);
+      if (!hit.ok || hit.count <= 0) why.push(`未出现「${wantSelector}」`);
+    }
+    if (wantGone) {
+      const hit = await countOf(wantGone);
+      if (hit.ok && hit.count > 0) why.push(`「${wantGone}」仍然在`);
+    }
+    if (wantText) {
+      const read = await self.AIPDD_RPA.agentExec(localSessionId, { action: "read", selector: "body" });
+      const value = String((read && read.data && read.data.value) || "");
+      if (!value.includes(wantText)) why.push(`正文未出现「${wantText}」`);
+    }
+    return why.length ? { ok: false, why: why.join("；") } : { ok: true, why: "" };
+  }
+
+  /**
+   * 连跑队列（N14=A）：把一次规划的多步按顺序跑完，逐步校验 expect，偏离即回脑。
+   * ctx = { history, failures }（history 是数组按引用共享，failures 由本函数回写）。
+   * 返回 { count, deviated, stopped, failed }：count＝已跑掉的步数，外层按它推进步额。
+   */
+  async function runQueue(steps, stepBase, ctx) {
+    for (let index = 0; index < steps.length; index += 1) {
+      if (stopRequested) return { count: index, deviated: false, stopped: true };
+      const item = steps[index] || {};
+      const action = item.action;
+      if (!action || String(action.action) === "finish") return { count: index, deviated: false };
+      const stepNo = stepBase + index;
+      if (item.thought) pushMessage({ role: "agent", kind: "thought", content: item.thought });
+      if (item.needsConfirm) {
+        const allow = await waitConfirm({ action, stepIndex: stepNo, thought: item.thought });
+        if (!allow) {
+          pushMessage({ role: "system", kind: "note", content: `已跳过第 ${stepNo + 1} 步敏感动作（未允许），计划中止。` });
+          return { count: index, deviated: true };
+        }
+      }
+      const result = await self.AIPDD_RPA.agentExec(localSessionId, action);
+      const message = pushMessage({
+        role: "agent",
+        kind: String(action.action) === "screenshot" ? "screenshot" : "action",
+        content: item.thought || "",
+        payload: { action, result: result && result.data ? result.data : {}, ok: Boolean(result && result.ok), errorMessage: clip(result && result.errorMessage, 300) },
+      });
+      if (message.kind === "screenshot" && result && result.data && result.data.screenshot) {
+        message.payload.screenshot = result.data.screenshot;
+      }
+      if (String(action.action) === "harvest" && result && result.ok) {
+        await landHarvest(stepNo, result);
+      }
+      ctx.history.push(actionLine(stepNo, action, result));
+      if (ctx.history.length > HISTORY_LINES) ctx.history.shift();
+      ctx.failures = result && result.ok ? 0 : ctx.failures + 1;
+      if (ctx.failures >= MAX_CONSECUTIVE_FAILURES) return { count: index + 1, deviated: true, failed: true };
+      // 逐步校验：给了预期就核；不成立即「偏离」，立刻停下回脑（剩余计划作废，已做的动作不回滚）。
+      if (item.expect) {
+        const check = await verifyExpect(item.expect);
+        if (!check.ok) {
+          pushMessage({ role: "system", kind: "note", content: `第 ${stepNo + 1} 步的实际结果与计划不符（${clip(check.why, 200)}），已停下重新规划。` });
+          ctx.history.push(`#${stepNo + 1} 预期未达成=${clip(check.why, 160)}（偏离，回大脑重规划）`);
+          if (ctx.history.length > HISTORY_LINES) ctx.history.shift();
+          return { count: index + 1, deviated: true };
+        }
+      }
+    }
+    return { count: steps.length, deviated: false };
+  }
+
   async function run(goal, mode, modelKey) {
     const history = [];
     let failures = 0;
@@ -278,7 +524,18 @@
       state.stepIndex = step;
       const observation = await observe();
 
-      const decided = await decide({ goal, mode, modelKey, stepIndex: step, confirmed, observation: observation || {}, history: history.join("\n"), attachments: state.attachments });
+      const decided = await decide({
+        goal,
+        mode,
+        modelKey,
+        stepIndex: step,
+        confirmed,
+        persist: state.persist,
+        tableId: state.tableId,
+        observation: observation || {},
+        history: history.join("\n"),
+        attachments: state.attachments,
+      });
       if (!decided.ok) {
         pushMessage({ role: "system", kind: "error", content: `决策失败：${decided.errorMsg}` });
         setPhase("error", decided.errorMsg);
@@ -286,6 +543,30 @@
       }
       const decision = decided.decision || {};
       if (decision.thought) pushMessage({ role: "agent", kind: "thought", content: decision.thought });
+      if (decision.gap) {
+        // 缺口先落平台台账（本人私有 RpaChrome_* 通道，不套授权闸）：卡片据回执说「已回报」还是给重试入口。
+        const gapBody = {
+          need: clip(decision.gap.need, 200),
+          why: clip(decision.gap.why, 500),
+          site: clip(decision.gap.site || hostOfUrl(observation && observation.url), 200),
+          attempted: (Array.isArray(decision.gap.attempted) ? decision.gap.attempted : []).slice(0, 10),
+          want: clip(decision.gap.want, 300),
+          version: manifestVersion(),
+        };
+        const gapCall = gapBody.need
+          ? await callTool({ tool: "RpaChrome_reportGap", args: { body: gapBody }, code: `gap-${Date.now()}` })
+          : { ok: false, errorMessage: "缺少 need" };
+        pushMessage({
+          role: "agent",
+          kind: "gap",
+          content: clip(decision.thought || "这一步需要的能力插件还不具备。", 500),
+          payload: {
+            ...gapBody,
+            reported: gapCall.ok === true,
+            reportError: gapCall.ok === true ? "" : clip(gapCall.errorMessage || "回报失败", 200),
+          },
+        });
+      }
 
       // 对话轮次：Agent 直接回答（纯提问/闲聊/要规划、不需操作页面）或反问澄清。
       if (decision.reply) pushMessage({ role: "agent", kind: "reply", content: decision.reply });
@@ -299,9 +580,10 @@
         return;
       }
 
-      // 「确认后执行」的第一个闸：模型给了方案就复述方案、直接给了动作就拿它当方案，都要等用户点确认。
+      // 「确认后执行」的第一个闸：模型给了方案就复述方案、直接给了动作/连跑队列就拿它当方案，都要等用户点确认。
       if (!confirmed) {
-        const plan = decision.confirm || (decision.action || decision.tool ? decision.thought || "我准备按你的目标操作页面，请确认后执行。" : "");
+        const hasPlan = decision.action || decision.tool || (Array.isArray(decision.queue) && decision.queue.length >= 2);
+        const plan = decision.confirm || (hasPlan ? decision.thought || "我准备按你的目标操作页面，请确认后执行。" : "");
         if (plan) {
           const allow = await waitConfirm({ plan, stepIndex: step, thought: decision.thought });
           if (!allow) {
@@ -314,6 +596,27 @@
           if (history.length > HISTORY_LINES) history.shift();
           continue;
         }
+      }
+
+      // 连跑队列（N14=A）：一次规划 2–8 步按序连跑，逐步核对预期；偏离 / 连续失败 / 待确认即回脑重规划。
+      const queue = Array.isArray(decision.queue) ? decision.queue : [];
+      if (!decision.tool && queue.length >= 2) {
+        if (decision.plan) pushMessage({ role: "agent", kind: "thought", content: `连跑计划：${clip(decision.plan, 300)}` });
+        const queueCtx = { history, failures };
+        const ran = await runQueue(queue, step, queueCtx);
+        failures = queueCtx.failures;
+        if (ran.stopped) {
+          pushMessage({ role: "system", kind: "error", content: "已按你的请求停止。" });
+          setPhase("stopped");
+          return;
+        }
+        if (ran.failed) {
+          pushMessage({ role: "system", kind: "error", content: `连续 ${MAX_CONSECUTIVE_FAILURES} 步执行失败，已停止。` });
+          setPhase("error", "连续执行失败");
+          return;
+        }
+        step += Math.max(0, ran.count - 1);
+        continue;
       }
 
       // 平台工具：与页面动作二选一。走本系统网关（授权闸同一口径），未授权只回草案。
@@ -351,6 +654,20 @@
         continue;
       }
 
+      // 只报了缺口、没给任何后续（无 reply/question/action/tool/finishReason）：
+      // 缺口卡已说明情况，这里直接收口，不再补一张与「缺能力」语义打架的「目标已达成」。
+      if (
+        decision.gap &&
+        !decision.reply &&
+        !decision.question &&
+        !decision.tool &&
+        !decision.action &&
+        !decision.finishReason
+      ) {
+        setPhase("done");
+        return;
+      }
+
       if (!decision.action || String(decision.action.action) === "finish") {
         pushMessage({ role: "system", kind: "result", content: decision.finishReason || "目标已达成。" });
         setPhase("done");
@@ -378,6 +695,9 @@
       });
       if (message.kind === "screenshot" && result && result.data && result.data.screenshot) {
         message.payload.screenshot = result.data.screenshot;
+      }
+      if (String(action.action) === "harvest" && result && result.ok) {
+        await landHarvest(step, result);
       }
       history.push(actionLine(step, action, result));
       if (history.length > HISTORY_LINES) history.shift();
@@ -411,6 +731,9 @@
     state.errorMsg = "";
     state.startedAt = Date.now();
     state.endedAt = 0;
+    state.persist = pickPersistMode(input && input.persist);
+    state.tableId = Math.max(0, Math.round(Number(input && input.tableId) || 0));
+    state.landing = pickLanding(input);
     seq = 0;
     stopRequested = false;
     executedCodes.clear();
@@ -636,6 +959,10 @@
       }
       if (type === "AIPDD_AGENT_SET_AUTORUN") {
         sendResponse(await setAutoRun(message.autoRun === true));
+        return;
+      }
+      if (type === "AIPDD_AGENT_SET_PERSIST") {
+        sendResponse(setPersist(message));
         return;
       }
       if (type === "AIPDD_AGENT_ATTACH") {

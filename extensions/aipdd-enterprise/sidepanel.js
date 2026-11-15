@@ -23,6 +23,7 @@
     stream: $("stream"),
     modeBtn: $("modeBtn"),
     runGateBtn: $("runGateBtn"),
+    persistBtn: $("persistBtn"),
     attachBtn: $("attachBtn"),
     enhanceBtn: $("enhanceBtn"),
     goal: $("goal"),
@@ -35,6 +36,7 @@
     dwBody: $("dwBody"),
     modePop: $("modePop"),
     modelPop: $("modelPop"),
+    persistPop: $("persistPop"),
     accountPop: $("accountPop"),
   };
 
@@ -70,6 +72,13 @@
     "browser_skill_run",
   ];
 
+  // 采集产物的去向（与契约 RC_PERSIST_MODES / 后台 chrome-agent.js 同一套闭集档位）。
+  const PERSIST_MODES = [
+    { key: "none", label: "只回对话", desc: "结果只在会话里给出，不落库" },
+    { key: "extract", label: "存采集台账", desc: "按次存进本系统「采集结果」，之后可随时投递到表格" },
+    { key: "table", label: "落多维表格", desc: "收割到的行直接写进多维表格（指定表或新建表）" },
+  ];
+
   const state = {
     status: null,
     mode: "act",
@@ -78,6 +87,13 @@
     balance: 0,
     rate: 0,
     agent: { messages: [], phase: "idle", pendingConfirm: null, running: false, maxSteps: 25, autoRun: false },
+    // 采集去向：界面只留当前选择，真值在后台会话状态里（侧边栏重开也能看到）。
+    persist: "none",
+    tableId: 0,
+    tableName: "",
+    dedupBy: [],
+    tables: { list: [], loaded: false, pending: null, errorMsg: "" },
+    caps: { primitives: [], reported: null, local: null, loaded: false, errorMsg: "" },
     drawer: "",
     counts: { history: 0, skills: 0, schedules: 0 },
     skills: { list: [], filter: "", loaded: false, editing: null, errorMsg: "" },
@@ -192,7 +208,8 @@
     if (kind === "reply") return renderCard("回复", message.content, "", "result");
     if (kind === "question") return renderCard("追问", message.content, "", "question");
     if (kind === "error") return renderCard("错误", message.content, "", "error");
-    if (kind === "result") return renderCard("结果", message.content, summarizeResult(message.payload), "result");
+    if (kind === "result") return renderResult(message);
+    if (kind === "gap") return renderGap(message.payload || {});
     if (kind === "screenshot") return renderScreenshot(message);
     if (kind === "action") return renderCard("动作", actionSummary(message.payload), message.payload?.errorMessage || "", message.payload?.ok === false ? "error" : "action");
     if (kind === "tool") return renderTool(message);
@@ -247,6 +264,81 @@
     return text === "{}" ? "" : text.slice(0, 400);
   }
 
+  /** 结果卡：落多维表格后补一个「打开表格」直达，用户不必自己去后台找表。 */
+  function renderResult(message) {
+    const payload = message.payload || {};
+    const box = renderCard("结果", message.content, summarizeResult(payload), "result");
+    const tableUrl = String(payload.tableUrl || "");
+    if (tableUrl) {
+      const btn = h("button", null, "打开表格");
+      btn.type = "button";
+      btn.disabled = !state.status?.domain;
+      btn.addEventListener("click", () => openTab(siteUrl(tableUrl)));
+      box.appendChild(cardActions([btn]));
+    }
+    return box;
+  }
+
+  /**
+   * 缺能力卡：插件把缺口自动回报到平台「能力缺口」台账（本人私有通道），这里只如实说结果。
+   * 回报失败时留一个重试按钮——缺口是平台补能力的输入，丢掉就再也不会被看见。
+   */
+  function renderGap(gap) {
+    const box = h("div", "card card-question");
+    const head = h("div", "card-hd");
+    head.appendChild(h("span", "tag", "缺能力"));
+    head.appendChild(h("span", null, gap.need || "这一步需要的能力插件还不具备"));
+    box.appendChild(head);
+    if (gap.why) box.appendChild(h("div", "card-bd", `为什么现有动作做不到：${gap.why}`));
+    if (Array.isArray(gap.attempted) && gap.attempted.length) {
+      box.appendChild(h("div", "card-bd", `已经试过：${gap.attempted.join("、")}`));
+    }
+    if (gap.want) box.appendChild(h("div", "card-bd", `希望插件补：${gap.want}`));
+    box.appendChild(h("div", "card-bd", gap.site ? `站点：${gap.site}` : "站点：与具体站点无关"));
+
+    const buttons = [];
+    const view = h("button", null, "查看缺口台账");
+    view.type = "button";
+    view.disabled = !state.status?.domain;
+    view.addEventListener("click", () => openTab(siteUrl("/rpa?tab=status")));
+    buttons.push(view);
+    if (gap.reported !== true) {
+      const retry = h("button", null, "重新回报");
+      retry.type = "button";
+      retry.addEventListener("click", async () => {
+        retry.disabled = true;
+        const res = await lib("RpaChrome_reportGap", {
+          body: {
+            need: gap.need || "",
+            why: gap.why || "",
+            site: gap.site || "",
+            attempted: Array.isArray(gap.attempted) ? gap.attempted : [],
+            want: gap.want || "",
+          },
+        });
+        if (res.ok) {
+          gap.reported = true;
+          retry.textContent = "已回报";
+          pushNote("缺口已回报到平台「能力缺口」台账。");
+        } else {
+          retry.disabled = false;
+          retry.textContent = "重新回报";
+          pushNote(`缺口回报失败：${res.errorMsg || "平台未返回结果"}`);
+        }
+      });
+      buttons.push(retry);
+      box.appendChild(h("div", "card-bd", gap.reportError ? `缺口回报失败：${gap.reportError}` : "缺口还没回报成功。"));
+    }
+    box.appendChild(cardActions(buttons));
+    return box;
+  }
+
+  function cardActions(buttons) {
+    const actions = h("div", "card-actions");
+    for (const btn of buttons) actions.appendChild(btn);
+    return actions;
+  }
+
   function renderConfirm(item) {
     const isPlan = Boolean(item.plan);
     const action = item.action || {};
@@ -297,7 +389,16 @@
     }
     el.goal.value = "";
     autosize();
-    const result = await send({ type: "AIPDD_AGENT_START", goal, mode: state.mode, modelKey: state.modelKey });
+    // 去向档位随目标一起下发：后台 start() 会重置 persist/落点，不带过去就把界面上选好的档位清成「只回对话」。
+    const result = await send({
+      type: "AIPDD_AGENT_START",
+      goal,
+      mode: state.mode,
+      modelKey: state.modelKey,
+      persist: state.persist,
+      tableId: state.tableId,
+      ...(state.tableName ? { tableName: state.tableName } : {}),
+    });
     if (!result?.ok) {
       pushNote(`未能启动 Agent：${result?.errorMsg || "后台未返回结果"}`);
     } else if (result.status) {
@@ -565,6 +666,57 @@
         open.disabled = !state.status?.domain;
         open.addEventListener("click", () => openTab(siteUrl("/models")));
         body.appendChild(open);
+      },
+    },
+    caps: {
+      title: "本插件能力",
+      render(body) {
+        const local = state.caps.local || {};
+        const reported = state.caps.reported || {};
+        const version = String(state.status?.version || chrome.runtime.getManifest().version || "");
+        body.appendChild(
+          h(
+            "div",
+            "dw-note",
+            "Agent 是大脑，这台插件是能力：每步决策只会给下面列出的动作。缺的能力插件会如实回报到平台「能力缺口」台账，不会假装完成。",
+          ),
+        );
+        body.appendChild(h("div", "dw-group", "版本指纹"));
+        body.appendChild(h("div", "dw-item", `本机插件 v${version} · 协议 v${local.protocol || 0} · 站点矩阵 ${local.siteMatrixHash || "未上报"}`));
+        body.appendChild(
+          h(
+            "div",
+            "dw-item",
+            reported.version
+              ? `平台已登记：v${reported.version} · 协议 v${reported.protocol || 0}（心跳 ${reported.at || "未知"}）`
+              : "平台还没登记这台设备的能力：登录后每 30 秒心跳一次，稍等片刻再刷新",
+          ),
+        );
+        if (state.caps.errorMsg) body.appendChild(h("div", "dw-note err", `能力清单读取失败：${state.caps.errorMsg}`));
+
+        const available = state.caps.primitives.length ? state.caps.primitives : (local.primitives || []);
+        body.appendChild(h("div", "dw-group", `可用页面动作（${available.length}）`));
+        for (const name of available) body.appendChild(h("div", "dw-item", name));
+        if (!available.length && !state.caps.errorMsg) {
+          body.appendChild(h("div", "dw-note", "还没读到动作清单：登录后打开任意网页，让插件心跳一次再刷新本面板。"));
+        }
+
+        const families = Array.isArray(local.capabilities) ? local.capabilities : [];
+        body.appendChild(h("div", "dw-group", `能力族（${families.length}）`));
+        body.appendChild(h("div", "dw-item", families.join(" · ") || "未上报"));
+
+        const refresh = h("button", "dw-btn", "重新读取能力清单");
+        refresh.type = "button";
+        refresh.addEventListener("click", () => {
+          state.caps.loaded = false;
+          void loadBootstrap();
+        });
+        body.appendChild(refresh);
+        const gapLink = h("button", "dw-btn sub", "打开平台「能力缺口」台账");
+        gapLink.type = "button";
+        gapLink.disabled = !state.status?.domain;
+        gapLink.addEventListener("click", () => openTab(siteUrl("/rpa?tab=status")));
+        body.appendChild(gapLink);
       },
     },
   };
@@ -884,6 +1036,10 @@
       minute: cfg.minute || 0,
       scheduledAt: toLocalInput(item.scheduledAt),
       status: item.status || "enabled",
+      persist: item.persist || "none",
+      tableId: Number(item.tableId) || 0,
+      tableName: (item.landing && item.landing.tableName) || "",
+      dedupBy: Array.isArray(item.landing && item.landing.dedupBy) ? item.landing.dedupBy : [],
     };
   }
 
@@ -978,6 +1134,91 @@
       item.mode = mode.value;
     });
     form.appendChild(mode);
+
+    // 采集去向（与输入框上的「存到哪里」同一套闭集档位）：计划里先定好，到点重跑直接落表，行不经模型复述。
+    const persist = h("select", "dw-input");
+    for (const m of PERSIST_MODES) {
+      const opt = document.createElement("option");
+      opt.value = m.key;
+      opt.textContent = `采集去向：${m.label}`;
+      if (item.persist === m.key) opt.selected = true;
+      persist.appendChild(opt);
+    }
+    form.appendChild(persist);
+
+    const landingBox = h("div", "dw-form");
+    form.appendChild(landingBox);
+    const renderLanding = () => {
+      landingBox.textContent = "";
+      if (persist.value !== "table") {
+        landingBox.appendChild(
+          h(
+            "div",
+            "dw-note",
+            persist.value === "extract"
+              ? "按次存进「采集结果」台账，之后可随时投递到多维表格。"
+              : "结果只在会话里给出，不落库。",
+          ),
+        );
+        return;
+      }
+      const table = h("select", "dw-input");
+      const fresh = document.createElement("option");
+      fresh.value = "0";
+      fresh.textContent = "新建一张表（在下面起名）";
+      table.appendChild(fresh);
+      for (const row of state.tables.list) {
+        const opt = document.createElement("option");
+        opt.value = String(row.id);
+        opt.textContent = `#${row.id} ${row.name}（${Number(row.rowCount) || 0} 行）`;
+        if (Number(item.tableId) === row.id) opt.selected = true;
+        table.appendChild(opt);
+      }
+      if (Number(item.tableId) && !state.tables.list.some((row) => row.id === Number(item.tableId))) {
+        const keep = document.createElement("option");
+        keep.value = String(item.tableId);
+        keep.textContent = `#${item.tableId}（当前保存的表）`;
+        keep.selected = true;
+        table.appendChild(keep);
+      }
+      table.addEventListener("change", () => {
+        item.tableId = Number(table.value) || 0;
+      });
+      landingBox.appendChild(table);
+      if (!state.tables.loaded) {
+        landingBox.appendChild(h("div", "dw-note", "正在读取本账号的多维表格…"));
+        void ensureTables().then(() => {
+          if (landingBox.isConnected) renderLanding();
+        });
+      }
+
+      const name = h("input", "dw-input");
+      name.placeholder = "新表名（选了已有表就不用填），如「昆明药店」";
+      name.maxLength = 60;
+      name.value = item.tableName || "";
+      name.addEventListener("input", () => {
+        item.tableName = name.value;
+      });
+      landingBox.appendChild(name);
+
+      const dedup = h("input", "dw-input");
+      dedup.placeholder = "查重列（可选，逗号分隔）：如 电话,名称；重跑同一页不产生重复行";
+      dedup.maxLength = 120;
+      dedup.value = (item.dedupBy || []).join(",");
+      dedup.addEventListener("input", () => {
+        item.dedupBy = dedup.value
+          .split(/[,，]/)
+          .map((part) => part.trim())
+          .filter(Boolean)
+          .slice(0, 5);
+      });
+      landingBox.appendChild(dedup);
+    };
+    persist.addEventListener("change", () => {
+      item.persist = persist.value;
+      renderLanding();
+    });
+    renderLanding();
 
     const type = h("select", "dw-input");
     for (const [value, label] of [["recurring", "周期重复"], ["scheduled", "定时一次"]]) {
@@ -1126,10 +1367,17 @@
         clientId: item.clientId || state.status?.clientId || "",
         scheduleType: type.value,
         status: item.status === "paused" ? "paused" : "enabled",
+        persist: item.persist || "none",
+        tableId: Number(item.tableId) || 0,
+        tableName: String(item.tableName || "").trim(),
+        dedupBy: Array.isArray(item.dedupBy) ? item.dedupBy : [],
       };
       if (!payload.title) return pushNote("请填写任务名称。");
       if (!payload.goal) return pushNote("请填写要执行的目标。");
       if (!payload.clientId) return pushNote("这台设备还没登录，先在插件里登录本系统。");
+      if (payload.persist === "table" && !payload.tableId && !payload.tableName) {
+        return pushNote("落多维表格要先选一张已有表，或给新表起个名字。");
+      }
       if (type.value === "scheduled") {
         if (!item.scheduledAt) return pushNote("请选择执行时间。");
         payload.scheduledAt = item.scheduledAt;
@@ -1313,6 +1561,8 @@
       state.schedules.editing = null;
     }
     if (key === "history") state.history.loaded = false;
+    // 能力清单每次打开都重读：插件升级、心跳补报都会在下一步生效，不该等侧边栏重开。
+    if (key === "caps") void loadBootstrap();
     el.drawer.hidden = false;
     el.scrim.hidden = false;
     renderDrawer();
@@ -1345,6 +1595,7 @@
   function closePop() {
     el.modePop.hidden = true;
     el.modelPop.hidden = true;
+    if (el.persistPop) el.persistPop.hidden = true;
     el.accountPop.hidden = true;
   }
 
@@ -1373,6 +1624,145 @@
     el.modePop.style.left = "8px";
     el.modePop.style.right = "auto";
     el.modePop.hidden = false;
+  }
+
+  /** 查重列文本 → 列名数组（与定时任务表单同一口径：逗号分隔、去空、最多 5 个）。 */
+  function parseDedup(value) {
+    return String(value || "")
+      .split(/[,，]/)
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .slice(0, 5);
+  }
+
+  /**
+   * 「存到哪里」浮层：档位三选一（只回对话 / 存采集台账 / 落多维表格），
+   * 选「落多维表格」时给已有表清单（本账号的多维表格，只读取）或让新表起名。
+   * 选择立刻写进后台会话状态：会话进行中改也生效，下一次决策步就按新档位落库。
+   */
+  function togglePersistPop() {
+    const anchor = el.persistBtn;
+    if (!anchor || !el.persistPop) return;
+    const wasHidden = el.persistPop.hidden;
+    closePop();
+    if (!wasHidden) return;
+    const pop = el.persistPop;
+    pop.textContent = "";
+    pop.appendChild(h("div", "pop-title", "采集到的数据存到哪里"));
+    for (const item of PERSIST_MODES) {
+      const btn = h("button", "pop-item");
+      btn.type = "button";
+      btn.appendChild(h("span", null, `${item.label}${item.key === state.persist ? " ✓" : ""}`));
+      btn.appendChild(h("span", "d", item.desc));
+      btn.addEventListener("click", () => {
+        if (item.key === state.persist) {
+          closePop();
+          return;
+        }
+        void applyPersist({ persist: item.key });
+      });
+      pop.appendChild(btn);
+    }
+    if (state.persist === "table") {
+      pop.appendChild(h("div", "pop-sep"));
+      pop.appendChild(h("div", "pop-title", "目标多维表格"));
+      const box = h("div", "pop-tables");
+      pop.appendChild(box);
+      renderTablePicker(box);
+      void ensureTables().then(() => {
+        if (!el.persistPop.hidden) renderTablePicker(box);
+      });
+
+      const name = h("input", "pop-text");
+      name.type = "text";
+      name.maxLength = 60;
+      name.placeholder = "或给新表起名（同名已有表会直接复用）";
+      name.value = state.tableName || "";
+      pop.appendChild(name);
+
+      const dedup = h("input", "pop-text");
+      dedup.type = "text";
+      dedup.maxLength = 120;
+      dedup.placeholder = "查重列（可选，逗号分隔）：如 电话,名称；重跑同一页不产生重复行";
+      dedup.value = (state.dedupBy || []).join(",");
+      pop.appendChild(dedup);
+
+      const save = h("button", "pop-apply", "记住这个落点");
+      save.type = "button";
+      save.addEventListener("click", () => {
+        const trimmed = String(name.value || "").trim();
+        void applyPersist({ tableName: trimmed, dedupBy: parseDedup(dedup.value) });
+      });
+      pop.appendChild(save);
+    }
+    pop.appendChild(h("div", "d", "落表由平台一次调用完成：定位/新建表 → 补齐表头 → 按幂等锚查重写入，行数据不经模型复述。"));
+    pop.style.top = "auto";
+    pop.style.bottom = `${window.innerHeight - anchor.getBoundingClientRect().top + 6}px`;
+    pop.style.left = "8px";
+    pop.style.right = "auto";
+    pop.hidden = false;
+  }
+
+  /** 已有表清单：读 DataTable_list（只读接口，本账号名下），点一下即作为本次落点。 */
+  function renderTablePicker(box) {
+    box.textContent = "";
+    if (state.tables.errorMsg) {
+      box.appendChild(h("div", "d", `表清单读取失败：${state.tables.errorMsg}`));
+      return;
+    }
+    if (!state.tables.loaded) {
+      box.appendChild(h("div", "d", "正在读取本账号的多维表格…"));
+      return;
+    }
+    if (!state.tables.list.length) {
+      box.appendChild(h("div", "d", "还没有多维表格：到本系统「多维表格」新建一张，或在下面直接给新表起名。"));
+      return;
+    }
+    for (const table of state.tables.list.slice(0, 20)) {
+      const btn = h("button", "pop-item");
+      btn.type = "button";
+      btn.appendChild(h("span", null, `#${table.id} ${table.name}${Number(table.tableId || table.id) === state.tableId ? " ✓" : ""}`));
+      btn.appendChild(h("span", "d", `${Number(table.rowCount) || 0} 行`));
+      btn.addEventListener("click", () => void applyPersist({ tableId: Number(table.id) || 0 }));
+      box.appendChild(btn);
+    }
+  }
+
+  /** 表清单只在第一次点开时取（之后随登录态变化重新拉）；在途去重，加载完由调用方重渲染各自的表选择器。 */
+  async function ensureTables(force) {
+    if (state.tables.loaded && !force) return;
+    if (state.tables.pending) return state.tables.pending;
+    const pending = (async () => {
+      const res = await lib("DataTable_list", { query: {} });
+      state.tables.loaded = true;
+      state.tables.errorMsg = res.ok ? "" : res.errorMsg || "读取多维表格失败";
+      if (res.ok) {
+        const list = Array.isArray(res.data) ? res.data : Array.isArray(res.data.list) ? res.data.list : [];
+        state.tables.list = list.map((row) => ({ id: Number(row.id) || 0, name: String(row.name || ""), rowCount: Number(row.rowCount) || 0 }));
+      }
+    })();
+    state.tables.pending = pending;
+    try {
+      await pending;
+    } finally {
+      state.tables.pending = null;
+    }
+  }
+
+  /** 把档位/表选择写进后台会话状态（AIPDD_AGENT_SET_PERSIST），成功后按后台回显刷新界面。 */
+  async function applyPersist(input) {
+    const body = { type: "AIPDD_AGENT_SET_PERSIST", persist: state.persist, tableId: state.tableId };
+    if (input.persist) body.persist = input.persist;
+    if (input.tableId) body.tableId = input.tableId;
+    if (input.tableName !== undefined) body.tableName = input.tableName;
+    if (input.dedupBy !== undefined) body.dedupBy = input.dedupBy;
+    const result = await send(body);
+    if (result?.ok === false) {
+      pushNote(`设置采集去向失败：${result?.errorMsg || "后台未返回结果"}`);
+      return;
+    }
+    closePop();
+    await refreshAgent();
   }
 
   function toggleModelPop() {
@@ -1548,6 +1938,12 @@
     if (agent.recording && typeof agent.recording === "object") {
       state.recording = { on: agent.recording.on === true, count: Number(agent.recording.count) || 0 };
     }
+    // 采集去向跟后台走：侧边栏只是开关与显示，真值在会话状态里（重开面板也不丢选择）。
+    state.persist = PERSIST_MODES.some((item) => item.key === agent.persist) ? String(agent.persist) : "none";
+    state.tableId = Math.max(0, Math.round(Number(agent.tableId) || 0));
+    const landing = agent.landing && typeof agent.landing === "object" ? agent.landing : {};
+    state.tableName = clip(landing.tableName, 60);
+    state.dedupBy = Array.isArray(landing.dedupBy) ? landing.dedupBy.slice(0, 5) : [];
   }
 
   async function refreshAgent() {
@@ -1570,6 +1966,18 @@
     el.sendBtn.classList.toggle("stop", running);
     el.modeBtn.disabled = running;
     renderRunGate();
+    renderPersistChip();
+  }
+
+  /** 「存到哪里」胶囊：档位 + 是否已定目标表，落表口径一眼可辨（不必点开浮层）。 */
+  function renderPersistChip() {
+    if (!el.persistBtn) return;
+    const found = PERSIST_MODES.find((item) => item.key === state.persist) || PERSIST_MODES[0];
+    const suffix =
+      found.key === "table" ? (state.tableId ? ` · 表#${state.tableId}` : state.tableName ? ` · ${state.tableName}` : " · 未选表") : "";
+    el.persistBtn.textContent = `${found.label}${suffix}`;
+    el.persistBtn.appendChild(h("span", "caret", "▾"));
+    el.persistBtn.title = `采集到的数据存到哪里：${found.desc}${suffix ? `（当前${suffix.slice(3)}）` : ""}`;
   }
 
   async function stopAgent() {
@@ -1585,13 +1993,22 @@
     if (!state.models.length && state.status?.hasToken) await loadBootstrap();
   }
 
-  /** 从平台读「可用模型 + 额度」（同一设备令牌）；失败保持原状，界面显示「默认模型」。 */
+  /** 从平台读「可用模型 + 额度 + 能力指纹」（同一设备令牌）；失败保持原状，界面显示「默认模型」。 */
   async function loadBootstrap() {
     const data = await send({ type: "AIPDD_AGENT_BOOTSTRAP" });
-    if (!data?.ok) return;
+    if (!data?.ok) {
+      state.caps.errorMsg = data?.errorMsg || "平台未返回能力清单";
+      return;
+    }
     state.models = Array.isArray(data.models) ? data.models : [];
     state.balance = Number(data.balance) || 0;
     state.rate = Number(data.rate) || 0;
+    // 能力面板数据：平台算出的实际可用原语（目录 ∩ 设备指纹）+ 设备自报指纹 + 本机指纹。
+    state.caps.primitives = Array.isArray(data.primitives) ? data.primitives : [];
+    state.caps.reported = data.caps || null;
+    state.caps.local = data.local || null;
+    state.caps.loaded = true;
+    state.caps.errorMsg = "";
     renderHeader();
     if (state.drawer) renderDrawer();
   }
@@ -1645,6 +2062,7 @@
       });
     }
     el.modelBtn.addEventListener("click", toggleModelPop);
+    if (el.persistBtn) el.persistBtn.addEventListener("click", togglePersistPop);
     el.accountBtn.addEventListener("click", toggleAccountPop);
     el.state.addEventListener("click", () => {
       if (!state.status?.hasToken) openAccountPop();

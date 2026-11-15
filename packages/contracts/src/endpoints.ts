@@ -52,6 +52,7 @@ import { erpEndpoints } from "./erp";
 import { mktEndpoints } from "./mkt";
 import { recruitEndpoints } from "./recruit";
 import { seoEndpoints } from "./seo";
+import { geoSiteEndpoints } from "./geo-site";
 import { acquisitionEndpoints } from "./acquisition";
 import { collabEndpoints } from "./collab";
 import { scrmEndpoints } from "./wecom-scrm";
@@ -66,6 +67,8 @@ import { workflowEndpoints } from "./workflow";
 import { upgradeEndpoints } from "./upgrade";
 import { aiCodeEndpoints } from "./ai-code";
 import { wechatMpEndpoints } from "./wechat-mp";
+import { botHostEndpoints } from "./bot-host";
+import { miniprogramEndpoints } from "./miniprogram";
 const jsonValueSchema = z.union([
   z.null(),
   z.string(),
@@ -15600,6 +15603,7 @@ type ModuleEndpoints = typeof adminPageEndpoints &
   typeof mktEndpoints &
   typeof recruitEndpoints &
   typeof seoEndpoints &
+  typeof geoSiteEndpoints &
   typeof acquisitionEndpoints &
   typeof collabEndpoints &
   typeof scrmEndpoints &
@@ -15615,7 +15619,9 @@ type ModuleEndpoints = typeof adminPageEndpoints &
   typeof workflowEndpoints &
   typeof upgradeEndpoints &
   typeof aiCodeEndpoints &
-  typeof wechatMpEndpoints;
+  typeof wechatMpEndpoints &
+  typeof botHostEndpoints &
+  typeof miniprogramEndpoints;
 export const endpoints: ModuleEndpoints & typeof localEndpoints = {
   ...adminPageEndpoints,
   ...automationEndpoints,
@@ -15655,6 +15661,7 @@ export const endpoints: ModuleEndpoints & typeof localEndpoints = {
   ...mktEndpoints,
   ...recruitEndpoints,
   ...seoEndpoints,
+  ...geoSiteEndpoints,
   ...acquisitionEndpoints,
   ...collabEndpoints,
   ...scrmEndpoints,
@@ -15670,6 +15677,8 @@ export const endpoints: ModuleEndpoints & typeof localEndpoints = {
   ...upgradeEndpoints,
   ...aiCodeEndpoints,
   ...wechatMpEndpoints,
+  ...botHostEndpoints,
+  ...miniprogramEndpoints,
   ...localEndpoints,
 };
 export type EndpointId = keyof typeof endpoints;

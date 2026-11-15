@@ -25,16 +25,12 @@ import {
   GeoTopicView,
 } from "./geo-views";
 
-/** GEO 建站：AIworkin 侧 GEO 独立站看板，点按钮即新窗口打开。 */
-const GEO_SITE_URL = "https://aiworkin.com/cn/dashboard/geo-sites";
-
 const VIEWS = [
   { value: "report", label: <><BarChartOutlined aria-hidden /> 可见度报告</> },
   { value: "questions", label: <><QuestionCircleOutlined aria-hidden /> 监控问题库</> },
   { value: "batches", label: <><DownloadOutlined aria-hidden /> 采集批次</> },
   { value: "topics", label: <><BulbOutlined aria-hidden /> 选题池</> },
   { value: "press", label: <><SendOutlined aria-hidden /> 发稿平台推荐</> },
-  { value: "site", label: <><GlobalOutlined aria-hidden /> GEO 建站</> },
 ];
 
 const EMPTY_PROJECT = {
@@ -48,8 +44,8 @@ const EMPTY_PROJECT = {
 
 /**
  * GEO-AI引擎优化：项目 → 问题库 → 采集批次（逐条观测）→ 报告 → 选题池，
- * 指标口径与 AIworkin GEO 技能包 geo_metrics.py 一致；另有发稿平台推荐（按语言筛）
- * 与 GEO 建站（AIworkin 外链视图）两个视图。
+ * 指标口径与 AIworkin GEO 技能包 geo_metrics.py 一致；另有发稿平台推荐（按语言筛）。
+ * 独立站已拆到「工作台 → 国际独立站」，这里只做优化分析。
  * 采集平台 Key 由每个账号在这里配自己的（只服务本人项目，管理员也看不到别人的 Key）。
  */
 export function GeoTab() {
@@ -77,6 +73,12 @@ export function GeoTab() {
     const list = projectsQuery.data;
     setProjectId(current => current && list.some(item => item.id === current) ? current : list[0]?.id ?? null);
   }, [projectsQuery.data]);
+  // 功能目录的旧链接 ?tab=geo-site 仍可能被收藏：独立站已拆成独立页面，直接跳过去。
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("tab") === "geo-site") {
+      window.location.replace("/international-site");
+    }
+  }, []);
 
   const openCreate = () => {
     setEditing(null);
@@ -198,25 +200,6 @@ export function GeoTab() {
       <ColumnSwitch value={view} onChange={setView} options={VIEWS} />
       {view === "press" ? (
         <GeoPressView />
-      ) : view === "site" ? (
-        <div>
-          <Notice variant="info">
-            GEO 建站是在 AIworkin 侧完成的生成式引擎优化独立站：建站、内容发布与看板都在那边，本系统不保存建站数据。
-          </Notice>
-          <p className="text-12 muted" style={{ marginTop: 12 }}>
-            地址：{GEO_SITE_URL}
-          </p>
-          <Button
-            type="primary"
-            icon={<GlobalOutlined aria-hidden />}
-            style={{ marginTop: 10 }}
-            onClick={() =>
-              window.open(GEO_SITE_URL, "_blank", "noopener,noreferrer")
-            }
-          >
-            在新窗口打开 GEO 独立站
-          </Button>
-        </div>
       ) : !projectId ? (
         <EmptyState
           icon={<GlobalOutlined aria-hidden />}

@@ -5,9 +5,10 @@ import { WorkbuddyAccountService } from './workbuddy-account.service';
 import { WorkbuddyAgentService } from './workbuddy-agent.service';
 import { WorkbuddyLlmService } from './workbuddy-llm.service';
 import { WorkbuddyPlanService } from './workbuddy-plan.service';
+import { WorkbuddyCloudService } from './workbuddy-cloud.service';
 
 /**
- * Workbuddy 企业云界面侧接口（登录态）。三块与 /workbuddy 的三个页签一一对应：
+ * Workbuddy 企业版界面侧接口（登录态）。三块与 /workbuddy 的三个页签一一对应：
  * Workbuddy 账号（腾讯云凭据）/ Agent（远端清单与版本）/ 计划任务（澄清 → 拆解 → 派发 → 同步）。
  * 每个用户只用自己的凭据与自己的计划，管理员也不代看他人密钥。
  */
@@ -17,7 +18,56 @@ export class WorkbuddyController {
     private readonly agents: WorkbuddyAgentService,
     private readonly llm: WorkbuddyLlmService,
     private readonly plans: WorkbuddyPlanService,
+    private readonly cloud: WorkbuddyCloudService,
   ) {}
+
+  async cloudCommands(user: CurrentUser, accountId: string) {
+    return ok(await this.cloud.commands(user, parseId(accountId, '账号 ID')));
+  }
+  async sendCloudCommand(
+    user: CurrentUser,
+    accountId: string,
+    body: Record<string, unknown>,
+  ) {
+    return ok(
+      await this.cloud.sendCommand(user, parseId(accountId, '账号 ID'), body),
+    );
+  }
+  async syncCloudCommand(user: CurrentUser, id: string) {
+    return ok(await this.cloud.syncCommand(user, parseId(id, '指令 ID')));
+  }
+
+  async cloudSchedules(user: CurrentUser, accountId: string) {
+    return ok(await this.cloud.list(user, parseId(accountId, '账号 ID')));
+  }
+  async createCloudSchedule(
+    user: CurrentUser,
+    accountId: string,
+    body: Record<string, unknown>,
+  ) {
+    return ok(
+      await this.cloud.create(user, parseId(accountId, '账号 ID'), body),
+    );
+  }
+  async cloudSchedule(user: CurrentUser, id: string) {
+    return ok(await this.cloud.get(user, parseId(id, '定时任务 ID')));
+  }
+  async updateCloudSchedule(
+    user: CurrentUser,
+    id: string,
+    body: Record<string, unknown>,
+  ) {
+    return ok(await this.cloud.update(user, parseId(id, '定时任务 ID'), body));
+  }
+  async removeCloudSchedule(user: CurrentUser, id: string) {
+    return ok(await this.cloud.remove(user, parseId(id, '定时任务 ID')));
+  }
+  async cloudScheduleRuns(user: CurrentUser, id: string) {
+    return ok(await this.cloud.runs(user, parseId(id, '定时任务 ID')));
+  }
+  async runCloudSchedule(user: CurrentUser, id: string) {
+    return ok(await this.cloud.runNow(user, parseId(id, '定时任务 ID')));
+  }
 
   // ---------- Workbuddy 账号（腾讯云凭据） ----------
 

@@ -55,6 +55,7 @@ import { publishReviewMiddleware } from '../moderation/publish-review.middleware
 import { registerPublishReviewRoutes } from '../moderation/publish-review.routes';
 import { registerMcpRoutes } from '../mcp/mcp-routes';
 import { registerLivecodePublic } from '../livecode/livecode.public';
+import { registerGeoSitePublic } from '../geo-site/geo-site.public';
 import { registerServiceDeskPublic } from '../service-desk/service-desk.public';
 import { registerSurveyPublic } from '../survey/survey.public';
 import { registerMechanismPublic } from '../mechanisms/mechanism.public';
@@ -64,8 +65,10 @@ import { registerGapsPublic } from '../gaps/gaps.public';
 import { registerModelPlazaPublic } from '../model-plaza/model-plaza.public';
 import { registerHardwarePublic } from '../hardware/hardware.public';
 import { registerRpaChromePublic } from '../rpa/rpa-chrome.public';
+import { registerBotHostPublic } from '../bot-host/bot-host.public';
 import { registerHardwareMachineRoutes } from '../hardware/hardware.machine';
 import { registerWechatMpPublic } from '../wechat-mp/wechat-mp.public';
+import { registerMiniProgramPublic } from '../miniprogram/miniprogram.public';
 import { McpService } from '../mcp/mcp.service';
 import { handleError, validationHook } from './error-handler';
 import { bearerApiKey } from '../mcp/mcp-auth';
@@ -456,7 +459,11 @@ export function createApp(services: Services) {
   // 本地 Chrome 插件设备通道：/api/public/rpa-chrome/**，同样只认设备令牌（x-chrome-token）。
   // 账号模块在 services 之后构造，登录校验所需的账号实例在这里注入。
   services.rpaChrome.device.bindAccounts(account.account);
+  // 能力目录同样晚于设备服务构造：原语派发门与降级菜单以它为唯一口径。
+  services.rpaChrome.device.bindCatalog(services.extensionCatalog);
   registerRpaChromePublic(app, services, mcpService);
+  // Bot 主机客户端通道：/api/public/bot-host/**，只认主机令牌（x-bot-token）。
+  registerBotHostPublic(app, services, { account, auth, platform });
   // 微信服务号：服务器配置回调与微信内网页授权（免登录，靠微信签名/state 自证）。
   registerWechatMpPublic(app, services, {
     issueSession: async (userId) => {
@@ -472,6 +479,10 @@ export function createApp(services: Services) {
       };
     },
   });
+  // 用户版小程序：启动配置与 wx 免登 / 账号密码登录（免登录，公开通道靠 code 自证）。
+  registerMiniProgramPublic(app, services, { account: account.account });
+  // GEO 独立站公开投递：泛子域/自定义域名按 Host 反查，本站路径按 slug；免登录、不走统一信封。
+  registerGeoSitePublic(app, services);
   app.notFound((c) =>
     c.json({ code: 404, message: '接口不存在', data: null }, 404),
   );

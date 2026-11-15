@@ -1,0 +1,21 @@
+.body {
+  font-size: 28rpx;
+  line-height: 1.7;
+  color: #4e5969;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.link {
+  word-break: break-all;
+  margin-bottom: 16rpx;
+}
+
+.btn-block {
+  display: flex;
+  width: 100%;
+}
+
+.hint {
+  margin-top: 14rpx;
+}

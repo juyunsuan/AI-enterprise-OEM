@@ -3,7 +3,7 @@ import { BusinessException } from '../common/business.exception';
 import { ErrorCode } from '../common/error-code';
 
 /**
- * Workbuddy 企业云（腾讯云 WorkBuddy Managed Agents）的口径常量与归一化助手。
+ * Workbuddy 企业版（腾讯云 WorkBuddy Managed Agents）的口径常量与归一化助手。
  * 产品 / 版本 / 错误码取值对齐 cloud.tencent.com/document/api/1831 一线文档。
  */
 
