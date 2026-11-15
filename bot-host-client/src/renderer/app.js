@@ -580,7 +580,7 @@
         el(
           'div',
           'empty',
-          '还没有技能：点右上「上传 ZIP / 选择文件夹」导入技能包，或「新建技能」手写；Agent 需要时自己读正文'
+          '还没有技能：点右上「上传 ZIP / 选择文件夹」导入技能包；Agent 需要时自己读正文'
         )
       );
       return;
@@ -617,6 +617,7 @@
         const full = await api.readSkill(skill.id);
         if (!full) return;
         state.editingSkillId = skill.id;
+        $('skillEditorCard').classList.remove('hidden');
         $('skillMode').textContent = '修改 · ' + skill.id;
         $('skId').value = skill.id;
         $('skId').disabled = true;
@@ -641,19 +642,16 @@
 
   function clearSkillForm() {
     state.editingSkillId = '';
-    $('skillMode').textContent = '新建';
+    $('skillMode').textContent = '';
     $('skId').disabled = false;
     $('skId').value = '';
     $('skName').value = '';
     $('skDesc').value = '';
     $('skBody').value = '';
     note($('skillHint'), '');
+    $('skillEditorCard').classList.add('hidden');
   }
 
-  $('newSkill').addEventListener('click', () => {
-    clearSkillForm();
-    $('skId').focus();
-  });
   $('cancelSkill').addEventListener('click', () => clearSkillForm());
 
   // 技能包导入：只读本机 ZIP / 文件夹里的 SKILL.md，导入后立即可勾选使用。
@@ -662,23 +660,23 @@
     if (!res || res.canceled) return;
     if (res.ok) {
       note(
-        $('skillHint'),
+        $('skillImportHint'),
         '已导入：' + (res.skill.name || res.skill.id) + '（' + res.skill.id + '）',
         'ok'
       );
       clearSkillForm();
       await reloadAgent();
     } else {
-      note($('skillHint'), res.error || '技能包导入失败', 'bad');
+      note($('skillImportHint'), res.error || '技能包导入失败', 'bad');
     }
   }
   $('importSkillZip').addEventListener('click', () => importSkillPackage('zip'));
   $('importSkillFolder').addEventListener('click', () => importSkillPackage('folder'));
 
   $('saveSkill').addEventListener('click', async () => {
-    const id = state.editingSkillId || $('skId').value.trim();
+    const id = state.editingSkillId;
     if (!id) {
-      note($('skillHint'), '技能 id 必填', 'bad');
+      note($('skillImportHint'), '新建技能请用「上传 ZIP / 选择文件夹」导入技能包', 'bad');
       return;
     }
     const res = await api.saveSkill({
@@ -688,7 +686,7 @@
       body: $('skBody').value
     });
     if (res && res.ok) {
-      note($('skillHint'), '已保存：' + id, 'ok');
+      note($('skillImportHint'), '已保存：' + id, 'ok');
       clearSkillForm();
       await reloadAgent();
     } else {

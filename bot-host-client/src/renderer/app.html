@@ -298,16 +298,16 @@
               <span class="card-actions">
                 <button id="importSkillZip" class="btn small ghost" title="上传本地技能包（ZIP，含 SKILL.md）">上传 ZIP</button>
                 <button id="importSkillFolder" class="btn small ghost" title="从文件夹导入技能（含 SKILL.md）">选择文件夹</button>
-                <button id="newSkill" class="btn small primary">新建技能</button>
               </span>
             </div>
             <div id="skillList" class="list"></div>
+            <p id="skillImportHint" class="card-note"></p>
           </div>
 
-          <div class="card">
+          <div id="skillEditorCard" class="card hidden">
             <div class="card-head">
               <span class="card-title">编辑技能</span>
-              <span class="card-hint" id="skillMode">新建</span>
+              <span class="card-hint" id="skillMode"></span>
             </div>
             <div class="form">
               <label class="field"><span class="k">技能 id<em>*</em></span>
@@ -319,8 +319,8 @@
             </div>
             <textarea id="skBody" class="editor" placeholder="技能正文：Agent 需要时用 load_skill 读取这段说明再照做。"></textarea>
             <div class="actions spaced">
-              <button id="saveSkill" class="btn primary">保存技能</button>
-              <button id="cancelSkill" class="btn ghost">清空表单</button>
+              <button id="saveSkill" class="btn primary">保存修改</button>
+              <button id="cancelSkill" class="btn ghost">关闭</button>
             </div>
             <p id="skillHint" class="card-note"></p>
           </div>
