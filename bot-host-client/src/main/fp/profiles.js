@@ -122,7 +122,7 @@ function validate(input) {
       ? String(seedRaw)
       : String(crypto.randomInt(1, 2147483647));
   const platform = PLATFORMS.includes(input && input.platform) ? input.platform : 'win';
-  const canvasNoise = CANVAS_MODES.includes(input && input.canvasNoise) ? input.canvasNoise : 'light';
+  const canvasNoise = CANVAS_MODES.includes(input && input.canvasNoise) ? input.canvasNoise : 'off';
   const audioNoise = AUDIO_MODES.includes(input && input.audioNoise) ? input.audioNoise : 'light';
   const webrtcMode = WEBRTC_MODES.includes(input && input.webrtcMode) ? input.webrtcMode : 'proxy';
   const hardwareConcurrency = clampInt(input && input.hardwareConcurrency, 0, 64, 0);

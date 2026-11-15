@@ -214,8 +214,18 @@ function relayConnect(relayPort, host, port, payload) {
   assert.ok(args.includes('--proxy-server=http://127.0.0.1:35901'));
   assert.ok(args.includes('--load-extension=C:/ext/one'));
   assert.ok(args.includes('--remote-debugging-port=35902'));
+  assert.ok(args.includes('--remote-allow-origins=*'));
   assert.equal(args[args.length - 1], 'https://www.baidu.com');
   ok('启动参数：种子/平台/品牌/语言/时区/噪声/WebRTC/代理/扩展/调试端口');
+
+  const lightArgs = fingerprint.buildArgs(
+    { seed: 42, platform: 'win', canvasNoise: 'light', webrtcMode: 'proxy' },
+    { profileDir: 'C:/tmp/fp', startUrl: 'about:blank' }
+  );
+  assert.ok(!lightArgs.some((arg) => arg.startsWith('--disable-spoofing=')));
+  assert.ok(fingerprint.consistency({ canvasNoise: 'light' }).some((hint) => hint.includes('Canvas')));
+  assert.equal(fingerprint.consistency({ canvasNoise: 'off', audioNoise: 'light' }).length, 0);
+  ok('一致性提示：Canvas 噪声默认关闭，开启时明确告警');
 
   const kernelDir = path.join(HOME, 'fake-kernel', '150.0.7871.186');
   fs.mkdirSync(kernelDir, { recursive: true });
@@ -298,6 +308,25 @@ function relayConnect(relayPort, host, port, payload) {
   socks2.server.close();
   ipServer.close();
   ok('出口 IP 检测：直连 + 经 SOCKS5 代理');
+
+  const startPage = require('../src/main/fp/start-page');
+  const startUrl = await startPage.ensure();
+  assert.match(startUrl, /^http:\/\/127\.0\.0\.1:\d+\/$/);
+  const html = await new Promise((resolve, reject) => {
+    http
+      .get(startUrl, (res) => {
+        let raw = '';
+        res.on('data', (chunk) => {
+          raw += chunk;
+        });
+        res.on('end', () => resolve(raw));
+      })
+      .on('error', reject);
+  });
+  assert.match(html, /BotBuddy 指纹窗口已就绪/);
+  assert.equal(await startPage.ensure(), startUrl);
+  await startPage.close();
+  ok('起始页：回环地址 + 单例 + 页面内容');
 
   fs.rmSync(HOME, { recursive: true, force: true });
 })().catch((error) => {

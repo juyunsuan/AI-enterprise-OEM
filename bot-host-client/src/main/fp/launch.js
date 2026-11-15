@@ -20,6 +20,7 @@ const kernels = require('./kernels');
 const profiles = require('./profiles');
 const fingerprint = require('./fingerprint');
 const relay = require('./proxy-relay');
+const startPage = require('./start-page');
 const wsClient = require('../ws-client');
 
 const windows = new Map();
@@ -115,6 +116,7 @@ async function open(profileId) {
     relayPort,
     relay: relayHandle,
     child,
+    cdp: null,
     startedAt: Date.now(),
     status: 'starting',
     error: ''
@@ -124,18 +126,24 @@ async function open(profileId) {
     if (windows.get(profile.id) === state) {
       windows.delete(profile.id);
       if (state.relay) state.relay.close();
+      if (state.cdp) {
+        state.cdp.close();
+        state.cdp = null;
+      }
     }
   });
   try {
     const pages = await wsClient.waitReady(cdpPort, 25000);
     if (!pages) throw new Error('内核没有在预期时间内就绪（CDP 无页面）');
+    state.cdp = await wsClient.browserSession(cdpPort, 10000);
+    const ready = await primeKernelPage(state, pages);
     state.status = 'open';
     profiles.markOpened(profile.id, profile.lastIp || '');
     return {
       ...stateSummary(state),
       reused: false,
       wsEndpoint: 'http://127.0.0.1:' + cdpPort,
-      pages: pages.map((page) => ({ id: page.id, title: page.title, url: page.url }))
+      pages: (ready || pages).map((page) => ({ id: page.id, title: page.title, url: page.url }))
     };
   } catch (error) {
     state.error = error.message;
@@ -149,6 +157,10 @@ async function close(profileId) {
   if (!state) return { ok: true, reused: false };
   windows.delete(state.profileId);
   state.status = 'closing';
+  if (state.cdp) {
+    state.cdp.close();
+    state.cdp = null;
+  }
   try {
     await wsClient.closeBrowser(state.cdpPort);
   } catch {
@@ -204,9 +216,52 @@ async function pages() {
   return out;
 }
 
-function pickPage(list) {
-  const usable = list.filter((page) => page.wsUrl && page.url !== 'about:blank');
-  return usable[0] || list.find((page) => page.wsUrl) || null;
+/**
+ * 内核命令行打开的 about:blank 没有 Runtime 上下文（CDP 命令会阻塞），
+ * 用常驻会话导航到内置起始页，并等上下文可执行后再返回页面列表。
+ */
+async function primeKernelPage(state, fallback) {
+  let startUrl = '';
+  try {
+    startUrl = await startPage.ensure();
+  } catch {
+    /* 起始页不可用时保留 about:blank，Agent 首次导航后仍可驱动 */
+  }
+  const session = state.cdp;
+  if (!session) return fallback;
+  if (startUrl) {
+    try {
+      await session.call('Page.navigate', { url: startUrl }, 10000);
+    } catch {
+      /* 保留原页面 */
+    }
+  }
+  const deadline = Date.now() + 8000;
+  while (Date.now() < deadline) {
+    try {
+      const result = await session.call(
+        'Runtime.evaluate',
+        { expression: 'document.readyState', returnByValue: true },
+        2500
+      );
+      if (result && result.result && result.result.value) break;
+    } catch {
+      /* 上下文尚未建立 */
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  try {
+    return await wsClient.listPages(state.cdpPort);
+  } catch {
+    return fallback;
+  }
+}
+
+/** 常驻会话缺失时补建（内核重开或连接被回收）。 */
+async function ensureSession(state) {
+  if (state.cdp) return state.cdp;
+  state.cdp = await wsClient.browserSession(state.cdpPort, 10000);
+  return state.cdp;
 }
 
 /** Agent 默认窗口：显式设置优先；没设置就取最近使用档案；没有任何档案时自动建一个。 */
@@ -222,26 +277,27 @@ async function agentWindow() {
   return windows.get(profile.id);
 }
 
-async function agentPage() {
-  const state = await agentWindow();
-  if (!state) throw new Error('Agent 默认窗口不可用');
-  const list = await wsClient.listPages(state.cdpPort);
-  const page = pickPage(list);
-  if (!page) throw new Error('Agent 默认窗口里没有可用页面');
-  return { state, page };
-}
-
 async function navigateAgent(rawUrl) {
-  const { state, page } = await agentPage();
+  const state = await agentWindow();
   const target = fingerprintUrl(rawUrl);
-  await wsClient.cdpCall(page.webSocketDebuggerUrl, 'Page.navigate', { url: target });
+  const session = await ensureSession(state);
+  await session.call('Page.navigate', { url: target }, 20000);
   profiles.markOpened(state.profileId, '');
   return { profileId: state.profileId, url: target };
 }
 
 async function evaluateAgent(expression, timeoutMs) {
-  const { page } = await agentPage();
-  return wsClient.cdpEvaluate(page.webSocketDebuggerUrl, expression, timeoutMs);
+  const state = await agentWindow();
+  const session = await ensureSession(state);
+  const result = await session.call(
+    'Runtime.evaluate',
+    { expression, awaitPromise: true, returnByValue: true },
+    timeoutMs || 20000
+  );
+  if (result.exceptionDetails) {
+    throw new Error(result.exceptionDetails.text || '页面执行异常');
+  }
+  return result.result ? result.result.value : undefined;
 }
 
 function fingerprintUrl(raw) {

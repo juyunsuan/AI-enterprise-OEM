@@ -264,6 +264,88 @@ async function waitReady(port, timeoutMs = 20000) {
   return null;
 }
 
+/**
+ * 以浏览器端点 + flatten 会话驱动页面（Playwright 同款路径）。
+ * 页面级 WebSocket 在新版内核上不响应命令，必须经 Target.attachToTarget。
+ */
+async function browserSession(port, timeoutMs = 8000, targetId = '') {
+  const endpoint = await browserWs(port);
+  if (!endpoint) throw new Error('指纹内核 CDP 不可用');
+  const client = await connect(endpoint, { timeoutMs });
+  let seq = 0;
+  const pending = new Map();
+  client.onText((text) => {
+    let message;
+    try {
+      message = JSON.parse(text);
+    } catch {
+      return;
+    }
+    if (!message || !message.id || !pending.has(message.id)) return;
+    const entry = pending.get(message.id);
+    pending.delete(message.id);
+    clearTimeout(entry.timer);
+    if (message.error) entry.reject(new Error(message.error.message || 'CDP 调用失败'));
+    else entry.resolve(message.result || {});
+  });
+  const call = (method, params, sessionId, ms) => {
+    const wait = ms || timeoutMs;
+    return new Promise((resolve, reject) => {
+      const id = (seq += 1);
+      const timer = setTimeout(() => {
+        pending.delete(id);
+        reject(new Error('CDP 调用超时：' + method));
+      }, wait);
+      pending.set(id, { resolve, reject, timer });
+      const payload = { id, method, params: params || {} };
+      if (sessionId) payload.sessionId = sessionId;
+      client.sendText(JSON.stringify(payload));
+    });
+  };
+  try {
+    const targets = await call('Target.getTargets', {});
+    const page = (targets.targetInfos || []).find((target) => target.type === 'page' && (!targetId || target.targetId === targetId))
+      || (targetId ? null : (targets.targetInfos || []).find((target) => target.type === 'page'));
+    if (!page) throw new Error('指纹内核里没有可用页面');
+    const attached = await call('Target.attachToTarget', { targetId: page.targetId, flatten: true });
+    return {
+      page,
+      sessionId: attached.sessionId,
+      call: (method, params, ms) => call(method, params, attached.sessionId, ms),
+      close: () => client.close(),
+    };
+  } catch (error) {
+    client.close();
+    throw error;
+  }
+}
+
+async function pageNavigate(port, url, timeoutMs = 15000) {
+  const session = await browserSession(port, timeoutMs);
+  try {
+    return await session.call('Page.navigate', { url }, timeoutMs);
+  } finally {
+    session.close();
+  }
+}
+
+async function pageEvaluate(port, expression, timeoutMs = 15000) {
+  const session = await browserSession(port, timeoutMs);
+  try {
+    const result = await session.call(
+      'Runtime.evaluate',
+      { expression, awaitPromise: true, returnByValue: true },
+      timeoutMs,
+    );
+    if (result.exceptionDetails) {
+      throw new Error(result.exceptionDetails.text || 'CDP 执行异常');
+    }
+    return result.result ? result.result.value : undefined;
+  } finally {
+    session.close();
+  }
+}
+
 module.exports = {
   connect,
   cdpCall,
@@ -272,4 +354,7 @@ module.exports = {
   browserWs,
   closeBrowser,
   waitReady,
+  browserSession,
+  pageNavigate,
+  pageEvaluate,
 };

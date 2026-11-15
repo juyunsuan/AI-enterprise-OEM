@@ -21,8 +21,9 @@ const DIR = path.join(db.DATA_DIR, 'kernels');
 const ZIP_MAX = 600 * 1024 * 1024;
 const EXTRACT_LIMITS = {
   entries: 20000,
-  file: 300 * 1024 * 1024,
-  total: 1500 * 1024 * 1024
+  // Chrome 150 的 chrome.dll 已超过 300MB，内核包需要更大的单文件与总量上限。
+  file: 512 * 1024 * 1024,
+  total: 2048 * 1024 * 1024
 };
 
 function ensureDir() {
@@ -108,6 +109,7 @@ function installFromDir(srcDir, options = {}) {
   const version =
     safeVersion(options.version) ||
     safeVersion(detectVersion(srcDir)) ||
+    safeVersion(detectVersion(path.dirname(exe))) ||
     'custom-' + Date.now().toString(36);
   ensureDir();
   const dest = path.join(DIR, version);
@@ -157,8 +159,12 @@ function importFromZip(file, options = {}) {
         .filter((entry) => entry.isDirectory());
       if (subs.length === 1) root = path.join(root, subs[0].name);
     }
+    const exe = findExe(root);
     const version =
-      safeVersion(options.version) || safeVersion(detectVersion(root)) || safeVersion(detectVersion(file));
+      safeVersion(options.version) ||
+      safeVersion(detectVersion(root)) ||
+      safeVersion(exe ? detectVersion(path.dirname(exe)) : '') ||
+      safeVersion(detectVersion(file));
     return installFromDir(root, { version, source: path.basename(file), zipSha256 });
   } finally {
     fs.rmSync(temp, { recursive: true, force: true });

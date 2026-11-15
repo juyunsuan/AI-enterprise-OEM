@@ -68,6 +68,8 @@ function buildArgs(profile, options) {
   }
   args.push('--remote-debugging-address=127.0.0.1');
   args.push('--remote-debugging-port=' + Number(opts.cdpPort));
+  // Chrome 111+ 默认拒绝带 Origin 的 DevTools WebSocket；管理器只在本机连，放开来源。
+  args.push('--remote-allow-origins=*');
   args.push('--window-size=' + (Number(opts.width) || 1280) + ',' + (Number(opts.height) || 800));
   if (opts.startUrl) args.push(String(opts.startUrl));
   return args;
@@ -77,7 +79,10 @@ function buildArgs(profile, options) {
 function consistency(profile) {
   const hints = [];
   if (!profile) return hints;
-  if (profile.canvasNoise === 'strict' || profile.audioNoise === 'strict') {
+  if (profile.canvasNoise !== 'off') {
+    hints.push('当前内核的 Canvas 噪声在部分页面（toDataURL）会卡死渲染进程，建议关闭');
+  }
+  if (profile.audioNoise === 'strict') {
     hints.push('严格噪声可能更容易被识别为“过度伪装”，一般用默认轻噪即可');
   }
   if (profile.webrtcMode === 'real') {

@@ -554,6 +554,7 @@ check('只认库里的白名单与默认目录', () => {
     });
     assert.ok(created.id);
     assert.equal(created.proxy.hasPassword, true);
+    assert.equal(created.canvasNoise, 'off');
     assert.ok(created.seed);
     assert.ok(!JSON.stringify(created).includes('secret-pass'));
     assert.equal(fpProfiles.proxyCredentials(created.id).password, 'secret-pass');

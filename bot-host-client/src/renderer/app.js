@@ -1124,7 +1124,7 @@
     $('fpLanguages').value = profile ? (profile.languages || []).join(',') : '';
     $('fpCores').value = profile ? String(profile.hardwareConcurrency || 0) : '0';
     $('fpSeed').value = profile ? profile.seed : '';
-    $('fpCanvas').value = profile ? profile.canvasNoise : 'light';
+    $('fpCanvas').value = profile ? profile.canvasNoise : 'off';
     $('fpAudio').value = profile ? profile.audioNoise : 'light';
     $('fpWebrtc').value = profile ? profile.webrtcMode : 'proxy';
     const proxy = (profile && profile.proxy) || {

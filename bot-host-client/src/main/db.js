@@ -109,7 +109,7 @@ const SCHEMA = [
      platform              TEXT NOT NULL DEFAULT 'win',
      timezone              TEXT NOT NULL DEFAULT '',
      languages_json        TEXT NOT NULL DEFAULT '[]',
-     canvas_noise          TEXT NOT NULL DEFAULT 'light',
+     canvas_noise          TEXT NOT NULL DEFAULT 'off',
      audio_noise           TEXT NOT NULL DEFAULT 'light',
      webrtc_mode           TEXT NOT NULL DEFAULT 'proxy',
      hardware_concurrency  INTEGER NOT NULL DEFAULT 0,
