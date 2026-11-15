@@ -383,15 +383,19 @@
             <div class="card-head">
               <span class="card-title">Agent 插件</span>
               <span class="card-hint">给 Agent 加自定义工具：HTTP 接口或本机命令</span>
-              <span class="card-actions"><button id="newPlugin" class="btn small primary">新建插件</button></span>
+              <span class="card-actions">
+                <button id="importPluginZip" class="btn small ghost" title="上传本地插件包（ZIP，含 plugin.json）">上传 ZIP</button>
+                <button id="importPluginFolder" class="btn small ghost" title="从文件夹导入插件（含 plugin.json）">选择文件夹</button>
+              </span>
             </div>
             <div id="pluginList" class="list"></div>
+            <p id="pluginImportHint" class="card-note"></p>
           </div>
 
-          <div class="card">
+          <div id="pluginEditorCard" class="card hidden">
             <div class="card-head">
               <span class="card-title">编辑插件</span>
-              <span class="card-hint" id="pluginMode">新建</span>
+              <span class="card-hint" id="pluginMode"></span>
             </div>
             <div class="form">
               <label class="field"><span class="k">名称<em>*</em></span>
@@ -409,8 +413,8 @@
             <label class="field"><span class="k">请求配置（JSON：HTTP 填 method/url/headers/body，命令填 command；模板用 {{参数名}}）</span>
               <textarea id="plgConfig" class="editor short" spellcheck="false" placeholder='{"method":"GET","url":"https://api.example.com/weather?city={{city}}"}'></textarea></label>
             <div class="actions spaced">
-              <button id="savePlugin" class="btn primary">保存插件</button>
-              <button id="cancelPlugin" class="btn ghost">清空表单</button>
+              <button id="savePlugin" class="btn primary">保存修改</button>
+              <button id="cancelPlugin" class="btn ghost">关闭</button>
             </div>
             <p id="pluginHint" class="card-note"></p>
           </div>

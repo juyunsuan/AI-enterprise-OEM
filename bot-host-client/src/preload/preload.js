@@ -78,6 +78,7 @@ const api = {
   listPlugins: () => ipcRenderer.invoke('plugins:list'),
   savePlugin: (payload) => ipcRenderer.invoke('plugins:save', payload),
   removePlugin: (id) => ipcRenderer.invoke('plugins:remove', id),
+  importPluginPackage: (mode) => ipcRenderer.invoke('plugin:importPackage', mode),
 
   // --- Chrome 桥接 ---
   bridgeStatus: () => ipcRenderer.invoke('bridge:status'),

@@ -33,6 +33,7 @@ const agentRuntime = require('./agent');
 const chatStore = require('./chat-store');
 const referenceStore = require('./references');
 const plugins = require('./plugins');
+const pluginPackage = require('./plugin-package');
 const skillPackage = require('./skill-package');
 const chromeBridge = require('./chrome-bridge');
 const crypto = require('crypto');
@@ -987,6 +988,38 @@ function setupIpc() {
       return { ok: true, skill };
     } catch (error) {
       return { ok: false, error: error.message || '技能包解析失败' };
+    }
+  });
+
+  // 插件包导入：ZIP 或文件夹里的 plugin.json 在本机解析后直接入插件库，
+// 不加载任意 JS、不向平台同步（插件只在本机可见）。
+  ipcMain.handle('plugin:importPackage', async (e, mode) => {
+    const kind = mode === 'folder' ? 'folder' : 'zip';
+    const picked = await dialog.showOpenDialog(
+      mainWindow,
+      kind === 'folder'
+        ? { title: '选择插件包文件夹', properties: ['openDirectory'] }
+        : {
+            title: '选择插件包 ZIP',
+            properties: ['openFile'],
+            filters: [{ name: '插件包', extensions: ['zip'] }]
+          }
+    );
+    if (picked.canceled || !picked.filePaths.length) {
+      return { ok: false, canceled: true };
+    }
+    try {
+      const manifest =
+        kind === 'folder'
+          ? pluginPackage.readFromDir(picked.filePaths[0])
+          : pluginPackage.readFromZip(picked.filePaths[0]);
+      const saved = plugins.save(manifest);
+      if (!saved.ok) return saved;
+      log('info', 'plugin package imported: ' + saved.plugin.id + ' · ' + saved.plugin.name);
+      refreshAgentSnapshot();
+      return { ok: true, plugin: saved.plugin };
+    } catch (error) {
+      return { ok: false, error: error.message || '插件包解析失败' };
     }
   });
 

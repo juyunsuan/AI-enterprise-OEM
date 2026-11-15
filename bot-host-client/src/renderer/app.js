@@ -833,7 +833,7 @@
   }
 
   function resetPluginForm() {
-    $('pluginMode').textContent = '新建';
+    $('pluginMode').textContent = '';
     delete $('pluginMode').dataset.id;
     $('plgName').value = '';
     $('plgKind').value = 'http';
@@ -841,6 +841,7 @@
     $('plgParams').value = '';
     $('plgConfig').value = PLUGIN_DEFAULT_CONFIG.http;
     note($('pluginHint'), '');
+    $('pluginEditorCard').classList.add('hidden');
   }
 
   function renderPlugins(list) {
@@ -849,7 +850,13 @@
     const box = $('pluginList');
     clear(box);
     if (!state.plugins.length) {
-      box.appendChild(el('span', 'muted', '还没有插件：点右上「新建插件」把常用接口或命令挂给 Agent。'));
+      box.appendChild(
+        el(
+          'span',
+          'muted',
+          '还没有插件：点右上「上传 ZIP / 选择文件夹」导入插件包（含 plugin.json）。'
+        )
+      );
       return;
     }
     state.plugins.forEach((plugin) => {
@@ -864,6 +871,7 @@
       const actions = el('div', 'list-actions');
       const edit = el('button', 'btn small', '编辑');
       edit.addEventListener('click', () => {
+        $('pluginEditorCard').classList.remove('hidden');
         $('pluginMode').textContent = '编辑：' + plugin.name;
         $('pluginMode').dataset.id = plugin.id;
         $('plgName').value = plugin.name;
@@ -895,10 +903,33 @@
     if (!pluginIdOf()) $('plgConfig').value = PLUGIN_DEFAULT_CONFIG[$('plgKind').value] || '';
   });
 
-  $('newPlugin').addEventListener('click', () => resetPluginForm());
   $('cancelPlugin').addEventListener('click', () => resetPluginForm());
 
+  // 插件包导入：只读本机 ZIP / 文件夹里的 plugin.json，导入后立即可用作 Agent 工具。
+  async function importPluginPackage(mode) {
+    const res = await api.importPluginPackage(mode);
+    if (!res || res.canceled) return;
+    if (res.ok) {
+      note(
+        $('pluginImportHint'),
+        '已导入：' + (res.plugin.name || res.plugin.id) + '（' + res.plugin.toolName + '）',
+        'ok'
+      );
+      resetPluginForm();
+      await loadPlugins();
+    } else {
+      note($('pluginImportHint'), res.error || '插件包导入失败', 'bad');
+    }
+  }
+  $('importPluginZip').addEventListener('click', () => importPluginPackage('zip'));
+  $('importPluginFolder').addEventListener('click', () => importPluginPackage('folder'));
+
   $('savePlugin').addEventListener('click', async () => {
+    const id = pluginIdOf();
+    if (!id) {
+      note($('pluginImportHint'), '新建插件请用「上传 ZIP / 选择文件夹」导入插件包', 'bad');
+      return;
+    }
     let params;
     let config;
     try {
@@ -909,7 +940,7 @@
       return;
     }
     const res = await api.savePlugin({
-      id: pluginIdOf(),
+      id,
       name: $('plgName').value,
       kind: $('plgKind').value,
       description: $('plgDesc').value,
@@ -920,9 +951,8 @@
       note($('pluginHint'), (res && res.error) || '保存失败', 'bad');
       return;
     }
-    note($('pluginHint'), '已保存：' + res.plugin.name + ' → 工具 ' + res.plugin.toolName, 'ok');
+    note($('pluginImportHint'), '已保存：' + res.plugin.name + ' → 工具 ' + res.plugin.toolName, 'ok');
     resetPluginForm();
-    note($('pluginHint'), '已保存', 'ok');
     await loadPlugins();
   });
 

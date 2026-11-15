@@ -10,7 +10,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const zlib = require('zlib');
+const { readEntryFromZip } = require('./zip-reader');
 
 const MAX_SKILL_FILE = 1024 * 1024;
 const MAX_BODY = 200_000;
@@ -99,90 +99,25 @@ function importFromDir(dir, depth = 0) {
   );
 }
 
-function findZipEnd(buf) {
-  const min = Math.max(0, buf.length - 65557);
-  for (let i = buf.length - 22; i >= min; i -= 1) {
-    if (buf.readUInt32LE(i) === 0x06054b50) return i;
-  }
-  return -1;
-}
-
-/** 只读解析 ZIP 中央目录，挑出最靠根目录的 SKILL.md。 */
-function readSkillFromZip(buf, zipPath) {
-  const eocd = findZipEnd(buf);
-  if (eocd < 0) throw new Error('不是有效的 ZIP 文件（找不到目录尾）');
-  const total = buf.readUInt16LE(eocd + 10);
-  const cdOffset = buf.readUInt32LE(eocd + 16);
-  if (total === 0 || cdOffset >= buf.length) throw new Error('ZIP 里没有文件');
-  let cursor = cdOffset;
-  const skills = [];
-  for (let i = 0; i < total; i += 1) {
-    if (cursor + 46 > buf.length || buf.readUInt32LE(cursor) !== 0x02014b50) {
-      throw new Error('ZIP 目录结构损坏');
-    }
-    const method = buf.readUInt16LE(cursor + 10);
-    const compSize = buf.readUInt32LE(cursor + 20);
-    const uncompSize = buf.readUInt32LE(cursor + 24);
-    const nameLen = buf.readUInt16LE(cursor + 28);
-    const extraLen = buf.readUInt16LE(cursor + 30);
-    const commentLen = buf.readUInt16LE(cursor + 32);
-    const localOffset = buf.readUInt32LE(cursor + 42);
-    // Windows 的 PowerShell Compress-Archive 会把条目名写成反斜杠，先归一化再匹配。
-    const name = buf
-      .subarray(cursor + 46, cursor + 46 + nameLen)
-      .toString('utf8')
-      .replace(/\\/g, '/');
-    if (
-      compSize === 0xffffffff ||
-      uncompSize === 0xffffffff ||
-      localOffset === 0xffffffff
-    ) {
-      throw new Error('暂不支持 ZIP64 技能包，请重新压缩为标准 ZIP');
-    }
-    if (/(^|\/)skill\.md$/i.test(name)) {
-      skills.push({ name, method, compSize, uncompSize, localOffset });
-    }
-    cursor += 46 + nameLen + extraLen + commentLen;
-  }
-  if (!skills.length) {
-    throw new Error('技能包缺少 SKILL.md：请把 SKILL.md 放到 ZIP 根目录或一层目录里');
-  }
-  skills.sort((a, b) => a.name.length - b.name.length);
-  const hit = skills[0];
-  if (hit.uncompSize > MAX_SKILL_FILE) throw new Error('SKILL.md 超过 1MB，无法导入');
-  if (hit.localOffset + 30 > buf.length || buf.readUInt32LE(hit.localOffset) !== 0x04034b50) {
-    throw new Error('ZIP 文件头损坏');
-  }
-  const localNameLen = buf.readUInt16LE(hit.localOffset + 26);
-  const localExtraLen = buf.readUInt16LE(hit.localOffset + 28);
-  const start = hit.localOffset + 30 + localNameLen + localExtraLen;
-  const raw = buf.subarray(start, start + hit.compSize);
-  if (raw.length !== hit.compSize) throw new Error('ZIP 数据不完整');
-  let content;
-  if (hit.method === 0) {
-    content = raw;
-  } else if (hit.method === 8) {
-    content = zlib.inflateRawSync(raw, { maxOutputLength: MAX_SKILL_FILE });
-  } else {
-    throw new Error('不支持的 ZIP 压缩方式（仅支持 store / deflate）');
-  }
-  const parent = hit.name.includes('/')
-    ? hit.name.slice(0, hit.name.lastIndexOf('/')).split('/').pop()
-    : path.basename(zipPath, path.extname(zipPath));
-  return parseSkillMarkdown(
-    content.toString('utf8'),
-    parent || path.basename(zipPath, path.extname(zipPath)),
-    parent || path.basename(zipPath, path.extname(zipPath)),
-  );
-}
-
 function importFromZip(file) {
   const stat = fs.statSync(file);
   if (!stat.isFile()) throw new Error('不是文件');
   if (stat.size > 20 * 1024 * 1024) {
     throw new Error('技能包 ZIP 超过 20MB，请只保留 SKILL.md 后重试');
   }
-  return readSkillFromZip(fs.readFileSync(file), file);
+  const hit = readEntryFromZip(
+    fs.readFileSync(file),
+    (name) => /(^|\/)skill\.md$/i.test(name),
+    { maxBytes: MAX_SKILL_FILE },
+  );
+  if (!hit) {
+    throw new Error('技能包缺少 SKILL.md：请把 SKILL.md 放到 ZIP 根目录或一层目录里');
+  }
+  const base = path.basename(file, path.extname(file));
+  const parent = hit.name.includes('/')
+    ? hit.name.slice(0, hit.name.lastIndexOf('/')).split('/').pop()
+    : base;
+  return parseSkillMarkdown(hit.text, parent || base, parent || base);
 }
 
 module.exports = {
