@@ -2801,6 +2801,8 @@ model WorkbuddyHost {
   userId            String    @map("user_id") @db.VarChar(64)
   /// 设备显示名（配对时用户填写）
   name              String    @default("") @db.VarChar(80)
+  /// DESKTOP＝BotBuddy 桌面主机；MOBOT＝Mobot 手机
+  clientKind        String    @default("DESKTOP") @map("client_kind") @db.VarChar(16)
   /// win | mac（客户端自报；本期不含 Linux 主机）
   platform          String    @default("") @db.VarChar(16)
   /// 主机令牌哈希：sha256(明文 wb_...)；明文只在配对成功响应里出现一次
@@ -2827,6 +2829,7 @@ model WorkbuddyHost {
 
   @@unique([userId, name])
   @@index([userId, status])
+  @@index([userId, clientKind, status])
   @@map("workbuddy_hosts")
 }
 
@@ -2968,6 +2971,8 @@ model WorkbuddyHostScheduleRun {
 model WorkbuddyHostPairCode {
   id         Int       @id @default(autoincrement())
   code       String    @unique @db.VarChar(12)
+  /// DESKTOP | MOBOT：连接码认领后建出的设备类型
+  clientKind String    @default("DESKTOP") @map("client_kind") @db.VarChar(16)
   /// 客户端自报设备信息 { os, hostname, clientVersion }
   deviceInfo Json      @default("{}") @map("device_info")
   /// 绑定后回填

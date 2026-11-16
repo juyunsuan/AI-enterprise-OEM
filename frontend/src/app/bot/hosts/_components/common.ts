@@ -12,6 +12,7 @@ import {
   type BotScheduleView,
   type BotHostModelGrant,
   type BotWorkspaceDetail,
+  type BotClientKind,
 } from "@enterprise/contracts";
 import { endpoint } from "@/api/endpoint";
 
@@ -33,6 +34,8 @@ export const SCHEDULE_LAST_STATUS_LABEL = BOT_SCHEDULE_LAST_STATUS_LABELS;
 export const PLATFORM_LABEL: Record<string, string> = {
   win: "Windows",
   mac: "macOS",
+  android: "Android",
+  ios: "iOS",
 };
 
 export function platformLabel(value: string) {
@@ -102,10 +105,14 @@ export type HostConversation = {
 };
 
 export const botHostApi = {
-  hosts: () => load<{ list: BotHostView[] }>(api.list({})),
+  hosts: (kind?: BotClientKind) =>
+    load<{ list: BotHostView[] }>(api.list({ query: kind ? { kind } : {} })),
   /** 配对：填了配对码走设备码通道，留空＝直接建主机并当场回一次令牌。 */
-  pair: (body: { name?: string; code?: string }) =>
-    mutate<{ host: BotHostView; token: string }>(api.pair({ body })),
+  pair: (body: {
+    name?: string;
+    code?: string;
+    clientKind?: BotClientKind;
+  }) => mutate<{ host: BotHostView; token: string }>(api.pair({ body })),
   setStatus: (hostId: number, enabled: boolean) =>
     mutate<{ host: BotHostView }>(
       api.setStatus({ params: { hostId: String(hostId) }, body: { enabled } }),
@@ -183,5 +190,11 @@ export const botHostApi = {
 export function hostHint(row: BotHostView) {
   const parts = [platformLabel(row.platform)];
   if (row.clientVersion) parts.push(`客户端 ${row.clientVersion}`);
+  if (row.mobot) {
+    if (row.mobot.battery) {
+      parts.push(`电量 ${row.mobot.battery}%${row.mobot.charging ? " · 充电中" : ""}`);
+    }
+    if (row.mobot.engine) parts.push(`引擎 ${row.mobot.engine}`);
+  }
   return parts.join(" · ");
 }

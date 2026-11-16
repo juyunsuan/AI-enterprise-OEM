@@ -7,6 +7,9 @@ import {
   BOT_HEARTBEAT_SECONDS,
   BOT_HOST_STATUS_LABELS,
   BOT_HOST_TOKEN_PREFIX,
+  BOT_CLIENT_KINDS,
+  MOBOT_HOST_TOKEN_PREFIX,
+  type BotClientKind,
   BOT_PENDING_QUEUE_LIMIT,
   BOT_SCHEDULE_LAST_STATUS_LABELS,
   BOT_SCHEDULE_STATUS_LABELS,
@@ -59,7 +62,7 @@ const INSTRUCTION_MAX = 4_000;
 const CONVERSATION_MESSAGE_LIMIT = 200;
 const CONVERSATION_COMMAND_LIMIT = 50;
 const SCHEDULE_DUE_LIMIT = 10;
-const PLATFORMS = ['win', 'mac'];
+const PLATFORMS = ['win', 'mac', 'android', 'ios'];
 /** 平台模型来源：跟随默认槽位 / 平台授权 / 客户端同步。 */
 type GrantSource = 'default' | 'platform' | 'client';
 type GrantSummary = NonNullable<BotHostView['modelGrant']>;
@@ -70,8 +73,17 @@ function hashToken(token: string) {
   return createHash('sha256').update(token).digest('hex');
 }
 
-function newHostToken() {
-  return `${BOT_HOST_TOKEN_PREFIX}${randomBytes(24).toString('hex')}`;
+function newHostToken(kind: BotClientKind = 'DESKTOP') {
+  const prefix =
+    kind === 'MOBOT' ? MOBOT_HOST_TOKEN_PREFIX : BOT_HOST_TOKEN_PREFIX;
+  return `${prefix}${randomBytes(24).toString('hex')}`;
+}
+
+function normalizeClientKind(raw: unknown): BotClientKind {
+  const value = clip(raw, 16).toUpperCase();
+  return (BOT_CLIENT_KINDS as readonly string[]).includes(value)
+    ? (value as BotClientKind)
+    : 'DESKTOP';
 }
 
 function newCommandCode() {
@@ -112,6 +124,7 @@ export type BotHostPrincipal = {
   id: number;
   userId: string;
   name: string;
+  clientKind: BotClientKind;
 };
 
 export type BotHostCommandPayload = {
@@ -187,9 +200,10 @@ export class BotHostService {
 
   // ---------------------------------------------------------------- 主机台账（界面侧）
 
-  async list(user: CurrentUser) {
+  async list(user: CurrentUser, kindRaw?: unknown) {
+    const clientKind = normalizeClientKind(kindRaw || 'DESKTOP');
     const rows = await this.prisma.workbuddyHost.findMany({
-      where: { userId: user.userId },
+      where: { userId: user.userId, clientKind },
       orderBy: [{ lastSeenAt: 'desc' }, { id: 'desc' }],
     });
     const pending = await this.prisma.workbuddyHostCommand.groupBy({
@@ -259,18 +273,19 @@ export class BotHostService {
   async pair(user: CurrentUser, body: Record<string, unknown>) {
     const code = clip(body.code, 12);
     const deviceInfo = toJsonObject(body.deviceInfo);
+    const clientKind = normalizeClientKind(body.clientKind);
     const platform = normalizePlatform(
       body.platform ?? deviceInfo.os ?? deviceInfo.platform,
     );
     const hostname = clip(deviceInfo.hostname, 40);
     const fallback = hostname
-      ? `Workbuddy · ${hostname}`
-      : `Bot 主机 · ${randomBytes(2).toString('hex')}`;
+      ? `${clientKind === 'MOBOT' ? 'Mobot' : 'Workbuddy'} · ${hostname}`
+      : `${clientKind === 'MOBOT' ? 'Mobot 手机' : 'Bot 主机'} · ${randomBytes(2).toString('hex')}`;
     const name = clip(body.name, 80) || fallback;
     if (code) {
-      return this.pairByCode(user, code, name, platform);
+      return this.pairByCode(user, code, name, platform, clientKind);
     }
-    return this.createHost(user, name, platform);
+    return this.createHost(user, name, platform, clientKind);
   }
 
   private async pairByCode(
@@ -278,6 +293,7 @@ export class BotHostService {
     code: string,
     name: string,
     platform: string,
+    clientKind: BotClientKind,
   ) {
     const row = await this.prisma.workbuddyHostPairCode.findUnique({
       where: { code },
@@ -295,7 +311,23 @@ export class BotHostService {
         '该连接码由其他账号在客户端生成，请用同一账号登录平台后再配对',
       );
     }
-    const created = await this.createHost(user, name, platform);
+    if (normalizeClientKind(row.clientKind) !== clientKind) {
+      throw new BusinessException(
+        ErrorCode.CONFLICT,
+        clientKind === 'MOBOT'
+          ? '该连接码来自 Bot 主机，请到「Bot 主机」页认领'
+          : '该连接码来自 Mobot 手机，请到「Mobot 手机」页认领',
+      );
+    }
+    const deviceInfo = toJsonObject(row.deviceInfo);
+    const effectivePlatform =
+      platform || normalizePlatform(deviceInfo.os ?? deviceInfo.platform);
+    const created = await this.createHost(
+      user,
+      name,
+      effectivePlatform,
+      clientKind,
+    );
     await this.prisma.workbuddyHostPairCode.update({
       where: { id: row.id },
       data: { hostId: created.host.id, issuedToken: created.token },
@@ -303,13 +335,19 @@ export class BotHostService {
     return { host: created.host, token: created.token };
   }
 
-  private async createHost(user: CurrentUser, name: string, platform: string) {
-    const token = newHostToken();
+  private async createHost(
+    user: CurrentUser,
+    name: string,
+    platform: string,
+    clientKind: BotClientKind = 'DESKTOP',
+  ) {
+    const token = newHostToken(clientKind);
     const row = await this.prisma.workbuddyHost.create({
       data: {
         userId: user.userId,
         name,
         platform,
+        clientKind,
         tokenHash: hashToken(token),
         tokenPrefix: token.slice(0, 10),
         status: 'NEVER',
@@ -372,7 +410,7 @@ export class BotHostService {
 
   async rotateToken(user: CurrentUser, hostIdRaw: string) {
     const row = await this.loadHost(user, hostIdRaw);
-    const token = newHostToken();
+    const token = newHostToken(normalizeClientKind(row.clientKind));
     await this.prisma.workbuddyHost.update({
       where: { id: row.id },
       data: { tokenHash: hashToken(token), tokenPrefix: token.slice(0, 10) },
@@ -1089,6 +1127,7 @@ export class BotHostService {
    */
   async requestPairCode(user: CurrentUser, body: Record<string, unknown>) {
     const deviceInfo = toJsonObject(body.deviceInfo);
+    const clientKind = normalizeClientKind(body.clientKind);
     let code = newPairCode();
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const exists = await this.prisma.workbuddyHostPairCode.findUnique({
@@ -1100,7 +1139,7 @@ export class BotHostService {
     }
     const expiresAt = new Date(Date.now() + PAIR_CODE_TTL_MS);
     await this.prisma.workbuddyHostPairCode.create({
-      data: { code, deviceInfo, expiresAt, userId: user.userId },
+      data: { code, clientKind, deviceInfo, expiresAt, userId: user.userId },
     });
     return { code, expiresAt: expiresAt.toISOString() };
   }
@@ -1149,7 +1188,11 @@ export class BotHostService {
   async hostByToken(raw: string): Promise<BotHostPrincipal | null> {
     const token = text(raw).trim();
     // 更名前已配对的客户端手里是 wb_ 令牌，继续认；新签发的都是 bot_。
-    if (!token.startsWith(BOT_HOST_TOKEN_PREFIX) && !token.startsWith('wb_')) {
+    if (
+      !token.startsWith(BOT_HOST_TOKEN_PREFIX) &&
+      !token.startsWith(MOBOT_HOST_TOKEN_PREFIX) &&
+      !token.startsWith('wb_')
+    ) {
       return null;
     }
     const row = await this.prisma.workbuddyHost.findFirst({
@@ -1166,7 +1209,12 @@ export class BotHostService {
         .catch(() => undefined);
       return null;
     }
-    return { id: row.id, userId: row.userId, name: row.name };
+    return {
+      id: row.id,
+      userId: row.userId,
+      name: row.name,
+      clientKind: normalizeClientKind(row.clientKind),
+    };
   }
 
   /** 心跳：刷新在线态 + 领取待执行指令 + 回带需要中断的指令码。 */
@@ -1431,9 +1479,18 @@ export class BotHostService {
    * 平台不拦也不提示，指令照常入队，跑不起来由客户端回执失败原因。
    */
   private resolveDispatchTarget(
-    host: { caps: Prisma.JsonValue; workingDir: string; name: string },
+    host: {
+      caps: Prisma.JsonValue;
+      workingDir: string;
+      name: string;
+      clientKind: string;
+    },
     body: Record<string, unknown>,
   ): { cwd: string; mode: string } {
+    if (normalizeClientKind(host.clientKind) === 'MOBOT') {
+      // 手机侧没有桌面工作区概念：不向移动端下发路径或执行模式。
+      return { cwd: '', mode: '' };
+    }
     const caps = readWorkspaceCaps(toJsonObject(host.caps));
     const requested = clip(body.workspace ?? body.cwd, 300);
     if (requested) {
@@ -1493,7 +1550,11 @@ export class BotHostService {
   ) {
     const payload = toJsonObject({
       instruction: input.instruction,
-      cwd: input.cwd || host.workingDir,
+      cwd:
+        input.cwd ||
+        (normalizeClientKind(host.clientKind) === 'MOBOT'
+          ? ''
+          : host.workingDir),
       timeoutSec: input.timeoutSec,
       mode: input.mode,
     });
@@ -1609,6 +1670,7 @@ export class BotHostService {
       id: number;
       name: string;
       platform: string;
+      clientKind: string;
       status: string;
       tokenPrefix: string;
       clientVersion: string;
@@ -1636,10 +1698,25 @@ export class BotHostService {
             ? 'ONLINE'
             : 'OFFLINE';
     const caps = readWorkspaceCaps(toJsonObject(row.caps));
+    const rawCaps = toJsonObject(row.caps);
+    const clientKind = normalizeClientKind(row.clientKind);
     return {
       id: row.id,
-      name: row.name || `Bot 主机 #${row.id}`,
+      name:
+        row.name ||
+        `${clientKind === 'MOBOT' ? 'Mobot 手机' : 'Bot 主机'} #${row.id}`,
       platform: row.platform,
+      clientKind,
+      mobot:
+        clientKind === 'MOBOT'
+          ? {
+              battery: Number(rawCaps.battery) || 0,
+              charging: rawCaps.charging === true,
+              network: text(rawCaps.network).slice(0, 24),
+              engine: text(rawCaps.engine).slice(0, 24),
+              modelSyncedAt: text(rawCaps.modelSyncedAt).slice(0, 40),
+            }
+          : null,
       status,
       statusLabel: BOT_HOST_STATUS_LABELS[status] || status,
       online,
@@ -1797,6 +1874,7 @@ type BotHostRowLike = {
   userId: string;
   name: string;
   workingDir: string;
+  clientKind: string;
 };
 
 // 供调度器与路由复用：指令终态判定收口在这里，避免各处再手写一份状态清单。

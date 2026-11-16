@@ -4,7 +4,12 @@ import { ReloadOutlined, RobotOutlined, SendOutlined } from "@ant-design/icons";
 import { App, Button, Input, Space, Spin, Table, Tag, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useState } from "react";
-import type { BotCommandView, BotHostView, BotMessageView } from "@enterprise/contracts";
+import type {
+  BotClientKind,
+  BotCommandView,
+  BotHostView,
+  BotMessageView,
+} from "@enterprise/contracts";
 import { EmptyState, Notice, Panel } from "@/components/ui/panel";
 import { useI18n } from "@/lib/i18n/i18n";
 import {
@@ -45,11 +50,14 @@ export function ChatPanel({
   hosts,
   hostId,
   onHostChange,
+  kind = "DESKTOP",
 }: {
   hosts: BotHostView[];
   hostId: number;
   onHostChange: (hostId: number) => void;
+  kind?: BotClientKind;
 }) {
+  const isMobile = kind === "MOBOT";
   const { message } = App.useApp();
   const { t } = useI18n();
   const [messages, setMessages] = useState<BotMessageView[]>([]);
@@ -102,7 +110,7 @@ export function ChatPanel({
     try {
       await botHostApi.send(hostId, {
         text: instruction,
-        workspace: target.workspace || undefined,
+        workspace: isMobile ? undefined : target.workspace || undefined,
       });
       setText("");
       await refresh();
@@ -140,18 +148,24 @@ export function ChatPanel({
         </Space>
       ),
     },
-    {
-      title: t("工作区"),
-      key: "workspace",
-      width: 200,
-      render: (_, row) => (
-        <Tooltip title={row.effectiveWorkspace || row.workspace || t("默认工作区")}>
-          <span className="text-12" style={{ maxWidth: 200 }}>
-            {row.effectiveWorkspace || row.workspace || t("默认工作区")}
-          </span>
-        </Tooltip>
-      ),
-    },
+    ...(isMobile
+      ? []
+      : [
+          {
+            title: t("工作区"),
+            key: "workspace",
+            width: 200,
+            render: (_: unknown, row: BotCommandView) => (
+              <Tooltip
+                title={row.effectiveWorkspace || row.workspace || t("默认工作区")}
+              >
+                <span className="text-12" style={{ maxWidth: 200 }}>
+                  {row.effectiveWorkspace || row.workspace || t("默认工作区")}
+                </span>
+              </Tooltip>
+            ),
+          },
+        ]),
     {
       title: "状态",
       dataIndex: "status",
@@ -250,12 +264,16 @@ export function ChatPanel({
         }
         extra={
           <div className="agent-workspace-row">
-            <span className="agent-pick-label">{t("工作区")}</span>
-            <WorkspaceSelect
-              detail={detail}
-              value={target.workspace}
-              onChange={(workspace) => setTarget({ workspace })}
-            />
+            {isMobile ? null : (
+              <>
+                <span className="agent-pick-label">{t("工作区")}</span>
+                <WorkspaceSelect
+                  detail={detail}
+                  value={target.workspace}
+                  onChange={(workspace) => setTarget({ workspace })}
+                />
+              </>
+            )}
             {host ? (
               <Tag color={hostStatusColor(host.status)}>
                 {HOST_STATUS_LABEL[host.status] || host.status}
@@ -272,10 +290,13 @@ export function ChatPanel({
               <div className="agent-empty-icon">
                 <RobotOutlined aria-hidden />
               </div>
-              <div className="agent-empty-title">开始一台主机的对话</div>
+              <div className="agent-empty-title">
+                {isMobile ? "开始一台 Mobot 手机的对话" : "开始一台主机的对话"}
+              </div>
               <p className="agent-empty-desc">
-                左侧先点一台主机，然后在面板右上角选工作区，说一句要它做的事。
-                客户端领到后在它本机跑，过程与结果回在这里。
+                {isMobile
+                  ? "左侧先点一台 Mobot 手机，说一句要它做的事。手机前台服务在线时由本地 Agent 执行，过程与结果回在这里；离线时指令先排队。"
+                  : "左侧先点一台主机，然后在面板右上角选工作区，说一句要它做的事。客户端领到后在它本机跑，过程与结果回在这里。"}
               </p>
             </div>
           ) : null}

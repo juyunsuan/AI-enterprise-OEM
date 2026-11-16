@@ -525,7 +525,7 @@ export function registerAutomationRoutes(
       c.workbuddyController.cancelTask(i.user, i.param['id']),
 
     // ---------- Bot 主机（Agent-Bot：BotBuddy 客户端领指令在本机执行） ----------
-    BotHost_list: async (i) => c.botHostController.list(i.user),
+    BotHost_list: async (i) => c.botHostController.list(i.user, i.query),
     BotHost_pair: async (i) => c.botHostController.pair(i.user, i.json),
     BotHost_setStatus: async (i) =>
       c.botHostController.setStatus(i.user, i.param['hostId'], i.json),

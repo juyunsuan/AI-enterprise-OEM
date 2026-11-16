@@ -9,8 +9,8 @@ import { BotHostService } from './bot-host.service';
 export class BotHostController {
   constructor(private readonly hosts: BotHostService) {}
 
-  async list(user: CurrentUser) {
-    return ok(await this.hosts.list(user));
+  async list(user: CurrentUser, query?: Record<string, unknown>) {
+    return ok(await this.hosts.list(user, query?.kind));
   }
 
   async pair(user: CurrentUser, body: Record<string, unknown>) {

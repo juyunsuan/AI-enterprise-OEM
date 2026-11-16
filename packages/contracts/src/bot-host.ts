@@ -13,6 +13,16 @@ import { z } from "zod";
 
 /** 主机令牌前缀：明文只在配对成功响应里出现一次，库内只存 sha256。 */
 export const BOT_HOST_TOKEN_PREFIX = "bot_";
+/** Mobot 手机令牌前缀（与桌面主机分命名空间，仍走同一张设备表与令牌头）。 */
+export const MOBOT_HOST_TOKEN_PREFIX = "mb_";
+
+/** 设备类型：桌面 BotBuddy / Mobot 手机。 */
+export const BOT_CLIENT_KINDS = ["DESKTOP", "MOBOT"] as const;
+export type BotClientKind = (typeof BOT_CLIENT_KINDS)[number];
+export const BOT_CLIENT_KIND_LABELS: Record<string, string> = {
+  DESKTOP: "Bot 主机",
+  MOBOT: "Mobot 手机",
+};
 /** 客户端调用主机通道时携带令牌的请求头。 */
 export const BOT_HOST_TOKEN_HEADER = "x-bot-token";
 
@@ -177,6 +187,17 @@ export const botHostViewSchema = z.object({
   tokenPrefix: z.string(),
   pendingCount: z.number(),
   channelCount: z.number(),
+  clientKind: z.enum(BOT_CLIENT_KINDS),
+  /** Mobot 手机自报状态（桌面主机为 null）；只展示，不参与调度。 */
+  mobot: z
+    .object({
+      battery: z.number(),
+      charging: z.boolean(),
+      network: z.string(),
+      engine: z.string(),
+      modelSyncedAt: z.string(),
+    })
+    .nullable(),
   workspace: botWorkspaceSummarySchema,
   /** 平台模型授权摘要（未授权为 null）：只给平台界面看，不下发客户端。 */
   modelGrant: z
@@ -304,7 +325,10 @@ export const botHostEndpoints = {
     method: "get" as const,
     path: "/enterprise/bot-hosts",
     params: z.object({}),
-    query: emptyQuery,
+    query: z.object({
+      /** 不传＝Bot 主机（桌面）；Mobot 手机页显式传 MOBOT。 */
+      kind: z.enum(BOT_CLIENT_KINDS).optional(),
+    }),
     body: z.undefined(),
     response: envelope(z.object({ list: z.array(botHostViewSchema) })),
   },

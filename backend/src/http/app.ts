@@ -65,7 +65,10 @@ import { registerGapsPublic } from '../gaps/gaps.public';
 import { registerModelPlazaPublic } from '../model-plaza/model-plaza.public';
 import { registerHardwarePublic } from '../hardware/hardware.public';
 import { registerRpaChromePublic } from '../rpa/rpa-chrome.public';
-import { registerBotHostPublic } from '../bot-host/bot-host.public';
+import {
+  registerBotHostPublic,
+  registerMobotPublic,
+} from '../bot-host/bot-host.public';
 import { registerHardwareMachineRoutes } from '../hardware/hardware.machine';
 import { registerWechatMpPublic } from '../wechat-mp/wechat-mp.public';
 import { registerMiniProgramPublic } from '../miniprogram/miniprogram.public';
@@ -464,6 +467,8 @@ export function createApp(services: Services) {
   registerRpaChromePublic(app, services, mcpService);
   // Bot 主机客户端通道：/api/public/bot-host/**，只认主机令牌（x-bot-token）。
   registerBotHostPublic(app, services, { account, auth, platform });
+  // Mobot 手机：与 Bot 主机同一服务，独立通道与 MOBOT 设备类型。
+  registerMobotPublic(app, services, { account, auth, platform });
   // 微信服务号：服务器配置回调与微信内网页授权（免登录，靠微信签名/state 自证）。
   registerWechatMpPublic(app, services, {
     issueSession: async (userId) => {

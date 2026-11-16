@@ -1,6 +1,9 @@
 import type { Context } from 'hono';
 import type { OpenAPIHono } from '@hono/zod-openapi';
-import { BOT_HOST_TOKEN_HEADER } from '@enterprise/contracts';
+import {
+  BOT_HOST_TOKEN_HEADER,
+  type BotClientKind,
+} from '@enterprise/contracts';
 import type { ApiEnv } from '../http/types';
 import type { Services } from '../http/services';
 import type { AccountModule } from '../account/account.routes';
@@ -55,12 +58,23 @@ function text(value: unknown, max = 200) {
   return typeof value === 'string' ? value.trim().slice(0, max) : '';
 }
 
+export interface BotHostPublicOptions {
+  /** 通道前缀：桌面 /api/public/bot-host，Mobot /api/public/mobot。 */
+  basePath?: string;
+  /** 该通道只接受此类型的设备令牌；不传＝桌面通道。 */
+  clientKind?: BotClientKind;
+}
+
 export function registerBotHostPublic(
   app: OpenAPIHono<ApiEnv>,
   services: Services,
   deps: BotHostPublicDeps,
+  options: BotHostPublicOptions = {},
 ) {
   const hosts = services.botHost;
+  const basePath = options.basePath || '/api/public/bot-host';
+  const requiredKind: BotClientKind =
+    options.clientKind === 'MOBOT' ? 'MOBOT' : 'DESKTOP';
   // 客户端登录按 IP 兜底限流；账号维度的连续失败锁定仍在 AccountService 里。
   const loginLimit = new RateWindow(30, 10 * 60_000);
 
@@ -70,7 +84,7 @@ export function registerBotHostPublic(
     const host = await hosts.hostByToken(
       c.req.header(BOT_HOST_TOKEN_HEADER) || '',
     );
-    if (!host) {
+    if (!host || host.clientKind !== requiredKind) {
       return c.json(
         denied('主机令牌无效或已失效，请在客户端里重新配对本站账号'),
         401,
@@ -175,7 +189,7 @@ export function registerBotHostPublic(
   };
 
   // 客户端登录：平台账号密码换 30 天会话令牌。绑定连接码必须先走到这一步。
-  app.post('/api/public/bot-host/login', async (c) => {
+  app.post(basePath + '/login', async (c) => {
     const ip = clientIp(c) || 'unknown';
     try {
       loginLimit.consume(ip, '登录尝试过于频繁，请 10 分钟后再试');
@@ -213,7 +227,7 @@ export function registerBotHostPublic(
   });
 
   // 会话续期/校验：客户端启动时带旧令牌来换最新的昵称、站点名与积分余额。
-  app.post('/api/public/bot-host/session', async (c) => {
+  app.post(basePath + '/session', async (c) => {
     const user = await sessionUser(c);
     if (!user) return c.json(denied('登录已失效，请重新登录'), 401);
     return open(c, async () => profileOf(user));
@@ -221,17 +235,20 @@ export function registerBotHostPublic(
 
   // 申请配对码：客户端展示 6 位码，用户在站内「Bot 主机」页输入认领。
   // 码与账号绑定：谁登录客户端谁申请，站内必须用同一账号认领。
-  app.post('/api/public/bot-host/pair', (c) =>
-    signedIn(c, (user, body) => hosts.requestPairCode(user, body)),
+  app.post(basePath + '/pair', (c) =>
+    signedIn(c, (user, body) =>
+      // 通道即设备类型：桌面通道只能申请桌面码，Mobot 通道只能申请 MOBOT 码。
+      hosts.requestPairCode(user, { ...body, clientKind: requiredKind }),
+    ),
   );
 
   // 轮询配对结果：用户认领后取回一次性令牌并作废该码。
-  app.post('/api/public/bot-host/pair/poll', (c) =>
+  app.post(basePath + '/pair/poll', (c) =>
     signedIn(c, (user, body) => hosts.pollPairCode(user, body)),
   );
 
   // 心跳：刷新在线态，顺带领取待执行指令、需要中断的指令码与积分余额。
-  app.post('/api/public/bot-host/heartbeat', (c) =>
+  app.post(basePath + '/heartbeat', (c) =>
     handle(c, async (host, body) => ({
       ...(await hosts.heartbeat(host, body, clientIp(c))),
       points: await services.points.ledger.balance(host.userId).catch(() => 0),
@@ -239,27 +256,42 @@ export function registerBotHostPublic(
   );
 
   // 流式进度：回传 ACP 片段，并取回平台的取消标记。
-  app.post('/api/public/bot-host/progress', (c) =>
+  app.post(basePath + '/progress', (c) =>
     handle(c, (host, body) => hosts.progress(host, body)),
   );
 
   // 终结回执：按 commandCode 幂等。
-  app.post('/api/public/bot-host/result', (c) =>
+  app.post(basePath + '/result', (c) =>
     handle(c, (host, body) => hosts.result(host, body)),
   );
 
   // 本机改完模型设置同步到平台（平台侧落一条「BotBuddy · 主机名」渠道并授权给本机）。
-  app.post('/api/public/bot-host/model-settings', (c) =>
+  app.post(basePath + '/model-settings', (c) =>
     handle(c, (host, body) => hosts.syncModelFromClient(host, body)),
   );
 
   // 本机清空模型设置：撤掉客户端同步的覆盖项，主机回到跟随平台默认模型。
-  app.delete('/api/public/bot-host/model-settings', (c) =>
+  app.delete(basePath + '/model-settings', (c) =>
     handle(c, (host) => hosts.clearClientModel(host)),
   );
 
   // 客户端退出配对：本机令牌保留，仅转离线（重新配对才换令牌）。
-  app.post('/api/public/bot-host/logout', (c) =>
+  app.post(basePath + '/logout', (c) =>
     handle(c, (host) => hosts.logout(host)),
   );
+}
+
+/**
+ * Mobot 手机通道：与 Bot 主机共用登录、配对、心跳、指令与模型授权实现；
+ * 独立前缀 + 强制 MOBOT 设备类型，桌面令牌进不来、Mobot 令牌也进不了桌面通道。
+ */
+export function registerMobotPublic(
+  app: OpenAPIHono<ApiEnv>,
+  services: Services,
+  deps: BotHostPublicDeps,
+) {
+  registerBotHostPublic(app, services, deps, {
+    basePath: '/api/public/mobot',
+    clientKind: 'MOBOT',
+  });
 }

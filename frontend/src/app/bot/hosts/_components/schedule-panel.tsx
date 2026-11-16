@@ -28,7 +28,12 @@ import {
   nextRunText,
   type ScheduleDraft,
 } from "@/lib/schedule";
-import { type BotScheduleView, type BotScheduleRunView, type BotHostView } from "@enterprise/contracts";
+import {
+  type BotClientKind,
+  type BotScheduleView,
+  type BotScheduleRunView,
+  type BotHostView,
+} from "@enterprise/contracts";
 import {
   HOST_STATUS_LABEL,
   SCHEDULE_LAST_STATUS_LABEL,
@@ -87,13 +92,16 @@ export function SchedulePanel({
   onHostChange,
   schedules,
   reload,
+  kind = "DESKTOP",
 }: {
   hosts: BotHostView[];
   hostId: number;
   onHostChange: (hostId: number) => void;
   schedules: BotScheduleView[];
   reload: () => Promise<void>;
+  kind?: BotClientKind;
 }) {
+  const isMobile = kind === "MOBOT";
   const { message } = App.useApp();
   const { t } = useI18n();
   const { request, modal } = usePasswordConfirm();
@@ -140,7 +148,7 @@ export function SchedulePanel({
       hostId: draft.hostId,
       title: draft.title.trim(),
       instruction: draft.instruction.trim(),
-      workspace: draft.target.workspace || undefined,
+      workspace: isMobile ? undefined : draft.target.workspace || undefined,
       ...scheduleBody(draft.schedule),
     };
     setBusy(true);
@@ -236,18 +244,22 @@ export function SchedulePanel({
         </Tooltip>
       ),
     },
-    {
-      title: t("工作区"),
-      key: "workspace",
-      width: 170,
-      render: (_, row) => (
-        <Tooltip title={row.workspace || t("默认工作区")}>
-          <span className="text-12" style={{ maxWidth: 170 }}>
-            {row.workspace || t("默认工作区")}
-          </span>
-        </Tooltip>
-      ),
-    },
+    ...(isMobile
+      ? []
+      : [
+          {
+            title: t("工作区"),
+            key: "workspace",
+            width: 170,
+            render: (_: unknown, row: BotScheduleView) => (
+              <Tooltip title={row.workspace || t("默认工作区")}>
+                <span className="text-12" style={{ maxWidth: 170 }}>
+                  {row.workspace || t("默认工作区")}
+                </span>
+              </Tooltip>
+            ),
+          },
+        ]),
     {
       title: "排期",
       key: "schedule",
@@ -339,8 +351,14 @@ export function SchedulePanel({
 
   if (!hosts.length) {
     return (
-      <Panel title="主机定时任务">
-        <EmptyState text="先在「主机」页签配对一台主机" />
+      <Panel title={isMobile ? "Mobot 定时任务" : "主机定时任务"}>
+        <EmptyState
+          text={
+            isMobile
+              ? "先在「设备」页签配对一台 Mobot 手机"
+              : "先在「主机」页签配对一台主机"
+          }
+        />
       </Panel>
     );
   }
@@ -348,7 +366,7 @@ export function SchedulePanel({
   return (
     <>
       <div className="agent-shell">
-        <Panel title="主机">
+        <Panel title={isMobile ? "Mobot 手机" : "主机"}>
           <div className="agent-conv-list">
             {hosts.map((row) => (
               <div
@@ -365,7 +383,9 @@ export function SchedulePanel({
             ))}
           </div>
           <div className="text-12 muted" style={{ marginTop: 8 }}>
-            点一台主机查看它的定时任务；主机离线时到点指令保持待执行，上线即领取。
+            {isMobile
+              ? "点一台 Mobot 手机查看定时任务；手机离线时到点指令保持待执行，上线即领取。"
+              : "点一台主机查看它的定时任务；主机离线时到点指令保持待执行，上线即领取。"}
           </div>
         </Panel>
 
@@ -395,7 +415,13 @@ export function SchedulePanel({
 
       <Modal
         open={open}
-        title={editing ? `修改定时任务（${editing.title}）` : "新建主机定时任务"}
+        title={
+          editing
+            ? `修改定时任务（${editing.title}）`
+            : isMobile
+              ? "新建 Mobot 定时任务"
+              : "新建主机定时任务"
+        }
         onCancel={close}
         onOk={() => void submit()}
         okText={busy ? "提交中" : editing ? "保存修改" : "创建"}
@@ -423,15 +449,17 @@ export function SchedulePanel({
               />
             </label>
           ) : null}
-          <div className="data-table-form-item" style={{ gridColumn: "1 / -1" }}>
-            <span className="data-table-form-label">工作区</span>
-            <WorkspacePicker
-              detail={detail}
-              value={draft.target}
-              onChange={(target) => patch({ target })}
-              onReload={reloadDetail}
-            />
-          </div>
+          {isMobile ? null : (
+            <div className="data-table-form-item" style={{ gridColumn: "1 / -1" }}>
+              <span className="data-table-form-label">工作区</span>
+              <WorkspacePicker
+                detail={detail}
+                value={draft.target}
+                onChange={(target) => patch({ target })}
+                onReload={reloadDetail}
+              />
+            </div>
+          )}
           <label className="data-table-form-item">
             <span className="data-table-form-label">
               任务名称<b style={{ color: "var(--danger)" }}> *</b>
@@ -462,7 +490,7 @@ export function SchedulePanel({
             allowOnce={false}
           />
           <div className="text-12 muted" style={{ gridColumn: "1 / -1" }}>
-            到点只负责把指令排进该主机的队列；主机离线时指令保持待执行，客户端上线心跳即领取。
+            到点只负责把指令排进该设备的队列；离线时指令保持待执行，上线心跳即领取。
             周期重复的上一轮跑到终态后才算完成，错过的时刻不补跑。
           </div>
         </div>

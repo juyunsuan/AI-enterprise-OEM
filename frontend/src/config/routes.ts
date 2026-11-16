@@ -302,6 +302,7 @@ export const enterpriseRoute: EnterpriseRoute = {
           icon: "robot",
           routes: [
             { path: "/bot/hosts", name: "Bot 主机", icon: "network" },
+            { path: "/bot/mobots", name: "Mobot 手机", icon: "mobile" },
             { path: "/workbuddy", name: "Workbuddy 企业版", icon: "robot" },
           ],
         },
@@ -548,6 +549,11 @@ export const PAGE_META: Record<
     title: "Workbuddy 企业版",
     description:
       "按用户归属的腾讯云 Workbuddy 企业版：计划任务（口水话经 AI 澄清成任务书、拆条派发、同步 Agent 消息）、Agent（创建 / 版本 / 会话）、Workbuddy Enterprise 账号（用户自己的 SecretId / SecretKey 密文保存，可配多把并行）、AI 调用账号（第三方平台口令 / API Key / Cookie 加密保存，按 Workbuddy Enterprise 账号绑定授权，经机器通道按绑定取用）。",
+  },
+  "/bot/mobots": {
+    title: "Mobot 手机",
+    description:
+      "Mobot 手机通过 6 位连接码与平台账号配对：心跳领取平台 Prompt，由手机内的本地 Agent 执行并流式回传。平台只下发「做什么」与「做到哪了」，不读取手机模型、技能与本地文件；配对后平台模型授权会同步到手机现有模型配置，手机离线时指令排队、上线即领取。",
   },
   "/bot/hosts": {
     title: "Bot 主机",

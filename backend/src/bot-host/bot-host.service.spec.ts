@@ -19,7 +19,12 @@ import { BotHostService } from './bot-host.service';
 type Row = Record<string, unknown>;
 
 const user = new CurrentUser('u1', 'owner', 'user');
-const hostPrincipal = { id: 1, userId: 'u1', name: 'PC' };
+const hostPrincipal = {
+  id: 1,
+  userId: 'u1',
+  name: 'PC',
+  clientKind: 'DESKTOP' as const,
+};
 
 function matches(row: Row, where: Row): boolean {
   return Object.entries(where).every(([key, cond]) => {
@@ -86,6 +91,25 @@ function table(seed: Row[] = [], defaults: Row = {}) {
       Promise.resolve(
         seed.filter((item) => matches(item, whereOf(opts))).length,
       ),
+    groupBy: (opts: Row = {}) => {
+      const by = Array.isArray(opts['by']) ? (opts['by'] as string[]) : [];
+      const groups = new Map<string, { row: Row; count: number }>();
+      for (const item of seed.filter((row) => matches(row, whereOf(opts)))) {
+        const key = by.map((field) => String(item[field])).join('|');
+        const current = groups.get(key);
+        if (current) current.count += 1;
+        else groups.set(key, { row: item, count: 1 });
+      }
+      return Promise.resolve(
+        [...groups.values()].map(({ row, count }) => ({
+          ...by.reduce<Row>((acc, field) => {
+            acc[field] = row[field];
+            return acc;
+          }, {}),
+          _count: { _all: count },
+        })),
+      );
+    },
     create: ({ data }: { data: Row }) => {
       const row: Row = {
         id: (seq += 1),
@@ -216,6 +240,7 @@ const hostRow = {
   userId: 'u1',
   name: 'PC',
   platform: 'win',
+  clientKind: 'DESKTOP',
   tokenHash: '',
   tokenPrefix: 'bot_abc',
   status: 'ONLINE',
@@ -237,6 +262,8 @@ const hostRow = {
   workingDir: '/workspace',
   heartbeatIntervalSec: 5,
   enabled: true,
+  createdAt: new Date('2026-01-01T00:00:00Z'),
+  updatedAt: new Date('2026-01-01T00:00:00Z'),
 };
 
 /** 只改 caps 里的 Agent 快照，其余保持在线主机的口径。 */
@@ -592,7 +619,7 @@ describe('BotHostService', () => {
   it('平台模型授权：没默认模型时心跳不下发；AIPDD 默认模型用平台 Key 自动下发', async () => {
     const { service } = setup({ hosts: [hostRow] });
     const beat = await service.heartbeat(
-      { id: 1, userId: 'u1', name: '测试主机' },
+      { id: 1, userId: 'u1', name: '测试主机', clientKind: 'DESKTOP' },
       { caps: {} },
       '127.0.0.1',
     );
@@ -617,7 +644,7 @@ describe('BotHostService', () => {
         model: 'ap-deepseek-v4-flash',
       });
       const granted = await withSlot.heartbeat(
-        { id: 1, userId: 'u1', name: '测试主机' },
+        { id: 1, userId: 'u1', name: '测试主机', clientKind: 'DESKTOP' },
         { caps: {} },
         '127.0.0.1',
       );
@@ -632,7 +659,7 @@ describe('BotHostService', () => {
 
       // 内容相同的第二次心跳只发「未变化」标记，客户端据此跳过，不再重复建渠道。
       const again = await withSlot.heartbeat(
-        { id: 1, userId: 'u1', name: '测试主机' },
+        { id: 1, userId: 'u1', name: '测试主机', clientKind: 'DESKTOP' },
         { caps: {} },
         '127.0.0.1',
       );
@@ -735,7 +762,12 @@ describe('BotHostService', () => {
       model: 'local-choice',
     });
 
-    const principal = { id: 1, userId: 'u1', name: 'PC' };
+    const principal = {
+      id: 1,
+      userId: 'u1',
+      name: 'PC',
+      clientKind: 'DESKTOP' as const,
+    };
     await expect(service.clearClientModel(principal)).resolves.toEqual({
       removed: true,
     });
@@ -772,5 +804,86 @@ describe('BotHostService', () => {
       status: 'DISABLED',
       tokenHash: '',
     });
+  });
+  it('Mobot 与桌面主机按 clientKind 隔离，不互相串台', async () => {
+    const mobotRow = {
+      ...hostRow,
+      id: 2,
+      name: 'Mobot 手机',
+      platform: 'android',
+      clientKind: 'MOBOT',
+      tokenPrefix: 'mb_abc',
+    };
+    const { service } = setup({ hosts: [hostRow, mobotRow] });
+
+    const desktops = await service.list(user);
+    expect(desktops.list.map((row) => row.id)).toEqual([1]);
+    expect(desktops.list[0].clientKind).toBe('DESKTOP');
+    expect(desktops.list[0].mobot).toBeNull();
+
+    const mobots = await service.list(user, 'MOBOT');
+    expect(mobots.list.map((row) => row.id)).toEqual([2]);
+    expect(mobots.list[0].clientKind).toBe('MOBOT');
+    expect(mobots.list[0].mobot).toMatchObject({
+      battery: 0,
+      charging: false,
+    });
+  });
+
+  it('Mobot 配对码：按 kind 申请与认领，签发 mb_ 令牌，桌面页不能认领', async () => {
+    const { service, workbuddyHostPairCode, workbuddyHost } = setup({});
+    const issued = await service.requestPairCode(user, {
+      clientKind: 'MOBOT',
+      deviceInfo: { hostname: 'Pixel', os: 'android' },
+    });
+    expect(workbuddyHostPairCode.rows[0]).toMatchObject({
+      clientKind: 'MOBOT',
+      userId: 'u1',
+    });
+
+    await expect(
+      service.pair(user, { code: issued.code, clientKind: 'DESKTOP' }),
+    ).rejects.toThrow('Mobot 手机');
+
+    const paired = await service.pair(user, {
+      code: issued.code,
+      clientKind: 'MOBOT',
+      name: '我的手机',
+    });
+    expect(paired.token.startsWith('mb_')).toBe(true);
+    expect(paired.host.clientKind).toBe('MOBOT');
+    expect(workbuddyHost.rows[0]).toMatchObject({
+      clientKind: 'MOBOT',
+      name: '我的手机',
+      platform: 'android',
+    });
+
+    const polled = await service.pollPairCode(user, { code: issued.code });
+    expect(polled).toMatchObject({ paired: true, hostId: paired.host.id });
+    expect(polled.token.startsWith('mb_')).toBe(true);
+  });
+
+  it('Mobot 向手机下发指令时不携带桌面工作区或执行模式', async () => {
+    const { service } = setup({
+      hosts: [
+        {
+          ...hostRow,
+          id: 2,
+          clientKind: 'MOBOT',
+          platform: 'android',
+          caps: {
+            defaultPath: '/should-not-leak',
+            list: [{ path: '/should-not-leak' }],
+          },
+        },
+      ],
+    });
+    const { command } = await service.send(user, '2', {
+      text: '你好',
+      workspace: '/should-not-leak',
+      mode: 'danger-full-access',
+    });
+    expect(command.workspace).toBe('');
+    expect(command.mode).toBe('');
   });
 });
