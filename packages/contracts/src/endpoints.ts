@@ -24,6 +24,7 @@ import { notificationsEndpoints } from "./notifications";
 import { orgStaffEndpoints } from "./org-staff";
 import { serviceDeskEndpoints } from "./service-desk";
 import { livecodeEndpoints } from "./livecode";
+import { overseasNavEndpoints } from "./overseas-nav";
 import { crmEndpoints } from "./crm";
 import { biEndpoints } from "./bi";
 import { lowcodeEndpoints } from "./lowcode";
@@ -15575,6 +15576,7 @@ type ModuleEndpoints = typeof adminPageEndpoints &
   typeof orgStaffEndpoints &
   typeof serviceDeskEndpoints &
   typeof livecodeEndpoints &
+  typeof overseasNavEndpoints &
   typeof crmEndpoints &
   typeof biEndpoints &
   typeof lowcodeEndpoints &
@@ -15632,6 +15634,7 @@ export const endpoints: ModuleEndpoints & typeof localEndpoints = {
   ...orgStaffEndpoints,
   ...serviceDeskEndpoints,
   ...livecodeEndpoints,
+  ...overseasNavEndpoints,
   ...crmEndpoints,
   ...biEndpoints,
   ...lowcodeEndpoints,

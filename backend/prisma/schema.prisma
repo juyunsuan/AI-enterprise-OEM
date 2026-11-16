@@ -13250,3 +13250,41 @@ model MiniProgramBinding {
   @@index([unionId])
   @@map("miniprogram_bindings")
 }
+
+/// 出海导航：两级分类（parent 为空即一级分类），默认数据由 0105 迁移写入。
+model OverseasNavCategory {
+  id        Int      @id @default(autoincrement())
+  parentId  Int?     @map("parent_id")
+  name      String   @db.VarChar(100)
+  sortOrder Int      @default(0) @map("sort_order")
+  visible   Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  parent   OverseasNavCategory?  @relation("OverseasNavCategoryTree", fields: [parentId], references: [id])
+  children OverseasNavCategory[] @relation("OverseasNavCategoryTree")
+  items    OverseasNavItem[]
+
+  @@index([parentId, sortOrder])
+  @@map("overseas_nav_categories")
+}
+
+/// 出海导航站点：同一分类下 URL 唯一。
+model OverseasNavItem {
+  id          Int      @id @default(autoincrement())
+  categoryId  Int      @map("category_id")
+  title       String   @db.VarChar(200)
+  description String   @default("") @db.VarChar(500)
+  url         String   @db.VarChar(500)
+  logoUrl     String   @default("") @map("logo_url") @db.VarChar(500)
+  sortOrder   Int      @default(0) @map("sort_order")
+  visible     Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  category OverseasNavCategory @relation(fields: [categoryId], references: [id])
+
+  @@unique([categoryId, url])
+  @@index([categoryId, sortOrder])
+  @@map("overseas_nav_items")
+}

@@ -1251,6 +1251,19 @@ export function registerAutomationRoutes(
     AdminMarketingQr_disable: async (i) =>
       c.livecodeController.adminDisable(i.user, i.param['id'], i.json),
 
+    // ---------- 出海导航（营销工具：分类 + 站点，默认数据由迁移写入） ----------
+    OverseasNav_tree: async (i) => c.overseasNavController.tree(i.user),
+    AdminOverseasNav_tree: async (i) =>
+      c.overseasNavController.adminTree(i.user),
+    AdminOverseasNav_saveCategory: async (i) =>
+      c.overseasNavController.saveCategory(i.user, i.json),
+    AdminOverseasNav_removeCategory: async (i) =>
+      c.overseasNavController.removeCategory(i.user, i.param['id']),
+    AdminOverseasNav_saveItem: async (i) =>
+      c.overseasNavController.saveItem(i.user, i.json),
+    AdminOverseasNav_removeItem: async (i) =>
+      c.overseasNavController.removeItem(i.user, i.param['id']),
+
     // ---------- 营销问卷与调研（营销工具：回收数据写入多维表格） ----------
     Survey_page: async (i) =>
       ok(await c.surveyController.page(i.user, i.query)),

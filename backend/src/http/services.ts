@@ -222,6 +222,8 @@ import { ServiceDeskService } from '../service-desk/service-desk.service';
 import { ServiceDeskController } from '../service-desk/service-desk.controller';
 import { LivecodeService } from '../livecode/livecode.service';
 import { LivecodeController } from '../livecode/livecode.controller';
+import { OverseasNavController } from '../overseas-nav/overseas-nav.controller';
+import { OverseasNavService } from '../overseas-nav/overseas-nav.service';
 import { CrmScopeService } from '../crm/crm.scope';
 import { CrmSettingsService } from '../crm/crm.settings.service';
 import { CrmLeadService } from '../crm/crm.lead.service';
@@ -1378,6 +1380,8 @@ export function createServices() {
   const serviceDeskController = new ServiceDeskController(serviceDeskService);
   const livecodeService = new LivecodeService(prismaService, ossService);
   const livecodeController = new LivecodeController(livecodeService);
+  const overseasNavService = new OverseasNavService(prismaService);
+  const overseasNavController = new OverseasNavController(overseasNavService);
   const lowcodeAccessService = new LowCodeAccessService(
     prismaService,
     identityService,
@@ -2938,6 +2942,7 @@ export function createServices() {
       orgStaffController,
       serviceDeskController,
       livecodeController,
+      overseasNavController,
       crmController,
       biController,
       growthController,

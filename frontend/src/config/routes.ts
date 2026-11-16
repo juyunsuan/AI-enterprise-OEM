@@ -207,6 +207,13 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     group: "capability",
   },
   {
+    key: "overseas-nav",
+    name: "出海导航",
+    icon: "compass",
+    desc: "营销工具「出海导航」的分类与站点维护：Logo、标题、简介、URL、排序与显示状态；默认数据随系统安装写入。",
+    group: "system",
+  },
+  {
     key: "terms",
     name: "条款版本",
     icon: "file-done",

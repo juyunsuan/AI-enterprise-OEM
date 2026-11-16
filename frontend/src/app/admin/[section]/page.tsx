@@ -31,6 +31,7 @@ import { ModelPlazaAdminTab } from "../_components/model-plaza-admin-tab";
 import { HardwareAdminTab } from "../_components/hardware-admin-tab";
 import { WechatMpTab } from "../_components/wechat-mp-tab";
 import { MiniProgramTab } from "../_components/miniprogram-tab";
+import { OverseasNavAdminTab } from "../_components/overseas-nav-admin-tab";
 import {
   GapsChangelogTab,
   GapsEntitlementsTab,
@@ -106,6 +107,7 @@ export default function AdminSectionPage() {
       {section === "ai-code" ? <AiCodeTab /> : null}
       {section === "wechat-mp" ? <WechatMpTab /> : null}
       {section === "miniprogram" ? <MiniProgramTab /> : null}
+      {section === "overseas-nav" ? <OverseasNavAdminTab /> : null}
       {section === "settings" ? <SettingsTab /> : null}
     </>
   );
