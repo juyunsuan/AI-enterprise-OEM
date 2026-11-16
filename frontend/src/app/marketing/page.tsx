@@ -71,7 +71,7 @@ export default function MarketingPage() {
   const { hiddenBoardTabs } = useSiteBrand();
   const tabs: HeroTab[] = [
     { key: "requests", label: <><UnorderedListOutlined aria-hidden /> 需求信息</> },
-    // 资源库页签恒排末尾（全站口径）：达人建联 / GEO-AI引擎优化 / 潜客挖掘已迁至「工作台 → 营销工具」，独立站见「工作台 → 国际独立站」
+    // 资源库页签恒排末尾（全站口径）：达人建联 / GEO-AI引擎优化 / 潜客挖掘已迁至「工作台 → 营销工具」，独立站见「工作台 → 营销工具 → 国际独立站」
     { key: "providers", label: <><TagOutlined aria-hidden /> 营销服务商</> },
     serviceMarketTab("营销服务市集"),
   ];
@@ -136,7 +136,7 @@ export default function MarketingPage() {
           isEnterprise
             ? "提交营销需求后，服务商在消息通道直接回复即接收对接"
             : "服务商直接回复企业需求即接收对接，无需先点接收"
-        }）。达人建联、GEO-AI引擎优化与 Google 潜客线索挖掘已迁至「工作台 → 营销工具」，独立站建站见「工作台 → 国际独立站」。`,
+        }）。达人建联、GEO-AI引擎优化与 Google 潜客线索挖掘已迁至「工作台 → 营销工具」，独立站建站见「工作台 → 营销工具 → 国际独立站」。`,
       }}
       tabs={visibleTabs}
       activeTab={activeTab}

@@ -45,7 +45,7 @@ const EMPTY_PROJECT = {
 /**
  * GEO-AI引擎优化：项目 → 问题库 → 采集批次（逐条观测）→ 报告 → 选题池，
  * 指标口径与 AIworkin GEO 技能包 geo_metrics.py 一致；另有发稿平台推荐（按语言筛）。
- * 独立站已拆到「工作台 → 国际独立站」，这里只做优化分析。
+ * 独立站建站见营销工具「国际独立站」卡片，这里只做优化分析。
  * 采集平台 Key 由每个账号在这里配自己的（只服务本人项目，管理员也看不到别人的 Key）。
  */
 export function GeoTab() {
@@ -73,7 +73,7 @@ export function GeoTab() {
     const list = projectsQuery.data;
     setProjectId(current => current && list.some(item => item.id === current) ? current : list[0]?.id ?? null);
   }, [projectsQuery.data]);
-  // 功能目录的旧链接 ?tab=geo-site 仍可能被收藏：独立站已拆成独立页面，直接跳过去。
+  // 功能目录的旧链接 ?tab=geo-site 仍可能被收藏：国际独立站已并入营销工具，直接跳到该页面。
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get("tab") === "geo-site") {
       window.location.replace("/international-site");

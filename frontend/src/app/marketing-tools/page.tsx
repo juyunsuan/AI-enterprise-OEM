@@ -9,6 +9,7 @@ import {
   EnvironmentOutlined,
   FormOutlined,
   GiftOutlined,
+  GlobalOutlined,
   LinkOutlined,
   MailOutlined,
   PhoneOutlined,
@@ -23,6 +24,7 @@ import {
   ThunderboltOutlined,
 } from "@ant-design/icons";
 import { Button, Tag } from "antd";
+import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import {
@@ -66,6 +68,7 @@ type ToolKey =
   | "leads"
   | "distribution"
   | "overseas-nav"
+  | "international-site"
   | "survey"
   | "mkt-skills"
   | "salesbuddy"
@@ -80,6 +83,8 @@ type ToolCard = {
   group: ToolGroupKey;
   /** 外部工具：填了网址就新窗口打开该站，不进本页的工具视图。 */
   href?: string;
+  /** 站内独立页面：点卡片在站内跳转（如国际独立站）。 */
+  to?: string;
 };
 
 type ToolGroupKey = "acquisition" | "content" | "data" | "touch";
@@ -160,7 +165,7 @@ const TOOLS: ToolCard[] = [
     name: "GEO-AI引擎优化",
     icon: <BarChartOutlined aria-hidden />,
     group: "content",
-    desc: "可见度报告、监控问题库、采集批次与选题池，可开启每周自动采集；另含按语言与付费/免费筛选的发稿平台推荐。独立站建站已拆到「工作台 → 国际独立站」。",
+    desc: "可见度报告、监控问题库、采集批次与选题池，可开启每周自动采集；另含按语言与付费/免费筛选的发稿平台推荐。独立站建站使用「国际独立站」卡片。",
   },
   {
     key: "seo",
@@ -189,6 +194,14 @@ const TOOLS: ToolCard[] = [
     icon: <CompassOutlined aria-hidden />,
     group: "content",
     desc: "出海常用站点导航：代理 IP / VPS、跨境电商与独立站、跨境服务、Facebook / Google、营销推广、广告工具、海外支付、社媒业务、内容制作等分类，支持站内搜索；分类与站点可在平台后台维护，默认数据随系统初始化写入。",
+  },
+  {
+    key: "international-site",
+    name: "国际独立站",
+    icon: <GlobalOutlined aria-hidden />,
+    group: "content",
+    desc: "拖拽搭建多语言独立站：页面、菜单、文章与产品按语言分别维护，模板库、发布台账与域名绑定；可发布到平台子域或客户自有域名，欠费只停服不删数据。",
+    to: "/international-site",
   },
   {
     key: "survey",
@@ -252,6 +265,7 @@ const isBigdataTool = (key: ToolKey): key is BigdataDatasetKey =>
  */
 export default function MarketingToolsPage() {
   const [tab, setTab] = useState<ToolKey>("overview");
+  const router = useRouter();
 
   // 功能目录里的「企业微信 SCRM」用 ?tab=wecom-scrm 直达该卡片，避免落到总览再找一遍。
   // 独立站已拆成独立菜单：旧链接 ?tab=geo-site 直接跳转新页面。
@@ -260,13 +274,14 @@ export default function MarketingToolsPage() {
     if (requested === "wecom-scrm") setTab("scrm");
     if (requested === "overseas-nav") setTab("overseas-nav");
     if (requested === "geo-site") window.location.replace("/international-site");
+    if (requested === "international-site") window.location.replace("/international-site");
   }, []);
 
   return (
     <>
       <PageHero
         title="营销工具"
-        desc={`营销获客与内容自动化工具箱，${TOOLS.length} 个工具可单独使用：AI 获客（线索雷达 → 触达编排 → 客户档案 → 销售剧本 → 跟进计划 → 接待质检与获客看板，采集与私信/评论触达由 AIPDD Enterprise 插件在已登录的平台页执行）· 企微 SCRM（原生企微客户同步：客户与客户群、活码与欢迎语、自动打标、群发人工确认、在职/离职继承、SOP、员工侧边栏 H5、敏感词与 AI 质检；启用后企点客户导入自动暂停）· 达人建联（按类目 / 平台 / 粉丝数筛选达人并查看联系方式）· 阿里云智能外呼（选多维表格、映射列后把名单导入阿里云智能外呼，可新建任务组或往已有任务组追加号码）· 阿里云邮件推送（选多维表格、映射邮箱列与模板变量后同步到阿里云收件人列表，模板、域名与群发仍在阿里云控制台完成）· GEO-AI引擎优化（品牌在 AI 问答中的可见度报告与选题池，另含按语言与付费/免费筛选的发稿平台推荐）· SEO 优化（传统搜索引擎侧工作台：站点体检、关键词研究与聚类、排名跟踪、竞品洞察、外链分析与建设、本地 SEO 网格、程序化页面、结构化数据与收录提交、SEO 报告；三层数据源——自有抓取免费、DataForSEO 你自带 Key 你付费、系统 AI 计积分，无 Key 不造假数据）· 多平台内容分发（一条内容同发 13 家图文/文章渠道，配套 AIPDD Enterprise 浏览器插件在已登录的浏览器里自动填充发布，逐平台结果回写台账）· 问卷设计与调研（逐题设计、发布分享链接与二维码，回答自动写进问卷专属多维表格）· 活码引流（固定入口 + 多个子码按随机/顺序/权重分发，支持限额、同访客粘性与渠道统计，短链用你自己的域名）· 腾讯企点·客户数据 / 企微运营 / 会员与触达（自带企点凭据，客户与分群、企微活码与群发、会员积分与短信邮件触达，客户可写进本系统 CRM；Customer AI 与社媒聆听等只在控制台）· Google 潜客线索挖掘（与 AI 对话明确挖掘条件，线索逐批写入多维表格）· ${BIGDATA_TOOLS.map((tool) => tool.name).join(" / ")}（自然语言提数据需求，AI 解析后查询并写入各自的多维表格）· 出海导航（代理 IP / VPS、电商平台与独立站、跨境服务、Facebook / Google、营销推广、广告、支付、社媒、内容制作等出海站点导航，支持搜索与后台维护）· AI销售管理-SalesBuddy（AI 销售管理，点击直接新窗口打开 salesbuddy.top 网站）。潜客线索与大数据查询任务只按登录账号归属，且按数据集彼此独立；GEO 项目按创建账号与所属企业可见；阿里云外呼与邮件推送的 Key 也按登录账号各自配置。`}
+        desc={`营销获客与内容自动化工具箱，${TOOLS.length} 个工具可单独使用：AI 获客（线索雷达 → 触达编排 → 客户档案 → 销售剧本 → 跟进计划 → 接待质检与获客看板，采集与私信/评论触达由 AIPDD Enterprise 插件在已登录的平台页执行）· 企微 SCRM（原生企微客户同步：客户与客户群、活码与欢迎语、自动打标、群发人工确认、在职/离职继承、SOP、员工侧边栏 H5、敏感词与 AI 质检；启用后企点客户导入自动暂停）· 达人建联（按类目 / 平台 / 粉丝数筛选达人并查看联系方式）· 阿里云智能外呼（选多维表格、映射列后把名单导入阿里云智能外呼，可新建任务组或往已有任务组追加号码）· 阿里云邮件推送（选多维表格、映射邮箱列与模板变量后同步到阿里云收件人列表，模板、域名与群发仍在阿里云控制台完成）· GEO-AI引擎优化（品牌在 AI 问答中的可见度报告与选题池，另含按语言与付费/免费筛选的发稿平台推荐）· SEO 优化（传统搜索引擎侧工作台：站点体检、关键词研究与聚类、排名跟踪、竞品洞察、外链分析与建设、本地 SEO 网格、程序化页面、结构化数据与收录提交、SEO 报告；三层数据源——自有抓取免费、DataForSEO 你自带 Key 你付费、系统 AI 计积分，无 Key 不造假数据）· 多平台内容分发（一条内容同发 13 家图文/文章渠道，配套 AIPDD Enterprise 浏览器插件在已登录的浏览器里自动填充发布，逐平台结果回写台账）· 问卷设计与调研（逐题设计、发布分享链接与二维码，回答自动写进问卷专属多维表格）· 活码引流（固定入口 + 多个子码按随机/顺序/权重分发，支持限额、同访客粘性与渠道统计，短链用你自己的域名）· 腾讯企点·客户数据 / 企微运营 / 会员与触达（自带企点凭据，客户与分群、企微活码与群发、会员积分与短信邮件触达，客户可写进本系统 CRM；Customer AI 与社媒聆听等只在控制台）· Google 潜客线索挖掘（与 AI 对话明确挖掘条件，线索逐批写入多维表格）· ${BIGDATA_TOOLS.map((tool) => tool.name).join(" / ")}（自然语言提数据需求，AI 解析后查询并写入各自的多维表格）· 出海导航（代理 IP / VPS、电商平台与独立站、跨境服务、Facebook / Google、营销推广、广告、支付、社媒、内容制作等出海站点导航，支持搜索与后台维护）· 国际独立站（拖拽搭建多语言站点，绑定客户自有域名，按语言维护页面 / 菜单 / 文章 / 产品）· AI销售管理-SalesBuddy（AI 销售管理，点击直接新窗口打开 salesbuddy.top 网站）。潜客线索与大数据查询任务只按登录账号归属，且按数据集彼此独立；GEO 项目按创建账号与所属企业可见；阿里云外呼与邮件推送的 Key 也按登录账号各自配置。`}
         extra={
           tab !== "overview" ? (
             <Button
@@ -299,11 +314,17 @@ export default function MarketingToolsPage() {
                       title={tool.name}
                       tag={tool.href ? <Tag>外部网站</Tag> : null}
                       description={tool.desc}
-                      onClick={() =>
-                        tool.href
-                          ? window.open(tool.href, "_blank", "noopener,noreferrer")
-                          : setTab(tool.key)
-                      }
+                      onClick={() => {
+                        if (tool.to) {
+                          router.push(tool.to);
+                          return;
+                        }
+                        if (tool.href) {
+                          window.open(tool.href, "_blank", "noopener,noreferrer");
+                          return;
+                        }
+                        setTab(tool.key);
+                      }}
                     />
                   ))}
                 </ToolCardGrid>
