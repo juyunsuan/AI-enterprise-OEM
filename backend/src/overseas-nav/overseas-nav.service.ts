@@ -1,4 +1,5 @@
 import type { OverseasNavItemNode } from '@enterprise/contracts';
+import { text } from '../common/api';
 import { BusinessException } from '../common/business.exception';
 import { ErrorCode } from '../common/error-code';
 import { PrismaService } from '../prisma/prisma.service';
@@ -22,7 +23,7 @@ type ItemInput = {
   visible?: boolean;
 };
 
-const text = (value: unknown, max: number) => String(value ?? '').trim().slice(0, max);
+const clip = (value: unknown, max: number) => text(value).trim().slice(0, max);
 
 const normalizeHttpUrl = (raw: string) => {
   let parsed: URL;
@@ -97,8 +98,9 @@ export class OverseasNavService {
   }
 
   async saveCategory(input: CategoryInput) {
-    const name = text(input.name, 100);
-    if (!name) throw new BusinessException(ErrorCode.BAD_REQUEST, '请填写分类名称');
+    const name = clip(input.name, 100);
+    if (!name)
+      throw new BusinessException(ErrorCode.BAD_REQUEST, '请填写分类名称');
     const parentId =
       input.parentId === null || input.parentId === undefined
         ? null
@@ -124,7 +126,10 @@ export class OverseasNavService {
         throw new BusinessException(ErrorCode.NOT_FOUND, '分类不存在');
       }
       if (parentId === current.id) {
-        throw new BusinessException(ErrorCode.BAD_REQUEST, '分类不能以自己为父级');
+        throw new BusinessException(
+          ErrorCode.BAD_REQUEST,
+          '分类不能以自己为父级',
+        );
       }
       if (parentId !== null) {
         const children = await this.prisma.overseasNavCategory.count({
@@ -142,7 +147,10 @@ export class OverseasNavService {
         select: { id: true },
       });
       if (duplicate) {
-        throw new BusinessException(ErrorCode.CONFLICT, '同一层级下已有同名分类');
+        throw new BusinessException(
+          ErrorCode.CONFLICT,
+          '同一层级下已有同名分类',
+        );
       }
       await this.prisma.overseasNavCategory.update({
         where: { id: current.id },
@@ -210,23 +218,28 @@ export class OverseasNavService {
     if (!category) {
       throw new BusinessException(ErrorCode.BAD_REQUEST, '分类不存在');
     }
-    const title = text(input.title, 200);
-    if (!title) throw new BusinessException(ErrorCode.BAD_REQUEST, '请填写标题');
-    const url = normalizeHttpUrl(text(input.url, 500));
-    const description = text(input.description, 500);
-    const logoUrl = text(input.logoUrl, 500);
+    const title = clip(input.title, 200);
+    if (!title)
+      throw new BusinessException(ErrorCode.BAD_REQUEST, '请填写标题');
+    const url = normalizeHttpUrl(clip(input.url, 500));
+    const description = clip(input.description, 500);
+    const logoUrl = clip(input.logoUrl, 500);
 
     if (input.id) {
       const current = await this.prisma.overseasNavItem.findUnique({
         where: { id: input.id },
       });
-      if (!current) throw new BusinessException(ErrorCode.NOT_FOUND, '站点不存在');
+      if (!current)
+        throw new BusinessException(ErrorCode.NOT_FOUND, '站点不存在');
       const duplicate = await this.prisma.overseasNavItem.findFirst({
         where: { categoryId, url, id: { not: current.id } },
         select: { id: true },
       });
       if (duplicate) {
-        throw new BusinessException(ErrorCode.CONFLICT, '该分类下已存在相同网址');
+        throw new BusinessException(
+          ErrorCode.CONFLICT,
+          '该分类下已存在相同网址',
+        );
       }
       try {
         await this.prisma.overseasNavItem.update({
@@ -243,7 +256,10 @@ export class OverseasNavService {
         });
       } catch (error) {
         if ((error as { code?: string }).code === 'P2002') {
-          throw new BusinessException(ErrorCode.CONFLICT, '该分类下已存在相同网址');
+          throw new BusinessException(
+            ErrorCode.CONFLICT,
+            '该分类下已存在相同网址',
+          );
         }
         throw error;
       }
@@ -276,7 +292,10 @@ export class OverseasNavService {
       return { saved: true, id: created.id };
     } catch (error) {
       if ((error as { code?: string }).code === 'P2002') {
-        throw new BusinessException(ErrorCode.CONFLICT, '该分类下已存在相同网址');
+        throw new BusinessException(
+          ErrorCode.CONFLICT,
+          '该分类下已存在相同网址',
+        );
       }
       throw error;
     }

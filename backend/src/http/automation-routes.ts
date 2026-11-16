@@ -1252,7 +1252,7 @@ export function registerAutomationRoutes(
       c.livecodeController.adminDisable(i.user, i.param['id'], i.json),
 
     // ---------- 出海导航（营销工具：分类 + 站点，默认数据由迁移写入） ----------
-    OverseasNav_tree: async (i) => c.overseasNavController.tree(i.user),
+    OverseasNav_tree: async () => c.overseasNavController.tree(),
     AdminOverseasNav_tree: async (i) =>
       c.overseasNavController.adminTree(i.user),
     AdminOverseasNav_saveCategory: async (i) =>

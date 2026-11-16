@@ -1,4 +1,4 @@
-import { ok } from '../common/api';
+import { ok, text } from '../common/api';
 import { BusinessException } from '../common/business.exception';
 import { ErrorCode } from '../common/error-code';
 import type { CurrentUser } from '../auth/current-user';
@@ -8,7 +8,7 @@ import { OverseasNavService } from './overseas-nav.service';
 export class OverseasNavController {
   constructor(private readonly service: OverseasNavService) {}
 
-  async tree(user: CurrentUser) {
+  async tree() {
     return ok(await this.service.tree(false));
   }
 
@@ -22,7 +22,7 @@ export class OverseasNavController {
     return ok(
       await this.service.saveCategory({
         id: body.id === undefined ? undefined : Number(body.id),
-        name: String(body.name ?? ''),
+        name: text(body.name),
         parentId:
           body.parentId === null || body.parentId === undefined
             ? null
@@ -45,10 +45,10 @@ export class OverseasNavController {
       await this.service.saveItem({
         id: body.id === undefined ? undefined : Number(body.id),
         categoryId: Number(body.categoryId),
-        title: String(body.title ?? ''),
-        description: String(body.description ?? ''),
-        url: String(body.url ?? ''),
-        logoUrl: String(body.logoUrl ?? ''),
+        title: text(body.title),
+        description: text(body.description),
+        url: text(body.url),
+        logoUrl: text(body.logoUrl),
         sortOrder:
           body.sortOrder === undefined ? undefined : Number(body.sortOrder),
         visible: body.visible === undefined ? undefined : body.visible === true,
