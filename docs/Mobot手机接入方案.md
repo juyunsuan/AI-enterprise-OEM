@@ -394,7 +394,23 @@ Mobot                              平台
   - 标识符：`dsh-go`、`dsh-go-guide`、`dshgo://`、`dsh-go.json` 等技能/协议/深链名。
 - 默认模型（§11.5）已实现，口径收窄：引擎的模型目录只列有凭据的供应商，因此「目录为空」= 这台手机原本跑不了任何模型；只有此时才在 Mobot 会话上调用既有 `session/selectModel`（引擎会同时把它存为新会话默认）。原本就有模型的手机不动用户的选择；路由注册晚于 profile 写入，这一次没选中就留给用户手动挑，不算失败。
 - 未做（按方案属可选或后续）：二维码配对、iOS 后台、推送唤醒、`examples/plugins/mobot-status`；Dart 源码注释里的项目名沿用 `DSH Go`（注释描述上游工程，非界面文案）。
-- 未在本机验证：APK 构建与真机联调（本机无 Android SDK/真机），锁屏与省电策略下的前台服务表现，审批等待时是否复用既有 ChatAlerts 通知。
+- 已在本机出包（2026-11-17，Windows + WSL Ubuntu 24.04）：`tooling/build-apk.sh` 产出 release/arm64 包
+  `app-arm64-release.apk` 220.9MB，`versionName=1.1.0` / `versionCode=11171843`（构建分钟），
+  `package=io.github.ccch1mneyyy.dsh_app`、`application-label=Mobot`；签名证书
+  `CN=Mobot, OU=Mobot, O=Mobot, L=Shanghai, C=CN`，SHA-256 指纹
+  `abb63dc373546410ffc6ed9e1bba7c3be7bb11164c25b775eb23a5e8c4df1cf7`，与新建签名库逐字节一致；
+  包内 JNI 类定义经 `tooling/check_apk_jni.py` 回检通过。
+- 仍未验证：真机联调（本机无 Android 真机），锁屏与省电策略下的前台服务表现，审批等待时是否复用既有 ChatAlerts 通知。
+- 出包环境实录（供复现，均为本机环境处置，**未改动 App 源码与任何 sha256 pin**）：
+  - `runtime/build-runtime.sh` 只能在 x86_64 Linux 跑，故在 WSL Ubuntu 24.04 的 ext4 内构建后回写 `runtime/out`；
+    该步要求 `zstd` 命令行（Python 3.12 无 stdlib zstd，`rtbuild.py` 会回落调用它）。
+  - 固定输入有两处取不到：清华镜像的 `ubuntu-cdimage` 路径对 GET 返 403（HEAD 却是 200），改从 Canonical
+    `cdimage.ubuntu.com` 取；`github.com/termux/proot/archive/*.zip` 出现连接重置，重试即成。
+    两者都按 `build-runtime.sh` 自带的 pin 逐字校验 sha256 后才作为 `runtime/.cache` 落盘（`fetch()` 认缓存）。
+  - Gradle 侧两个坑：`rtbuild` 之外还需要 `ANDROID_HOME` 指向**不含空格**的 SDK 路径（NDK 工具链拒绝
+    `Program Files`，本次用目录联接 `C:\Android\android-sdk` 规避，未搬迁文件）；Kotlin 增量编译无法跨盘根，
+    需让 pub 缓存与工程同盘（把已下载的 pub 缓存镜像到工程盘并设 `PUB_CACHE`，再 `flutter clean` + `flutter pub get`
+    重写 `.dart_tool/package_config.json`——只设环境变量不会重写已解析路径）。
 - 闸门（Windows 本机 + WSL Ubuntu 24.04 复刻 CI 环境：Flutter 3.47.7 / Dart 3.13.5 / 同版本 fonts-noto-cjk 与 NotoColorEmoji 2.051）：
   - `packages/mobot_link`：`dart analyze` 无告警，`dart test` 52 项通过；
   - `app`：`flutter analyze` 无告警；`flutter test` 全量 13889 通过 / 310 跳过 / 0 失败（改名后先跑一遍收集差异、重新生成基线，再跑一遍全绿）；

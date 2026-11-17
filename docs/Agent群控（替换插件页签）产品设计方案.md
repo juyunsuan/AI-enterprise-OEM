@@ -332,6 +332,17 @@ Agent 在对话里可替用户创建**设备定时任务**（`create_device_sche
 - **群控任务站内通知**：新增消息分类「群控任务」（顶栏铃铛橙色标识；M5 上线时叫「设备任务」，M7 把企云纳进来后改名）。「我的消息」可按该分类筛选，点开直达群控台账。
   云端任务的进度原来只有开着企云对话时才轮询，现在平台调度器每分钟替用户追一轮，不开页面也能收到终态。
 
+### 客户端安装包
+- **BotBuddy Windows 客户端**：`BotBuddy.Setup.1.7.0.exe`（未代码签名）。本轮 M1–M7 未改动 `bot-host-client/` 源码，
+  故沿用已构建的 1.7.0 安装包，未重新出包。
+- **Mobot 安卓客户端**：`Mobot-1.1.0-arm64.apk`（220.9MB，release/arm64，`versionCode=11171843`）。
+  对应源码随包收录在本仓库 [`mobot-app/`](../mobot-app/PROVENANCE.md)（AGPL-3.0，保留上游 LICENSE 与
+  THIRD_PARTY_NOTICES），构建步骤与环境处置见 [`docs/Mobot手机接入方案.md`](Mobot手机接入方案.md) 的出包实录。
+  ⚠️ 该包用**新建立的 Mobot 签名密钥**签名，与上游 DSH 包的密钥不同：**已安装上游 DSH Go 的用户无法覆盖升级**，
+  需先卸载再装（App 内数据随之清除）；此后各 Mobot 版本之间可正常覆盖升级。
+  验签指纹：`CN=Mobot, OU=Mobot, O=Mobot, L=Shanghai, C=CN`，SHA-256
+  `abb63dc373546410ffc6ed9e1bba7c3be7bb11164c25b775eb23a5e8c4df1cf7`。
+
 ### 移除（破坏性变更）：Agent「插件」
 - 平台侧「Agent → 插件」页签（我的插件 / SkillHub 插件中心）整体下线，同类能力走「Agent → 技能」（`我的技能 / 技能中心`）。
 - 数据库删除 `content_agent_plugins` 表，同时清掉 `content_agent_schedules.plugin_ids` 列与
