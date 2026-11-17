@@ -1,0 +1,90 @@
+{
+  "mobotTitle": "Mobot 手机",
+  "mobotSubtitle": "平台派发指令到这台手机，由本机 Agent 执行。",
+  "mobotSectionLink": "平台连接",
+  "mobotSectionDevice": "这台手机",
+  "mobotSectionCommands": "最近指令",
+  "mobotStatusUnpaired": "未连接平台",
+  "mobotStatusStarting": "正在连接平台…",
+  "mobotStatusOnline": "已连接平台",
+  "mobotStatusRetrying": "正在重连平台…",
+  "mobotStatusStopped": "已暂停",
+  "mobotStatusOnlineHint": "平台派发的指令会交给本机 Agent 执行。",
+  "mobotStatusUnpairedHint": "登录平台账号、生成连接码，再在平台里输入即可。",
+  "mobotSiteAddress": "站点地址",
+  "mobotSiteHint": "更换站点会重新开始配对。",
+  "mobotSiteDialogTitle": "平台站点地址",
+  "mobotSiteDialogHint": "https://mobot.example.com",
+  "mobotAccount": "平台账号",
+  "mobotNotSignedIn": "未登录",
+  "mobotPoints": "积分",
+  "mobotPairAction": "去配对",
+  "mobotAllowWake": "允许平台唤起本机 Agent",
+  "mobotAllowWakeHint": "关闭后，只有引擎已经在运行时才执行平台指令。",
+  "mobotModelSync": "平台模型",
+  "mobotModelSynced": "已同步到本机模型配置",
+  "mobotModelNotSynced": "尚未同步",
+  "mobotModelSyncError": "同步失败：{message}",
+  "@mobotModelSyncError": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "mobotRunning": "正在执行：{title}",
+  "@mobotRunning": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "mobotQueued": "{count} 条在排队",
+  "@mobotQueued": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mobotUnbind": "断开连接",
+  "mobotUnbindTitle": "断开与平台的连接？",
+  "mobotUnbindBody": "手机不再接收平台指令，平台同步过来的模型也会从本机模型配置里移除。",
+  "mobotUnbound": "已断开连接",
+  "mobotCommandsEmpty": "还没有执行过平台指令。",
+  "mobotCodeTitle": "连接码",
+  "mobotCodeRequest": "生成连接码",
+  "mobotCodeHint": "在平台的「工作台 → Agent-Bot → Mobot 手机」里输入下面的连接码。",
+  "mobotCodeExpires": "10 分钟内有效",
+  "mobotCodeNew": "换一个连接码",
+  "mobotCodeWaiting": "等待平台确认…",
+  "mobotSignInFirst": "先登录平台账号，再生成连接码。",
+  "mobotUsername": "用户名",
+  "mobotPassword": "密码",
+  "mobotSignedInNotice": "已登录平台账号",
+  "mobotSignedOut": "已退出登录",
+  "mobotPaired": "这台手机已连接到平台",
+  "mobotEngineNotRunning": "本机引擎还没运行",
+  "mobotEngineLost": "本机引擎断开了，这一轮没有跑完。",
+  "mobotTurnFailed": "这一轮执行失败",
+  "mobotNoticeTool": "调用工具 {name}",
+  "@mobotNoticeTool": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mobotNoticeApproval": "等待在手机上的确认：{name}",
+  "@mobotNoticeApproval": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mobotSessionTitle": "Mobot 平台",
+  "mobotProviderName": "Mobot 平台（自动同步）",
+  "mobotSiteMissing": "请先填写站点地址"
+}
