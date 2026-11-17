@@ -120,10 +120,15 @@ function initialInput(tool: ContentTool) {
 }
 
 /**
- * 内容创作小工具（「工作台 → 内容创作」板块下的首个入口 · 与营销工具同款）：一屏工具卡片，点卡片进入该工具。
+ * 内容创作工具（「工作台 → 内容创作」板块下的首个入口 · 与营销工具同款）：一屏工具卡片，点卡片进入该工具。
  * 表单控件由契约里的 CONTENT_TOOLS 生成；跨境电商 / 国内电商商品页优化是独立面板，同样以卡片进入。
  * 提交即建任务，长任务轮询任务表；产物一律由后端登记进本账号的 AIPDD 数字资产。
  */
+/** 三张非表单工具的名字：卡片与页头共用一处来源，避免两处各写一遍。 */
+const ECOM_PDP_TITLE = "跨境电商商品页优化";
+const DOMESTIC_PDP_TITLE = "国内电商商品页优化";
+const DRAMA_TITLE = "视频创作工具";
+
 export default function ContentPage() {
   const [activeKey, setActiveKey] = useState("");
   const [pdpKey, setPdpKey] = useState<"" | "ecom-pdp" | "domestic-pdp">("");
@@ -133,6 +138,16 @@ export default function ContentPage() {
   const tools = useMemo(() => Object.values(CONTENT_TOOLS), []);
   const active = activeKey ? CONTENT_TOOLS[activeKey] : null;
   const detailOpen = Boolean(active) || Boolean(pdpKey) || dramaOpen;
+  // 与营销工具同款：进了哪个工具，页头就叫哪个工具名；总览才是板块名。
+  const heroTitle = active
+    ? active.label
+    : pdpKey === "ecom-pdp"
+      ? ECOM_PDP_TITLE
+      : pdpKey === "domestic-pdp"
+        ? DOMESTIC_PDP_TITLE
+        : dramaOpen
+          ? DRAMA_TITLE
+          : "内容创作工具";
 
   useEffect(() => {
     contentApi
@@ -150,7 +165,7 @@ export default function ContentPage() {
   return (
     <div>
       <PageHero
-        title="内容创作小工具"
+        title={heroTitle}
         desc="一个卡片一个功能：写文案、生成图片/视频、配音配乐、去水印超分；跨境电商 / 国内电商商品页优化（商品简报 → 转化诊断与理由卡 → 风格锁 → 逐张确认文案与提示词后出图，国内版按广告法合规、白底首图预留平台价格区与 logo 区）；末尾的「视频创作工具」是装在自己电脑上的外部项目，点卡片先看简介与网关配置。产物自动存进本账号的 AIPDD 数字资产；模型与 Key 在「模型服务 → 模型设置」里配置"
         extra={
           detailOpen ? (
@@ -188,19 +203,19 @@ export default function ContentPage() {
             ))}
             <ToolCard
               icon={<PictureOutlined aria-hidden style={{ fontSize: 20 }} />}
-              title="跨境电商商品页优化"
+              title={ECOM_PDP_TITLE}
               description="填商品简报，AI 先做转化诊断与买家理由卡、锁定整套视觉风格，再逐张给出主图 / 详情页的图面文案与出图提示词；确认后走本系统模型网关出图，有产品参考图时锁定产品身份。"
               onClick={() => setPdpKey("ecom-pdp")}
             />
             <ToolCard
               icon={<ShopOutlined aria-hidden style={{ fontSize: 20 }} />}
-              title="国内电商商品页优化"
+              title={DOMESTIC_PDP_TITLE}
               description="面向淘宝/天猫、京东、拼多多、抖音商城与 1688：按广告法合规做转化诊断与购买理由卡，白底首图预留平台价格区与 logo 区、图面不写价格，逐张确认中文文案后走模型网关出图。"
               onClick={() => setPdpKey("domestic-pdp")}
             />
             <ToolCard
               icon={<VideoCameraOutlined aria-hidden style={{ fontSize: 20 }} />}
-              title="视频创作工具"
+              title={DRAMA_TITLE}
               tag={<Tag>本地部署</Tag>}
               description="AI 短剧与视频创作工具（AIPDD Drama Agent）：装在自己电脑上的生产线，点卡片看简介与网关配置——AIPDD / AIworkin 的 API Key 直接粘贴就能用，那一页再去下载。"
               onClick={() => setDramaOpen(true)}
@@ -486,7 +501,7 @@ function ContentToolPanel({ tool }: { tool: ContentTool }) {
   return (
     <div style={{ display: "grid", gap: 16 }}>
       <Panel
-        title={tool.label}
+        title="生成参数"
         titleExtra={<span className="text-12 muted">{tool.description}</span>}
       >
         <div style={{ display: "grid", gap: 12, maxWidth: 760 }}>

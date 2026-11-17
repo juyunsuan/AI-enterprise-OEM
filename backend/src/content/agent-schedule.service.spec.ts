@@ -26,7 +26,6 @@ const stored = {
   expertId: 0,
   personaId: 0,
   skillIds: [],
-  pluginIds: [],
   libraryIds: [],
   connectorIds: [],
   mailboxIds: [],
@@ -187,5 +186,119 @@ describe('定时执行前的在册复核', () => {
     const { service, execute } = buildDue(true);
     await service.advanceDue();
     expect(execute).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * 群控范围（M4）：定时任务把「到点这一轮可以指挥哪些设备」固定在自己配置里，
+ * 落库要归一、编辑不传不能顺手清空、到点必须原样交给那一轮对话。
+ */
+const storedScope = { ...stored, dispatchScope: ['DESKTOP'] };
+
+function buildScope(row: Record<string, unknown> = storedScope) {
+  const runRow = {
+    id: 9,
+    scheduleId: 1,
+    trigger: 'manual',
+    status: 'running',
+    conversationId: 77,
+    messageId: 0,
+    summary: '',
+    error: '',
+    startedAt: new Date('2026-11-17T01:00:00Z'),
+    finishedAt: null,
+  };
+  const create = jest
+    .fn()
+    .mockImplementation(({ data }) =>
+      Promise.resolve({ ...stored, id: 5, ...data }),
+    );
+  const update = jest
+    .fn()
+    .mockImplementation(({ data }) => Promise.resolve({ ...row, ...data }));
+  const runSilent = jest
+    .fn()
+    .mockResolvedValue({ text: '已把这周的内容派给在线的主机', messageId: 88 });
+  const prisma = stub<PrismaService>({
+    account: {
+      findUnique: jest
+        .fn()
+        .mockResolvedValue({ passwordHash: HASH, status: 'ACTIVE' }),
+    },
+    contentAgentSchedule: {
+      create,
+      update,
+      findFirst: jest.fn().mockResolvedValue({ ...row }),
+      findMany: jest.fn().mockResolvedValue([{ ...row }]),
+    },
+    contentAgentConversation: {
+      create: jest.fn().mockResolvedValue({ id: 77, expertId: 0 }),
+      findFirst: jest.fn().mockResolvedValue(null),
+      update: jest.fn(),
+    },
+    contentAgentScheduleRun: {
+      create: jest.fn().mockResolvedValue({ ...runRow }),
+      update: jest
+        .fn()
+        .mockImplementation(({ data }) =>
+          Promise.resolve({ ...runRow, ...data }),
+        ),
+    },
+    contentAgentMcpConnector: { count: jest.fn() },
+    mailAccount: { count: jest.fn(), findMany: jest.fn() },
+  });
+  const service = new ContentAgentScheduleService(
+    prisma,
+    stub<IdentityService>({ audit: jest.fn() }),
+    stub<UserLookupService>({
+      lookup: jest.fn().mockResolvedValue([{ id: '9200', username: 'tester' }]),
+    }),
+    stub<HrmScopeService>({ isStanding: jest.fn(async () => true) }),
+    stub<ContentAgentService>({ runSilent }),
+    stub<ContentAgentExpertService>({ bindable: jest.fn() }),
+  );
+  return { service, create, update, runSilent };
+}
+
+describe('定时任务的群控范围', () => {
+  it('新建时把勾选范围归一后入库，回读也带着它', async () => {
+    const { service, create } = buildScope();
+    const view = await service.save(
+      user,
+      body({ dispatchScope: ['desktop', 'MOBOT', 'DESKTOP', 'bogus', null] }),
+    );
+    expect(create.mock.calls[0][0].data.dispatchScope).toEqual([
+      'DESKTOP',
+      'MOBOT',
+    ]);
+    expect(view?.dispatchScope).toEqual(['DESKTOP', 'MOBOT']);
+  });
+
+  it('没勾选就是空数组：到点这一轮不开群控', async () => {
+    const { service, create } = buildScope();
+    const view = await service.save(user, body({}));
+    expect(create.mock.calls[0][0].data.dispatchScope).toEqual([]);
+    expect(view?.dispatchScope).toEqual([]);
+  });
+
+  it('编辑没传范围时不许顺手清空，传了才改写', async () => {
+    const { service, update } = buildScope();
+    await service.update(user, '1', { title: '每日要闻' });
+    expect(update.mock.calls[0][0].data.dispatchScope).toBeUndefined();
+    await service.update(user, '1', { dispatchScope: ['MOBOT'] });
+    expect(update.mock.calls[1][0].data.dispatchScope).toEqual(['MOBOT']);
+  });
+
+  it('到点执行把范围交给这一轮对话', async () => {
+    const { service, runSilent } = buildScope({
+      ...storedScope,
+      dispatchScope: ['DESKTOP', 'MOBOT'],
+    });
+    await service.runNow(user, '1', 'token');
+    expect(runSilent).toHaveBeenCalledTimes(1);
+    expect(runSilent.mock.calls[0][4].dispatchScope).toEqual([
+      'DESKTOP',
+      'MOBOT',
+    ]);
   });
 });

@@ -16,7 +16,11 @@ import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '../../generated/prisma';
 import { toJsonInput } from '../common/json-input';
 import { ContentAgentExpertService } from './agent-experts.service';
-import { ContentAgentService, parseReferences } from './agent.service';
+import {
+  ContentAgentService,
+  parseDispatchScope,
+  parseReferences,
+} from './agent.service';
 
 const TITLE_MAX = 80;
 const INSTRUCTION_MAX = 8000;
@@ -71,10 +75,11 @@ type ScheduleRow = {
   expertId: number;
   personaId: number;
   skillIds: unknown;
-  pluginIds: unknown;
   libraryIds: unknown;
   connectorIds: unknown;
   mailboxIds: unknown;
+  /** 到点这一轮允许指挥的设备类型；空＝不开群控 */
+  dispatchScope: unknown;
   allowWrite: boolean;
   references: unknown;
   channelId: number;
@@ -135,10 +140,10 @@ export class ContentAgentScheduleService {
       personaId: row.personaId,
       personaName,
       skillIds: idList(row.skillIds, SKILL_REFS_MAX),
-      pluginIds: idList(row.pluginIds, SKILL_REFS_MAX),
       libraryIds: idList(row.libraryIds, LIBRARY_REFS_MAX),
       connectorIds: connectorIdList(row.connectorIds, CONNECTOR_REFS_MAX),
       mailboxIds: idList(row.mailboxIds, MAILBOX_REFS_MAX),
+      dispatchScope: parseDispatchScope(row.dispatchScope),
       allowWrite: row.allowWrite === true,
       references: parseReferences(row.references),
       channelId: row.channelId,
@@ -390,10 +395,10 @@ export class ContentAgentScheduleService {
         expertId: expert?.id || 0,
         personaId: persona?.id || 0,
         skillIds: idList(body.skillIds, SKILL_REFS_MAX),
-        pluginIds: idList(body.pluginIds, SKILL_REFS_MAX),
         libraryIds: idList(body.libraryIds, LIBRARY_REFS_MAX),
         connectorIds,
         mailboxIds,
+        dispatchScope: parseDispatchScope(body.dispatchScope),
         allowWrite,
         references: parseReferences(body.references),
         channelId: this.channelIdOf(body.channelId),
@@ -472,9 +477,6 @@ export class ContentAgentScheduleService {
     if (body.skillIds !== undefined) {
       data.skillIds = toJsonInput(idList(body.skillIds, SKILL_REFS_MAX));
     }
-    if (body.pluginIds !== undefined) {
-      data.pluginIds = toJsonInput(idList(body.pluginIds, SKILL_REFS_MAX));
-    }
     if (body.libraryIds !== undefined) {
       data.libraryIds = toJsonInput(idList(body.libraryIds, LIBRARY_REFS_MAX));
     }
@@ -493,6 +495,9 @@ export class ContentAgentScheduleService {
       await this.validateRefs(user, connectorIds, mailboxIds);
       data.connectorIds = toJsonInput(connectorIds);
       data.mailboxIds = toJsonInput(mailboxIds);
+    }
+    if (body.dispatchScope !== undefined) {
+      data.dispatchScope = toJsonInput(parseDispatchScope(body.dispatchScope));
     }
     if (body.channelId !== undefined) {
       data.channelId = this.channelIdOf(body.channelId);
@@ -615,13 +620,14 @@ export class ContentAgentScheduleService {
           model: schedule.model,
           personaId: schedule.personaId,
           skillIds: idList(schedule.skillIds, SKILL_REFS_MAX),
-          pluginIds: idList(schedule.pluginIds, SKILL_REFS_MAX),
           libraryIds: idList(schedule.libraryIds, LIBRARY_REFS_MAX),
           connectorIds: connectorIdList(
             schedule.connectorIds,
             CONNECTOR_REFS_MAX,
           ),
           mailboxIds: idList(schedule.mailboxIds, MAILBOX_REFS_MAX),
+          // 到点这一轮可以指挥哪些设备：勾选范围随任务配置固定，未选＝不开群控
+          dispatchScope: parseDispatchScope(schedule.dispatchScope),
           // 写动作默认不放开：只有任务自带上 allowWrite=true 才让无人值守这一轮真执行修改
           allowWrite: schedule.allowWrite === true,
           references: schedule.references,

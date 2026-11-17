@@ -2,7 +2,6 @@ import { ContentAgentService } from './agent.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ContentAgentMemoryService } from './agent-memory.service';
 import { ContentAgentSkillService } from './agent-skills.service';
-import { ContentAgentPluginService } from './agent-plugins.service';
 import { ContentAgentExpertService } from './agent-experts.service';
 import { ContentAgentConnectorService } from './agent-connectors.service';
 import { ContentAgentEngine } from './agent-engine';
@@ -70,7 +69,6 @@ function buildCollaborate() {
     stub<PrismaService>(),
     stub<ContentAgentMemoryService>(),
     stub<ContentAgentSkillService>(),
-    stub<ContentAgentPluginService>(),
     stub<ContentAgentExpertService>(),
     stub<ContentAgentConnectorService>(),
     stub<ContentAgentEngine>(),

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { BOT_DISPATCH_TARGET_KINDS } from "./agent-dispatch";
 
 const envelope = <T extends z.ZodType>(data: T) =>
   z.object({
@@ -1360,44 +1361,6 @@ export const contentAgentSkillSchema = z.object({
 });
 
 /**
- * Agent 插件：插件包（zip）或 SkillHub 插件目录安装，说明进系统提示，模型用 load_plugin 取全文。
- * commands＝包内 commands/*.md 展开出的插件命令：模型用 run_plugin_command 拿到正文后照它跑业务。
- */
-export const contentAgentPluginSchema = z.object({
-  id: z.number(),
-  name: z.string(),
-  description: z.string(),
-  content: z.string(),
-  /** 插件包内的附加文本文件数（zip 上传才有） */
-  fileCount: z.number(),
-  files: z.array(z.object({ path: z.string(), content: z.string() })),
-  /** 插件命令清单（来自包内 commands/*.md；目录安装的插件为空数组） */
-  commands: z.array(
-    z.object({ name: z.string(), description: z.string(), path: z.string() }),
-  ),
-  /** upload＝上传插件包；skillhub＝从插件的 SkillHub 目录安装 */
-  source: z.string(),
-  /** 插件目录来源 owner/name；上传包为空串 */
-  sourceSlug: z.string(),
-  enabled: z.boolean(),
-  /** 安全审查状态与结论摘要（§5.9，口径同技能行） */
-  reviewStatus: z.string().optional(),
-  reviewMessage: z.string().optional(),
-  category: z.string().optional(),
-  permissions: z
-    .object({
-      network: z.array(z.string()),
-      fs: z.array(z.string()),
-      exec: z.array(z.string()),
-      secrets: z.array(z.string()),
-    })
-    .optional(),
-  permissionsDeclared: z.boolean().optional(),
-  permissionsAcknowledged: z.boolean().optional(),
-  updatedAt: z.string(),
-});
-
-/**
  * 技能/插件的历史版本快照（同名重传或目录覆盖安装时的旧内容）：
  * 列表不返正文，只给时间、来源、说明与体量，够界面判断「哪一版被换过」。
  */
@@ -1458,14 +1421,13 @@ export const contentConnectorTestSchema = z.object({
 });
 export type ContentConnectorTest = z.infer<typeof contentConnectorTestSchema>;
 
-/** 统一工具 manifest（AI 底座 §4.3）：内置/业务/连接器/硬件/技能/插件归一注册的单一口径。 */
+/** 统一工具 manifest（AI 底座 §4.3）：内置/业务/连接器/硬件/技能归一注册的单一口径。 */
 export const agentToolKindSchema = z.enum([
   "builtin",
   "business",
   "connector",
   "hardware",
   "skill",
-  "plugin",
 ]);
 export const agentToolManifestSchema = z.object({
   name: z.string(),
@@ -1524,14 +1486,14 @@ export const contentAgentScheduleSchema = z.object({
   personaName: z.string(),
   /** 随任务固定引用的技能 id；空数组＝全部启用中的技能 */
   skillIds: z.array(z.number()),
-  /** 随任务固定引用的插件 id；空数组＝全部启用中的插件 */
-  pluginIds: z.array(z.number()),
   /** 随任务固定引用的资料库条目 id；空数组＝整库检索 */
   libraryIds: z.array(z.number()),
   /** 随任务固定引用的 MCP 连接器 id；空数组＝全部启用中的连接器（0＝本站 MCP Server） */
   connectorIds: z.array(z.number()),
   /** 本任务只处理哪些邮箱账号 id；空数组＝不限定 */
   mailboxIds: z.array(z.number()),
+  /** 到点这一轮允许 Agent 指挥的目标类型（Bot 主机 / Mobot 手机 / WorkBuddy 企业云）；空数组＝不开群控 */
+  dispatchScope: z.array(z.enum(BOT_DISPATCH_TARGET_KINDS)),
   /**
    * 无人值守是否允许执行写动作；默认 false＝定时任务只能读取与出草案，
    * 所有修改类动作要用户在对话里确认后执行。只给单个任务单独放开不是全局开关。
@@ -2348,46 +2310,6 @@ export const ContentEndpoints = {
     body: passthroughBody,
     response: envelope(contentAgentSkillSchema),
   },
-  Content_plugins: {
-    method: "get" as const,
-    path: "/enterprise/content/agent/plugins",
-    params: z.object({}),
-    query: emptyQuery,
-    body: z.undefined(),
-    response: envelope(z.array(contentAgentPluginSchema)),
-  },
-  Content_togglePlugin: {
-    method: "put" as const,
-    path: "/enterprise/content/agent/plugins/:id",
-    params: z.object({ id: z.string().min(1) }),
-    query: emptyQuery,
-    body: passthroughBody,
-    response: envelope(contentAgentPluginSchema),
-  },
-  Content_removePlugin: {
-    method: "delete" as const,
-    path: "/enterprise/content/agent/plugins/:id",
-    params: z.object({ id: z.string().min(1) }),
-    query: emptyQuery,
-    body: z.undefined(),
-    response: envelope(z.object({ removed: z.boolean() })),
-  },
-  Content_pluginRevisions: {
-    method: "get" as const,
-    path: "/enterprise/content/agent/plugins/:id/revisions",
-    params: z.object({ id: z.string().min(1) }),
-    query: emptyQuery,
-    body: z.undefined(),
-    response: envelope(z.array(contentAgentRevisionSchema)),
-  },
-  Content_restorePlugin: {
-    method: "post" as const,
-    path: "/enterprise/content/agent/plugins/:id/restore",
-    params: z.object({ id: z.string().min(1) }),
-    query: emptyQuery,
-    body: passthroughBody,
-    response: envelope(contentAgentPluginSchema),
-  },
   Content_experts: {
     method: "get" as const,
     path: "/enterprise/content/agent/experts",
@@ -2816,5 +2738,4 @@ export type ContentAgentMessage = z.infer<typeof contentAgentMessageSchema>;
 export type ContentMemories = z.infer<typeof contentMemoriesSchema>;
 export type ContentJob = z.infer<typeof contentJobSchema>;
 export type ContentAgentSkill = z.infer<typeof contentAgentSkillSchema>;
-export type ContentAgentPlugin = z.infer<typeof contentAgentPluginSchema>;
 export type ContentAgentExpert = z.infer<typeof contentAgentExpertSchema>;

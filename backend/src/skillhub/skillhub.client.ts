@@ -8,7 +8,6 @@ const MAX_ZIP_BYTES = 20 * 1024 * 1024;
 
 export type SkillHubRawSkill = Record<string, unknown>;
 export type SkillHubRawDetail = Record<string, unknown>;
-export type SkillHubRawPlugin = Record<string, unknown>;
 
 export type SkillHubZip = {
   bytes: Uint8Array;
@@ -27,20 +26,12 @@ function baseUrl() {
  * 只允许固定主机的公开接口，不接受用户传入整条外部 URL。
  */
 export class SkillHubClient {
-  private async json<T>(
-    path: string,
-    timeoutMs = 15000,
-    kind: 'skill' | 'plugin' = 'skill',
-  ): Promise<T> {
-    const unavailable =
-      kind === 'plugin'
-        ? '插件中心暂时不可用，请稍后重试'
-        : '技能中心暂时不可用，请稍后重试';
+  private async json<T>(path: string, timeoutMs = 15000): Promise<T> {
     let response;
     try {
       response = await httpRequest<T>(`${baseUrl()}${path}`, {
         timeoutMs,
-        operation: kind === 'plugin' ? 'skillhub:plugin' : 'skillhub',
+        operation: 'skillhub',
         headers: {
           accept: 'application/json',
           'user-agent': 'AIworkin-Enterprise',
@@ -48,16 +39,19 @@ export class SkillHubClient {
       });
     } catch (error) {
       logger.warn({ path, error: this.errorInfo(error) });
-      throw new BusinessException(ErrorCode.SERVICE_UNAVAILABLE, unavailable);
+      throw new BusinessException(
+        ErrorCode.SERVICE_UNAVAILABLE,
+        '技能中心暂时不可用，请稍后重试',
+      );
     }
     if (!response.ok || !response.data) {
       if (response.status === 404) {
-        throw new BusinessException(
-          ErrorCode.NOT_FOUND,
-          kind === 'plugin' ? '插件不存在' : '技能不存在',
-        );
+        throw new BusinessException(ErrorCode.NOT_FOUND, '技能不存在');
       }
-      throw new BusinessException(ErrorCode.SERVICE_UNAVAILABLE, unavailable);
+      throw new BusinessException(
+        ErrorCode.SERVICE_UNAVAILABLE,
+        '技能中心暂时不可用，请稍后重试',
+      );
     }
     return response.data;
   }
@@ -101,55 +95,6 @@ export class SkillHubClient {
       `/api/v1/skills/${encodeURIComponent(slug)}/versions`,
     );
     return Array.isArray(payload.versions) ? payload.versions : [];
-  }
-
-  /** 插件目录：公开 /api/v1/plugins；搜索参数是 q，不传 q 时上游按 Star 排序回热门。 */
-  async pluginSearch(keyword: string, page: number, pageSize: number) {
-    const query = new URLSearchParams({
-      page: String(page),
-      pageSize: String(pageSize),
-    });
-    if (keyword) query.set('q', keyword);
-    const payload = await this.json<{
-      items?: SkillHubRawPlugin[];
-      total?: number;
-    }>(`/api/v1/plugins?${query.toString()}`, 15000, 'plugin');
-    const items = payload.items;
-    return {
-      items: Array.isArray(items) ? items : [],
-      total: Number(payload.total || 0),
-    };
-  }
-
-  pluginDetail(owner: string, name: string) {
-    return this.json<SkillHubRawPlugin>(
-      `/api/v1/plugins/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`,
-      15000,
-      'plugin',
-    );
-  }
-
-  /** 插件 README（上游 302 到 COS）：拿不到就当没有，不阻断详情与安装。 */
-  async pluginReadme(owner: string, name: string) {
-    try {
-      const response = await httpRequest<string>(
-        `${baseUrl()}/api/v1/plugins/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/readme`,
-        {
-          timeoutMs: 20000,
-          readAs: 'text',
-          operation: 'skillhub:plugin-readme',
-          headers: {
-            accept: 'text/markdown, text/plain, */*',
-            'user-agent': 'AIworkin-Enterprise',
-          },
-        },
-      );
-      if (!response.ok || !response.data) return '';
-      return response.data.slice(0, 20000);
-    } catch (error) {
-      logger.warn({ owner, name, error: this.errorInfo(error) });
-      return '';
-    }
   }
 
   async download(slug: string, version = ''): Promise<SkillHubZip> {

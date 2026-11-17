@@ -254,7 +254,10 @@ export class AiCallAccountService {
     bindings: { kind: AiCallPrincipalKind; principalId: number }[],
   ) {
     const row = await this.loadOwned(user, accountId);
-    const wanted = new Map<string, { kind: AiCallPrincipalKind; principalId: number }>();
+    const wanted = new Map<
+      string,
+      { kind: AiCallPrincipalKind; principalId: number }
+    >();
     for (const item of bindings) {
       if (!AI_CALL_PRINCIPAL_KINDS.includes(item.kind)) {
         throw new BusinessException(
@@ -487,10 +490,7 @@ export class AiCallAccountService {
         select: { id: true, name: true, clientKind: true },
       });
       for (const host of hosts) {
-        names.set(
-          `${host.clientKind}:${host.id}`,
-          host.name || `#${host.id}`,
-        );
+        names.set(`${host.clientKind}:${host.id}`, host.name || `#${host.id}`);
       }
     }
     const wbIds = [...(wanted.get('WORKBUDDY') ?? [])];
@@ -590,9 +590,8 @@ export class AiCallAccountService {
               principalKind: binding.principalKind as AiCallPrincipalKind,
               principalId: binding.principalId,
               name:
-                names?.get(
-                  `${binding.principalKind}:${binding.principalId}`,
-                ) ?? `${binding.principalKind} #${binding.principalId}`,
+                names?.get(`${binding.principalKind}:${binding.principalId}`) ??
+                `${binding.principalKind} #${binding.principalId}`,
             })),
           }
         : {}),

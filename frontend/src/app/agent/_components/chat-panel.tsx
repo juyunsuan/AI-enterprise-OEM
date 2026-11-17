@@ -3,10 +3,10 @@
 import {
   ApiOutlined,
   ArrowLeftOutlined,
-  BlockOutlined,
   CheckCircleFilled,
   CloseCircleFilled,
   CloseOutlined,
+  ClusterOutlined,
   DeleteOutlined,
   EditOutlined,
   FileAddOutlined,
@@ -49,11 +49,11 @@ import {
   CONTENT_AGENT_MODE_LABELS,
   MCP_TOOL_NAMES,
   MCP_TOOLS,
+  type BotDispatchTargetKind,
   type ContentAgentConnector,
   type ContentAgentExpert,
   type ContentAgentMessage,
   type ContentAgentMode,
-  type ContentAgentPlugin,
   type ContentAgentReference,
   type ContentAgentSkill,
   type ContentAgentPersona,
@@ -74,6 +74,12 @@ import {
   nextReferenceLabel,
   referencesFromAssets,
 } from "@/components/content/asset-reference-picker";
+import {
+  DISPATCH_TARGET_OPTIONS,
+  dispatchScopeLabel,
+  dispatchScopeSummary,
+  toggleDispatchScope,
+} from "./dispatch-common";
 
 type ToolLine = { name: string; state: "running" | "ok" | "failed"; text?: string };
 /** 「自动」时模型会在首行标注本轮选的分身；拆出来单独显示成徽标，正文不重复。 */
@@ -261,18 +267,18 @@ type AddPanel =
   | "root"
   | "references"
   | "skills"
-  | "plugins"
   | "experts"
   | "library"
-  | "connectors";
+  | "connectors"
+  | "dispatch";
 
 const ADD_PANEL_TITLES: Record<Exclude<AddPanel, "root">, string> = {
   references: "添加参考文件",
   skills: "选择技能",
-  plugins: "选择插件",
   experts: "选择专家",
   library: "选择资料",
   connectors: "选择 MCP 连接器",
+  dispatch: "Agent 群控任务",
 };
 
 const ADD_ROW_STYLE: CSSProperties = {
@@ -435,13 +441,12 @@ export function AgentChatPanel({
   const [videoDuration, setVideoDuration] = useState(VIDEO_DURATION_DEFAULT);
   const [upscale, setUpscale] = useState(false);
   const [upscaleResolution, setUpscaleResolution] = useState(UPSCALE_RESOLUTIONS[0]);
-  // 「+」浮层：模型设置 / 添加参考文件 / 选择技能 / 选择插件 / 选择专家（模型选择直接摆在输入框下方）
+  // 「+」浮层：模型设置 / 添加参考文件 / 选择技能 / 选择专家（模型选择直接摆在输入框下方）
   const [addOpen, setAddOpen] = useState(false);
   const [addPanel, setAddPanel] = useState<AddPanel>("root");
   /** 从数字资产管理挑参考文件的弹窗 */
   const [assetPickerOpen, setAssetPickerOpen] = useState(false);
   const [skills, setSkills] = useState<ContentAgentSkill[]>([]);
-  const [plugins, setPlugins] = useState<ContentAgentPlugin[]>([]);
   const [experts, setExperts] = useState<ContentAgentExpert[]>([]);
   const [library, setLibrary] = useState<ContentLibraryItem[]>([]);
   const [connectors, setConnectors] = useState<ContentAgentConnector[]>([]);
@@ -449,12 +454,14 @@ export function AgentChatPanel({
   const [auxError, setAuxError] = useState("");
   /** 本轮勾选的技能；空＝全部启用中的技能 */
   const [skillIds, setSkillIds] = useState<number[]>([]);
-  /** 本轮勾选的插件；空＝全部启用中的插件 */
-  const [pluginIds, setPluginIds] = useState<number[]>([]);
   /** 本轮指定的资料；空＝整库检索 */
   const [libraryIds, setLibraryIds] = useState<number[]>([]);
   /** 本轮引用的 MCP 连接器；空＝全部启用中的 */
   const [connectorIds, setConnectorIds] = useState<number[]>([]);
+  /** 本轮勾选的群控设备范围；空＝不开群控。同一会话沿用上次选择，换会话回到未选。 */
+  const [dispatchScope, setDispatchScope] = useState<BotDispatchTargetKind[]>([]);
+  const scopeMemoryRef = useRef(new Map<number, BotDispatchTargetKind[]>());
+  const prevActiveIdRef = useRef(0);
   const [switchingExpert, setSwitchingExpert] = useState(false);
   const auxLoadedRef = useRef(false);
   const loadedModesRef = useRef(new Set<ContentAgentMode>());
@@ -473,6 +480,19 @@ export function AgentChatPanel({
   // 输入区是浮层：左边界/宽度跟着「会话 + 对话」整行的实际位置走，高度用于给两栏留出底部空位
   const [composerBox, setComposerBox] = useState<{ left: number; width: number } | null>(null);
   const [composerHeight, setComposerHeight] = useState(0);
+
+  /** 群控范围按会话记忆：切换会话时恢复该会话上次的勾选，新建对话默认未选。 */
+  useEffect(() => {
+    const prev = prevActiveIdRef.current;
+    prevActiveIdRef.current = activeId;
+    if (prev === activeId) return;
+    setDispatchScope(activeId ? scopeMemoryRef.current.get(activeId) || [] : []);
+  }, [activeId]);
+
+  const applyDispatchScope = (next: BotDispatchTargetKind[]) => {
+    setDispatchScope(next);
+    scopeMemoryRef.current.set(activeId, next);
+  };
 
   /** 视频分辨率档位：取当前视频模型在网关声明的 supportedResolutions，没声明就不给选、也不发提示。 */
   const videoResolutionOptions = useMemo(() => {
@@ -656,27 +676,24 @@ export function AgentChatPanel({
     }
   };
 
-  /** 「+」浮层里的技能、插件、专家与资料清单：第一次打开时取一次，取不到只影响这几个二级面板。 */
+  /** 「+」浮层里的技能、专家与资料清单：第一次打开时取一次，取不到只影响这几个二级面板。 */
   const loadAux = useCallback(async () => {
     setAuxLoading(true);
     try {
-      const [skillRows, pluginRows, expertRows, libraryRows, connectorRows] =
-        await Promise.all([
+      const [skillRows, expertRows, libraryRows, connectorRows] = await Promise.all([
           contentApi.skills(),
-          contentApi.plugins(),
           contentApi.experts(),
           contentApi.library(),
           contentApi.connectors(),
         ]);
       setSkills(skillRows || []);
-      setPlugins(pluginRows || []);
       setExperts(expertRows || []);
       setLibrary(libraryRows || []);
       setConnectors(connectorRows || []);
       setAuxError("");
       auxLoadedRef.current = true;
     } catch (caught) {
-      setAuxError((caught as Error).message || "技能、插件、专家与连接器清单读取失败");
+      setAuxError((caught as Error).message || "技能、专家与连接器清单读取失败");
     } finally {
       setAuxLoading(false);
     }
@@ -1036,7 +1053,6 @@ export function AgentChatPanel({
     void loadChannelModels("text", channelId, { channelId, model: row.model });
   }, [currentPersonaId, personas, selections.text.channelId, loadChannelModels]);
   const pickedSkills = skills.filter((skill) => skillIds.includes(skill.id));
-  const pickedPlugins = plugins.filter((plugin) => pluginIds.includes(plugin.id));
   const pickedLibrary = library.filter((item) => libraryIds.includes(item.id));
 
   /** 「+」浮层：一级菜单（Qoder 形态）+ 两个二级面板（选择技能 / 选择专家）。 */
@@ -1059,13 +1075,6 @@ export function AgentChatPanel({
             onClick={() => setAddPanel("skills")}
           />
           <AddRow
-            icon={<BlockOutlined aria-hidden />}
-            label="选择插件"
-            meta={pluginIds.length ? `已选 ${pluginIds.length}` : "全部启用"}
-            chevron
-            onClick={() => setAddPanel("plugins")}
-          />
-          <AddRow
             icon={<TeamOutlined aria-hidden />}
             label="选择专家"
             meta={currentExpertName || "未选"}
@@ -1085,6 +1094,13 @@ export function AgentChatPanel({
             meta={connectorIds.length ? `已选 ${connectorIds.length}` : "全部启用"}
             chevron
             onClick={() => setAddPanel("connectors")}
+          />
+          <AddRow
+            icon={<ClusterOutlined aria-hidden />}
+            label="Agent 群控任务"
+            meta={dispatchScopeSummary(dispatchScope)}
+            chevron
+            onClick={() => setAddPanel("dispatch")}
           />
           <AddRow
             icon={<SettingOutlined aria-hidden />}
@@ -1185,77 +1201,6 @@ export function AgentChatPanel({
                   type="link"
                   style={{ padding: 0, height: "auto", justifySelf: "start" }}
                   onClick={() => setSkillIds([])}
-                >
-                  清空勾选
-                </Button>
-              ) : null}
-            </div>
-          ) : addPanel === "plugins" ? (
-            <div style={{ display: "grid", gap: 8 }}>
-              {auxLoading ? <Spin size="small" /> : null}
-              {auxError ? (
-                <span className="text-12" style={{ color: "#d4380d" }}>
-                  {auxError}
-                </span>
-              ) : null}
-              {!auxLoading && !plugins.length ? (
-                <span className="text-12 muted">
-                  还没有插件：到「插件」页签安装或上传 zip 插件包后再来选。
-                </span>
-              ) : null}
-              {plugins.length ? (
-                <div style={{ display: "grid", gap: 4, maxHeight: 220, overflowY: "auto" }}>
-                  {plugins.map((plugin) => (
-                    <Checkbox
-                      key={plugin.id}
-                      checked={pluginIds.includes(plugin.id)}
-                      disabled={!plugin.enabled}
-                      onChange={(event) =>
-                        setPluginIds((prev) =>
-                          event.target.checked
-                            ? [...prev, plugin.id]
-                            : prev.filter((id) => id !== plugin.id),
-                        )
-                      }
-                    >
-                      <span
-                        style={{
-                          display: "inline-flex",
-                          flexDirection: "column",
-                          gap: 2,
-                          maxWidth: 236,
-                        }}
-                      >
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                          <span
-                            style={{
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            {plugin.name}
-                          </span>
-                          {!plugin.enabled ? <Tag style={{ marginInlineEnd: 0 }}>已停用</Tag> : null}
-                        </span>
-                        {plugin.commands.length ? (
-                          <span className="text-12 muted">
-                            命令：{plugin.commands.map((command) => `/${command.name}`).join(" ")}
-                          </span>
-                        ) : null}
-                      </span>
-                    </Checkbox>
-                  ))}
-                </div>
-              ) : null}
-              <span className="text-12 muted">
-                勾选后本轮只用这几个插件（含它们的插件命令）；不勾＝全部启用中的插件。
-              </span>
-              {pluginIds.length ? (
-                <Button
-                  type="link"
-                  style={{ padding: 0, height: "auto", justifySelf: "start" }}
-                  onClick={() => setPluginIds([])}
                 >
                   清空勾选
                 </Button>
@@ -1410,6 +1355,51 @@ export function AgentChatPanel({
                 </Button>
               ) : null}
             </div>
+          ) : addPanel === "dispatch" ? (
+            <div style={{ display: "grid", gap: 8 }}>
+              <div style={{ display: "grid", gap: 4 }}>
+                {DISPATCH_TARGET_OPTIONS.map((option) => (
+                  <Checkbox
+                    key={option.value}
+                    checked={dispatchScope.includes(option.value)}
+                    onChange={(event) =>
+                      applyDispatchScope(
+                        toggleDispatchScope(
+                          dispatchScope,
+                          option.value,
+                          event.target.checked,
+                        ),
+                      )
+                    }
+                  >
+                    {option.label}
+                  </Checkbox>
+                ))}
+              </div>
+              <span className="text-12 muted">
+                勾选后本轮 Agent 会先查这些目标的在线与负载（企云看凭据与可用 Agent），给出分配方案，等你确认再逐个派单。
+              </span>
+              <span className="text-12 muted">
+                两个都不勾＝退出群控；设备清单与配对在
+                <Link
+                  style={{ padding: "0 4px" }}
+                  href="/agent-bot?tab=bots"
+                  onClick={() => setAddOpen(false)}
+                >
+                  Agent-Bot
+                </Link>
+                。
+              </span>
+              {dispatchScope.length ? (
+                <Button
+                  type="link"
+                  style={{ padding: 0, height: "auto", justifySelf: "start" }}
+                  onClick={() => applyDispatchScope([])}
+                >
+                  退出群控
+                </Button>
+              ) : null}
+            </div>
           ) : null}
         </AddSubPanel>
       )}
@@ -1440,9 +1430,9 @@ export function AgentChatPanel({
     }
     const turnReferences = references;
     const turnSkillIds = skillIds;
-    const turnPluginIds = pluginIds;
     const turnLibraryIds = libraryIds;
     const turnConnectorIds = connectorIds;
+    const turnDispatchScope = dispatchScope;
     const turnMode = mode;
     // 只有文本模式支持协作；不足 2 个分身就当普通回合跑
     const turnPersonaIds =
@@ -1468,13 +1458,14 @@ export function AgentChatPanel({
         return;
       }
       conversationId = row.id;
+      // 会话记忆挂在真实 id 上：新会话里第一次发送也要沿用本轮勾选
+      scopeMemoryRef.current.set(row.id, turnDispatchScope);
       setActiveId(row.id);
       setConversations((prev) => [row, ...prev]);
     }
     setInput("");
     setReferences([]);
     setSkillIds([]);
-    setPluginIds([]);
     setLibraryIds([]);
     setConnectorIds([]);
     setMention(null);
@@ -1543,9 +1534,9 @@ export function AgentChatPanel({
         videoResolution: turnMode === "video" ? turnVideoResolution || undefined : undefined,
         videoDuration: turnMode === "video" ? turnVideoDuration : undefined,
         skillIds: turnSkillIds,
-        pluginIds: turnPluginIds,
         libraryIds: turnLibraryIds,
         connectorIds: turnConnectorIds,
+        dispatchScope: turnDispatchScope,
         personaId: currentPersonaId,
         personaIds: turnPersonaIds,
         onEvent: ({ event, data }) => {
@@ -2026,29 +2017,6 @@ export function AgentChatPanel({
               ))}
             </div>
           ) : null}
-          {pickedPlugins.length ? (
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-              <span className="text-12 muted">本轮插件</span>
-              {pickedPlugins.map((plugin) => (
-                <Tag
-                  key={plugin.id}
-                  closable
-                  closeIcon={<CloseOutlined aria-hidden />}
-                  onClose={(event) => {
-                    event.preventDefault();
-                    setPluginIds((prev) => prev.filter((id) => id !== plugin.id));
-                  }}
-                >
-                  {plugin.name}
-                  {plugin.commands.length ? (
-                    <span className="text-12 muted" style={{ marginLeft: 6 }}>
-                      {plugin.commands.map((command) => `/${command.name}`).join(" ")}
-                    </span>
-                  ) : null}
-                </Tag>
-              ))}
-            </div>
-          ) : null}
           {pickedLibrary.length ? (
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
               <span className="text-12 muted">本轮资料</span>
@@ -2065,6 +2033,27 @@ export function AgentChatPanel({
                   {item.name}
                 </Tag>
               ))}
+            </div>
+          ) : null}
+          {dispatchScope.length ? (
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+              <Tag
+                color="blue"
+                closable
+                closeIcon={<CloseOutlined aria-hidden />}
+                onClose={(event) => {
+                  event.preventDefault();
+                  applyDispatchScope([]);
+                }}
+              >
+                <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
+                  <ClusterOutlined aria-hidden />
+                  {dispatchScopeLabel(dispatchScope)}
+                </span>
+              </Tag>
+              <span className="text-12 muted">
+                本轮可指挥这些设备；Agent 会先给分配方案，确认后才派单。
+              </span>
             </div>
           ) : null}
           <div style={{ position: "relative" }}>
@@ -2116,7 +2105,7 @@ export function AgentChatPanel({
               autoSize={{ minRows: 2, maxRows: 6 }}
               placeholder={
                 mode === "text"
-                  ? "说明你想做什么；下方选渠道和模型，点 + 选参考文件 / 资料 / 技能 / 专家 / MCP连接器；Enter 换行"
+                  ? "说明你想做什么；下方选渠道和模型，点 + 选参考文件 / 资料 / 技能 / 专家 / MCP连接器 / Agent 群控任务；Enter 换行"
                   : mode === "image"
                     ? "描述要生成的图片；输入 @ 调取参考图片；Enter 换行"
                     : "描述要生成的视频；输入 @ 调取参考图片/视频/音频；Enter 换行"
@@ -2209,7 +2198,7 @@ export function AgentChatPanel({
                 <Button
                   shape="circle"
                   icon={<PlusOutlined aria-hidden />}
-                  aria-label="添加参考文件、资料、技能、专家、MCP 连接器或模型设置"
+                  aria-label="添加参考文件、资料、技能、专家、MCP 连接器、Agent 群控任务或模型设置"
                 />
               </Popover>
             ) : null}

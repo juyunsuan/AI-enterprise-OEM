@@ -9,6 +9,7 @@ import {
 import { buildAgentToolManifest } from './agent-tool-manifest';
 import {
   AGENT_TOOLS,
+  DISPATCH_TOOLS,
   runAgentTool,
   type AgentToolContext,
 } from './agent-tools';
@@ -346,23 +347,16 @@ describe('agent-tool-manifest 统一工具清单', () => {
           reviewStatus: 'pending',
         },
       ],
-      plugins: [
-        {
-          name: '过审插件',
-          description: 'c',
-          enabled: true,
-          reviewStatus: 'passed',
-        },
-      ],
     });
     const names = new Set(rows.map((row) => row.name));
     expect(
       rows.filter((row) => row.kind === 'builtin').map((row) => row.name),
-    ).toEqual(AGENT_TOOLS.map((tool) => tool.function.name));
+    ).toEqual(
+      [...AGENT_TOOLS, ...DISPATCH_TOOLS].map((tool) => tool.function.name),
+    );
     expect(names.has('crm_create_lead')).toBe(true);
     expect(names.has('mcp__c1__fetch')).toBe(true);
     expect(names.has('过审技能')).toBe(true);
-    expect(names.has('过审插件')).toBe(true);
     // 先审后用：没过审的技能不进清单
     expect(rows.some((row) => row.name === '待审技能')).toBe(false);
     const connector = rows.find((row) => row.kind === 'connector');
@@ -374,7 +368,6 @@ describe('agent-tool-manifest 统一工具清单', () => {
     const rows = buildAgentToolManifest({
       connectorTools: [],
       skills: [],
-      plugins: [],
     });
     const lead = rows.find((row) => row.name === 'crm_create_lead');
     expect(lead?.operationId).toBe('Crm_createLead');

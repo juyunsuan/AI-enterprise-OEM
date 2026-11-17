@@ -23,7 +23,6 @@ function serviceWith(findFirst: jest.Mock) {
     stub(),
     stub(),
     stub(),
-    stub(),
   );
   return { service, findMany, findFirst };
 }

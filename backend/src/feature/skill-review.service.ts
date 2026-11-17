@@ -63,7 +63,7 @@ function toView(row: {
 /**
  * 技能审查台账服务（§5.9 的管理侧读写）：
  * - list：Platform_skillReviews 分页台账（静态命中 + LLM 判定全程留痕）；
- * - applyDecision：Platform_reviewSkillDecision 人工放行/终裁，直接改写 Skill/Plugin 的 reviewStatus；
+ * - applyDecision：Platform_reviewSkillDecision 人工放行/终裁，直接改写技能的 reviewStatus；
  * - recordRun：审查执行（静态扫描 + LLM）落台账的统一入口，供 importZip / 存量首扫调用（l0-review 接入）。
  * 审查执行引擎本体在 skill-review.rules / skill-review.runner，本服务只管台账与放行状态。
  */
@@ -82,8 +82,7 @@ export class SkillReviewService {
     size: number;
   }> {
     const where: Prisma.SkillReviewRunWhereInput = {};
-    if (input.kind === 'skill' || input.kind === 'plugin')
-      where.kind = input.kind;
+    if (input.kind === 'skill') where.kind = input.kind;
     if (
       ['pass', 'reject', 'needsAdmin', 'unreviewed'].includes(
         input.decision || '',
@@ -110,7 +109,7 @@ export class SkillReviewService {
   /** 人工终裁（passed/rejected）：放行即进可用集（gating 查询只认 reviewStatus=passed）。 */
   async applyDecision(
     input: {
-      kind: 'skill' | 'plugin';
+      kind: 'skill';
       itemId: number;
       decision: 'passed' | 'rejected';
       note: string;
@@ -129,25 +128,14 @@ export class SkillReviewService {
       reviewedAt: new Date(),
       reviewedBy,
     };
-    if (input.kind === 'skill') {
-      const row = await this.prisma.contentAgentSkill.findUnique({
-        where: { id: input.itemId },
-      });
-      if (!row) throw new BusinessException(ErrorCode.NOT_FOUND, '技能不存在');
-      await this.prisma.contentAgentSkill.update({
-        where: { id: input.itemId },
-        data,
-      });
-    } else {
-      const row = await this.prisma.contentAgentPlugin.findUnique({
-        where: { id: input.itemId },
-      });
-      if (!row) throw new BusinessException(ErrorCode.NOT_FOUND, '插件不存在');
-      await this.prisma.contentAgentPlugin.update({
-        where: { id: input.itemId },
-        data,
-      });
-    }
+    const row = await this.prisma.contentAgentSkill.findUnique({
+      where: { id: input.itemId },
+    });
+    if (!row) throw new BusinessException(ErrorCode.NOT_FOUND, '技能不存在');
+    await this.prisma.contentAgentSkill.update({
+      where: { id: input.itemId },
+      data,
+    });
     return {
       kind: input.kind,
       itemId: input.itemId,
@@ -157,7 +145,7 @@ export class SkillReviewService {
 
   /** 台账写入统一入口（审查执行引擎调用）：返回行 id 便于回链。 */
   async recordRun(input: {
-    kind: 'skill' | 'plugin';
+    kind: 'skill';
     itemId: number;
     userId: string;
     inputDigest: string;

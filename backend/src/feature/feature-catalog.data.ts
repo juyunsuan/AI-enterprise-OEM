@@ -67,7 +67,7 @@ export const FEATURE_SEED: FeatureSeedNode[] = [
   menu('data-table', 'workbench', '多维表格', '/data-table', 30),
   menu('rpa', 'workbench', 'RPA自动化', '/rpa', 40),
   group('content-creation', '内容创作', 50, 'workbench'),
-  menu('content-tools', 'content-creation', '内容创作小工具', '/content', 10),
+  menu('content-tools', 'content-creation', '内容创作工具', '/content', 10),
   // AI 画布与三个工作台同属一个开关；画布任务仍走 /enterprise/content/jobs（归 content-tools）
   menu('content-canvas', 'content-creation', 'AI 画布', '/content/canvas', 15),
   menu('community', 'content-creation', '创意社区', '/community', 20),
@@ -211,12 +211,18 @@ export const FEATURE_API_PREFIXES: Record<string, string[]> = {
     '/enterprise/content/studio',
   ],
   assets: ['/enterprise/content/digital-assets'],
-  // 智慧分析：热点工具接管 /insight/hotspot、/subscriptions、/metrics；趋势工具只接 /insight/trends
+  // 采集 SKILL 包清单挂板块底座码：两个工具各配自己那组采集目的，但下载同一份包清单，
+  // 关掉其中一个工具不应把另一个工具的下载入口藏掉。
+  insight: ['/enterprise/insight/skills'],
+  // 智慧分析：热点工具接管 /insight/hotspot、/subscriptions、/metrics 与热点侧采集配置
   'insight-hotspot': [
     '/enterprise/insight/hotspot',
     '/enterprise/insight/subscriptions',
     '/enterprise/insight/metrics',
+    '/enterprise/insight/sources',
+    '/enterprise/insight/runs',
   ],
+  // 趋势工具的 /enterprise/insight/trends 前缀已覆盖其采集配置（trends/sources|runs|subscriptions）
   'insight-trends': ['/enterprise/insight/trends'],
   community: ['/enterprise/community'],
   // 视频模版单独成码：前缀比 /enterprise/content 长，关闭模版不影响其它内容工具

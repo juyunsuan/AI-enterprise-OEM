@@ -8,6 +8,7 @@ import {
   BOT_HOST_STATUS_LABELS,
   BOT_HOST_TOKEN_PREFIX,
   BOT_CLIENT_KINDS,
+  BOT_CLIENT_KIND_LABELS,
   MOBOT_HOST_TOKEN_PREFIX,
   type BotClientKind,
   BOT_PENDING_QUEUE_LIMIT,
@@ -43,6 +44,10 @@ import {
 import type { HrmScopeService } from '../hrm/hrm.scope';
 import { PrismaService } from '../prisma/prisma.service';
 import { toJsonObject } from '../shared/json-value';
+import {
+  composeTerminalNotice,
+  type BotTerminalNoticeSink,
+} from './dispatch-notice';
 
 /**
  * Agent-Bot · Bot 主机（docs/Agent-Bot方案.md）：
@@ -86,6 +91,16 @@ function normalizeClientKind(raw: unknown): BotClientKind {
   return (BOT_CLIENT_KINDS as readonly string[]).includes(value)
     ? (value as BotClientKind)
     : 'DESKTOP';
+}
+
+function scopeKindsOf(raw: unknown): BotClientKind[] {
+  const list = Array.isArray(raw) ? raw : [];
+  const kinds = list
+    .map((item) => clip(item, 16).toUpperCase())
+    .filter((item): item is BotClientKind =>
+      (BOT_CLIENT_KINDS as readonly string[]).includes(item),
+    );
+  return [...new Set(kinds)];
 }
 
 function newCommandCode() {
@@ -184,8 +199,17 @@ function readWorkspaceCaps(caps: Record<string, unknown>): WorkspaceCaps {
   return { defaultPath: clip(raw.workspace, 300), list };
 }
 
+/** 终态提醒的入参：文案与闸门见 dispatch-notice，通知模块只负责落站内信。 */
+export type { BotTerminalNoticeSink } from './dispatch-notice';
+
 export class BotHostService {
   private contentCryptoSingleton: ContentCrypto | null = null;
+
+  /**
+   * 群控任务终态的站内信出口（装配见 services.ts）：通知服务比本服务构造更晚，
+   * 只留这条通道；没接上时静默跳过，设备回执照常落库。
+   */
+  terminalNotice?: BotTerminalNoticeSink;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -709,7 +733,40 @@ export class BotHostService {
     hostIdRaw: string,
     body: Record<string, unknown>,
   ) {
+    const { command } = await this.queuePrompt(user, hostIdRaw, body, {
+      source: 'UI',
+    });
+    return { command };
+  }
+
+  /**
+   * Agent 群控派单（docs/Agent群控（替换插件页签）产品设计方案.md §4.2）：
+   * 校验口径与界面手动下发完全同源（归属复权、指令 4000 字上限、单机待执行队列上限、
+   * 工作区白名单），额外要求设备已启用、类型落在本轮勾选的群控范围内，并打上 AGENT 来源与发起会话。
+   */
+  async dispatchAsAgent(user: CurrentUser, body: Record<string, unknown>) {
+    return this.queuePrompt(user, text(body.hostId), body, {
+      source: 'AGENT',
+      agentConversationId: Number(body.agentConversationId) || 0,
+      scope: scopeKindsOf(body.scope),
+      requireEnabled: true,
+    });
+  }
+
+  private async queuePrompt(
+    user: CurrentUser,
+    hostIdRaw: string,
+    body: Record<string, unknown>,
+    meta: {
+      source: 'UI' | 'AGENT';
+      agentConversationId?: number;
+      scope?: BotClientKind[];
+      requireEnabled?: boolean;
+    },
+  ) {
     const host = await this.loadHost(user, hostIdRaw);
+    const kind = normalizeClientKind(host.clientKind);
+    this.assertDispatchable(host, meta);
     const instruction = clip(body.text ?? body.instruction, INSTRUCTION_MAX);
     if (!instruction) {
       throw new BusinessException(
@@ -734,9 +791,25 @@ export class BotHostService {
       timeoutSec: timeoutSecOf(body.timeoutSec),
       mode: target.mode,
       kind: 'prompt',
+      title: clip(body.title, 200),
       conversationId,
+      source: meta.source,
+      agentConversationId: meta.agentConversationId,
     });
-    return { command: this.commandView(command) };
+    return {
+      command: this.commandView(command),
+      // 只回派单文案要用的设备摘要：令牌哈希等原始行字段不出服务层（界面响应也走这里）。
+      host: {
+        id: host.id,
+        name: host.name || `${BOT_CLIENT_KIND_LABELS[kind]} #${host.id}`,
+        clientKind: kind,
+        status: !host.enabled
+          ? 'DISABLED'
+          : botHostOnline(host)
+            ? 'ONLINE'
+            : 'OFFLINE',
+      },
+    };
   }
 
   /** 取消：未派发即置 CANCELED；已在跑的置取消标记，由客户端下一次心跳/进度回传时中断。 */
@@ -779,8 +852,35 @@ export class BotHostService {
   }
 
   async createSchedule(user: CurrentUser, body: Record<string, unknown>) {
+    return this.queueSchedule(user, body, { source: 'UI' });
+  }
+
+  /** Agent 群控创建设备定时任务：与界面同一套校验，额外加启用/scope 闸与 AGENT 来源标记。 */
+  async createScheduleAsAgent(
+    user: CurrentUser,
+    body: Record<string, unknown>,
+  ) {
+    return this.queueSchedule(user, body, {
+      source: 'AGENT',
+      agentConversationId: Number(body.agentConversationId) || 0,
+      scope: scopeKindsOf(body.scope),
+      requireEnabled: true,
+    });
+  }
+
+  private async queueSchedule(
+    user: CurrentUser,
+    body: Record<string, unknown>,
+    meta: {
+      source: 'UI' | 'AGENT';
+      agentConversationId?: number;
+      scope?: BotClientKind[];
+      requireEnabled?: boolean;
+    },
+  ) {
     const hostId = parseId(body.hostId, '主机 ID');
     const host = await this.loadHost(user, String(hostId));
+    this.assertDispatchable(host, meta);
     const title = clip(body.title, 80);
     if (!title)
       throw new BusinessException(ErrorCode.BAD_REQUEST, '请填写任务名称');
@@ -827,6 +927,8 @@ export class BotHostService {
         scheduleConfig: fields.scheduleConfig ?? {},
         scheduledAt,
         status: body.status === 'paused' ? 'paused' : 'enabled',
+        source: meta.source,
+        agentConversationId: meta.agentConversationId || 0,
       },
     });
     const names = await this.hostNames(user.userId, [row.hostId]);
@@ -1045,6 +1147,16 @@ export class BotHostService {
           data: { status: 'failed', error: reason, finishedAt: now },
         });
       }
+      await this.announceTerminal({
+        userId: row.userId,
+        hostId: row.hostId,
+        commandCode: row.commandCode,
+        title: row.title,
+        kind: row.kind,
+        source: row.source,
+        status: 'TIMEOUT',
+        detail: reason,
+      });
       swept += 1;
     }
     return swept;
@@ -1105,6 +1217,9 @@ export class BotHostService {
       title: row.title,
       conversationId,
       scheduleId: row.id,
+      // 定时任务到点生成的指令继承计划本身的来源：Agent 建的群控定时任务，每轮都算 Agent 派单。
+      source: row.source === 'AGENT' ? 'AGENT' : 'UI',
+      agentConversationId: row.agentConversationId,
     });
     await this.prisma.workbuddyHostScheduleRun.create({
       data: {
@@ -1451,7 +1566,57 @@ export class BotHostService {
         },
       });
     }
+    await this.announceTerminal({
+      userId: host.userId,
+      hostId: host.id,
+      hostName: host.name,
+      commandCode: command.commandCode,
+      title: command.title,
+      kind: command.kind,
+      source: command.source,
+      status,
+      detail: status === 'DONE' ? resultText : errorMessage,
+    });
     return { received: true, duplicate: false };
+  }
+
+  /**
+   * 群控任务到终态主动告知（方案 §4.4）：闸门与文案见 dispatch-notice，
+   * 与 WorkBuddy 企业云共用同一份口径。
+   * 站内信只是旁路提醒，出错也不能把设备的回执带崩，因此整段吞异常。
+   */
+  private async announceTerminal(input: {
+    userId: string;
+    hostId: number;
+    hostName?: string;
+    commandCode: string;
+    title: string;
+    kind: string;
+    source: string;
+    status: string;
+    detail: string;
+  }) {
+    if (!this.terminalNotice) return;
+    try {
+      const device =
+        input.hostName ||
+        (
+          await this.prisma.workbuddyHost.findUnique({
+            where: { id: input.hostId },
+            select: { name: true },
+          })
+        )?.name ||
+        '设备';
+      const message = composeTerminalNotice({
+        ...input,
+        target: device,
+        channel: 'device',
+      });
+      if (!message) return;
+      await this.terminalNotice(input.userId, message);
+    } catch {
+      // 提醒失败不影响回执落库
+    }
   }
 
   async logout(host: BotHostPrincipal) {
@@ -1531,6 +1696,29 @@ export class BotHostService {
     return { cwd, mode: clip(body.mode, 24) };
   }
 
+  /**
+   * 群控派单/建计划共用的两道额外闸（界面手动下发不受约束）：
+   * 设备必须启用，且类型落在本轮勾选的群控范围（DESKTOP / MOBOT）之内。
+   */
+  private assertDispatchable(
+    host: { name: string; clientKind: string; enabled: boolean },
+    meta: { scope?: BotClientKind[]; requireEnabled?: boolean },
+  ) {
+    if (meta.requireEnabled && !host.enabled) {
+      throw new BusinessException(
+        ErrorCode.BAD_REQUEST,
+        `「${host.name || '该设备'}」已停用，请先在 Agent-Bot 设备页启用后再派发`,
+      );
+    }
+    const kind = normalizeClientKind(host.clientKind);
+    if (meta.scope?.length && !meta.scope.includes(kind)) {
+      throw new BusinessException(
+        ErrorCode.BAD_REQUEST,
+        `「${host.name || '该设备'}」是${BOT_CLIENT_KIND_LABELS[kind]}，不在本轮勾选的群控范围（${meta.scope.map((item) => BOT_CLIENT_KIND_LABELS[item]).join('、')}）内`,
+      );
+    }
+  }
+
   private async loadHost(user: CurrentUser, hostIdRaw: string) {
     const id = parseId(hostIdRaw, '主机 ID');
     const row = await this.prisma.workbuddyHost.findFirst({
@@ -1570,6 +1758,10 @@ export class BotHostService {
       conversationId: number;
       title?: string;
       scheduleId?: number;
+      /** 派单来源：界面手动 UI（缺省）/ Agent 群控 AGENT，台账与完成通知都按它筛。 */
+      source?: 'UI' | 'AGENT';
+      /** 群控派单发起的站内会话，供「来源会话」回溯。 */
+      agentConversationId?: number;
     },
   ) {
     const payload = toJsonObject({
@@ -1593,6 +1785,8 @@ export class BotHostService {
         payload,
         status: 'PENDING',
         scheduleId: input.scheduleId || 0,
+        source: input.source === 'AGENT' ? 'AGENT' : 'UI',
+        agentConversationId: input.agentConversationId || 0,
       },
     });
     // 用户气泡在入队时落一条，回执时补 assistant 气泡：对话框顺序即「说 → 做 → 回」。

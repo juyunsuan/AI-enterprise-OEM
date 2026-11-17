@@ -182,6 +182,8 @@ function setup(input: {
     progressText: '',
     acpSessionId: '',
     scheduleId: 0,
+    source: 'UI',
+    agentConversationId: 0,
     dispatchedAt: null,
     finishedAt: null,
   });
@@ -288,6 +290,8 @@ function commandRow(overrides: Row = {}): Row {
     progressText: '',
     acpSessionId: '',
     scheduleId: 0,
+    source: 'UI',
+    agentConversationId: 0,
     dispatchedAt: null,
     finishedAt: null,
     createdAt: new Date(),
@@ -885,5 +889,337 @@ describe('BotHostService', () => {
     });
     expect(command.workspace).toBe('');
     expect(command.mode).toBe('');
+  });
+});
+
+/**
+ * Agent 群控写侧（docs/Agent群控（替换插件页签）产品设计方案.md §4.2、§8）：
+ * 派单入口与设备页面手动下发同源，但多了三道闸——启用状态、本轮勾选的设备类型、来源留痕；
+ * 回给工具层的设备摘要绝不能带配对令牌。
+ */
+describe('BotHostService 受控派单（Agent 群控）', () => {
+  const intruder = new CurrentUser('u9', 'stealer', 'user');
+
+  it('按 AGENT 来源与对话编号落库，设备摘要只给编号/名称/在线态', async () => {
+    const { service, workbuddyHostCommand } = setup({
+      hosts: [{ ...hostRow, tokenHash: 'secret-hash' }],
+    });
+
+    const { command, host } = await service.dispatchAsAgent(user, {
+      hostId: 1,
+      instruction: '把这份周报发出去',
+      title: '周报投递',
+      scope: ['DESKTOP'],
+      agentConversationId: 42,
+    });
+
+    expect(command.instruction).toBe('把这份周报发出去');
+    expect(command.status).toBe('PENDING');
+    expect(workbuddyHostCommand.rows[0]).toMatchObject({
+      source: 'AGENT',
+      agentConversationId: 42,
+      title: '周报投递',
+    });
+    expect(host).toEqual({
+      id: 1,
+      name: 'PC',
+      clientKind: 'DESKTOP',
+      status: 'ONLINE',
+    });
+  });
+
+  it('设备离线照样入队，状态回成 OFFLINE 让模型告知用户排队', async () => {
+    const { service } = setup({
+      hosts: [{ ...hostRow, lastSeenAt: new Date(Date.now() - 600_000) }],
+    });
+
+    const { command, host } = await service.dispatchAsAgent(user, {
+      hostId: 1,
+      instruction: '跑一下',
+      scope: ['DESKTOP'],
+      agentConversationId: 7,
+    });
+
+    expect(host.status).toBe('OFFLINE');
+    expect(command.status).toBe('PENDING');
+  });
+
+  it('已停用设备不能被 Agent 派发，界面手动下发口径保持不变', async () => {
+    const { service, workbuddyHostCommand } = setup({
+      hosts: [{ ...hostRow, enabled: false, status: 'DISABLED' }],
+    });
+
+    await expect(
+      service.dispatchAsAgent(user, {
+        hostId: 1,
+        instruction: '跑一下',
+        scope: ['DESKTOP'],
+      }),
+    ).rejects.toMatchObject({
+      errorCode: ErrorCode.BAD_REQUEST,
+      message: expect.stringContaining('已停用'),
+    });
+    expect(workbuddyHostCommand.rows).toHaveLength(0);
+
+    await expect(
+      service.send(user, '1', { text: '手动下发' }),
+    ).resolves.toBeTruthy();
+  });
+
+  it('设备类型不在本轮勾选的群控范围内时拒派', async () => {
+    const { service, workbuddyHostCommand } = setup({
+      hosts: [{ ...hostRow, id: 2, clientKind: 'MOBOT', platform: 'android' }],
+    });
+
+    await expect(
+      service.dispatchAsAgent(user, {
+        hostId: 2,
+        instruction: '拍一张',
+        scope: ['DESKTOP'],
+      }),
+    ).rejects.toMatchObject({
+      errorCode: ErrorCode.BAD_REQUEST,
+      message: expect.stringContaining('不在本轮勾选的群控范围'),
+    });
+    expect(workbuddyHostCommand.rows).toHaveLength(0);
+  });
+
+  it('别人的设备按不存在处理，不泄露设备是否存在', async () => {
+    const { service } = setup({ hosts: [hostRow] });
+
+    await expect(
+      service.dispatchAsAgent(intruder, {
+        hostId: 1,
+        instruction: '跑一下',
+        scope: ['DESKTOP'],
+      }),
+    ).rejects.toMatchObject({ errorCode: ErrorCode.NOT_FOUND });
+  });
+
+  it('Agent 建的设备定时任务继承来源，补跑一轮生成的指令仍是 AGENT', async () => {
+    const { service, workbuddyHostSchedule, workbuddyHostCommand } = setup({
+      hosts: [hostRow],
+    });
+
+    const { schedule } = await service.createScheduleAsAgent(user, {
+      hostId: 1,
+      title: '每天早报',
+      instruction: '汇总昨天的销量',
+      scheduleType: 'scheduled',
+      scheduledAt: new Date(Date.now() + 3_600_000).toISOString(),
+      scope: ['DESKTOP'],
+      agentConversationId: 43,
+    });
+
+    expect(workbuddyHostSchedule.rows[0]).toMatchObject({
+      source: 'AGENT',
+      agentConversationId: 43,
+      scheduleType: 'scheduled',
+    });
+
+    await service.runSchedule(user, String(schedule.id));
+
+    expect(workbuddyHostCommand.rows[0]).toMatchObject({
+      source: 'AGENT',
+      agentConversationId: 43,
+      kind: 'prompt',
+      scheduleId: schedule.id,
+    });
+  });
+});
+
+/**
+ * 群控任务终态的站内信（方案 §4.4）：Agent 派单与设备侧定时到点必须主动告知，
+ * 用户在设备页面手动下的指令不打扰；提醒只是旁路，出口缺席或出错都不能带崩设备回执。
+ */
+describe('BotHostService 终态站内信', () => {
+  type NoticePayload = Parameters<
+    NonNullable<BotHostService['terminalNotice']>
+  >[1];
+
+  function withNotice(input: { hosts?: Row[]; commands?: Row[] }) {
+    const env = setup(input);
+    const notice = jest.fn<Promise<void>, [string, NoticePayload]>(() =>
+      Promise.resolve(),
+    );
+    env.service.terminalNotice = notice;
+    return { ...env, notice };
+  }
+
+  it('Agent 派单跑完：发 info 级消息，正文带设备名与指令码且遮掉本地路径', async () => {
+    const { service, notice, workbuddyHostCommand } = withNotice({
+      hosts: [hostRow],
+      commands: [
+        commandRow({
+          status: 'DISPATCHED',
+          source: 'AGENT',
+          agentConversationId: 43,
+          dispatchedAt: new Date(),
+        }),
+      ],
+    });
+    const receipt = await service.result(hostPrincipal, {
+      commandCode: 'wbcmd1',
+      ok: true,
+      text: '结果文件在 C:\\Users\\a\\report.docx\n第二段',
+      elapsedMs: 4200,
+    });
+    expect(receipt).toMatchObject({ received: true, duplicate: false });
+    expect(workbuddyHostCommand.rows[0].status).toBe('DONE');
+    expect(notice).toHaveBeenCalledTimes(1);
+    const [userId, message] = notice.mock.calls[0];
+    expect(userId).toBe('u1');
+    expect(message.title).toBe('群控任务已完成：整理周报');
+    expect(message.level).toBe('info');
+    expect(message.commandCode).toBe('wbcmd1');
+    expect(message.body).toContain('PC · 普通任务');
+    expect(message.body).toContain('指令码 wbcmd1');
+    expect(message.body).toContain('（本地路径已隐藏）');
+    expect(message.body).not.toContain('report.docx');
+  });
+
+  it('用户在设备页面手下的指令跑完不发信', async () => {
+    const { service, notice } = withNotice({
+      hosts: [hostRow],
+      commands: [
+        commandRow({ status: 'DISPATCHED', dispatchedAt: new Date() }),
+      ],
+    });
+    await service.result(hostPrincipal, {
+      commandCode: 'wbcmd1',
+      ok: true,
+      text: '已完成',
+    });
+    expect(notice).not.toHaveBeenCalled();
+  });
+
+  it('设备侧定时任务到点跑完也通知，正文标注定时任务', async () => {
+    const { service, notice } = withNotice({
+      hosts: [hostRow],
+      commands: [
+        commandRow({
+          kind: 'schedule',
+          status: 'DISPATCHED',
+          scheduleId: 7,
+          dispatchedAt: new Date(),
+        }),
+      ],
+    });
+    await service.result(hostPrincipal, {
+      commandCode: 'wbcmd1',
+      ok: true,
+      text: '早报已汇总',
+    });
+    expect(notice).toHaveBeenCalledTimes(1);
+    const [, message] = notice.mock.calls[0];
+    expect(message.title).toBe('群控任务已完成：整理周报');
+    expect(message.body).toContain('定时任务');
+  });
+
+  it('执行失败按 error 级，正文给失败原因与重新派单指引', async () => {
+    const { service, notice } = withNotice({
+      hosts: [hostRow],
+      commands: [
+        commandRow({
+          status: 'DISPATCHED',
+          source: 'AGENT',
+          dispatchedAt: new Date(),
+        }),
+      ],
+    });
+    await service.result(hostPrincipal, {
+      commandCode: 'wbcmd1',
+      ok: false,
+      errorMessage: '工作区不存在',
+    });
+    expect(notice).toHaveBeenCalledTimes(1);
+    const [, message] = notice.mock.calls[0];
+    expect(message.level).toBe('error');
+    expect(message.title).toBe('群控任务执行失败：整理周报');
+    expect(message.body).toContain('工作区不存在');
+    expect(message.body).toContain('重新派单');
+  });
+
+  it('超时收口同样通知；取消不发信', async () => {
+    const { service, notice } = withNotice({
+      hosts: [hostRow],
+      commands: [
+        commandRow({
+          status: 'DISPATCHED',
+          source: 'AGENT',
+          dispatchedAt: new Date(Date.now() - 40 * 60_000),
+          payload: {
+            instruction: '整理周报',
+            cwd: '/workspace',
+            timeoutSec: 60,
+          },
+        }),
+        commandRow({
+          id: 12,
+          commandCode: 'wbcmd2',
+          status: 'DISPATCHED',
+          source: 'AGENT',
+          dispatchedAt: new Date(),
+          cancelRequested: true,
+        }),
+      ],
+    });
+    expect(await service.sweepTimeouts()).toBe(1);
+    expect(notice).toHaveBeenCalledTimes(1);
+    const [, timeout] = notice.mock.calls[0];
+    expect(timeout.title).toBe('群控任务超时未回传：整理周报');
+    expect(timeout.level).toBe('error');
+
+    notice.mockClear();
+    await service.result(hostPrincipal, {
+      commandCode: 'wbcmd2',
+      ok: true,
+      text: '跑完了',
+      canceled: true,
+    });
+    expect(notice).not.toHaveBeenCalled();
+  });
+
+  it('出口没装配或抛错都不影响设备回执落库', async () => {
+    const plain = setup({
+      hosts: [hostRow],
+      commands: [
+        commandRow({
+          status: 'DISPATCHED',
+          source: 'AGENT',
+          dispatchedAt: new Date(),
+        }),
+      ],
+    });
+    await expect(
+      plain.service.result(hostPrincipal, {
+        commandCode: 'wbcmd1',
+        ok: true,
+        text: '已完成',
+      }),
+    ).resolves.toMatchObject({ received: true });
+    expect(plain.workbuddyHostCommand.rows[0].status).toBe('DONE');
+
+    const broken = withNotice({
+      hosts: [hostRow],
+      commands: [
+        commandRow({
+          status: 'DISPATCHED',
+          source: 'AGENT',
+          commandCode: 'wbcmd3',
+          dispatchedAt: new Date(),
+        }),
+      ],
+    });
+    broken.service.terminalNotice = () =>
+      Promise.reject(new Error('站内信写失败'));
+    await expect(
+      broken.service.result(hostPrincipal, {
+        commandCode: 'wbcmd3',
+        ok: true,
+        text: '已完成',
+      }),
+    ).resolves.toMatchObject({ received: true });
+    expect(broken.workbuddyHostCommand.rows[0].status).toBe('DONE');
   });
 });

@@ -263,7 +263,7 @@ export const HELP_CHAPTERS_PART_TWO: HelpChapterContent[] = [
 
 - **AIPDD 渠道**：直接使用「API Key 管理」里绑定的 sk- Key，开箱即用。
 - **自定义渠道**：接入其他 OpenAI 兼容网关与火山 AI MediaKit。
-- **默认值**：为文本、图片、视频、语音每种类型选定默认模型，Agent 与内容创作小工具都会遵循。`,
+- **默认值**：为文本、图片、视频、语音每种类型选定默认模型，Agent 与内容创作工具都会遵循。`,
       },
     ],
   },

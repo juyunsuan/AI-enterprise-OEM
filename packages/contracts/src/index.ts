@@ -147,5 +147,6 @@ export * from "./upgrade";
 export * from "./ai-code";
 export * from "./wechat-mp";
 export * from "./bot-host";
+export * from "./agent-dispatch";
 export * from "./miniprogram";
 export { ContentEndpoints as contentEndpoints } from "./content";

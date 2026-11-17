@@ -122,7 +122,10 @@ import { WorkbuddyLlmService } from '../workbuddy/workbuddy-llm.service';
 import { WorkbuddyController } from '../workbuddy/workbuddy.controller';
 import { WorkbuddyCloudService } from '../workbuddy/workbuddy-cloud.service';
 import { BotHostService } from '../bot-host/bot-host.service';
+import type { BotTerminalNoticePayload } from '../bot-host/dispatch-notice';
 import { BotHostController } from '../bot-host/bot-host.controller';
+import { AgentDispatchController } from '../bot-host/agent-dispatch.controller';
+import { AgentDispatchService } from '../bot-host/agent-dispatch.service';
 import { AiCallCrypto } from '../ai-call/ai-call-crypto';
 import { AiCallAccountService } from '../ai-call/ai-call-account.service';
 import { AiCallController } from '../ai-call/ai-call.controller';
@@ -182,7 +185,6 @@ import { AgentMcpCrypto } from '../content/agent-mcp-crypto';
 import { ContentAgentMemoryService } from '../content/agent-memory.service';
 import { ContentAgentLibraryService } from '../content/agent-library.service';
 import { ContentAgentSkillService } from '../content/agent-skills.service';
-import { ContentAgentPluginService } from '../content/agent-plugins.service';
 import { runAgentTool } from '../content/agent-tools';
 import { SkillHubClient } from '../skillhub/skillhub.client';
 import { SkillHubService } from '../skillhub/skillhub.service';
@@ -971,6 +973,17 @@ export function createServices() {
   const aliyunMailController = new AliyunMailController(aliyunMailService);
   const agentMemoryService = new AgentMemoryService(prismaService);
   const agentMemoryController = new AgentMemoryController(agentMemoryService);
+  // Agent 群控（替换插件页签）：读侧给页签与工具同源台账，写侧仍走 BotHostService 的受控方法；
+  // 派单动作要在「智能体记忆」操作流留痕，故装配在 agentMemoryService 之后。
+  const agentDispatchService = new AgentDispatchService(
+    prismaService,
+    botHostService,
+    workbuddyCloudService,
+    agentMemoryService,
+  );
+  const agentDispatchController = new AgentDispatchController(
+    agentDispatchService,
+  );
   const contentCrypto = new ContentCrypto();
   const aipddAssetClient = new AipddAssetClient();
   // §5.7 安全三件套：平台/组织 AI 主开关 + 用户×组织双维限流，网关与模型设置共用同一闸。
@@ -1040,14 +1053,9 @@ export function createServices() {
     prismaService,
     identityService,
   );
-  const contentAgentPluginService = new ContentAgentPluginService(
-    prismaService,
-    identityService,
-  );
   const skillHubService = new SkillHubService(
     new SkillHubClient(),
     contentAgentSkillService,
-    contentAgentPluginService,
   );
   const skillHubController = new SkillHubController(skillHubService);
   const contentMediaService = new ContentMediaService(
@@ -1125,6 +1133,7 @@ export function createServices() {
   insightService.deliverableSink = (userId, input) =>
     contentDigitalAssetService.registerDeliverable(userId, input);
   insightService.schedule = rpaChromeScheduleService;
+  insightService.hostChannel = botHostService;
   insightService.vision = new AssetVisionService(prismaService);
   const contentAgentLibraryService = new ContentAgentLibraryService(
     prismaService,
@@ -1140,12 +1149,13 @@ export function createServices() {
     media: contentMediaService,
     memory: contentAgentMemoryService,
     skills: contentAgentSkillService,
-    plugins: contentAgentPluginService,
     connectors: contentAgentConnectorService,
     library: contentAgentLibraryService,
     prisma: prismaService,
     identity: identityService,
     hardware: hardwareService,
+    // Agent 群控工具（dispatchScope 勾选后注入）：读写都经 AgentDispatchService 收口到 BotHostService 受控方法
+    dispatch: agentDispatchService,
     // 统一 RAG 出口（kb_retrieve）：kb 装配在下方，闭包延后解析
     retrieve: (user: CurrentUser, input: RetrieveInput) =>
       kbRetrieveService.retrieve(user, input),
@@ -1229,7 +1239,6 @@ export function createServices() {
     prismaService,
     contentAgentMemoryService,
     contentAgentSkillService,
-    contentAgentPluginService,
     contentAgentExpertService,
     contentAgentConnectorService,
     contentAgentEngine,
@@ -1285,7 +1294,6 @@ export function createServices() {
     contentAssetShareService,
     contentAgentConnectorService,
     contentAgentSkillService,
-    contentAgentPluginService,
     canvasProjectService,
     (user) =>
       workflowRef.service
@@ -1359,6 +1367,23 @@ export function createServices() {
     snsService,
     wechatMpPushService,
   );
+  // 群控任务终态的站内信出口（方案 §4.4、§4.7）：通知服务比这两个服务构造更晚，装配后再交给设备回执与云端追平两条链路。
+  const dispatchTerminalNotice = async (
+    userId: string,
+    input: BotTerminalNoticePayload,
+  ) => {
+    await notificationService.notify(userId, {
+      category: 'bot',
+      title: input.title,
+      body: input.body,
+      level: input.level,
+      link: '/agent?tab=dispatch',
+      entityType: input.entityType,
+      entityId: input.commandCode,
+    });
+  };
+  botHostService.terminalNotice = dispatchTerminalNotice;
+  workbuddyCloudService.terminalNotice = dispatchTerminalNotice;
   const notificationController = new NotificationController(
     notificationService,
   );
@@ -1769,20 +1794,14 @@ export function createServices() {
   // 静态硬红线直接拒收，LLM 绝对安全门通过后才允许启用。
   contentAgentSkillService.reviewHook = (kind, itemId, userId) =>
     skillReviewRunner.enqueue(kind, itemId, userId);
-  contentAgentPluginService.reviewHook = (kind, itemId, userId) =>
-    skillReviewRunner.enqueue(kind, itemId, userId);
   // 上传入口改为同步审查：用户配置的 LLM 分析结果决定放行/拒绝，不安全不落库；
   // 确定性四组规则作为补充证据与既有红线兜底（不替换原策略）。
   contentAgentSkillService.uploadReview = (userId, pkg) =>
     skillReviewRunner.reviewPackage(userId, pkg);
-  contentAgentPluginService.uploadReview = (userId, pkg) =>
-    skillReviewRunner.reviewPackage(userId, pkg);
   // 运行期复扫与出站黑名单共用平台访问策略
   contentAgentSkillService.blacklistProvider = async () =>
     (await accessPolicyService.current()).blacklist;
-  contentAgentPluginService.blacklistProvider = async () =>
-    (await accessPolicyService.current()).blacklist;
-  // 2.1 单轮请求上限走平台沙箱硬上限（技能/插件正文无权调大）
+  // 2.1 单轮请求上限走平台沙箱硬上限（技能正文无权调大）
   contentAgentEngine.guardOptions = async () => {
     const policy = await accessPolicyService.current();
     return {
@@ -2477,7 +2496,6 @@ export function createServices() {
       connectorTools: (user) => contentAgentConnectorService.toolSpecs(user),
       hardwareTools: (user) => contentAgentService.hardwareToolSpecs(user),
       skills: (user) => contentAgentSkillService.list(user),
-      plugins: (user) => contentAgentPluginService.list(user),
     },
     hrmScopeService,
   );
@@ -2943,6 +2961,7 @@ export function createServices() {
       rpaChromeController,
       workbuddyController,
       botHostController,
+      agentDispatchController,
       aiCallController,
       aiCallOpenController,
       leadProspectingController,

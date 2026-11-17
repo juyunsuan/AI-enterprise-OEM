@@ -6,9 +6,6 @@ export const skillHubApi = {
   list: endpoint(endpoints.SkillHub_list),
   detail: endpoint(endpoints.SkillHub_detail),
   install: endpoint(endpoints.SkillHub_install),
-  pluginList: endpoint(endpoints.SkillHub_pluginList),
-  pluginDetail: endpoint(endpoints.SkillHub_pluginDetail),
-  pluginInstall: endpoint(endpoints.SkillHub_pluginInstall),
   download: async (slug: string) => {
     const result = await http(
       `/api/backend/enterprise/skillhub/skills/${encodeURIComponent(slug)}/download`,

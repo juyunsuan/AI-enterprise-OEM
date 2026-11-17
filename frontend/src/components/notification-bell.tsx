@@ -14,6 +14,7 @@ const COLOR: Record<string, string> = {
   identity: "#ff7d00",
   tax: "#722ed1",
   automation: "#14c9c9",
+  bot: "#d48806",
   account: "#f53f3f",
   platform: "#86909c",
   sns: "#00b96b",

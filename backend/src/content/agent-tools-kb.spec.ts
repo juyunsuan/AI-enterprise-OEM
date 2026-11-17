@@ -23,7 +23,6 @@ function scoped<T>(
     {
       connectorIds: [],
       mailboxIds: [],
-      pluginIds: [],
       trigger: 'chat',
       ...extra,
     },

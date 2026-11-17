@@ -319,18 +319,11 @@ export function toolNodeSpecs(input: {
     enabled?: boolean;
     reviewStatus?: string;
   }[];
-  plugins?: {
-    name: string;
-    description?: string;
-    enabled?: boolean;
-    reviewStatus?: string;
-  }[];
 }): WorkflowNodeSpec[] {
   const manifest = buildAgentToolManifest({
     connectorTools: input.connectorTools ?? [],
     hardwareTools: input.hardwareTools ?? [],
     skills: input.skills ?? [],
-    plugins: input.plugins ?? [],
   });
   // builtin / business 已在别处暴露（内置工具不单独编排；业务动作用契约动作节点，走同一张路由表）。
   return manifest
@@ -357,12 +350,6 @@ export function buildWorkflowCatalog(input: {
   connectorTools?: ConnectorToolSpec[];
   hardwareTools?: HardwareMcpTool[];
   skills?: {
-    name: string;
-    description?: string;
-    enabled?: boolean;
-    reviewStatus?: string;
-  }[];
-  plugins?: {
     name: string;
     description?: string;
     enabled?: boolean;

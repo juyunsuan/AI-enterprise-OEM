@@ -50,11 +50,7 @@ const IMPORT_WINDOW_MS = 60_000;
 export class ContentAgentSkillService {
   private readonly importLimiter = new RateWindow(IMPORT_MAX, IMPORT_WINDOW_MS);
   /** 审查挂钩（§5.9 先审后用）：装配时由 services.ts 属性注入 SkillReviewRunner.enqueue。 */
-  reviewHook?: (
-    kind: 'skill' | 'plugin',
-    itemId: number,
-    userId: string,
-  ) => void;
+  reviewHook?: (kind: 'skill', itemId: number, userId: string) => void;
   /** 上传前同步审查（用户配置的 LLM 判定安全/不安全）：装配时由 services.ts 注入。 */
   uploadReview?: (
     userId: string,

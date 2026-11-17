@@ -1,7 +1,7 @@
 import { agentActionLabel, MCP_FORBIDDEN_ACTIONS } from '@enterprise/contracts';
 import type { ConnectorToolSpec } from './agent-connectors.service';
 import type { HardwareMcpTool } from '../hardware/hardware.service';
-import { AGENT_TOOLS } from './agent-tools';
+import { AGENT_TOOLS, DISPATCH_TOOLS } from './agent-tools';
 import { BUSINESS_TOOLS } from './agent-business-tools';
 
 /**
@@ -17,7 +17,6 @@ export const AGENT_TOOL_KINDS = [
   'connector',
   'hardware',
   'skill',
-  'plugin',
   'workflow',
 ] as const;
 export type AgentToolKind = (typeof AGENT_TOOL_KINDS)[number];
@@ -28,7 +27,6 @@ export const AGENT_TOOL_KIND_LABELS: Record<AgentToolKind, string> = {
   connector: '连接器',
   hardware: '硬件工具',
   skill: '技能',
-  plugin: '插件',
   workflow: '工作流',
 };
 
@@ -49,7 +47,7 @@ export type AgentToolManifestEntry = {
   source?: string;
 };
 
-/** 内置工具里会改数据的动作：出图出片入库、记忆与资料库写入、跑插件命令。 */
+/** 内置工具里会改数据的动作：出图出片入库、记忆与资料库写入、群控派单。 */
 const BUILTIN_WRITE_TOOLS = new Set([
   'generate_image',
   'generate_video',
@@ -57,16 +55,26 @@ const BUILTIN_WRITE_TOOLS = new Set([
   'save_to_kb',
   'propose_library_edit',
   'publish_to_library',
-  'run_plugin_command',
+  'dispatch_device_task',
+  'create_device_schedule',
+  'cancel_dispatch_task',
 ]);
 
 const BUILTIN_BILLING: Record<string, string> = {
   generate_image: '按图像生成计积分',
   generate_video: '按视频生成计积分',
+  // 群控工具本身免费：设备侧耗的模型记在授权渠道，企云跑在用户自己的腾讯云账号里，本站都不计积分
+  dispatch_device_task:
+    '工具免费；设备执行耗的模型记在设备侧授权渠道，WorkBuddy 企业云用用户自己的腾讯云账号、本站不计积分',
+  create_device_schedule:
+    '工具免费；设备执行耗的模型记在设备侧授权渠道，WorkBuddy 企业云用用户自己的腾讯云账号、本站不计积分',
+  list_dispatch_devices: '读操作，不消耗积分',
+  list_dispatch_tasks: '读操作，不消耗积分',
+  cancel_dispatch_task: '写操作：只改指令状态',
 };
 
 export function builtinToolManifest(): AgentToolManifestEntry[] {
-  return AGENT_TOOLS.map((tool) => {
+  return [...AGENT_TOOLS, ...DISPATCH_TOOLS].map((tool) => {
     const name = String(tool.function.name);
     return {
       name,
@@ -144,7 +152,6 @@ function usable(rows: ManifestResource[]) {
 export function buildAgentToolManifest(input: {
   connectorTools: ConnectorToolSpec[];
   skills: ManifestResource[];
-  plugins: ManifestResource[];
   hardwareTools?: HardwareMcpTool[];
   workflows?: ManifestWorkflow[];
 }): AgentToolManifestEntry[] {
@@ -173,16 +180,6 @@ export function buildAgentToolManifest(input: {
       write: false,
       permission: '先审后用：过审并启用后，模型可用 load_skill 读取',
       billing: '读操作，不消耗积分',
-    });
-  }
-  for (const plugin of usable(input.plugins)) {
-    rows.push({
-      name: plugin.name,
-      kind: 'plugin',
-      description: plugin.description || '（插件未填写说明）',
-      write: true,
-      permission: '先审后用：过审并启用后，模型可读取并运行其命令',
-      billing: '按命令内容执行',
     });
   }
   for (const workflow of input.workflows ?? []) {

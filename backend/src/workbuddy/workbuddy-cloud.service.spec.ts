@@ -5,11 +5,61 @@ import { PrismaService } from '../prisma/prisma.service';
 import { stub } from '../../test/doubles';
 import { WorkbuddyCloudService } from './workbuddy-cloud.service';
 import type { WorkbuddyAccountService } from './workbuddy-account.service';
+import {
+  wbAgentTaskGet,
+  wbCreateAgentSession,
+  wbDescribeAgentList,
+  wbDescribeMessageEventList,
+  wbDescribeUserAccessToken,
+  wbPushInstruction,
+} from './workbuddy-client';
 
 /**
  * 企业云改版的三条硬约束：账号归属隔离、定时先推排期再跑、失败只留痕不外抛。
+ * 群控并入后（方案 §4.7）再加四条：Agent 派单要标来源、Agent 省略时按最近用过回落、
+ * 取消要说清「停止跟踪」、终态必须走与设备同一条站内信出口。
  * 用内存替身钉住，避免改派发链路时把隔离或收口弄丢。
  */
+
+jest.mock('./workbuddy-client', () => ({
+  wbAgentTaskGet: jest.fn(),
+  wbCreateAgentSession: jest.fn(),
+  wbDescribeAgentList: jest.fn(),
+  wbDescribeMessageEventList: jest.fn(),
+  wbDescribeUserAccessToken: jest.fn(),
+  wbPushInstruction: jest.fn(),
+}));
+
+const remote = {
+  createSession: wbCreateAgentSession as jest.Mock,
+  agentList: wbDescribeAgentList as jest.Mock,
+  token: wbDescribeUserAccessToken as jest.Mock,
+  push: wbPushInstruction as jest.Mock,
+  taskGet: wbAgentTaskGet as jest.Mock,
+  events: wbDescribeMessageEventList as jest.Mock,
+};
+
+function mockCloud(
+  input: {
+    agents?: { AgentId: string; AgentName: string; LatestVersionId?: string }[];
+  } = {},
+) {
+  remote.agentList.mockResolvedValue({
+    TotalCount: (input.agents ?? []).length,
+    AgentSet: input.agents ?? [
+      { AgentId: 'agent-1', AgentName: '数字员工甲', LatestVersionId: 'v1' },
+      { AgentId: 'agent-2', AgentName: '数字员工乙', LatestVersionId: 'v2' },
+    ],
+  });
+  remote.createSession.mockResolvedValue({
+    SessionId: 'sess-1',
+    EndpointSet: [{ Url: 'https://a2a.example/rpc' }],
+  });
+  remote.token.mockResolvedValue({ token: 'tok-1' });
+  remote.push.mockResolvedValue({
+    payload: { result: { id: 'task-1', status: { state: 'working' } } },
+  });
+}
 
 type Row = Record<string, unknown>;
 
@@ -17,15 +67,31 @@ const user = new CurrentUser('u1', 'owner', 'user');
 
 function matches(row: Row, where: Row): boolean {
   return Object.entries(where).every(([key, cond]) => {
+    // OR / AND：群控扫尾的 where 用到，条件本身是数组。
+    if (Array.isArray(cond) && key === 'OR') {
+      return (cond as Row[]).some((item) => matches(row, item));
+    }
+    if (Array.isArray(cond) && key === 'AND') {
+      return (cond as Row[]).every((item) => matches(row, item));
+    }
     if (cond && typeof cond === 'object' && !Array.isArray(cond)) {
       const bag = cond as Row;
       if ('in' in bag) return (bag['in'] as unknown[]).includes(row[key]);
+      if ('notIn' in bag)
+        return !(bag['notIn'] as unknown[]).includes(row[key]);
       if ('not' in bag) return row[key] !== bag['not'];
       if ('lte' in bag) {
         const value = row[key];
         return (
           value instanceof Date &&
           value.getTime() <= (bag['lte'] as Date).getTime()
+        );
+      }
+      if ('lt' in bag) {
+        const value = row[key];
+        return (
+          value instanceof Date &&
+          value.getTime() < (bag['lt'] as Date).getTime()
         );
       }
       if ('equals' in bag) return row[key] === bag['equals'];
@@ -135,11 +201,13 @@ function scheduleRow(overrides: Row = {}): Row {
   };
 }
 
-function setup(input: {
-  accounts?: Row[];
-  schedules?: Row[];
-  commands?: Row[];
-}) {
+function setup(
+  input: {
+    accounts?: Row[];
+    schedules?: Row[];
+    commands?: Row[];
+  } = {},
+) {
   const workbuddyAccount = table(input.accounts ?? [accountRow]);
   const workbuddyCloudSchedule = table(input.schedules ?? []);
   const workbuddyCloudScheduleRun = table([]);
@@ -175,10 +243,51 @@ function setup(input: {
     credsOf,
     creds: () => ({ secretId: 's', secretKey: 'k', region: 'ap-guangzhou' }),
   });
+  const service = new WorkbuddyCloudService(prisma, accounts);
+  type NoticePayload = Parameters<
+    NonNullable<WorkbuddyCloudService['terminalNotice']>
+  >[1];
+  const notice = jest.fn<Promise<void>, [string, NoticePayload]>(() =>
+    Promise.resolve(),
+  );
+  service.terminalNotice = notice;
   return {
-    service: new WorkbuddyCloudService(prisma, accounts),
+    service,
+    notice,
+    workbuddyAccount,
+    workbuddyCloudCommand,
     workbuddyCloudSchedule,
     workbuddyCloudScheduleRun,
+  };
+}
+
+function commandRow(overrides: Row = {}): Row {
+  return {
+    id: 21,
+    userId: 'u1',
+    accountId: 7,
+    agentId: 'agent-1',
+    versionId: 'v1',
+    conversationId: 1,
+    sessionId: 'sess-1',
+    endpoint: 'https://a2a.example/rpc',
+    commandCode: 'cloud-cmd-1',
+    kind: 'prompt',
+    title: '整理今天的线索',
+    payload: { instruction: '整理今天的线索' },
+    status: 'DISPATCHED',
+    progressText: '',
+    result: { a2aTaskId: 'task-1', state: 'working' },
+    error: '',
+    cancelRequested: false,
+    source: 'AGENT',
+    agentConversationId: 42,
+    scheduleId: 0,
+    dispatchedAt: new Date(),
+    finishedAt: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...overrides,
   };
 }
 
@@ -239,5 +348,177 @@ describe('WorkbuddyCloudService', () => {
     await expect(
       service.sendCommand(user, 7, { agentId: 'a1', instruction: '做点事' }),
     ).rejects.toMatchObject({ errorCode: ErrorCode.BAD_REQUEST });
+  });
+});
+
+describe('WorkbuddyCloudService 群控派单（方案 §4.7）', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockCloud();
+  });
+
+  it('Agent 派单标来源与会话，省略 Agent 时按清单第一个回落', async () => {
+    const { service, workbuddyCloudCommand } = setup();
+    const result = await service.dispatchAsAgent(user, {
+      accountId: 7,
+      instruction: '把今天的线索汇总成表',
+      scope: ['WORKBUDDY'],
+      agentConversationId: 42,
+    });
+    expect(result.agent.agentId).toBe('agent-1');
+    expect(result.command).toMatchObject({
+      agentId: 'agent-1',
+      versionId: 'v1',
+      status: 'DISPATCHED',
+    });
+    const row = workbuddyCloudCommand.rows[0];
+    expect(row).toMatchObject({
+      source: 'AGENT',
+      agentConversationId: 42,
+      userId: 'u1',
+      accountId: 7,
+    });
+    expect(remote.push).toHaveBeenCalled();
+  });
+
+  it('本轮没勾企云就不下发，且提示去哪儿补勾', async () => {
+    const { service, workbuddyCloudCommand } = setup();
+    await expect(
+      service.dispatchAsAgent(user, {
+        accountId: 7,
+        instruction: '做点事',
+        scope: ['DESKTOP'],
+        agentConversationId: 1,
+      }),
+    ).rejects.toMatchObject({ errorCode: ErrorCode.BAD_REQUEST });
+    expect(workbuddyCloudCommand.rows).toHaveLength(0);
+    expect(remote.push).not.toHaveBeenCalled();
+  });
+
+  it('显式指定的 Agent 不在该账号清单里时拒绝，并把可用清单回给模型', async () => {
+    const { service } = setup();
+    await expect(
+      service.dispatchAsAgent(user, {
+        accountId: 7,
+        instruction: '做点事',
+        agentId: 'agent-9',
+        scope: ['WORKBUDDY'],
+      }),
+    ).rejects.toMatchObject({
+      errorCode: ErrorCode.BAD_REQUEST,
+      message: expect.stringContaining('数字员工甲'),
+    });
+  });
+
+  it('账号里一个 Agent 都没有时给出企云账号入口，不编一个 Agent 出来', async () => {
+    remote.agentList.mockResolvedValue({ TotalCount: 0, AgentSet: [] });
+    const { service } = setup();
+    await expect(
+      service.dispatchAsAgent(user, {
+        accountId: 7,
+        instruction: '做点事',
+        scope: ['WORKBUDDY'],
+      }),
+    ).rejects.toMatchObject({
+      errorCode: ErrorCode.BAD_REQUEST,
+      message: expect.stringContaining('没有可见的 Agent'),
+    });
+  });
+
+  it('Agent 清单按账号缓存 60 秒，台账反复刷新不重复敲腾讯云', async () => {
+    const { service } = setup();
+    await service.agentsFor(user, 7);
+    await service.agentsFor(user, 7);
+    expect(remote.agentList).toHaveBeenCalledTimes(1);
+    await service.agentsFor(user, 7, true);
+    expect(remote.agentList).toHaveBeenCalledTimes(2);
+  });
+
+  it('已推进会话的取消是「停止跟踪」，文案必须如实说明', async () => {
+    const { service, workbuddyCloudCommand } = setup({
+      commands: [commandRow({ status: 'DISPATCHED' })],
+    });
+    const result = await service.cancelAsAgent(user, 'cloud-cmd-1');
+    expect(result.stopped).toBe(true);
+    expect(workbuddyCloudCommand.rows[0]).toMatchObject({
+      status: 'CANCELED',
+      cancelRequested: true,
+    });
+    expect(String(workbuddyCloudCommand.rows[0]['error'])).toContain(
+      '腾讯云侧会话不中止',
+    );
+  });
+
+  it('调度器追平：腾讯云任务完成后落终态并发站内信，出口与设备同口径', async () => {
+    const { service, notice, workbuddyCloudCommand } = setup({
+      commands: [commandRow()],
+    });
+    remote.taskGet.mockResolvedValue({
+      result: { status: { state: 'completed' } },
+    });
+    remote.events.mockResolvedValue({
+      TotalCount: 1,
+      MessageEventSet: [
+        {
+          EventType: 'assistant',
+          Message: { Content: '线索已汇总，共 12 条。C:\\Users\\a\\out.xlsx' },
+        },
+      ],
+    });
+    expect(await service.sweepUnfinished()).toBe(1);
+    expect(workbuddyCloudCommand.rows[0]).toMatchObject({ status: 'DONE' });
+    expect(notice).toHaveBeenCalledTimes(1);
+    const [userId, message] = notice.mock.calls[0];
+    expect(userId).toBe('u1');
+    expect(message).toMatchObject({
+      title: '群控任务已完成：整理今天的线索',
+      level: 'info',
+      entityType: 'cloud_command',
+      commandCode: 'cloud-cmd-1',
+    });
+    expect(message.body).toContain('主账号 · 普通任务');
+    // 本地路径不能进站内信正文
+    expect(message.body).toContain('（本地路径已隐藏）');
+  });
+
+  it('Agent 建的云端定时：跑出来的每一轮都继承群控来源，台账与站内信都认它', async () => {
+    const { service, workbuddyCloudCommand } = setup({
+      schedules: [scheduleRow({ source: 'AGENT', agentConversationId: 42 })],
+    });
+    expect(await service.advanceDue()).toBe(1);
+    expect(workbuddyCloudCommand.rows[0]).toMatchObject({
+      kind: 'schedule',
+      source: 'AGENT',
+      agentConversationId: 42,
+      status: 'DISPATCHED',
+      scheduleId: 3,
+    });
+  });
+
+  it('手动下发的云端指令不发站内信（用户正盯着结果）', async () => {
+    const { service, notice } = setup({
+      commands: [commandRow({ source: 'UI', agentConversationId: 0 })],
+    });
+    remote.taskGet.mockResolvedValue({
+      result: { status: { state: 'completed' } },
+    });
+    remote.events.mockResolvedValue({ TotalCount: 0, MessageEventSet: [] });
+    await service.sweepUnfinished();
+    expect(notice).not.toHaveBeenCalled();
+  });
+
+  it('凭据失效的云端行按失败收口并提醒，不会永远卡在非终态', async () => {
+    const { service, notice, workbuddyCloudCommand } = setup({
+      commands: [commandRow({ title: '跑个周报' })],
+      accounts: [{ ...accountRow, status: 'disabled' }],
+    });
+    expect(await service.sweepUnfinished()).toBe(1);
+    expect(workbuddyCloudCommand.rows[0]).toMatchObject({ status: 'FAILED' });
+    expect(notice).toHaveBeenCalledTimes(1);
+    expect(notice.mock.calls[0][1]).toMatchObject({
+      level: 'error',
+      title: '群控任务执行失败：跑个周报',
+    });
+    expect(notice.mock.calls[0][1].body).toContain('账号凭据');
   });
 });

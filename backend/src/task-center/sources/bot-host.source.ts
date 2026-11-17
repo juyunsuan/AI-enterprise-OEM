@@ -37,7 +37,10 @@ export function botHostSource(prisma: PrismaService): TaskSource {
       });
       const nameOf = new Map(hosts.map((host) => [host.id, host.name]));
       const tabOf = new Map(
-        hosts.map((host) => [host.id, host.clientKind === 'MOBOT' ? 'mobot' : 'bots']),
+        hosts.map((host) => [
+          host.id,
+          host.clientKind === 'MOBOT' ? 'mobot' : 'bots',
+        ]),
       );
       return rows.map((row) => ({
         assigneeUserId: row.userId,

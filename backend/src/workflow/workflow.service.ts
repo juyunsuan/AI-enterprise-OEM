@@ -58,12 +58,11 @@ type ManifestResource = {
   reviewStatus?: string;
 };
 
-/** 节点目录的四类来源：与「Agent 工具」面板读同一批服务，不另存一份目录。 */
+/** 节点目录的三类来源：与「Agent 工具」面板读同一批服务，不另存一份目录。 */
 export type WorkflowCatalogSources = {
   connectorTools: (user: CurrentUser) => Promise<ConnectorToolSpec[]>;
   hardwareTools: (user: CurrentUser) => Promise<HardwareMcpTool[]>;
   skills: (user: CurrentUser) => Promise<ManifestResource[]>;
-  plugins: (user: CurrentUser) => Promise<ManifestResource[]>;
 };
 
 type OrgOption = {
@@ -112,17 +111,15 @@ export class WorkflowService {
   // ---------------------------------------------------------------- 节点目录
 
   async catalog(user: CurrentUser) {
-    const [connectorTools, hardwareTools, skills, plugins] = await Promise.all([
+    const [connectorTools, hardwareTools, skills] = await Promise.all([
       this.sources.connectorTools(user).catch(() => []),
       this.sources.hardwareTools(user).catch(() => []),
       this.sources.skills(user).catch(() => []),
-      this.sources.plugins(user).catch(() => []),
     ]);
     const nodes: WorkflowNodeSpec[] = buildWorkflowCatalog({
       connectorTools,
       hardwareTools,
       skills,
-      plugins,
     });
     return { nodes };
   }

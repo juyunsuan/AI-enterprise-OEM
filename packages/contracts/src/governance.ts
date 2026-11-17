@@ -67,7 +67,7 @@ export const saveAccessPolicyBodySchema = z.object({
 /** 技能审查台账（§5.9）：静态命中 + LLM 判定 + 最终决议。 */
 export const skillReviewRunSchema = z.object({
   id: z.number(),
-  kind: z.enum(["skill", "plugin"]),
+  kind: z.enum(["skill"]),
   itemId: z.number(),
   userId: z.string(),
   inputDigest: z.string(),
@@ -81,7 +81,7 @@ export const skillReviewRunSchema = z.object({
   createdAt: z.string(),
 });
 export const reviewDecisionBodySchema = z.object({
-  kind: z.enum(["skill", "plugin"]),
+  kind: z.enum(["skill"]),
   itemId: z.number().int().positive(),
   decision: z.enum(["passed", "rejected"]),
   note: z.string().max(200).default(""),

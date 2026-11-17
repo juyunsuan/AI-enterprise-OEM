@@ -5,13 +5,13 @@ import {
   PlusOutlined,
 } from "@ant-design/icons";
 import type {
+  BotDispatchTargetKind,
   ContentAgentConnector,
   ContentAgentExpert,
   ContentAgentSchedule,
   ContentAgentSchedulePreset,
   ContentAgentScheduleRun,
   ContentAgentPersona,
-  ContentAgentPlugin,
   ContentAgentSkill,
   ContentAgentReference,
   ContentLibraryItem,
@@ -32,11 +32,13 @@ import {
   Tooltip,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { contentApi } from "@/api/content";
 import { ScheduleFields } from "@/components/schedule-fields";
 import { usePasswordConfirm } from "@/components/confirm-with-password";
 import { InstructionComposer } from "./instruction-composer";
+import { dispatchScopeSummary } from "./dispatch-common";
 import { EmptyState, Notice, Panel } from "@/components/ui/panel";
 import { fmtTime } from "@/lib/datetime";
 import {
@@ -87,12 +89,12 @@ type Editor = {
   personaId: number;
   /** 引用的技能；空数组＝全部启用中的技能 */
   skillIds: number[];
-  /** 引用的插件；空数组＝全部启用中的插件 */
-  pluginIds: number[];
   /** 引用的资料库条目；空数组＝整库检索 */
   libraryIds: number[];
   /** 引用的 MCP 连接器；空数组＝全部启用中的连接器（0＝本站 MCP Server） */
   connectorIds: number[];
+  /** 到点这一轮允许 Agent 指挥的设备类型；空数组＝不开群控 */
+  dispatchScope: BotDispatchTargetKind[];
   /** 无人值守是否允许执行写动作；默认关，放开要验登录密码 */
   allowWrite: boolean;
   /** 库里已有的开关值：只有「从关到开」才触发验密 */
@@ -113,9 +115,9 @@ const EMPTY_EDITOR: Editor = {
   expertId: 0,
   personaId: 0,
   skillIds: [],
-  pluginIds: [],
   libraryIds: [],
   connectorIds: [],
+  dispatchScope: [],
   allowWrite: false,
   originAllowWrite: false,
   references: [],
@@ -135,17 +137,19 @@ function draftFromPreset(preset: ContentAgentSchedulePreset): ScheduleDraft {
   };
 }
 
-/** 任务列第二行：这次执行固定引用什么（专家 / 技能 / 插件 / 资料 / 连接器 / 邮箱）。 */
+/** 任务列第二行：这次执行固定引用什么（专家 / 技能 / 资料 / 连接器 / 群控范围）。 */
 function refText(row: ContentAgentSchedule) {
   return [
     row.expertName ? `专家：${row.expertName}` : "未绑定专家",
     row.personaName ? `分身：${row.personaName}` : "分身：自动",
     row.skillIds.length ? `技能 ${row.skillIds.length} 项` : "技能：全部启用",
-    row.pluginIds.length ? `插件 ${row.pluginIds.length} 个` : "插件：全部启用",
     row.libraryIds.length ? `资料 ${row.libraryIds.length} 项` : "资料：整库检索",
     row.connectorIds.length
       ? `连接器 ${row.connectorIds.length} 个`
       : "连接器：全部启用",
+    row.dispatchScope.length
+      ? `群控 ${dispatchScopeSummary(row.dispatchScope)}`
+      : "",
   ]
     .filter(Boolean)
     .join(" · ");
@@ -158,6 +162,7 @@ export function AgentSchedulesTab({
   onOpenConversation: (conversationId: number) => void;
 }) {
   const { message } = App.useApp();
+  const router = useRouter();
   const { request: confirmPassword, modal: passwordModal } =
     usePasswordConfirm();
   const [rows, setRows] = useState<ContentAgentSchedule[]>([]);
@@ -176,9 +181,8 @@ export function AgentSchedulesTab({
   const [saving, setSaving] = useState(false);
   const modelsSeqRef = useRef(0);
 
-  // 弹窗里可引用的专家 / 技能 / 插件 / 资料：第一次打开弹窗时取一次，取不到只影响这几项
+  // 弹窗里可引用的专家 / 技能 / 资料：第一次打开弹窗时取一次，取不到只影响这几项
   const [skills, setSkills] = useState<ContentAgentSkill[]>([]);
-  const [plugins, setPlugins] = useState<ContentAgentPlugin[]>([]);
   const [experts, setExperts] = useState<ContentAgentExpert[]>([]);
   const [library, setLibrary] = useState<ContentLibraryItem[]>([]);
   const [connectors, setConnectors] = useState<ContentAgentConnector[]>([]);
@@ -232,27 +236,24 @@ export function AgentSchedulesTab({
     })();
   }, []);
 
-  /** 弹窗里的专家 / 技能 / 插件 / 资料清单：与对话页签「+」里的是同一批数据。 */
+  /** 弹窗里的专家 / 技能 / 资料清单：与对话页签「+」里的是同一批数据。 */
   const loadAux = useCallback(async () => {
     setAuxLoading(true);
     try {
       const [
         skillRows,
-        pluginRows,
         expertRows,
         libraryRows,
         connectorRows,
         personaRows,
       ] = await Promise.all([
         contentApi.skills(),
-        contentApi.plugins(),
         contentApi.experts(),
         contentApi.library(),
         contentApi.connectors(),
         contentApi.personas(),
       ]);
       setSkills(skillRows || []);
-      setPlugins(pluginRows || []);
       setExperts(expertRows || []);
       setLibrary(libraryRows || []);
       setConnectors(connectorRows || []);
@@ -260,7 +261,7 @@ export function AgentSchedulesTab({
       setAuxError("");
       auxLoadedRef.current = true;
     } catch (caught) {
-      setAuxError((caught as Error).message || "专家、技能、插件与资料清单读取失败");
+      setAuxError((caught as Error).message || "专家、技能与资料清单读取失败");
     } finally {
       setAuxLoading(false);
     }
@@ -331,9 +332,9 @@ export function AgentSchedulesTab({
       expertId: row.expertId,
       personaId: row.personaId,
       skillIds: row.skillIds,
-      pluginIds: row.pluginIds,
       libraryIds: row.libraryIds,
       connectorIds: row.connectorIds,
+      dispatchScope: row.dispatchScope,
       allowWrite: row.allowWrite,
       originAllowWrite: row.allowWrite,
       references: row.references,
@@ -422,10 +423,10 @@ export function AgentSchedulesTab({
       expertId: editor.expertId,
       personaId: editor.personaId,
       skillIds: editor.skillIds,
-      pluginIds: editor.pluginIds,
       libraryIds: editor.libraryIds,
       connectorIds: editor.connectorIds,
       mailboxIds: [],
+      dispatchScope: editor.dispatchScope,
       allowWrite: editor.allowWrite,
       references: editor.references,
     };
@@ -769,16 +770,15 @@ export function AgentSchedulesTab({
             onChange={(value) => patchEditor({ instruction: value })}
             skillIds={editor.skillIds}
             onSkillIds={(ids) => patchEditor({ skillIds: ids })}
-            pluginIds={editor.pluginIds}
-            onPluginIds={(ids) => patchEditor({ pluginIds: ids })}
             expertId={editor.expertId}
             onExpertId={(id) => patchEditor({ expertId: id })}
             connectorIds={editor.connectorIds}
             onConnectorIds={(ids) => patchEditor({ connectorIds: ids })}
             references={editor.references}
             onReferences={(items) => patchEditor({ references: items })}
+            dispatchScope={editor.dispatchScope}
+            onDispatchScope={(scope) => patchEditor({ dispatchScope: scope })}
             skills={skills}
-            plugins={plugins}
             experts={experts}
             connectors={connectors}
             loading={auxLoading}
@@ -905,6 +905,30 @@ export function AgentSchedulesTab({
         size={760}
         onClose={() => setRunsFor(null)}
       >
+        {runsFor?.dispatchScope.length ? (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              marginBottom: 12,
+            }}
+          >
+            <span className="text-12 muted">
+              {`这一轮开启群控（${dispatchScopeSummary(runsFor.dispatchScope)}）：到点 Agent 先查设备在线与负载，再逐台派单。`}
+            </span>
+            <Button
+              type="link"
+              style={{ padding: 0, height: "auto" }}
+              onClick={() => {
+                setRunsFor(null);
+                router.push("/agent?tab=dispatch");
+              }}
+            >
+              看派单去向
+            </Button>
+          </div>
+        ) : null}
         {runsError ? <Notice variant="error">{runsError}</Notice> : null}
         {!runsLoading && !runs.length ? (
           <EmptyState text="还没有执行记录：到点执行或点「立即执行」后会在这里留痕" />

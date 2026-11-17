@@ -1,15 +1,15 @@
 "use client";
 
 import type {
+  BotDispatchTargetKind,
   ContentAgentConnector,
   ContentAgentExpert,
-  ContentAgentPlugin,
   ContentAgentReference,
   ContentAgentSkill,
 } from "@enterprise/contracts";
 import {
   ApiOutlined,
-  BlockOutlined,
+  ClusterOutlined,
   FileAddOutlined,
   PictureOutlined,
   PlusOutlined,
@@ -20,6 +20,12 @@ import { App, Button, Checkbox, Input, Popover, Spin, Tag } from "antd";
 import type { CSSProperties } from "react";
 import { useRef, useState } from "react";
 import { uploadContentMedia } from "@/api/content";
+import {
+  DISPATCH_TARGET_OPTIONS,
+  dispatchScopeLabel,
+  dispatchScopeSummary,
+  toggleDispatchScope,
+} from "./dispatch-common";
 import {
   AssetReferencePicker,
   nextReferenceLabel,
@@ -41,23 +47,22 @@ const ROW_STYLE: CSSProperties = {
 
 /**
  * 定时任务的「每次执行的指令」输入区：样式照 Agent 的文本输入，
- * 「+」里选技能 / 插件 / 专家 / 参考文件 / MCP 连接器，选中项在输入框上方以标签列出。
+ * 「+」里选技能 / 专家 / 参考文件 / MCP 连接器 / Agent 群控任务，选中项在输入框上方以标签列出。
  */
 export function InstructionComposer({
   value,
   onChange,
   skillIds,
   onSkillIds,
-  pluginIds,
-  onPluginIds,
   expertId,
   onExpertId,
   connectorIds,
   onConnectorIds,
   references,
   onReferences,
+  dispatchScope,
+  onDispatchScope,
   skills,
-  plugins,
   experts,
   connectors,
   loading,
@@ -67,16 +72,16 @@ export function InstructionComposer({
   onChange: (value: string) => void;
   skillIds: number[];
   onSkillIds: (ids: number[]) => void;
-  pluginIds: number[];
-  onPluginIds: (ids: number[]) => void;
   expertId: number;
   onExpertId: (id: number) => void;
   connectorIds: number[];
   onConnectorIds: (ids: number[]) => void;
   references: ContentAgentReference[];
   onReferences: (items: ContentAgentReference[]) => void;
+  /** 到点这一轮允许 Agent 指挥的设备类型；空数组＝不开群控 */
+  dispatchScope: BotDispatchTargetKind[];
+  onDispatchScope: (scope: BotDispatchTargetKind[]) => void;
   skills: ContentAgentSkill[];
-  plugins: ContentAgentPlugin[];
   experts: ContentAgentExpert[];
   connectors: ContentAgentConnector[];
   loading: boolean;
@@ -85,7 +90,7 @@ export function InstructionComposer({
   const { message } = App.useApp();
   const [open, setOpen] = useState(false);
   const [panel, setPanel] = useState<
-    "root" | "references" | "skills" | "plugins" | "experts" | "connectors"
+    "root" | "references" | "skills" | "experts" | "connectors" | "dispatch"
   >("root");
   const [uploading, setUploading] = useState(false);
   const [assetOpen, setAssetOpen] = useState(false);
@@ -127,7 +132,6 @@ export function InstructionComposer({
   };
 
   const pickedSkills = skills.filter((item) => skillIds.includes(item.id));
-  const pickedPlugins = plugins.filter((item) => pluginIds.includes(item.id));
   const pickedExperts = experts.filter((item) => item.id === expertId);
   const pickedConnectors = connectors.filter((item) =>
     connectorIds.includes(item.id),
@@ -145,17 +149,6 @@ export function InstructionComposer({
           <span>选择技能</span>
           <span className="text-12 muted" style={{ marginLeft: "auto" }}>
             {skillIds.length ? `已选 ${skillIds.length}` : "全部启用"}
-          </span>
-        </button>
-        <button
-          type="button"
-          style={ROW_STYLE}
-          onClick={() => setPanel("plugins")}
-        >
-          <BlockOutlined aria-hidden />
-          <span>选择插件</span>
-          <span className="text-12 muted" style={{ marginLeft: "auto" }}>
-            {pluginIds.length ? `已选 ${pluginIds.length}` : "全部启用"}
           </span>
         </button>
         <button
@@ -189,6 +182,17 @@ export function InstructionComposer({
           <span>选择 MCP 连接器</span>
           <span className="text-12 muted" style={{ marginLeft: "auto" }}>
             {connectorIds.length ? `已选 ${connectorIds.length}` : "全部启用"}
+          </span>
+        </button>
+        <button
+          type="button"
+          style={ROW_STYLE}
+          onClick={() => setPanel("dispatch")}
+        >
+          <ClusterOutlined aria-hidden />
+          <span>Agent 群控任务</span>
+          <span className="text-12 muted" style={{ marginLeft: "auto" }}>
+            {dispatchScopeSummary(dispatchScope)}
           </span>
         </button>
       </div>
@@ -263,56 +267,6 @@ export function InstructionComposer({
           勾选后每次执行只把这些技能交给模型；不勾＝全部启用中的技能。
         </span>
       </div>
-    ) : panel === "plugins" ? (
-      <div style={{ display: "grid", gap: 8, width: 300 }}>
-        {loading ? <Spin size="small" /> : null}
-        {error ? (
-          <span className="text-12" style={{ color: "#d4380d" }}>
-            {error}
-          </span>
-        ) : null}
-        {!loading && !plugins.length ? (
-          <span className="text-12 muted">
-            还没有插件：到 Agent「插件」页签安装或上传 zip 插件包。
-          </span>
-        ) : null}
-        {plugins.length ? (
-          <div style={{ display: "grid", gap: 4, maxHeight: 220, overflowY: "auto" }}>
-            {plugins.map((item) => (
-              <Checkbox
-                key={item.id}
-                checked={pluginIds.includes(item.id)}
-                disabled={!item.enabled}
-                onChange={(event) =>
-                  onPluginIds(toggle(pluginIds, item.id, event.target.checked))
-                }
-              >
-                <span
-                  style={{
-                    display: "inline-flex",
-                    flexDirection: "column",
-                    gap: 2,
-                    maxWidth: 236,
-                  }}
-                >
-                  <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
-                    {item.name}
-                    {!item.enabled ? <Tag style={{ marginInlineEnd: 0 }}>已停用</Tag> : null}
-                  </span>
-                  {item.commands.length ? (
-                    <span className="text-12 muted">
-                      命令：{item.commands.map((command) => `/${command.name}`).join(" ")}
-                    </span>
-                  ) : null}
-                </span>
-              </Checkbox>
-            ))}
-          </div>
-        ) : null}
-        <span className="text-12 muted">
-          勾选后每次执行只用这几个插件（含它们的插件命令）；不勾＝全部启用中的插件。
-        </span>
-      </div>
     ) : panel === "experts" ? (
       <div style={{ display: "grid", gap: 4, width: 300, maxHeight: 260, overflowY: "auto" }}>
         <button type="button" style={ROW_STYLE} onClick={() => onExpertId(0)}>
@@ -340,7 +294,7 @@ export function InstructionComposer({
         ))}
         <span className="text-12 muted">选中后每次执行都按这位专家作答。</span>
       </div>
-    ) : (
+    ) : panel === "connectors" ? (
       <div style={{ display: "grid", gap: 8, width: 300 }}>
         {loading ? <Spin size="small" /> : null}
         {error ? (
@@ -374,6 +328,34 @@ export function InstructionComposer({
           勾选后每次执行只注入这些连接器；不勾＝全部启用中的连接器。
         </span>
       </div>
+    ) : (
+      <div style={{ display: "grid", gap: 8, width: 300 }}>
+        <div style={{ display: "grid", gap: 4 }}>
+          {DISPATCH_TARGET_OPTIONS.map((option) => (
+            <Checkbox
+              key={option.value}
+              checked={dispatchScope.includes(option.value)}
+              onChange={(event) =>
+                onDispatchScope(
+                  toggleDispatchScope(
+                    dispatchScope,
+                    option.value,
+                    event.target.checked,
+                  ),
+                )
+              }
+            >
+              {option.label}
+            </Checkbox>
+          ))}
+        </div>
+        <span className="text-12 muted">
+          到点这一轮 Agent 先查这些目标的在线与负载，给出分配方案后逐个派单；三个都不勾＝不开群控。
+        </span>
+        <span className="text-12 muted">
+          设备要先在「Agent-Bot → 主机 / 手机」完成配对并在线；企业云用「Agent-Bot → 企云账号」里的腾讯云凭据，没有队列。
+        </span>
+      </div>
     );
 
   return (
@@ -391,9 +373,9 @@ export function InstructionComposer({
       >
         {references.length ||
         skillIds.length ||
-        pluginIds.length ||
         expertId ||
-        connectorIds.length ? (
+        connectorIds.length ||
+        dispatchScope.length ? (
           <div
             style={{
               display: "flex",
@@ -426,18 +408,6 @@ export function InstructionComposer({
                 {`技能：${item.name}`}
               </Tag>
             ))}
-            {pickedPlugins.map((item) => (
-              <Tag
-                key={`plugin-${item.id}`}
-                closable
-                onClose={(event) => {
-                  event.preventDefault();
-                  onPluginIds(pluginIds.filter((id) => id !== item.id));
-                }}
-              >
-                {`插件：${item.name}`}
-              </Tag>
-            ))}
             {pickedExperts[0] ? (
               <Tag
                 closable
@@ -461,13 +431,25 @@ export function InstructionComposer({
                 {`连接器：${item.name}`}
               </Tag>
             ))}
+            {dispatchScope.length ? (
+              <Tag
+                color="blue"
+                closable
+                onClose={(event) => {
+                  event.preventDefault();
+                  onDispatchScope([]);
+                }}
+              >
+                {dispatchScopeLabel(dispatchScope)}
+              </Tag>
+            ) : null}
           </div>
         ) : null}
         <Input.TextArea
           value={value}
           autoSize={{ minRows: 4, maxRows: 10 }}
           maxLength={8000}
-          placeholder="到点时这段话会作为一轮对话内容发给 Agent；点 + 选技能 / 插件 / 专家 / 参考文件 / MCP 连接器，Enter 只换行"
+          placeholder="到点时这段话会作为一轮对话内容发给 Agent；点 + 选技能 / 专家 / 参考文件 / MCP 连接器 / Agent 群控任务，Enter 只换行"
           onChange={(event) => onChange(event.target.value)}
         />
         <div
@@ -493,7 +475,7 @@ export function InstructionComposer({
               shape="circle"
               icon={<PlusOutlined aria-hidden />}
               loading={uploading}
-              aria-label="选技能、插件、专家、参考文件或 MCP 连接器"
+              aria-label="选技能、专家、参考文件、MCP 连接器或 Agent 群控任务"
             />
           </Popover>
           {panel !== "root" && open ? (

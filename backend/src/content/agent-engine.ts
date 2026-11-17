@@ -8,10 +8,12 @@ import { protocolHeaders } from './model-catalog.service';
 import type { ModelOverrides } from './content-media.service';
 import type { ConnectorToolSpec } from './agent-connectors.service';
 import { AgentRunGuard, type RunGuardOptions } from '../feature/runtime-guard';
+import type { BotDispatchTargetKind } from '@enterprise/contracts';
 import {
   type AgentReference,
   type AgentToolContext,
   AGENT_TOOLS,
+  DISPATCH_TOOLS,
   runAgentTool,
 } from './agent-tools';
 import { businessToolSpecs } from './agent-business-tools';
@@ -111,6 +113,10 @@ type RunInput = {
   videoDuration?: number;
   /** 本轮在「+」里勾选的资料：资料检索与精读都只在这个范围内 */
   libraryIds?: number[];
+  /** 本轮在「+ → Agent 群控任务」勾选的设备范围；非空才注入群控工具 */
+  dispatchScope?: BotDispatchTargetKind[];
+  /** 发起本轮的站内 Agent 会话编号（群控派单来源回溯） */
+  conversationId?: number;
   signal: AbortSignal;
   emit: Emit;
 };
@@ -138,10 +144,19 @@ function withReferences(content: string, references: AgentReference[]) {
   ].join('\n');
 }
 
+/** 本轮勾选了群控范围才把群控工具交给模型；没勾选时模型看不到这组能力。 */
+function dispatchTools(scope?: BotDispatchTargetKind[]) {
+  return scope?.length ? DISPATCH_TOOLS : [];
+}
+
 /** 内置 + 业务动作 + 本轮连接器发布的远程工具；远程名字已带前缀，不会与内置重名。 */
-function openAiTools(connectorTools: ConnectorToolSpec[]) {
+function openAiTools(
+  connectorTools: ConnectorToolSpec[],
+  dispatchScope?: BotDispatchTargetKind[],
+) {
   return [
     ...AGENT_TOOLS,
+    ...dispatchTools(dispatchScope),
     ...businessToolSpecs(),
     ...connectorTools.map((spec) => ({
       type: 'function' as const,
@@ -154,9 +169,12 @@ function openAiTools(connectorTools: ConnectorToolSpec[]) {
   ];
 }
 
-function anthropicTools(connectorTools: ConnectorToolSpec[]) {
+function anthropicTools(
+  connectorTools: ConnectorToolSpec[],
+  dispatchScope?: BotDispatchTargetKind[],
+) {
   return [
-    ...AGENT_TOOLS.map((tool) => ({
+    ...[...AGENT_TOOLS, ...dispatchTools(dispatchScope)].map((tool) => ({
       name: tool.function.name,
       description: tool.function.description,
       input_schema: tool.function.parameters,
@@ -359,6 +377,8 @@ export class ContentAgentEngine {
       model,
       protocol: target0.protocol,
       libraryIds: input.libraryIds,
+      dispatchScope: input.dispatchScope,
+      conversationId: input.conversationId,
       system: modeRules.length
         ? `${input.system}\n\n【本回合模式】\n${modeRules.join('\n')}`
         : input.system,
@@ -400,7 +420,7 @@ export class ContentAgentEngine {
         {
           model: target.model,
           messages,
-          tools: openAiTools(target.connectorTools),
+          tools: openAiTools(target.connectorTools, target.dispatchScope),
           tool_choice: 'auto',
           stream: true,
           stream_options: { include_usage: true },
@@ -503,7 +523,7 @@ export class ContentAgentEngine {
           max_tokens: MAX_TOKENS,
           system: target.system,
           messages,
-          tools: anthropicTools(target.connectorTools),
+          tools: anthropicTools(target.connectorTools, target.dispatchScope),
           stream: true,
         },
         target.signal,
@@ -643,6 +663,8 @@ export class ContentAgentEngine {
         videoResolution: target.videoResolution,
         videoDuration: target.videoDuration,
         libraryIds: target.libraryIds,
+        dispatchScope: target.dispatchScope,
+        conversationId: target.conversationId,
         llm: {
           base: target.base,
           apiKey: target.apiKey,
@@ -721,6 +743,9 @@ type RunTarget = {
   protocol: 'openai' | 'anthropic';
   /** 本轮勾选的资料（只在这几篇里检索） */
   libraryIds?: number[];
+  /** 本轮群控范围与发起会话（群控工具注入与派单回溯） */
+  dispatchScope?: BotDispatchTargetKind[];
+  conversationId?: number;
   system: string;
   history: { role: 'user' | 'assistant'; content: string }[];
   references: AgentReference[];

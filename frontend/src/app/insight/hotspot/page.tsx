@@ -6,7 +6,6 @@ import {
   FileTextOutlined,
   FundOutlined,
   ProfileOutlined,
-  ReloadOutlined,
   TableOutlined,
 } from "@ant-design/icons";
 import {
@@ -14,15 +13,9 @@ import {
   Button,
   ConfigProvider,
   Drawer,
-  Empty,
-  Form,
-  Input,
-  InputNumber,
   Modal,
-  Popconfirm,
   Select,
   Space,
-  Switch,
   Table,
   Tag,
 } from "antd";
@@ -30,10 +23,8 @@ import type { ColumnsType } from "antd/es/table";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  INSIGHT_FREQUENCY_LABELS,
-  INSIGHT_FREQUENCIES,
-  INSIGHT_PLATFORM_LABELS,
   INSIGHT_PLATFORMS,
+  INSIGHT_PLATFORM_LABELS,
   INSIGHT_STAGE_LABELS,
   INSIGHT_STAGES,
 } from "@enterprise/contracts";
@@ -49,20 +40,32 @@ import {
 } from "@/components/ui/panel";
 import {
   insightApi,
-  type InsightCollectResult,
   type InsightHotspotRow,
   type InsightHotspotContentRow,
   type InsightOverview,
   type InsightReportRow,
-  type InsightSubscriptionRow,
 } from "@/api/insight";
+import {
+  CollectionRunsTab,
+  CollectionSchedulesTab,
+  CollectionSourcesTab,
+} from "../_components/collection-tabs";
 
-type HotspotTab = "board" | "list" | "subscriptions" | "ledger" | "report";
+type HotspotTab =
+  | "board"
+  | "sources"
+  | "subscriptions"
+  | "runs"
+  | "list"
+  | "ledger"
+  | "report";
 
 const TABS = [
   { key: "board", label: "热点大盘" },
-  { key: "list", label: "热点榜单" },
+  { key: "sources", label: "采集数据源" },
   { key: "subscriptions", label: "垂类订阅" },
+  { key: "runs", label: "采集批次" },
+  { key: "list", label: "热点榜单" },
   { key: "ledger", label: "热点台账" },
   { key: "report", label: "热点快报" },
 ];
@@ -122,7 +125,7 @@ export default function InsightHotspotPage() {
     <ConfigProvider button={{ autoInsertSpace: false }}>
       <PageHero
         title="全域内容热点分析"
-        desc="订阅垂类 → 采集进「热点内容」表 → 热点引擎分层 → 大盘 / 榜单 / 台账 / 快报。采集优先走 BotBuddy 主机托管窗口，本机浏览器代理作备用。"
+        desc="先配「采集数据源」与采集 SKILL 包 → 定时 / 手动采集进「热点内容」表 → 再做大盘 / 榜单 / 台账 / 快报分析。采集优先走 BotBuddy 主机托管窗口，本机浏览器代理作备用。"
         extra={
           <Button
             icon={<ArrowLeftOutlined aria-hidden />}
@@ -142,16 +145,22 @@ export default function InsightHotspotPage() {
           overview={overview}
           loading={loading}
           onGoSubscriptions={() => goTab("subscriptions")}
+          onGoSources={() => goTab("sources")}
         />
+      ) : tab === "sources" ? (
+        <CollectionSourcesTab scope="hotspot" onGoRuns={() => goTab("runs")} />
       ) : tab === "list" ? (
         <HotspotListTab />
       ) : tab === "subscriptions" ? (
-        <SubscriptionsTab
+        <CollectionSchedulesTab
+          scope="hotspot"
           onCollected={(result) => {
             message.success(result.dispatched ? "已派发采集" : result.reason);
             void loadOverview();
           }}
         />
+      ) : tab === "runs" ? (
+        <CollectionRunsTab scope="hotspot" health={overview} />
       ) : tab === "ledger" ? (
         <LedgerTab
           ledgerTableId={ledgerTableId}
@@ -170,10 +179,12 @@ function BoardTab({
   overview,
   loading,
   onGoSubscriptions,
+  onGoSources,
 }: {
   overview: InsightOverview | null;
   loading: boolean;
   onGoSubscriptions: () => void;
+  onGoSources: () => void;
 }) {
   const channels = overview?.deviceChannels ?? [];
   const allOffline = channels.length > 0 && channels.every((c) => !c.online);
@@ -196,6 +207,22 @@ function BoardTab({
         }
       >
         <StatGrid>
+          <StatCard
+            label="采集数据源"
+            value={overview?.sourceCount ?? 0}
+            hint={`启用 ${overview?.enabledSourceCount ?? 0}·无数据源不采集`}
+          />
+          <StatCard
+            label="近 24h 采集批次"
+            value={overview?.runCount24h ?? 0}
+            hint={
+              (overview?.failedRunCount24h ?? 0) > 0
+                ? `失败 ${overview?.failedRunCount24h} 轮`
+                : overview?.lastRunAt
+                  ? `最近一轮 ${new Date(overview.lastRunAt).toLocaleString()}`
+                  : "还没跑过采集"
+            }
+          />
           <StatCard
             label="订阅总数"
             value={overview?.subscriptionCount ?? 0}
@@ -237,11 +264,23 @@ function BoardTab({
           </Space>
         ) : (
           <EmptyState
-            text={loading ? "加载中…" : "暂无热点，请先在「垂类订阅」配置并采集"}
+            text={
+              loading
+                ? "加载中…"
+                : (overview?.sourceCount ?? 0) === 0
+                  ? "还没有采集数据源：先配数据源与采集包，采集回来的内容才会进「热点内容」表"
+                  : "暂无热点，请先在「垂类订阅」挂载数据源并采集"
+            }
             action={
-              <Button type="primary" onClick={onGoSubscriptions}>
-                去配置订阅
-              </Button>
+              (overview?.sourceCount ?? 0) === 0 ? (
+                <Button type="primary" onClick={onGoSources}>
+                  去配数据源
+                </Button>
+              ) : (
+                <Button type="primary" onClick={onGoSubscriptions}>
+                  去配置订阅
+                </Button>
+              )
             }
           />
         )}
@@ -572,242 +611,6 @@ function HotspotListTab() {
         ) : null}
       </Drawer>
     </Panel>
-  );
-}
-
-// ---------- 订阅 ----------
-
-function SubscriptionsTab({
-  onCollected,
-}: {
-  onCollected: (result: InsightCollectResult) => void;
-}) {
-  const { message } = App.useApp();
-  const [rows, setRows] = useState<InsightSubscriptionRow[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [editing, setEditing] = useState<InsightSubscriptionRow | null>(null);
-  const [formOpen, setFormOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [form] = Form.useForm();
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      setRows((await insightApi.subscriptions()) as InsightSubscriptionRow[]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const openForm = (record: InsightSubscriptionRow | null) => {
-    setEditing(record);
-    form.setFieldsValue(
-      record
-        ? {
-            name: record.name,
-            platforms: record.platforms,
-            keywords: record.keywords.join(","),
-            topics: record.topics.join(","),
-            creators: record.creators.join(","),
-            frequency: record.frequency,
-            minEngagement: record.minEngagement,
-            alertGrowthPct: record.alertGrowthPct,
-          }
-        : {
-            frequency: "daily",
-            platforms: ["xiaohongshu"],
-            minEngagement: 0,
-            alertGrowthPct: 50,
-          },
-    );
-    setFormOpen(true);
-  };
-
-  const splitList = (value?: string) =>
-    (value ?? "")
-      .split(/[,，\n]/)
-      .map((item) => item.trim())
-      .filter(Boolean);
-
-  const submit = async () => {
-    const values = await form.validateFields();
-    setSaving(true);
-    try {
-      await insightApi.saveSubscription({
-        body: {
-          id: editing?.id,
-          name: values.name,
-          platforms: values.platforms,
-          keywords: splitList(values.keywords),
-          topics: splitList(values.topics),
-          creators: splitList(values.creators),
-          frequency: values.frequency,
-          minEngagement: values.minEngagement ?? 0,
-          alertGrowthPct: values.alertGrowthPct ?? 50,
-        },
-      });
-      message.success(editing ? "订阅已更新" : "订阅已创建");
-      setFormOpen(false);
-      void load();
-    } catch (error) {
-      message.error((error as Error)?.message || "保存失败");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const toggle = async (record: InsightSubscriptionRow) => {
-    await insightApi.toggleSubscription({
-      params: { id: String(record.id) },
-      body: { status: record.status === "ACTIVE" ? "PAUSED" : "ACTIVE" },
-    });
-    void load();
-  };
-
-  const remove = async (record: InsightSubscriptionRow) => {
-    await insightApi.removeSubscription({ params: { id: String(record.id) } });
-    message.success("订阅已删除");
-    void load();
-  };
-
-  const collect = async (record: InsightSubscriptionRow) => {
-    const result = (await insightApi.collectNow({
-      params: { id: String(record.id) },
-    })) as InsightCollectResult;
-    onCollected(result);
-  };
-
-  return (
-    <>
-      <Panel
-        title={
-          <>
-            <ReloadOutlined aria-hidden /> 垂类订阅
-          </>
-        }
-        titleExtra="订阅范围＝采集范围：按关键词 / 话题 / 博主定向采集，不做全站爬取"
-        extra={
-          <Button type="primary" onClick={() => openForm(null)}>
-            新建订阅
-          </Button>
-        }
-      >
-        <Table
-          rowKey="id"
-          loading={loading}
-          dataSource={rows}
-          pagination={false}
-          locale={{ emptyText: <Empty description="还没有订阅，先「新建订阅」" /> }}
-          columns={[
-            { title: "名称", dataIndex: "name" },
-            {
-              title: "平台",
-              dataIndex: "platforms",
-              render: (value: string[]) => value.map(platformLabel).join("/"),
-            },
-            {
-              title: "频率",
-              dataIndex: "frequency",
-              render: (value: string) => INSIGHT_FREQUENCY_LABELS[value] ?? value,
-            },
-            { title: "内容数", dataIndex: "contentCount" },
-            {
-              title: "启用",
-              dataIndex: "status",
-              render: (_v, record) => (
-                <Switch
-                  checked={record.status === "ACTIVE"}
-                  onChange={() => void toggle(record)}
-                />
-              ),
-            },
-            {
-              title: "操作",
-              render: (_v, record) => (
-                <Space wrap>
-                  <Button type="link" onClick={() => void collect(record)}>
-                    立即采集
-                  </Button>
-                  <Button type="link" onClick={() => openForm(record)}>
-                    编辑
-                  </Button>
-                  <Popconfirm
-                    title="删除该订阅？"
-                    description="不会删除已采集进「热点内容」表的行。"
-                    onConfirm={() => void remove(record)}
-                  >
-                    <Button type="link" danger>
-                      删除
-                    </Button>
-                  </Popconfirm>
-                </Space>
-              ),
-            },
-          ]}
-        />
-      </Panel>
-
-      <Modal
-        open={formOpen}
-        title={editing ? "编辑订阅" : "新建订阅"}
-        confirmLoading={saving}
-        onOk={() => void submit()}
-        onCancel={() => setFormOpen(false)}
-        destroyOnHidden
-      >
-        <Form form={form} layout="vertical" key={editing?.id ?? "new"}>
-          <Form.Item
-            name="name"
-            label="订阅名称"
-            rules={[{ required: true, message: "请输入订阅名称" }]}
-          >
-            <Input placeholder="如：户外运动赛道 / 母婴辅食" maxLength={120} />
-          </Form.Item>
-          <Form.Item
-            name="platforms"
-            label="平台"
-            rules={[{ required: true, message: "请至少选择一个平台" }]}
-          >
-            <Select
-              mode="multiple"
-              options={INSIGHT_PLATFORMS.map((p) => ({
-                value: p,
-                label: INSIGHT_PLATFORM_LABELS[p],
-              }))}
-            />
-          </Form.Item>
-          <Form.Item name="keywords" label="关键词（逗号分隔）">
-            <Input.TextArea rows={2} placeholder="如：露营,徒步,冲锋衣" />
-          </Form.Item>
-          <Form.Item name="topics" label="话题标签（逗号分隔）">
-            <Input.TextArea rows={2} placeholder="如：新中式穿搭" />
-          </Form.Item>
-          <Form.Item name="creators" label="博主账号（逗号分隔）">
-            <Input.TextArea rows={2} placeholder="如：@某博主" />
-          </Form.Item>
-          <Form.Item name="frequency" label="采集频率">
-            <Select
-              options={INSIGHT_FREQUENCIES.map((f) => ({
-                value: f,
-                label: INSIGHT_FREQUENCY_LABELS[f],
-              }))}
-            />
-          </Form.Item>
-          <Space wrap size={16}>
-            <Form.Item name="minEngagement" label="最低互动门槛">
-              <InputNumber min={0} />
-            </Form.Item>
-            <Form.Item name="alertGrowthPct" label="告警增速(%)">
-              <InputNumber min={0} max={1000} />
-            </Form.Item>
-          </Space>
-        </Form>
-      </Modal>
-    </>
   );
 }
 

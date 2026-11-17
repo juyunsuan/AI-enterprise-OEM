@@ -42,7 +42,6 @@ const DECISION_LABEL: Record<string, { label: string; cls: string }> = {
 
 const METRIC_LABEL: Record<string, string> = {
   skill: "技能",
-  plugin: "插件",
 };
 
 /** 板块入口：三个页签同屏切换。 */
@@ -606,7 +605,7 @@ function SkillReviewPane() {
   );
 
   const decide = useOperationMutation(
-    (body: { kind: "skill" | "plugin"; itemId: number; decision: "passed" | "rejected"; note?: string }) =>
+    (body: { kind: "skill"; itemId: number; decision: "passed" | "rejected"; note?: string }) =>
       governanceApi.reviewDecision({ body: { ...body, note: body.note || "" } }),
     ["platform-skill-reviews", "platform-features", "*"],
   );
@@ -631,7 +630,7 @@ function SkillReviewPane() {
     <>
       <PermissionNotice denied={denied} />
       <Panel
-        title="技能 / 插件审查台账"
+        title="技能审查台账"
         titleBadge={<span className="text-12 muted">静态六红线 + LLM 判定全程留痕；先审后用，未通过不放行</span>}
         extra={
           <div style={{ display: "flex", gap: 8 }}>
@@ -646,7 +645,6 @@ function SkillReviewPane() {
               }}
               options={[
                 { value: "skill", label: "技能" },
-                { value: "plugin", label: "插件" },
               ]}
             />
             <Select
@@ -680,7 +678,7 @@ function SkillReviewPane() {
               showSizeChanger: false,
               onChange: setPage,
             }}
-            locale={{ emptyText: <EmptyState text="暂无审查记录（导入技能 / 插件后自动排队审查）" /> }}
+            locale={{ emptyText: <EmptyState text="暂无审查记录（导入技能后自动排队审查）" /> }}
             expandable={{
               expandedRowRender: (row) => (
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>

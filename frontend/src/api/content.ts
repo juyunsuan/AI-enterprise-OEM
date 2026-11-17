@@ -1,12 +1,12 @@
 import {
   apiEnvelope,
-  contentAgentPluginSchema,
   contentAgentSkillSchema,
   contentDigitalAssetSchema,
   endpoints,
   z,
 } from "@enterprise/contracts";
 import type {
+  BotDispatchTargetKind,
   ContentAgentMode,
   ContentAgentReference,
   ContentDigitalAsset,
@@ -14,7 +14,8 @@ import type {
 import { endpoint } from "./endpoint";
 import { http, streamSse, uploadFormTo } from "./http";
 
-export const contentApi = {  settings: endpoint(endpoints.Content_settings),
+export const contentApi = {
+  settings: endpoint(endpoints.Content_settings),
   saveSettings: endpoint(endpoints.Content_saveSettings),
   saveChannel: endpoint(endpoints.Content_saveChannel),
   removeChannel: endpoint(endpoints.Content_removeChannel),
@@ -45,11 +46,6 @@ export const contentApi = {  settings: endpoint(endpoints.Content_settings),
   removeSkill: endpoint(endpoints.Content_removeSkill),
   skillRevisions: endpoint(endpoints.Content_skillRevisions),
   restoreSkill: endpoint(endpoints.Content_restoreSkill),
-  plugins: endpoint(endpoints.Content_plugins),
-  togglePlugin: endpoint(endpoints.Content_togglePlugin),
-  removePlugin: endpoint(endpoints.Content_removePlugin),
-  pluginRevisions: endpoint(endpoints.Content_pluginRevisions),
-  restorePlugin: endpoint(endpoints.Content_restorePlugin),
   experts: endpoint(endpoints.Content_experts),
   createExpert: endpoint(endpoints.Content_createExpert),
   removeExpert: endpoint(endpoints.Content_removeExpert),
@@ -167,18 +163,6 @@ export async function importSkillPackage(file: File) {
   return result.data.data;
 }
 
-/** zip 插件包上传：包内需有 plugin.json 或 PLUGIN.md，其余文本文件一并存进插件。 */
-export async function importPluginPackage(file: File) {
-  const form = new FormData();
-  form.append("file", file);
-  const result = await http(
-    "/api/backend/enterprise/content/agent/plugins/import",
-    apiEnvelope(contentAgentPluginSchema),
-    { method: "POST", body: form, timeoutMs: 120000 },
-  );
-  return result.data.data;
-}
-
 /**
  * 素材上传（multipart）：后端转存 AIPDD 数字资产云后回公网直链。
  * 走统一传输层（FormData 由 http() 原样发送），失败按业务码给出中文原因。
@@ -221,12 +205,12 @@ export function streamAgentMessage(
     videoDuration?: number;
     /** 输入区 + 浮层里勾选的技能（只对这一轮生效；不传＝全部启用中的技能） */
     skillIds?: number[];
-    /** 输入区 + 浮层里勾选的插件（只对这一轮生效；不传＝全部启用中的插件） */
-    pluginIds?: number[];
     /** 输入区 + 浮层里勾选的资料（只对这一轮生效：检索与精读只在这几篇里） */
     libraryIds?: number[];
     /** 输入区 + 浮层里勾选的 MCP 连接器（只对这一轮生效；不传＝全部启用中的） */
     connectorIds?: number[];
+    /** 输入区 + 浮层里勾选的群控设备范围（只对这一轮生效；空＝不开群控） */
+    dispatchScope?: BotDispatchTargetKind[];
     /** 本轮用的数字分身（0＝自动；不传＝沿用会话上记住的那个） */
     personaId?: number;
     /** 多分身协作：传 2–3 个分身 id，先各自起草再互相评审，最后由第一位汇总 */
@@ -263,9 +247,9 @@ export function streamAgentMessage(
         videoResolution: options.videoResolution || "",
         videoDuration: options.videoDuration || 0,
         skillIds: options.skillIds || [],
-        pluginIds: options.pluginIds || [],
         libraryIds: options.libraryIds || [],
         connectorIds: options.connectorIds || [],
+        dispatchScope: options.dispatchScope || [],
         personaId: options.personaId ?? -1,
         personaIds: options.personaIds || [],
         copilot: options.copilot

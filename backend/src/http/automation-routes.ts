@@ -569,9 +569,10 @@ export function registerAutomationRoutes(
     AiCall_bindings: async (i) =>
       c.aiCallController.bindings(
         i.user,
-        readValidated<{ kind: 'DESKTOP' | 'MOBOT' | 'WORKBUDDY'; principalId: number }>(
-          i.query,
-        ),
+        readValidated<{
+          kind: 'DESKTOP' | 'MOBOT' | 'WORKBUDDY';
+          principalId: number;
+        }>(i.query),
       ),
     AiCall_saveBindings: async (i) =>
       c.aiCallController.saveBindings(
@@ -589,7 +590,10 @@ export function registerAutomationRoutes(
         i.user,
         i.param['id'],
         readValidated<{
-          bindings: { kind: 'DESKTOP' | 'MOBOT' | 'WORKBUDDY'; principalId: number }[];
+          bindings: {
+            kind: 'DESKTOP' | 'MOBOT' | 'WORKBUDDY';
+            principalId: number;
+          }[];
         }>(i.json),
       ),
     AiCall_updateAccount: async (i) =>
@@ -609,9 +613,10 @@ export function registerAutomationRoutes(
       c.aiCallOpenController.credentials(
         i.user,
         i.param['id'],
-        readValidated<{ kind: 'DESKTOP' | 'MOBOT' | 'WORKBUDDY'; agentId: number }>(
-          i.query,
-        ),
+        readValidated<{
+          kind: 'DESKTOP' | 'MOBOT' | 'WORKBUDDY';
+          agentId: number;
+        }>(i.query),
       ),
 
     // ---------- Google 潜客线索挖掘 ----------
@@ -1007,15 +1012,6 @@ export function registerAutomationRoutes(
       c.contentController.skillRevisions(i.user, i.param['id']),
     Content_restoreSkill: async (i) =>
       c.contentController.restoreSkill(i.user, i.param['id'], i.json),
-    Content_plugins: async (i) => c.contentController.listPlugins(i.user),
-    Content_togglePlugin: async (i) =>
-      c.contentController.togglePlugin(i.user, i.param['id'], i.json),
-    Content_removePlugin: async (i) =>
-      c.contentController.removePlugin(i.user, i.param['id']),
-    Content_pluginRevisions: async (i) =>
-      c.contentController.pluginRevisions(i.user, i.param['id']),
-    Content_restorePlugin: async (i) =>
-      c.contentController.restorePlugin(i.user, i.param['id'], i.json),
     Content_experts: async (i) => c.contentController.listExperts(i.user),
     Content_createExpert: async (i) =>
       c.contentController.createExpert(i.user, i.token, i.json),
@@ -1372,6 +1368,7 @@ export function registerAutomationRoutes(
     moduleHandlers('Crm_', c.crmController),
     moduleHandlers('Bi_', c.biController),
     moduleHandlers('Insight_', c.insightController),
+    moduleHandlers('AgentDispatch_', c.agentDispatchController),
     moduleHandlers('LowCode_', c.lowcodeController),
     moduleHandlers('Okr_', c.okrController),
     moduleHandlers('Oa_', c.oaController),
@@ -1669,7 +1666,6 @@ export function registerAutomationRoutes(
   registerContentDigitalAssetUpload(app, services);
   registerContentAgentStream(app, services);
   registerContentSkillImport(app, services);
-  registerContentPluginImport(app, services);
   registerUpgradePackageUpload(app, services);
   registerMiniProgramUploads(app, services);
   registerMiniProgramBuiltinDownload(app, services);
@@ -1808,31 +1804,6 @@ function registerContentSkillImport(
         );
       }
       const result = await services.controllers.contentController.importSkill(
-        context.get('user')!,
-        file,
-      );
-      return context.json(result);
-    },
-  );
-}
-
-/** 插件包上传走 multipart（zip 二进制），不进 JSON 契约。 */
-function registerContentPluginImport(
-  app: OpenAPIHono<ApiEnv>,
-  services: Services,
-) {
-  app.post(
-    '/enterprise/content/agent/plugins/import',
-    async (context: Context<ApiEnv>) => {
-      const form = await context.req.formData();
-      const file = form.get('file');
-      if (!(file instanceof File)) {
-        throw new BusinessException(
-          ErrorCode.BAD_REQUEST,
-          '请选择要上传的 zip 插件包',
-        );
-      }
-      const result = await services.controllers.contentController.importPlugin(
         context.get('user')!,
         file,
       );

@@ -15,7 +15,6 @@ import type {
 import { ContentAgentLibraryService } from './agent-library.service';
 import { ContentAgentConnectorService } from './agent-connectors.service';
 import { ContentAgentSkillService } from './agent-skills.service';
-import { ContentAgentPluginService } from './agent-plugins.service';
 import {
   buildAgentToolManifest,
   type ManifestWorkflow,
@@ -59,7 +58,6 @@ export class ContentController {
     private readonly assetShares: AssetShareService,
     private readonly agentConnectors: ContentAgentConnectorService,
     private readonly agentSkills: ContentAgentSkillService,
-    private readonly agentPlugins: ContentAgentPluginService,
     private readonly canvases: CanvasProjectService,
     /** 已共享工作流工具目录（wf__）：工作流服务在 orgContext 之后构造，故以惰性回调注入 */
     private readonly workflowTools: (
@@ -213,11 +211,10 @@ export class ContentController {
    * 权限人话与红线从契约词表派生；某一类读不到时只跳过那一类，不拖垮整张清单。
    */
   async agentTools(user: CurrentUser) {
-    const [connectorTools, skills, plugins, hardwareTools, workflows] =
+    const [connectorTools, skills, hardwareTools, workflows] =
       await Promise.all([
         this.agentConnectors.toolSpecs(user).catch(() => []),
         this.agentSkills.list(user).catch(() => []),
-        this.agentPlugins.list(user).catch(() => []),
         this.agent.hardwareToolSpecs(user).catch(() => []),
         this.workflowTools(user).catch(() => []),
       ]);
@@ -225,7 +222,6 @@ export class ContentController {
       buildAgentToolManifest({
         connectorTools,
         skills,
-        plugins,
         hardwareTools,
         workflows,
       }),
@@ -258,36 +254,6 @@ export class ContentController {
     body: Record<string, unknown>,
   ) {
     return ok(await this.agent.restoreSkill(user, id, body));
-  }
-
-  // ---------- Agent 插件 ----------
-
-  async listPlugins(user: CurrentUser) {
-    return ok(await this.agent.listPlugins(user));
-  }
-
-  async togglePlugin(
-    user: CurrentUser,
-    id: string,
-    body: Record<string, unknown>,
-  ) {
-    return ok(await this.agent.togglePlugin(user, id, body));
-  }
-
-  async removePlugin(user: CurrentUser, id: string) {
-    return ok(await this.agent.removePlugin(user, id));
-  }
-
-  async pluginRevisions(user: CurrentUser, id: string) {
-    return ok(await this.agent.pluginRevisions(user, id));
-  }
-
-  async restorePlugin(
-    user: CurrentUser,
-    id: string,
-    body: Record<string, unknown>,
-  ) {
-    return ok(await this.agent.restorePlugin(user, id, body));
   }
 
   // ---------- Agent 专家（全站共用，创建人可删） ----------
@@ -345,20 +311,6 @@ export class ContentController {
     }
     return ok(
       await this.agent.importSkill(user, bytes, file.name || 'skill.zip'),
-    );
-  }
-
-  /** 上传 zip 插件包：包内 plugin.json 或 PLUGIN.md 必须存在，其余文本文件一并存下。 */
-  async importPlugin(user: CurrentUser, file: File) {
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    if (!bytes.length) {
-      throw new BusinessException(ErrorCode.BAD_REQUEST, '文件内容为空');
-    }
-    if (bytes.length > 5 * 1024 * 1024) {
-      throw new BusinessException(ErrorCode.PAYLOAD_TOO_LARGE);
-    }
-    return ok(
-      await this.agent.importPlugin(user, bytes, file.name || 'plugin.zip'),
     );
   }
 

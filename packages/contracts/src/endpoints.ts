@@ -71,6 +71,7 @@ import { wechatMpEndpoints } from "./wechat-mp";
 import { botHostEndpoints } from "./bot-host";
 import { miniprogramEndpoints } from "./miniprogram";
 import { insightEndpoints } from "./insight";
+import { agentDispatchEndpoints } from "./agent-dispatch";
 const jsonValueSchema = z.union([
   z.null(),
   z.string(),
@@ -15625,7 +15626,8 @@ type ModuleEndpoints = typeof adminPageEndpoints &
   typeof wechatMpEndpoints &
   typeof botHostEndpoints &
   typeof miniprogramEndpoints &
-  typeof insightEndpoints;
+  typeof insightEndpoints &
+  typeof agentDispatchEndpoints;
 export const endpoints: ModuleEndpoints & typeof localEndpoints = {
   ...adminPageEndpoints,
   ...automationEndpoints,
@@ -15685,6 +15687,7 @@ export const endpoints: ModuleEndpoints & typeof localEndpoints = {
   ...botHostEndpoints,
   ...miniprogramEndpoints,
   ...insightEndpoints,
+  ...agentDispatchEndpoints,
   ...localEndpoints,
 };
 export type EndpointId = keyof typeof endpoints;

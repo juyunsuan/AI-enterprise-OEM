@@ -7,7 +7,7 @@ import { toJsonInput } from '../common/json-input';
  * 覆盖前把旧版本存一份，用户能查「它原来长什么样」，也能一键回滚——
  * 否则恶意包只要同名覆盖一次，痕迹就永久没了。
  */
-export type AgentAssetKind = 'skill' | 'plugin';
+export type AgentAssetKind = 'skill';
 
 /** 每个条目最多留多少条历史：只防「静默替换后无法追溯」，不当网盘用。 */
 const REVISION_KEEP = 10;

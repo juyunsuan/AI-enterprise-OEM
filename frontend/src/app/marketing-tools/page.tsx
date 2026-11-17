@@ -280,7 +280,7 @@ export default function MarketingToolsPage() {
   return (
     <>
       <PageHero
-        title="营销工具"
+        title={TOOLS.find((tool) => tool.key === tab)?.name ?? "营销工具"}
         desc={`营销获客与内容自动化工具箱：按「获客与转化 / 内容与搜索增长 / 数据与线索挖掘 / 触达与客户运营」四组排布，每张卡片一个工具、点卡片进入使用，各工具用法见卡片说明。潜客线索与大数据查询任务按登录账号归属、五个数据集彼此独立；GEO 项目按创建账号与所属企业可见；阿里云外呼与邮件推送的 Key 各自配置。`}
         extra={
           tab !== "overview" ? (
