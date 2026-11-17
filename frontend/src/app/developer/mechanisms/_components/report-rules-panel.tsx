@@ -20,7 +20,7 @@ import {
   WEBHOOK_EVENTS,
 } from "@enterprise/contracts";
 import { mechanismsApi } from "@/api/mechanisms";
-import { Notice, Panel, PillTabs } from "@/components/ui/panel";
+import { Notice, Panel, TabStrip } from "@/components/ui/panel";
 import { fmtDateTime } from "@/lib/datetime";
 import {
   RULE_ACTION_LABELS,
@@ -328,7 +328,7 @@ export function ReportRulesPanel() {
     <Panel
       title="报表目录与规则引擎"
       extra={
-        <PillTabs
+        <TabStrip
           items={[
             { key: "reports", label: "报表目录" },
             { key: "rules", label: "规则引擎" },

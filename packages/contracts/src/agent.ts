@@ -56,6 +56,7 @@ export const AGENT_DOMAIN_LABELS: Record<string, string> = {
   hrm: "HRM 人力",
   identity: "身份与资质",
   im: "IM 连接",
+  insight: "智慧分析",
   import: "数据导入",
   "im-sync": "飞书企微同步",
   "invoice-requests": "开票申请",
@@ -723,6 +724,10 @@ const AGENT_ACTION_PHRASES: Array<[string, string]> = [
 const AGENT_ACTION_TEXT: Record<string, string> = {
   Asset_postMessage: "发表留言",
   Bigdata_chat: "AI 对话",
+  Insight_generateReport: "生成热点/趋势快报",
+  Insight_tagAssets: "批量视觉打标资产",
+  Insight_syncLedger: "同步热点台账",
+  Insight_collectNow: "立即采集订阅内容",
   Contracts_agent: "指派签约代理人",
   Contracts_staff: "指派承办职员",
   Flex_candidates: "匹配候选人",

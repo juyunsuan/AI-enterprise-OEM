@@ -275,6 +275,182 @@ export function registerBotHostPublic(
     handle(c, (host) => hosts.clearClientModel(host)),
   );
 
+  /**
+   * AI 调用账号（本设备）：客户端按「Agent 绑定账号」取第三方平台凭据。
+   * 主体即本机——设备类型由通道决定（DESKTOP/MOBOT），设备 ID 取令牌归属主机；
+   * 严格放行：只列/只解密绑定给本机的启用账号，未绑定取不到。口令明文只在
+   * credentials 端点解密一次并记审计，与 x-api-key 机器通道同一套服务。
+   */
+  const hostUser = (host: BotHostPrincipal) =>
+    new CurrentUser(host.userId, host.name, 'user');
+  app.get(basePath + '/ai-call/accounts', async (c) => {
+    const host = await authenticate(c);
+    if (host instanceof Response) return host;
+    try {
+      const list = await services.aiCall.openList(
+        hostUser(host),
+        requiredKind,
+        host.id,
+        c.req.query('platform') || '',
+      );
+      return c.json({ ok: true, list });
+    } catch (error) {
+      if (error instanceof BusinessException) {
+        return c.json(denied(error.message), error.getStatus());
+      }
+      return c.json(denied('主机通道处理失败'), 500);
+    }
+  });
+  app.get(basePath + '/ai-call/accounts/:id/credentials', async (c) => {
+    const host = await authenticate(c);
+    if (host instanceof Response) return host;
+    try {
+      const raw = c.req.param('id') || '';
+      if (!/^\d+$/.test(raw)) {
+        throw new BusinessException(
+          ErrorCode.BAD_REQUEST,
+          '账号 ID 必须是正整数',
+        );
+      }
+      const credentials = await services.aiCall.openCredentials(
+        hostUser(host),
+        Number(raw),
+        requiredKind,
+        host.id,
+      );
+      return c.json({ ok: true, ...credentials });
+    } catch (error) {
+      if (error instanceof BusinessException) {
+        return c.json(denied(error.message), error.getStatus());
+      }
+      return c.json(denied('主机通道处理失败'), 500);
+    }
+  });
+
+  /**
+   * 技能中心（平台转发 SkillHub）：客户端「技能」页签的搜索 / 详情 / 下载包。
+   * 与站内 /enterprise/skillhub/* 同一套服务、同一份公开目录；客户端只拿数据，
+   * 技能入库落在本机（客户端自己解包 SKILL.md），平台不代客户端装技能。
+   */
+  app.get(basePath + '/skills', async (c) => {
+    const host = await authenticate(c);
+    if (host instanceof Response) return host;
+    try {
+      const page = await services.controllers.skillHubController.list(
+        hostUser(host),
+        {
+          keyword: c.req.query('keyword'),
+          page: Number(c.req.query('page') || 1),
+          pageSize: Number(c.req.query('pageSize') || 16),
+        },
+      );
+      return c.json({ ok: true, ...page });
+    } catch (error) {
+      if (error instanceof BusinessException) {
+        return c.json(denied(error.message), error.getStatus());
+      }
+      return c.json(denied('主机通道处理失败'), 500);
+    }
+  });
+  app.get(basePath + '/skills/:slug', async (c) => {
+    const host = await authenticate(c);
+    if (host instanceof Response) return host;
+    try {
+      const detail = await services.controllers.skillHubController.detail(
+        hostUser(host),
+        c.req.param('slug') || '',
+      );
+      return c.json({ ok: true, skill: detail });
+    } catch (error) {
+      if (error instanceof BusinessException) {
+        return c.json(denied(error.message), error.getStatus());
+      }
+      return c.json(denied('主机通道处理失败'), 500);
+    }
+  });
+  // 下载包：二进制响应，不进站内 code/message/data 信封；失败仍回 { ok:false }。
+  app.get(basePath + '/skills/:slug/download', async (c) => {
+    const host = await authenticate(c);
+    if (host instanceof Response) return host;
+    try {
+      const result = await services.controllers.skillHubController.download(
+        hostUser(host),
+        c.req.param('slug') || '',
+      );
+      const filename = encodeURIComponent(result.filename);
+      const body = result.bytes.buffer.slice(
+        result.bytes.byteOffset,
+        result.bytes.byteOffset + result.bytes.byteLength,
+      ) as ArrayBuffer;
+      return new Response(body, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/zip',
+          'Content-Disposition': `attachment; filename="${filename}"; filename*=UTF-8''${filename}`,
+        },
+      });
+    } catch (error) {
+      if (error instanceof BusinessException) {
+        return c.json(denied(error.message), error.getStatus());
+      }
+      return c.json(denied('主机通道处理失败'), 500);
+    }
+  });
+
+  /**
+   * RPA「BotBuddy 浏览器」设备：领任务与回传结果走这条主机令牌通道。
+   * 与本地 Chrome 插件的设备通道同一口径——只认本机令牌、按 hostId 收窄可领范围，
+   * 报文里只有「做什么」（Automa 工作流正文 + 运行参数）与「做到哪了」，
+   * 没有任何目标平台口令（D3-A：口令永不出站，这条链路上平台本来也没存）。
+   */
+  app.get(basePath + '/rpa/tasks', async (c) => {
+    const host = await authenticate(c);
+    if (host instanceof Response) return host;
+    try {
+      const list = await services.rpaTaskService.botBuddyTasks(
+        host.userId,
+        host.id,
+      );
+      return c.json({ ok: true, ...list });
+    } catch (error) {
+      if (error instanceof BusinessException) {
+        return c.json(denied(error.message), error.getStatus());
+      }
+      return c.json(denied('主机通道处理失败'), 500);
+    }
+  });
+  // 领取：body.taskId 指定单条（界面/客户端点「立即执行」）；不带＝按队列派一条，没有就 404。
+  app.post(basePath + '/rpa/claim', (c) =>
+    handle(c, (host, body) => {
+      const taskId = Number(text(body.taskId) || 0) || undefined;
+      return services.rpaTaskService.claimBotBuddy(
+        host.userId,
+        host.id,
+        taskId,
+      );
+    }),
+  );
+  // 回传终态：与比特浏览器执行端共用一套收口语义（失败且有重试次数则退回待执行）。
+  app.post(basePath + '/rpa/finish', (c) =>
+    handle(c, (host, body) =>
+      services.rpaTaskService.finish(
+        hostUser(host),
+        Number(text(body.executionId) || 0),
+        body,
+      ),
+    ),
+  );
+  // 窗口起不来、用户中断时把已抢到的任务退回待执行，别让它卡在「执行中」。
+  app.post(basePath + '/rpa/release', (c) =>
+    handle(c, async (host, body) => {
+      await services.rpaTaskService.releaseBotBuddy(
+        host.userId,
+        Number(text(body.taskId) || 0),
+      );
+      return { released: true };
+    }),
+  );
+
   // 客户端退出配对：本机令牌保留，仅转离线（重新配对才换令牌）。
   app.post(basePath + '/logout', (c) =>
     handle(c, (host) => hosts.logout(host)),

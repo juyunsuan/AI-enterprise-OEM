@@ -95,6 +95,24 @@ const MANIFEST = JSON.stringify(
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'bb-chrome-ext-src-'));
 try {
+  // --- 内置插件（builtin-extensions/ 随包分发） ---
+  const builtins = chromeExtensions.builtins();
+  assert.ok(builtins.length >= 1, '内置插件应随包存在（builtin-extensions/）');
+  for (const item of builtins) {
+    assert.equal(item.builtin, true);
+    const dir = chromeExtensions.resolveDir(item.id);
+    assert.ok(dir && fs.existsSync(path.join(dir, 'manifest.json')));
+  }
+  const automa = builtins.find((item) => item.id === 'automa');
+  assert.ok(automa, '内置插件应包含 Automa');
+  assert.equal(automa.builtin, true);
+  assert.equal(chromeExtensions.remove('automa').ok, false);
+  ok('内置插件：随包可见、目录可解析、不可删除');
+
+  // 用户插件列表要在内置之外单算：先确认导入前没有用户插件。
+  const userList = () => chromeExtensions.list().filter((item) => !item.builtin);
+  assert.equal(userList().length, 0);
+
   const src = path.join(tmp, 'my-ext');
   fs.mkdirSync(path.join(src, 'icons'), { recursive: true });
   fs.writeFileSync(path.join(src, 'manifest.json'), MANIFEST);
@@ -104,7 +122,7 @@ try {
   const imported = chromeExtensions.importFromDirectory(src);
   assert.match(imported.id, /^[a-z0-9-]+$/);
   assert.equal(imported.name, '测试采集插件');
-  const listed = chromeExtensions.list();
+  const listed = userList();
   assert.equal(listed.length, 1);
   assert.equal(listed[0].id, imported.id);
   assert.ok(fs.existsSync(path.join(chromeExtensions.DIR, imported.id, 'icons', 'icon.txt')));
@@ -112,8 +130,24 @@ try {
 
   const again = chromeExtensions.importFromDirectory(src);
   assert.equal(again.id, imported.id);
-  assert.equal(chromeExtensions.list().length, 1);
+  assert.equal(userList().length, 1);
   ok('重复导入：同 id 覆盖，不新增');
+
+  // 与内置插件重名的包拒绝导入（内置目录只读，不能被子目录覆盖）。
+  const clashDir = path.join(tmp, 'clash');
+  fs.mkdirSync(clashDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(clashDir, 'manifest.json'),
+    JSON.stringify({
+      manifest_version: 3,
+      name: 'Automa',
+      version: '9.9.9',
+      action: { default_title: 'x' },
+      background: { service_worker: 'background.js' },
+    }),
+  );
+  assert.throws(() => chromeExtensions.importFromDirectory(clashDir), /内置/);
+  ok('重名内置：拒绝导入');
 
   const zipPath = path.join(tmp, 'ext.zip');
   fs.writeFileSync(
@@ -146,7 +180,7 @@ try {
 
   const removed = chromeExtensions.remove(imported.id);
   assert.deepEqual(removed, { ok: true });
-  assert.equal(chromeExtensions.list().length, 0);
+  assert.equal(userList().length, 0);
   ok('删除：目录移除，列表同步');
 } finally {
   fs.rmSync(tmp, { recursive: true, force: true });

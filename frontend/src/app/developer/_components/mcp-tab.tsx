@@ -106,7 +106,7 @@ export function McpTab({ onOpenApi }: { onOpenApi: () => void }) {
       >
         <p className="muted" style={{ fontSize: 13, marginBottom: 12 }}>
           6 个元工具背后是 {TOTAL} 个业务接口（读 {TOTAL_READ} / 写 {TOTAL_WRITE}），分布在 {DOMAIN_ROWS.length} 个业务域，
-          覆盖驾驶舱、工作台（Agent、Workbuddy 企业版、内容创作、多维表格、RPA 自动化、营销工具、数字资产）
+          覆盖驾驶舱、工作台（Agent、Agent-Bot、内容创作、多维表格、RPA 自动化、营销工具、数字资产）
           与全部业务服务（财税、出海、物流、法律、知产、灵活用工、智库、IT服务、营销、资产、供销）。
           下表与外部客户端调 <span className="mono">list_operations</span> 得到的是同一份，新增接口自动进入；
           平台管理后台、智能体记忆自身、MCP 端点自身以及 Key 铸造/吊销动作不在清单内。

@@ -21,7 +21,7 @@ import {
   APPOINTMENT_PURPOSE_LABELS,
 } from "@enterprise/contracts";
 import { gapsApi, type AppointmentBooking, type AppointmentEvent } from "@/api/gaps";
-import { Notice, Panel, PillTabs } from "@/components/ui/panel";
+import { Notice, Panel, TabStrip } from "@/components/ui/panel";
 import { gapError, gapStatusTag, zhDay, zhTime } from "@/app/gaps/_components/gaps-common";
 
 type Mode = "events" | "bookings";
@@ -239,7 +239,7 @@ export function GapsAppointmentsTab() {
       title="预约与忙闲"
       titleExtra="公开预约页按 IP 限流；同一时段只允许一单"
       extra={
-        <PillTabs
+        <TabStrip
           items={[
             { key: "events", label: "预约活动" },
             { key: "bookings", label: "预约台账" },

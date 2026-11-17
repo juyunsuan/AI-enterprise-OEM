@@ -61,9 +61,9 @@ export const FEATURE_SEED: FeatureSeedNode[] = [
   // ---------- 工作台 ----------
   group('workbench', '工作台', 10),
   menu('agent', 'workbench', 'Agent', '/agent', 10),
-  group('agent-bot', 'Agent-Bot', 25, 'workbench'),
-  menu('bot-hosts', 'agent-bot', 'Bot 主机', '/bot/hosts', 10),
-  menu('workbuddy', 'agent-bot', 'Workbuddy 企业版', '/workbuddy', 20),
+  // Agent-Bot 单页四页签（BotBuddy主机 / MoBot手机 / WorkBuddy企业云 / AI调用账号），
+  // 原分组与「Bot 主机」「Workbuddy 企业版」两个子菜单已收敛进这一页。
+  menu('agent-bot', 'workbench', 'Agent-Bot', '/agent-bot', 25),
   menu('data-table', 'workbench', '多维表格', '/data-table', 30),
   menu('rpa', 'workbench', 'RPA自动化', '/rpa', 40),
   group('content-creation', '内容创作', 50, 'workbench'),
@@ -96,6 +96,16 @@ export const FEATURE_SEED: FeatureSeedNode[] = [
     10,
   ),
   menu('assets', 'workbench', '数字资产管理', '/assets', 70),
+  // ---------- 智慧分析（营销工具同款卡片页：单菜单 + 两张工具卡子项）----------
+  menu('insight', 'workbench', '智慧分析', '/insight', 65),
+  menu(
+    'insight-hotspot',
+    'insight',
+    '全域内容热点分析',
+    '/insight/hotspot',
+    10,
+  ),
+  menu('insight-trends', 'insight', '流行趋势分析', '/insight/trends', 20),
   menu('mail', 'workbench', 'AI邮箱服务', '/mail', 80),
   menu('crm', 'workbench', 'CRM', '/crm', 90),
   menu('bi', 'workbench', 'BI智能分析', '/bi', 100),
@@ -180,9 +190,12 @@ export const FEATURE_SEED: FeatureSeedNode[] = [
  */
 export const FEATURE_API_PREFIXES: Record<string, string[]> = {
   agent: ['/enterprise/agent', '/enterprise/skillhub'],
-  workbuddy: ['/enterprise/workbuddy'],
-  // 主机域前缀与 /enterprise/workbuddy 不同段（匹配要求前缀后紧跟 /），单独成码可只关主机通道
-  'bot-hosts': ['/enterprise/bot-hosts'],
+  // Agent-Bot 单码管整页：主机通道、WorkBuddy 通道与 AI 调用账号界面端点同开同关
+  'agent-bot': [
+    '/enterprise/workbuddy',
+    '/enterprise/bot-hosts',
+    '/enterprise/ai-call',
+  ],
   'data-table': ['/enterprise/data-tables'],
   rpa: ['/enterprise/rpa'],
   // 内容创作聚合页板块：PDP 详情页工具与多平台分发都归这一块；digital-assets 单独由 assets 接管（最长前缀）
@@ -198,6 +211,13 @@ export const FEATURE_API_PREFIXES: Record<string, string[]> = {
     '/enterprise/content/studio',
   ],
   assets: ['/enterprise/content/digital-assets'],
+  // 智慧分析：热点工具接管 /insight/hotspot、/subscriptions、/metrics；趋势工具只接 /insight/trends
+  'insight-hotspot': [
+    '/enterprise/insight/hotspot',
+    '/enterprise/insight/subscriptions',
+    '/enterprise/insight/metrics',
+  ],
+  'insight-trends': ['/enterprise/insight/trends'],
   community: ['/enterprise/community'],
   // 视频模版单独成码：前缀比 /enterprise/content 长，关闭模版不影响其它内容工具
   'video-templates': ['/enterprise/content/video-templates'],

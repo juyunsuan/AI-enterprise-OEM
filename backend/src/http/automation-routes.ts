@@ -537,6 +537,8 @@ export function registerAutomationRoutes(
       c.botHostController.channels(i.user, i.param['hostId']),
     BotHost_workspaces: async (i) =>
       c.botHostController.workspaces(i.user, i.param['hostId']),
+    BotHost_fingerprints: async (i) =>
+      c.botHostController.fingerprints(i.user, i.param['hostId']),
     BotHost_modelGrant: async (i) =>
       c.botHostController.modelGrant(i.user, i.param['hostId']),
     BotHost_saveModelGrant: async (i) =>
@@ -564,8 +566,32 @@ export function registerAutomationRoutes(
     // ---------- AI 调用账号 ----------
     AiCall_accounts: async (i) => c.aiCallController.list(i.user, i.query),
     AiCall_account: async (i) => c.aiCallController.get(i.user, i.param['id']),
+    AiCall_bindings: async (i) =>
+      c.aiCallController.bindings(
+        i.user,
+        readValidated<{ kind: 'DESKTOP' | 'MOBOT' | 'WORKBUDDY'; principalId: number }>(
+          i.query,
+        ),
+      ),
+    AiCall_saveBindings: async (i) =>
+      c.aiCallController.saveBindings(
+        i.user,
+        readValidated<{
+          kind: 'DESKTOP' | 'MOBOT' | 'WORKBUDDY';
+          principalId: number;
+          accountIds: number[];
+        }>(i.json),
+      ),
     AiCall_createAccount: async (i) =>
       c.aiCallController.create(i.user, i.json),
+    AiCall_saveAccountAgents: async (i) =>
+      c.aiCallController.saveAgents(
+        i.user,
+        i.param['id'],
+        readValidated<{
+          bindings: { kind: 'DESKTOP' | 'MOBOT' | 'WORKBUDDY'; principalId: number }[];
+        }>(i.json),
+      ),
     AiCall_updateAccount: async (i) =>
       c.aiCallController.update(i.user, i.param['id'], i.json),
     AiCall_removeAccount: async (i) =>
@@ -573,15 +599,19 @@ export function registerAutomationRoutes(
     OpenApi_aiCallAccounts: async (i) =>
       c.aiCallOpenController.list(
         i.user,
-        readValidated<{ workbuddyAccountId: number; platform?: string }>(
-          i.query,
-        ),
+        readValidated<{
+          kind: 'DESKTOP' | 'MOBOT' | 'WORKBUDDY';
+          agentId: number;
+          platform?: string;
+        }>(i.query),
       ),
     OpenApi_aiCallCredentials: async (i) =>
       c.aiCallOpenController.credentials(
         i.user,
         i.param['id'],
-        readValidated<{ workbuddyAccountId: number }>(i.query),
+        readValidated<{ kind: 'DESKTOP' | 'MOBOT' | 'WORKBUDDY'; agentId: number }>(
+          i.query,
+        ),
       ),
 
     // ---------- Google 潜客线索挖掘 ----------
@@ -1341,6 +1371,7 @@ export function registerAutomationRoutes(
     handlers,
     moduleHandlers('Crm_', c.crmController),
     moduleHandlers('Bi_', c.biController),
+    moduleHandlers('Insight_', c.insightController),
     moduleHandlers('LowCode_', c.lowcodeController),
     moduleHandlers('Okr_', c.okrController),
     moduleHandlers('Oa_', c.oaController),

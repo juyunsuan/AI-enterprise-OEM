@@ -366,4 +366,39 @@ Mobot                              平台
   - Mobot 设备按 `mb_` 令牌 + 独立公开通道 `/api/public/mobot/**` 配对/心跳/进度/回执；桌面通道与手机通道按 kind 互斥；
   - 列表按 `kind` 隔离；Mobot 指令不下发桌面工作区/执行模式；平台模型授权沿用现有心跳 `modelGrant`；
   - 后端单测覆盖 kind 隔离、Mobot 配对码认领、`mb_` 令牌、手机指令无 cwd；真实 API 联调覆盖配对 → 心跳 → 下发 → 进度 → 回执 → 会话 → 跨通道拒绝 → 清理。
-- 未实现（按约定暂不动 App）：Mobot 客户端 `Mobot Link`、6 位码/心跳 UI、前台服务、本地 Agent 执行器、模型同步写入；App 端按本文 §5 后续接入。
+- App 侧见 §13。
+
+## 13. Mobot App 侧实现状态（2026-11-16）
+
+实际文件与 §5.1 的命名对应：`executor` → `mobot_agent.dart`，`model_bridge` → `mobot_models.dart`，`bootstrap` 合入 `mobot_state.dart`。
+
+- `packages/mobot_link/`（纯 Dart，不依赖 Flutter 与引擎类型）：
+  - 登录 / 会话 / 6 位码配对 / 轮询认领；账号会话只走 `Authorization: Bearer`，设备只走 `x-bot-token`；
+  - 心跳（默认 5s，失败 5→60s 退避）、`commands` / `stop` 领取、串行执行、`commandCode` 幂等（本地留存最近 200 条）；
+  - 进度分片上报（每片 3800 字符，失败即退回游标重试）与 `cancelRequested` 中转为本轮取消；一条终止回执（`ok / text / errorMessage / elapsedMs / canceled / failReason / acpSessionId`）；
+  - 模型授权同步：固定路由 `mobot-platform`，指纹 `channelId|protocol|baseUrl|model`（不含 Key），撤销只清理本模块创建的 Provider。
+  - 验证：`dart analyze` 无告警，`dart test` 全绿；对真实 HTTP 桩联调 21 项通过（Key 只在入站出现一次、401 停连并清令牌、跨账号 409）。
+- `app/lib/mobot/` + `app/lib/ui/mobot/`（Flutter 伴生层，不改上游结构）：
+  - `mobot_state.dart`：站点 / 账号 / 设备 / 链接状态合一的 Notifier，App 启动即恢复并自动心跳（`app.dart` 仅加一行）；站点地址变更会清掉旧站点的两份令牌；「暂停」与「允许平台唤起」都持久化；
+  - `mobot_agent.dart`：本地引擎执行桥。固定会话「Mobot 平台」；本轮由 `session/prompt` 回传的 `requestId` 在日志里认领，历史回放因此不会误报；工具调用与审批等待只上报名称，`blocked` 不算结束——审批仍在手机上做；
+  - `mobot_models.dart`：写入本机 Provider（`ProviderProfile` + `storeKey` + 手机密钥自愈副本 + 目录失效），只碰 `mobot-platform`；
+  - `mobot_stores.dart`：普通偏好与安全存储分流（令牌只进安全存储，不进日志/诊断包）；
+  - `mobot_foreground.dart`：Android 常驻通知与电量/充电/网络 caps；
+  - 页面：设置 › 主机 › Mobot 手机（站点、账号、积分、连接开关、唤起开关、平台模型状态、最近指令）与配对页（站点 → 登录 → 6 位码 → 自动轮询）。
+- 原生（纯新增）：`mobot/MobotLinkService.kt`（`specialUse` 前台服务 + 常驻通知，保住进程让 Dart 心跳继续跑）、`MainActivity` 的 `mobotForeground` / `mobotDeviceCaps` 通道、`AndroidManifest.xml` 的 service 声明。
+- 极薄接入：`app/pubspec.yaml`（path 依赖）、设置索引与页面注册、`app/lib/l10n/parts/mobot_{zh,en}.arb` + 搜索关键词、`.github/workflows/ci.yml` 的 Dart 包闸门加入 `packages/mobot_link`。
+- 品牌：`android:label`、iOS `CFBundleDisplayName`、`AppStrings.APP_NAME`、`AppInfo.name` → `Mobot`；包名 `io.github.ccch1mneyyy.dsh_app` 不变。应用内文案已统一：ARB 分片 52 个文件、Android 资源与 Kotlin 字面量 15 个文件、Dart 内联文案 4 处、使用手册 13 个文件（`app/assets/skills/dsh-go-guide/` 由 `guide_sync.py` 重建）、测试期望 36 个文件。
+- 有意保留 `DSH Go` 的三类：
+  - 上游署名：`hubAboutAuthor`「DSH Go 原作者」、`botsProjectHome`「DSH Go 项目主页」，README/AGPL 与 ASSETS 授权说明同样不改（应用内其余提到本 App 的文案，含 star 弹窗与「给 Mobot 点个 star」，已跟随新名）；
+  - 落盘路径：相册 `Pictures/DSH Go`、`Movies/DSH Go`（改名会让历史文件散进两个相册）；
+  - 标识符：`dsh-go`、`dsh-go-guide`、`dshgo://`、`dsh-go.json` 等技能/协议/深链名。
+- 默认模型（§11.5）已实现，口径收窄：引擎的模型目录只列有凭据的供应商，因此「目录为空」= 这台手机原本跑不了任何模型；只有此时才在 Mobot 会话上调用既有 `session/selectModel`（引擎会同时把它存为新会话默认）。原本就有模型的手机不动用户的选择；路由注册晚于 profile 写入，这一次没选中就留给用户手动挑，不算失败。
+- 未做（按方案属可选或后续）：二维码配对、iOS 后台、推送唤醒、`examples/plugins/mobot-status`；Dart 源码注释里的项目名沿用 `DSH Go`（注释描述上游工程，非界面文案）。
+- 未在本机验证：APK 构建与真机联调（本机无 Android SDK/真机），锁屏与省电策略下的前台服务表现，审批等待时是否复用既有 ChatAlerts 通知。
+- 闸门（Windows 本机 + WSL Ubuntu 24.04 复刻 CI 环境：Flutter 3.47.7 / Dart 3.13.5 / 同版本 fonts-noto-cjk 与 NotoColorEmoji 2.051）：
+  - `packages/mobot_link`：`dart analyze` 无告警，`dart test` 52 项通过；
+  - `app`：`flutter analyze` 无告警；`flutter test` 全量 13889 通过 / 310 跳过 / 0 失败（改名后先跑一遍收集差异、重新生成基线，再跑一遍全绿）；
+  - `python3 app/tool/l10n_merge.py --check` 通过（76 个分片、8152 条），`python3 app/tool/guide_sync.py --check` 通过（38 个文件），`lib/l10n` 与 `app/assets/skills/dsh-go-guide/` 均已同步生成；
+  - 显示名改为 Mobot 后共重新生成 90 张 golden 基线（启动图、设置中心页与各设置页、分享卡与面板、手机操控与免确认弹窗、打扰模式、更新页、账号页、酒馆、插件市场、使用统计提示、star 弹窗等），另有 111 张逐字节未变。
+  - Windows 本机渲染 golden 与 Linux 基线相差约 1.7%（字形抗锯齿），因此基线只在 Linux 侧更新，与 `docs/testing/*` 的既有约定一致。
+

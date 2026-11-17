@@ -24,7 +24,7 @@ import {
   Tooltip,
 } from "antd";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BIGDATA_DATASETS } from "@enterprise/contracts";
 import type { BigdataDatasetKey } from "@enterprise/contracts";
 import { Notice, Panel, TabStrip } from "@/components/ui/panel";
@@ -74,7 +74,8 @@ export function BigdataQueryTab({
 }) {
   const { message } = App.useApp();
   const definition = BIGDATA_DATASETS[dataset];
-  const api = bigdataApi(dataset);
+  // 必须 memo：bigdataApi() 每次都返回新对象，直接进挂载 effect 的依赖会让它每渲染重跑一次（无限取数）
+  const api = useMemo(() => bigdataApi(dataset), [dataset]);
 
   const [view, setView] = useState<View>("chat");
   const [settings, setSettings] = useState<BigdataSettings | null>(null);

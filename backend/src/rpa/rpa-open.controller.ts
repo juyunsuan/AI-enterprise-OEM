@@ -13,8 +13,9 @@ import { RpaTaskService } from './rpa-task.service';
  * 认领报文里会带上前台从来不回传的账号口令明文（已解密），
  * 因为执行端要在比特浏览器窗口 / 云手机环境里真的登录目标平台。
  *
- * 脚本与任务都带 `deviceType`（pc / android / iphone）：一台只装了 PC 比特浏览器的执行端
- * 不该领到云手机任务，认领时同样按声明的设备过滤待办。
+ * 脚本与任务都带 `deviceType`（pc / android / iphone / chrome / botbuddy）：一台只装了 PC 比特浏览器的
+ * 执行端不该领到云手机任务，认领时同样按声明的设备过滤待办；
+ * chrome 与 botbuddy 两类各有自己的通道（插件设备令牌、BotBuddy 主机令牌），不从这里领。
  */
 export class RpaOpenController {
   constructor(

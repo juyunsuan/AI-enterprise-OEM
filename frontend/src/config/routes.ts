@@ -296,16 +296,7 @@ export const enterpriseRoute: EnterpriseRoute = {
       routes: [
         { path: "/tasks", name: "我的任务", icon: "tasks" },
         { path: "/agent", name: "Agent", icon: "robot" },
-        {
-          type: "group",
-          name: "Agent-Bot",
-          icon: "robot",
-          routes: [
-            { path: "/bot/hosts", name: "Bot 主机", icon: "network" },
-            { path: "/bot/mobots", name: "Mobot 手机", icon: "mobile" },
-            { path: "/workbuddy", name: "Workbuddy 企业版", icon: "robot" },
-          ],
-        },
+        { path: "/agent-bot", name: "Agent-Bot", icon: "robot" },
         { path: "/rpa", name: "RPA自动化", icon: "play" },
         { path: "/kb", name: "知识库", icon: "book" },
         { path: "/mail", name: "AI邮箱服务", icon: "mail" },
@@ -328,6 +319,11 @@ export const enterpriseRoute: EnterpriseRoute = {
           ],
         },
         { path: "/marketing-tools", name: "营销工具", icon: "horn" },
+        /**
+         * 「智慧分析」营销工具同款卡片页（一个菜单，页内两张工具卡：
+         * 全域内容热点分析在前、流行趋势分析在后；点卡片进各自带页签的工具页 /insight/hotspot、/insight/trends）。
+         */
+        { path: "/insight", name: "智慧分析", icon: "chart" },
         { path: "/assets", name: "数字资产管理", icon: "folder" },
         { path: "/crm", name: "CRM", icon: "team" },
         { path: "/bi", name: "BI智能分析", icon: "chart" },
@@ -530,6 +526,21 @@ export const PAGE_META: Record<
 > = {
   "/": { title: "官网首页", description: "企业服务操作系统：一个账号连接企业全生命周期。" },
   "/dashboard": { title: "驾驶舱", description: "身份与资质、我的待办与业务台账。" },
+  "/insight": {
+    title: "智慧分析",
+    description:
+      "趋势研判与垂类热点洞察的工具箱：一张卡片一个工具，全域内容热点分析在前、流行趋势分析在后，共用采集、数据资产、多维表格与统一模型网关。",
+  },
+  "/insight/hotspot": {
+    title: "全域内容热点分析",
+    description:
+      "订阅自己的垂类（关键词/话题/博主）后，用 BotBuddy 主机托管窗口（主）或本机浏览器代理（备）把公开内容采进「热点内容」多维表格，热点引擎按时段聚合打分分层（萌芽/上升/峰值/衰退），给出热点大盘、榜单、追踪台账与 AI 快报。",
+  },
+  "/insight/trends": {
+    title: "流行趋势分析",
+    description:
+      "对自有数字资产图片与电商采集结果做 VLM 打标、色彩/元素时序、价格带与爆款打分；开启联动后，用社媒互动热度（热点）×电商商业热度看概念商业化潜力四象限。数据面限定自有资产+自有采集，不接入受保护商业平台。",
+  },
   "/help": {
     title: "帮助中心",
     description:
@@ -543,22 +554,12 @@ export const PAGE_META: Record<
   "/rpa": {
     title: "RPA自动化",
     description:
-      "按账号归属的云端 RPA：RPA 任务（建任务即绑定脚本＋账号＋运行参数）、RPA 账号（口令密文保存）、RPA 脚本（Automa JSON / JS / Python，可由 AIPDD 文字模型按需求生成），本地比特浏览器凭 API Key 认领执行并回传结果；另有「本地 Chrome 插件（浏览器代理）」执行端——插件登录本系统后本机浏览器成为在线设备，Agent 可在你已登录的站点自主多步执行。",
+      "按账号归属的云端 RPA：RPA 任务（建任务即绑定脚本＋账号＋运行参数）、RPA 账号（口令密文保存）、RPA 脚本（Automa JSON / JS / Python，可由 AIPDD 文字模型按需求生成），本地比特浏览器凭 API Key 认领执行并回传结果；另有「本地 Chrome 插件（浏览器代理）」执行端——插件登录本系统后本机浏览器成为在线设备，Agent 可在你已登录的站点自主多步执行；还有「BotBuddy 浏览器」——BotBuddy 客户端自带的内核级指纹窗口，随客户端内置 Automa 插件开箱即用，浏览器本体与插件都在客户端，平台侧登记主机在线状态。",
   },
-  "/workbuddy": {
-    title: "Workbuddy 企业版",
+  "/agent-bot": {
+    title: "Agent-Bot",
     description:
-      "按用户归属的腾讯云 Workbuddy 企业版：计划任务（口水话经 AI 澄清成任务书、拆条派发、同步 Agent 消息）、Agent（创建 / 版本 / 会话）、Workbuddy Enterprise 账号（用户自己的 SecretId / SecretKey 密文保存，可配多把并行）、AI 调用账号（第三方平台口令 / API Key / Cookie 加密保存，按 Workbuddy Enterprise 账号绑定授权，经机器通道按绑定取用）。",
-  },
-  "/bot/mobots": {
-    title: "Mobot 手机",
-    description:
-      "Mobot 手机通过 6 位连接码与平台账号配对：心跳领取平台 Prompt，由手机内的本地 Agent 执行并流式回传。平台只下发「做什么」与「做到哪了」，不读取手机模型、技能与本地文件；配对后平台模型授权会同步到手机现有模型配置，手机离线时指令排队、上线即领取。",
-  },
-  "/bot/hosts": {
-    title: "Bot 主机",
-    description:
-      "平台与 Bot 里的 Agent 直接对接：本机装好 BotBuddy 客户端（自带模型渠道、技能、数字分身、长期记忆与本地工具），用配对码或令牌与本站绑定后成为在线主机。对话框里说人话，平台把指令排队下发，客户端里的 Agent 直接执行并流式回传；也可把每轮要做的事排成定时任务。模型密钥、技能与本机文件永不离开这台机器，平台只传「做什么」与「做到哪了」。",
+      "四个页签把「跑活的 Agent」收在一处：BotBuddy 主机（本机客户端配对成在线主机，说人话下发指令、选工作区、排定时任务）、MoBot 手机（6 位连接码配对，心跳领取 Prompt 由手机本地 Agent 执行回传）、WorkBuddy 企业云（一个腾讯云企业账号即一条执行通道：账号对话、定时任务、SecretId/SecretKey 密文保存）与 AI 调用账号（第三方平台口令 / API Key / Cookie 加密保存）。三类通道各自的「Agent 绑定账号」页签按设备授权：客户端凭主机令牌、任务侧凭平台 API Key 按 kind + Agent ID 取用，未绑定的一律取不到。模型密钥、技能与本机文件永不离开这台设备，平台只传「做什么」与「做到哪了」。",
   },
   "/app-center": {
     title: "应用中心",
@@ -643,7 +644,7 @@ export const PAGE_META: Record<
   "/marketing-tools": {
     title: "营销工具",
     description:
-      "二十三个营销工具，首屏每个工具一张卡片、点卡片进入使用：达人建联（按类目 / 平台 / 粉丝数筛选达人并查看联系方式）、阿里云智能外呼（把多维表格名单映射导入阿里云智能外呼任务组）、阿里云邮件推送（把多维表格的联系人同步到阿里云收件人列表）、GEO-AI引擎优化（品牌在 AI 问答中的可见度报告与选题池，另含按语言与付费/免费筛选的发稿平台推荐；独立站建站见同板块「国际独立站」卡片）、SEO 优化（传统搜索引擎侧工作台：站点体检、关键词研究与聚类、排名跟踪、竞品洞察、外链分析与建设、本地 SEO 网格、程序化页面、结构化数据与收录提交、SEO 报告；三层数据源——自有抓取免费、DataForSEO 你自带 Key 你付费、系统 AI 计积分，无 Key 不造假数据）、营销技能库（内容 / 社媒 / 邮件 / SEO / 广告 / 调研 / 销售七类技能与品牌上下文，填参数即可运行，结果沉淀为内容资产，支持渠道连接与定时任务）、多平台内容分发、问卷设计与调研、活码引流、腾讯企点三件套、Google 潜客线索挖掘、企业数据 / 全球贸易大数据 / 全球商务人士大数据 / 全球达人大数据 / 全球POI大数据（各自独立：自然语言提数据需求，AI 解析后查询并逐批写入各自的多维表格）、AI销售管理-SalesBuddy（外部网站，点卡片新窗口打开 salesbuddy.top）。",
+      "营销工具按获客与转化 / 内容与搜索增长 / 数据与线索挖掘 / 触达与客户运营四组排布，首屏一卡一工具、点卡片进入使用：AI 获客、企微 SCRM、达人建联、阿里云智能外呼与邮件推送、GEO-AI引擎优化、SEO 优化、营销技能库、多平台内容分发、问卷设计与调研、活码引流、腾讯企点三件套、Google 潜客线索挖掘、五个大数据数据集（企业数据 / 全球贸易 / 全球商务人士 / 全球达人 / 全球POI）、出海导航、国际独立站与外部站点 SalesBuddy。",
   },
   "/contracts": {
     title: "签约管理",

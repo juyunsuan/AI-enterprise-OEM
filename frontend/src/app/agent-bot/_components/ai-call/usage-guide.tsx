@@ -12,28 +12,28 @@ const STEP_ITEMS = [
       "点「登记账号」，按平台实际需要填用户名、登录口令、API Key、Cookie 或其他字段。至少填一种凭据；口令、API Key、Cookie 保存后不再回显，修改时留空即沿用原值。",
   },
   {
-    title: "绑定 Workbuddy Enterprise 账号",
+    title: "绑定给具体 Agent",
     content:
-      "同一个 AI 调用账号可以绑定多个 Workbuddy Enterprise 账号。只有与当前执行账号绑定的凭据，机器通道才会放行；绑定关系随时可在「改」里调整。",
+      "两个方向都能设：① 在「BotBuddy 主机」「MoBot 手机」「WorkBuddy 企业云」各自的「Agent 绑定账号」页签里，选中某一台设备/账号，勾选它可用的 AI 调用账号；② 在本页签点某条凭据的「绑定」，一次勾选多台 Agent。一份凭据可同时授权给多台 Agent，绑定关系随时可改。",
   },
   {
-    title: "为任务准备 API Key",
+    title: "Agent 侧取用（两种通道）",
     content:
-      "AI 任务侧使用全站唯一的那把平台 API Key（「模型服务 → API Key 管理」生成），请求头带 x-api-key。Key 属于哪个账号，就只能看到那个账号名下、且与指定 Workbuddy 账号绑定的 AI 调用账号。",
+      "① 已配对的客户端（BotBuddy / MoBot）带主机令牌 x-bot-token 直接取：GET /api/public/bot-host/ai-call/accounts（手机是 /api/public/mobot/…），身份就是本机，不用传设备 ID。\n② 外部任务/脚本用平台 API Key（「模型服务 → API Key 管理」生成，头 x-api-key）取：GET /api/v1/ai-call/accounts?kind=DESKTOP&agentId=<主机ID>。kind 取 DESKTOP / MOBOT / WORKBUDDY。",
   },
   {
-    title: "任务运行时取用",
+    title: "运行时按列表取凭据",
     content:
-      "先 GET /api/v1/ai-call/accounts?workbuddyAccountId=<id> 列出可用账号（不含明文），再 GET /api/v1/ai-call/accounts/<id>/credentials?workbuddyAccountId=<id> 取一次明文凭据。两次调用都必须带 Workbuddy Enterprise 账号 ID，未绑定的会被拒绝。",
+      "先列账号（不含明文），再 GET …/accounts/<id>/credentials 取一次明文凭据。两条通道都严格按绑定放行：没绑到本机的账号查不到，也取不到凭据。",
   },
   {
     title: "停用与解绑",
     content:
-      "账号停用后不再出现在机器通道列表里，也取不到凭据；要从某个 Workbuddy 账号收回权限，在「改」里移除这条绑定即可。删除 AI 调用账号不可恢复。",
+      "AI 调用账号停用后不再出现在任何 Agent 的列表里；要收回某个 Agent 的权限，去它的「Agent 绑定账号」页签取消勾选，或在本页签点该凭据的「绑定」把这台设备去掉。删除 AI 调用账号不可恢复，同时会清掉它的全部绑定。",
   },
 ];
 
-/** AI 调用账号使用说明：讲清「登记 → 绑定 → 取用 → 收回」四步。 */
+/** AI 调用账号使用说明：讲清「登记 → 绑定 Agent → 取用 → 收回」。 */
 export function AiCallGuideButton() {
   const [open, setOpen] = useState(false);
 
@@ -53,7 +53,7 @@ export function AiCallGuideButton() {
         </Title>
         <Text type="secondary">
           很多平台没有给 AI 用的开放接口，只能靠账号登录或 Cookie 操作。这里把各平台的凭据集中加密保存，
-          再用 Workbuddy Enterprise 账号做授权边界：任务在哪个 Workbuddy 账号下运行，就只能取用与该账号绑定的凭据。
+          再以「哪台 Agent 在用」为授权边界：BotBuddy 主机、MoBot 手机、WorkBuddy 企业账号各自只能取绑给自己的凭据。
         </Text>
 
         <Title level={5} style={{ marginTop: 20 }}>
@@ -76,8 +76,8 @@ export function AiCallGuideButton() {
         </Title>
         <Text style={{ whiteSpace: "pre-wrap" }}>
 {`• 口令 / API Key / Cookie 以 AES-256-GCM 密文落库，密钥上下文独立，界面与列表只显示「存过没有」。
-• 明文只在机器通道取用时解密一次，并记录审计；未绑定、已停用或跨账号的请求一律拒绝。
-• 平台管理员也不代看他人凭据；请按最小范围绑定 Workbuddy Enterprise 账号。`}
+• 明文只在通道取用时解密一次，并记录审计；未绑定、已停用或跨账号的请求一律拒绝。
+• 平台管理员也不代看他人凭据；请按最小范围绑定给具体 Agent。`}
         </Text>
       </Modal>
     </>

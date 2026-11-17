@@ -1,6 +1,6 @@
 {
   "name": "bot-host-client",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "BotBuddy 客户端：本机自带 Agent（模型渠道/技能/数字分身/本地工具），平台只下发自然语言指令。",
   "author": "AIPDD",
   "license": "UNLICENSED",
@@ -11,8 +11,8 @@
     "prepare:native": "node tools/prepare-native.js",
     "dist:win": "electron-builder --win",
     "dist:mac": "electron-builder --mac",
-    "check": "node --check src/main/main.js && node --check src/main/db.js && node --check src/main/config-store.js && node --check src/main/platform-client.js && node --check src/main/task-runner.js && node --check src/main/pairing.js && node --check src/main/selfcheck.js && node --check src/main/tray.js && node --check src/main/workspaces.js && node --check src/main/chat-store.js && node --check src/main/references.js && node --check src/main/chrome-bridge.js && node --check src/main/zip-extract.js && node --check src/main/chrome-extensions.js && node --check src/main/plugins.js && node --check src/main/zip-reader.js && node --check src/main/skill-package.js && node --check src/main/plugin-package.js && node --check src/main/agent/config.js && node --check src/main/agent/model-client.js && node --check src/main/agent/tools.js && node --check src/main/agent/index.js && node --check src/main/fp/profiles.js && node --check src/main/fp/fingerprint.js && node --check src/main/fp/kernels.js && node --check src/main/fp/proxy-relay.js && node --check src/main/fp/launch.js && node --check src/main/fp/browser-tools.js && node --check src/main/fp/index.js && node --check src/main/fp/start-page.js && node --check src/main/ws-client.js && node --check src/preload/preload.js && node --check src/renderer/app.js && node --check tools/prepare-native.js && node tools/_agent-unit.js && node tools/_db-unit.js && node tools/_pipeline-unit.js && node tools/_skill-package-unit.js && node tools/_plugin-package-unit.js && node tools/_chrome-ext-unit.js && node tools/_fp-unit.js",
-    "test": "node tools/_agent-unit.js && node tools/_db-unit.js && node tools/_pipeline-unit.js && node tools/_skill-package-unit.js && node tools/_plugin-package-unit.js && node tools/_chrome-ext-unit.js && node tools/_fp-unit.js"
+    "check": "node --check src/main/main.js && node --check src/main/db.js && node --check src/main/config-store.js && node --check src/main/platform-client.js && node --check src/main/task-runner.js && node --check src/main/pairing.js && node --check src/main/selfcheck.js && node --check src/main/tray.js && node --check src/main/workspaces.js && node --check src/main/chat-store.js && node --check src/main/references.js && node --check src/main/chrome-bridge.js && node --check src/main/zip-extract.js && node --check src/main/chrome-extensions.js && node --check src/main/rpa-runner.js && node --check src/main/plugins.js && node --check src/main/zip-reader.js && node --check src/main/skill-package.js && node --check src/main/plugin-package.js && node --check src/main/agent/config.js && node --check src/main/agent/model-client.js && node --check src/main/agent/tools.js && node --check src/main/agent/index.js && node --check src/main/fp/profiles.js && node --check src/main/fp/fingerprint.js && node --check src/main/fp/kernels.js && node --check src/main/fp/proxy-relay.js && node --check src/main/fp/launch.js && node --check src/main/fp/browser-tools.js && node --check src/main/fp/index.js && node --check src/main/fp/start-page.js && node --check src/main/ws-client.js && node --check src/preload/preload.js && node --check src/renderer/app.js && node --check tools/prepare-native.js && node tools/_agent-unit.js && node tools/_db-unit.js && node tools/_pipeline-unit.js && node tools/_skill-package-unit.js && node tools/_plugin-package-unit.js && node tools/_chrome-ext-unit.js && node tools/_fp-unit.js && node tools/_rpa-unit.js",
+    "test": "node tools/_agent-unit.js && node tools/_db-unit.js && node tools/_pipeline-unit.js && node tools/_skill-package-unit.js && node tools/_plugin-package-unit.js && node tools/_chrome-ext-unit.js && node tools/_fp-unit.js && node tools/_rpa-unit.js"
   },
   "devDependencies": {
     "electron": "^31.7.7",
@@ -61,6 +61,10 @@
       {
         "from": "chrome-bridge-extension",
         "to": "chrome-bridge-extension"
+      },
+      {
+        "from": "builtin-extensions",
+        "to": "builtin-extensions"
       }
     ]
   },

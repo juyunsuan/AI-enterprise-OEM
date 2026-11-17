@@ -1,4 +1,5 @@
 import { endpoints } from "@enterprise/contracts";
+import type { BotFingerprintDetail, BotHostView } from "@enterprise/contracts";
 import { endpoint } from "@/api/endpoint";
 
 /**
@@ -60,6 +61,7 @@ export const DEVICE_LABEL: Record<string, string> = {
   android: "安卓云手机",
   iphone: "iPhone 云手机",
   chrome: "本地 Chrome（插件）",
+  botbuddy: "BotBuddy 浏览器",
 };
 
 export const DEVICE_OPTIONS = Object.entries(DEVICE_LABEL).map(
@@ -78,6 +80,14 @@ export function isPhoneDevice(value: string) {
 /** 本地 Chrome 插件任务：绑设备 clientId、不需要 RPA 账号（用本机已登录的浏览器）。 */
 export function isChromeDevice(value: string) {
   return value === "chrome";
+}
+
+/**
+ * BotBuddy 浏览器任务：绑「一台已配对的 BotBuddy 主机 +（可选）该主机的一个指纹窗口」，
+ * 同样不需要 RPA 账号——流程跑在用户自己机器、用户本人登录态下，口令不经过服务端。
+ */
+export function isBotBuddyDevice(value: string) {
+  return value === "botbuddy";
 }
 
 /** 云手机计费方式（对齐比特浏览器 envType）：0＝套餐计费，1＝按时计费。 */
@@ -161,14 +171,36 @@ export const FILE_TYPE_LABEL: Record<string, string> = {
 /**
  * 每种设备能吃的脚本类型，顺序与默认值都由后端 rpa-shared.SCRIPT_FILE_TYPES_BY_DEVICE 定：
  * 比特浏览器 / 云手机的 RPA 流程只能在客户端里画好再登记，iPhone 云手机只有 JS / Python；
- * 本地 Chrome 插件只回放闭集动作序列（契约 RC_ACTIONS），不接受任意脚本。
+ * 本地 Chrome 插件只回放闭集动作序列（契约 RC_ACTIONS），不接受任意脚本；
+ * BotBuddy 浏览器与 PC 共用同一份 Automa 工作流 JSON。
  */
 export const FILE_TYPES_BY_DEVICE: Record<string, string[]> = {
   pc: ["automa_json", "bitbrowser_rpa", "javascript", "python"],
   android: ["bitphone_json", "javascript", "python"],
   iphone: ["javascript", "python"],
   chrome: ["chrome_actions"],
+  botbuddy: ["automa_json"],
 };
+
+/**
+ * 设备互换组：只有组内才允许「任务设备 ≠ 脚本设备」。
+ * PC 与 BotBuddy 浏览器都是 Chrome 内核 + Automa 插件，同一份 JSON 两边都能跑；
+ * 其余设备之间不互换（云手机不能拿 PC 流程跑，插件动作序列也不能给浏览器跑）。
+ */
+const INTERCHANGEABLE_DEVICES: Record<string, string[]> = {
+  pc: ["pc", "botbuddy"],
+  botbuddy: ["pc", "botbuddy"],
+};
+
+/** 这份脚本能不能交给该设备执行：先过互换组，再过脚本类型白名单（与后端 assertScriptRunnable 同口径）。 */
+export function scriptRunnableByDevice(
+  script: { deviceType: string; fileType: string },
+  device: string,
+): boolean {
+  const group = INTERCHANGEABLE_DEVICES[script.deviceType] || [script.deviceType];
+  if (!group.includes(device)) return false;
+  return (FILE_TYPES_BY_DEVICE[device] || FILE_TYPES_BY_DEVICE.pc).includes(script.fileType);
+}
 
 /** AI 能写出来的类型：客户端导出的流程文件模型造不出合法正文，不给选。 */
 export const AI_WRITABLE_FILE_TYPES = ["automa_json", "javascript", "python"];
@@ -296,6 +328,10 @@ export type RpaTask = {
   deviceLabel: string;
   /** 本地 Chrome 任务绑定的设备 clientId；其余设备类型为空串。 */
   chromeClientId: string;
+  /** BotBuddy 浏览器任务绑定的主机 ID（workbuddy_hosts.id）；其余设备类型为 null。 */
+  botHostId?: number | null;
+  /** BotBuddy 浏览器任务指定的指纹窗口档案 ID；空串＝由主机自取默认窗口。 */
+  fpProfileId?: string;
   accountIds: number[];
   params: Record<string, unknown>;
   status: string;
@@ -424,6 +460,9 @@ const api = {
   paramsChat: endpoint(endpoints.Rpa_paramsChat),
   settings: endpoint(endpoints.Rpa_settings),
   saveSettings: endpoint(endpoints.Rpa_saveSettings),
+  // BotBuddy 浏览器设备的执行位：主机清单走 Bot 主机接口，窗口候选走单主机接口。
+  botHosts: endpoint(endpoints.BotHost_list),
+  botHostWindows: endpoint(endpoints.BotHost_fingerprints),
 };
 
 /** 取数：失败不抛错，交页面提示（与 data-table/_components/common.ts 同口径）。 */
@@ -504,7 +543,19 @@ export const rpaApi = {
   settings: () => load<RpaSetting>(api.settings({})),
   saveSettings: (body: Record<string, unknown>) =>
     mutate<RpaSetting>(api.saveSettings({ body })),
+
+  /**
+   * BotBuddy 主机清单（kind=DESKTOP：Mobot 手机不是浏览器设备）与那台主机上报的指纹窗口候选。
+   * 窗口只认客户端心跳上报的表——平台不替用户建窗口（与「工作区候选」同一口径）。
+   */
+  botHosts: () => load<{ list: BotHostView[] }>(api.botHosts({ query: { kind: "DESKTOP" } })),
+  botHostWindows: (hostId: number) =>
+    load<BotFingerprintDetail>(
+      api.botHostWindows({ params: { hostId: String(hostId) } }),
+    ),
 };
+
+export type { BotFingerprintDetail, BotHostView };
 
 /** 运行参数定义输入：`keyword: 关键词` 每行一条，提交成后端认识的 JSON 对象。 */
 export function parseParamLines(raw: string): Record<string, { label: string }> {

@@ -124,6 +124,7 @@ export * from "./livecode";
 export * from "./overseas-nav";
 export * from "./crm";
 export * from "./bi";
+export * from "./insight";
 export * from "./lowcode";
 export * from "./okr";
 export * from "./oa";

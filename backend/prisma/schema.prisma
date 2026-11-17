@@ -2157,9 +2157,9 @@ model RpaScript {
   /// 业务分组（自由文本，界面按它归类）
   category     String   @default("") @db.VarChar(64)
   tags         Json     @default("[]")
-  /// 目标设备：pc（比特浏览器窗口）| android（安卓云手机）| iphone（iPhone 云手机）
+  /// 目标设备：pc（比特浏览器窗口）| android（安卓云手机）| iphone（iPhone 云手机）| chrome（本地 Chrome 插件）| botbuddy（BotBuddy 浏览器）
   deviceType   String   @default("pc") @map("device_type") @db.VarChar(16)
-  /// 脚本类型，取值按设备收窄：pc＝automa_json|bitbrowser_rpa|javascript|python，android＝bitphone_json|javascript|python，iphone＝javascript|python
+  /// 脚本类型，取值按设备收窄：pc＝automa_json|bitbrowser_rpa|javascript|python，android＝bitphone_json|javascript|python，iphone＝javascript|python，chrome＝chrome_actions，botbuddy＝automa_json
   fileType     String   @default("automa_json") @map("file_type") @db.VarChar(24)
   /// 厂商侧流程 ID：pc 的 bitbrowser_rpa 存比特浏览器 RPA 任务 ID（POST /rpa/run 的 id），android 的 bitphone_json 存云手机 RPA 流程 ID
   vendorFlowId String   @default("") @map("vendor_flow_id") @db.VarChar(64)
@@ -2219,7 +2219,7 @@ model RpaTask {
   name              String    @db.VarChar(200)
   /// 绑定的脚本；被任务引用的脚本禁止删除
   scriptId          Int       @map("script_id")
-  /// 运行设备：创建时由绑定脚本带出并与脚本一致，pc | android | iphone
+  /// 运行设备：创建时由绑定脚本带出并与脚本一致，pc | android | iphone | chrome | botbuddy
   deviceType        String    @default("pc") @map("device_type") @db.VarChar(16)
   /// 绑定的 RPA 账号 ID 数组
   accountIds        Json      @default("[]") @map("account_ids")
@@ -2244,6 +2244,10 @@ model RpaTask {
   timeoutSeconds    Int       @default(3600) @map("timeout_seconds")
   /// deviceType=chrome 时绑定的本地 Chrome 设备号（RpaChromeDevice.clientId）；其他设备固定空串
   chromeClientId    String    @default("") @map("chrome_client_id") @db.VarChar(64)
+  /// deviceType=botbuddy 时绑定的 BotBuddy 主机（workbuddy_hosts.id）；其他设备为 null
+  botHostId         Int?      @map("bot_host_id")
+  /// deviceType=botbuddy 时指定的指纹窗口档案 ID（客户端本机 fp-profiles）；空串＝由主机自己定窗口
+  fpProfileId       String    @default("") @map("fp_profile_id") @db.VarChar(64)
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
@@ -2613,7 +2617,6 @@ model WorkbuddyAccount {
   notes           String                 @default("") @db.VarChar(500)
   createdAt       DateTime               @default(now()) @map("created_at")
   updatedAt       DateTime               @updatedAt @map("updated_at")
-  aiCallBindings  AiCallAccountBinding[]
 
   @@index([createdBy, status])
   @@map("workbuddy_accounts")
@@ -3034,16 +3037,20 @@ model AiCallAccount {
   @@map("ai_call_accounts")
 }
 
+/// AI 调用账号 ↔ Agent 设备绑定：主体是 BotBuddy 主机（DESKTOP）、MoBot 手机（MOBOT）
+/// 或 WorkBuddy 企业账号（WORKBUDDY）三者之一；多态引用，归属校验在服务层做。
 model AiCallAccountBinding {
-  id                 Int              @id @default(autoincrement())
-  accountId          Int              @map("account_id")
-  workbuddyAccountId Int              @map("workbuddy_account_id")
-  createdAt          DateTime         @default(now()) @map("created_at")
-  account            AiCallAccount    @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  workbuddyAccount   WorkbuddyAccount @relation(fields: [workbuddyAccountId], references: [id], onDelete: Cascade)
+  id            Int           @id @default(autoincrement())
+  accountId     Int           @map("account_id")
+  /// DESKTOP | MOBOT | WORKBUDDY
+  principalKind String        @map("principal_kind") @db.VarChar(16)
+  /// 指向 workbuddy_hosts.id 或 workbuddy_accounts.id（按 principal_kind 区分）
+  principalId   Int           @map("principal_id")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  account       AiCallAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
-  @@unique([accountId, workbuddyAccountId])
-  @@index([workbuddyAccountId])
+  @@unique([accountId, principalKind, principalId])
+  @@index([principalKind, principalId])
   @@map("ai_call_account_bindings")
 }
 
@@ -13293,3 +13300,155 @@ model OverseasNavItem {
   @@index([categoryId, sortOrder])
   @@map("overseas_nav_items")
 }
+
+// ================= 智慧分析板块（全域内容热点分析 + 流行趋势分析）=================
+// 设计见 docs/智慧分析板块设计方案.md。全部按账号（user_id）归属；
+// 采集行不落本模块表，走既有 data_table_rows（预置「热点内容」表），热点是可重算的聚合产物。
+
+/// 每账号一份智慧分析设置：两张预置多维表格 id + 分析模型 + 打分权重 + 联动开关。
+model InsightSetting {
+  id                Int      @id @default(autoincrement())
+  userId            String   @unique @map("user_id") @db.VarChar(64)
+  /// 「热点内容」预置表 id（data_tables.id，0＝尚未生成）
+  contentTableId    Int      @default(0) @map("content_table_id")
+  /// 「热点追踪台账」预置表 id（0＝尚未生成）
+  ledgerTableId     Int      @default(0) @map("ledger_table_id")
+  /// 默认 AIPDD 模型名（Key 走「API Key 管理」统一维护）
+  model             String   @default("") @db.VarChar(128)
+  /// 打分权重与阶段阈值 JSON（缺省用 contracts 的 INSIGHT_SCORE_DEFAULTS）
+  scoreConfig       Json     @default("{}") @map("score_config")
+  /// 双板块联动开关（1＝开，四象限与信号回流可用）
+  linkageEnabled    Int      @default(1) @map("linkage_enabled") @db.TinyInt
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@map("insight_settings")
+}
+
+/// 垂类订阅策略：一条订阅派生采集计划任务 + 圈定热点聚合范围。
+model InsightSubscription {
+  id             Int      @id @default(autoincrement())
+  userId         String   @map("user_id") @db.VarChar(64)
+  name           String   @db.VarChar(120)
+  /// 平台集合 JSON（闭集见 INSIGHT_PLATFORMS）
+  platforms      Json     @default("[]")
+  /// 关键词 / 话题标签 / 博主账号，可组合
+  keywords       Json     @default("[]")
+  topics         Json     @default("[]")
+  creators       Json     @default("[]")
+  /// 采集频率：hourly | daily | weekly
+  frequency      String   @default("daily") @db.VarChar(16)
+  /// 排除词 JSON
+  excludeWords   Json     @default("[]") @map("exclude_words")
+  /// 最低互动门槛（低于此互动值的内容不入聚合）
+  minEngagement  Int      @default(0) @map("min_engagement")
+  /// 告警阈值：热点增速超过 N% 提醒
+  alertGrowthPct Int      @default(50) @map("alert_growth_pct")
+  /// 单次 / 单日采集上限 JSON：{ perRun, perDay }
+  quota          Json     @default("{}")
+  /// ACTIVE | PAUSED
+  status         String   @default("ACTIVE") @db.VarChar(16)
+  /// 关联 BotBuddy / 浏览器代理计划任务 id JSON 数组
+  scheduleIds    Json     @default("[]") @map("schedule_ids")
+  lastRunAt      DateTime? @map("last_run_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([userId, status])
+  @@index([userId, createdAt])
+  @@map("insight_subscriptions")
+}
+
+/// 热点事件（聚合产物）：一个聚类一行，删了可由热点内容表重算。
+model InsightHotspot {
+  id             Int      @id @default(autoincrement())
+  userId         String   @map("user_id") @db.VarChar(64)
+  subscriptionId Int      @default(0) @map("subscription_id")
+  subscriptionName String @default("") @map("subscription_name") @db.VarChar(120)
+  /// 聚类名称（可由 LLM 命名，缺省取代表内容关键词）
+  name           String   @db.VarChar(200)
+  /// 覆盖平台 JSON
+  platforms      Json     @default("[]")
+  /// emerging | rising | peak | declining
+  stage          String   @default("emerging") @db.VarChar(16)
+  hotScore       Decimal  @default(0) @map("hot_score") @db.Decimal(12, 4)
+  growthRate     Decimal  @default(0) @map("growth_rate") @db.Decimal(10, 4)
+  contentCount   Int      @default(0) @map("content_count")
+  /// 情感分布 JSON：{ pos, neu, neg }
+  sentiment      Json     @default("{}")
+  /// 关联关键词 JSON
+  keywords       Json     @default("[]") @map("keyword_list")
+  firstPlatform  String   @default("") @map("first_platform") @db.VarChar(32)
+  firstPublishAt DateTime? @map("first_publish_at")
+  windowStart    DateTime? @map("window_start")
+  windowEnd      DateTime? @map("window_end")
+  /// 人工纠偏标记：merged | split | ignored（不改原始采集行）
+  reviewNote     String   @default("") @map("review_note") @db.VarChar(200)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([userId, subscriptionId])
+  @@index([userId, stage, updatedAt])
+  @@index([userId, hotScore])
+  @@map("insight_hotspots")
+}
+
+/// 热点-内容关联：热点指向「热点内容」表里的具体行（tableId+rowId），可回溯、可代表内容标记。
+model InsightHotspotContent {
+  id             Int      @id @default(autoincrement())
+  hotspotId      Int      @map("hotspot_id")
+  tableId        Int      @map("table_id")
+  rowId          Int      @map("row_id")
+  similarity     Decimal  @default(0) @db.Decimal(6, 4)
+  representative Boolean  @default(false) @map("is_representative")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@unique([hotspotId, tableId, rowId])
+  @@index([hotspotId])
+  @@map("insight_hotspot_contents")
+}
+
+/// 时序指标：标签/品类/关键词/热点随时间三热度（interaction/visual/commercial）曲线与增速。
+model InsightMetric {
+  id         Int      @id @default(autoincrement())
+  userId     String   @map("user_id") @db.VarChar(64)
+  /// 指标键：标签 / 品类 / 关键词 / 热点 ID
+  metricKey  String   @map("metric_key") @db.VarChar(120)
+  /// interaction | visual | commercial
+  metricType String   @map("metric_type") @db.VarChar(16)
+  /// 统计周期（按天 YYYY-MM-DD 或按周 YYYY-Www）
+  period     String   @db.VarChar(16)
+  /// 归一值（0–100）
+  value      Decimal  @default(0) @db.Decimal(12, 4)
+  /// 原始聚合值 JSON（互动/曝光/销量分量，供交叉分析）
+  rawValue   Json     @default("{}") @map("raw_value")
+  growthRate Decimal  @default(0) @map("growth_rate") @db.Decimal(10, 4)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, metricKey, metricType, period], map: "insight_metrics_user_key_type_period_key")
+  @@index([userId, metricType, period])
+  @@map("insight_metrics")
+}
+
+/// AI 快报 / 趋势报告生成记录（产物经 deliverable 通道登记入数字资产，这里只留生成台账）。
+model InsightReport {
+  id           Int      @id @default(autoincrement())
+  userId       String   @map("user_id") @db.VarChar(64)
+  /// hotspot | trend
+  kind         String   @db.VarChar(16)
+  /// 统计窗口 JSON：{ from, to }
+  window       Json     @default("{}")
+  /// pending | running | success | failed
+  status       String   @default("pending") @db.VarChar(16)
+  /// 数字资产产物 id（登记成功时回填）
+  assetId      String   @default("") @map("asset_id") @db.VarChar(64)
+  content      String   @default("") @db.Text
+  error        String   @default("") @db.Text
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([userId, kind, createdAt])
+  @@map("insight_reports")
+}
+

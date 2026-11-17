@@ -125,6 +125,8 @@
     return node;
   }
 
+  const clip = (value, max) => String(value == null ? "" : value).slice(0, max);
+
   function openTab(url) {
     if (url) chrome.tabs.create({ url }).catch(() => undefined);
   }

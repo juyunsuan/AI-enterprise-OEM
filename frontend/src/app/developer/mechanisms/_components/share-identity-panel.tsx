@@ -16,7 +16,7 @@ import {
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useState } from "react";
 import { mechanismsApi } from "@/api/mechanisms";
-import { Notice, Panel, PillTabs } from "@/components/ui/panel";
+import { Notice, Panel, TabStrip } from "@/components/ui/panel";
 import { fmtDate } from "@/lib/datetime";
 import {
   SHARE_KIND_LABELS,
@@ -329,7 +329,7 @@ export function ShareIdentityPanel() {
     <Panel
       title="公开分享与身份源"
       extra={
-        <PillTabs
+        <TabStrip
           items={[
             { key: "shares", label: "公开分享" },
             { key: "oidc", label: "身份源 OIDC" },

@@ -37,6 +37,7 @@ const pluginPackage = require('./plugin-package');
 const skillPackage = require('./skill-package');
 const chromeBridge = require('./chrome-bridge');
 const chromeExtensions = require('./chrome-extensions');
+const rpa = require('./rpa-runner');
 const fp = require('./fp');
 const crypto = require('crypto');
 
@@ -45,6 +46,12 @@ const LOG_LINES = [];
 const WINDOW_ICON = path.join(__dirname, '..', 'assets', 'icon.png');
 const RENDERER_DIR = path.join(__dirname, '..', 'renderer');
 const PRELOAD = path.join(__dirname, '..', 'preload', 'preload.js');
+
+/** 下载落盘的文件名：只保留文件名部分，别让路径分隔符/上级引用跑进磁盘。 */
+function safeFileName(raw) {
+  const base = String(raw || '').split(/[\\/]/).pop().trim();
+  return base || 'skill.zip';
+}
 
 let mainWindow = null;
 let trayController = null;
@@ -200,7 +207,13 @@ function heartbeatCaps() {
       version: agentRuntime.CLIENT_VERSION,
       workspace: workspaces.defaultWorkspace(cfg),
       permissionPolicy: cfg.permissionPolicy,
-      workspaces: workspaces.listWorkspaces(cfg).slice(0, 200)
+      workspaces: workspaces.listWorkspaces(cfg).slice(0, 200),
+      // RPA「BotBuddy 浏览器」设备的执行位：平台按这张候选表让用户选窗口，
+      // 不替用户建窗口（与上面的工作区候选同一口径）。
+      fingerprint: {
+        defaultId: fp.profiles.agentProfileId(),
+        windows: fp.profileCandidates()
+      }
     }
   };
 }
@@ -228,6 +241,10 @@ function stateSnapshot() {
     userEmail: cfg.userEmail,
     userAvatar: cfg.userAvatar,
     points: userPoints,
+    // RPA 执行端：界面按它显示「本机正在跑哪条任务」与自动领取开关。
+    rpa: rpa.status(),
+    rpaLast,
+    rpaAutoRun: cfg.rpaAutoRun !== false,
     dbPath: db.DB_FILE
   };
 }
@@ -562,6 +579,10 @@ async function doHeartbeat() {
     }
     if (Array.isArray(data.stop)) runner.applyStop(data.stop);
 
+    // RPA 领取搭在心跳之后：主机令牌刚被平台确认过，这一刻领任务最不容易白跑。
+    rpaRound = (rpaRound + 1) % RPA_POLL_ROUNDS;
+    if (rpaRound === 0) void pollRpa();
+
     broadcast('state:update', stateSnapshot());
   } catch (err) {
     log('error', 'heartbeat failed: ' + err.message);
@@ -577,6 +598,95 @@ function handleTokenRejected() {
   stopHeartbeat();
   broadcast('state:update', stateSnapshot());
   if (pairing) void pairing.refresh();
+}
+
+// --- RPA（BotBuddy 浏览器设备） ------------------------------------------------
+
+/**
+ * 心跳 5 秒一次，但问「有没有活」不必这么勤：每 N 轮领取一次，
+ * 也是「本机刚跑完一条」之后的重试间隔。
+ */
+const RPA_POLL_ROUNDS = 4;
+let rpaRound = 0;
+let rpaLast = null;
+
+function rpaReady() {
+  const cfg = configStore.get();
+  if (!cfg.baseUrl || !cfg.token) {
+    return { ok: false, error: '还没有绑定平台主机，请先在「绑定」页完成配对' };
+  }
+  return { ok: true, cfg };
+}
+
+function rpaMessage(res) {
+  return String((res.data && res.data.message) || res.error || '平台没有应答');
+}
+
+/** 跑一条已领到的任务并把终态回传；回传失败只告警，任务由平台超时自愈退回待执行。 */
+async function finishRpaTask(claimed) {
+  const cfg = configStore.get();
+  let outcome;
+  try {
+    outcome = await rpa.run(claimed);
+  } catch (error) {
+    outcome = {
+      status: 'failed',
+      message: String((error && error.message) || error).slice(0, 500),
+      output: {}
+    };
+  }
+  rpaLast = {
+    taskId: claimed.taskId || 0,
+    executionId: claimed.executionId || 0,
+    name: claimed.taskName || '',
+    status: outcome.status,
+    message: outcome.message || '',
+    finishedAt: new Date().toISOString()
+  };
+  const res = await platform.rpaFinish(cfg.baseUrl, cfg.token, {
+    executionId: claimed.executionId,
+    status: outcome.status,
+    errorMessage: outcome.message || '',
+    output: outcome.output || {},
+    logText: outcome.logText || ''
+  });
+  if (!res.transportError && !res.ok) {
+    log('warn', 'rpa finish rejected: ' + rpaMessage(res));
+  }
+  broadcast('rpa:update', { running: rpa.status(), last: rpaLast, state: stateSnapshot() });
+  return rpaLast;
+}
+
+/**
+ * 领取并执行一条任务。taskId＝0 时让平台按队列派一条（没有就静默返回，
+ * 这是自动轮询的常态，不能每 20 秒刷一条告警）。
+ */
+async function claimAndRunRpa(taskId) {
+  if (rpa.isBusy()) throw new Error('本机正在跑另一条 RPA 任务，请等它结束');
+  const ready = rpaReady();
+  if (!ready.ok) throw new Error(ready.error);
+  const res = await platform.rpaClaim(ready.cfg.baseUrl, ready.cfg.token, taskId);
+  if (res.transportError) {
+    if (taskId) throw new Error('平台不可达：' + res.error);
+    return null;
+  }
+  if (!res.ok) {
+    // 404＝「现在没有待执行的 BotBuddy 任务」：自动轮询里这是正常空闲，不记日志
+    if (!taskId && res.httpStatus === 404) return null;
+    throw new Error(rpaMessage(res));
+  }
+  return finishRpaTask(res.data || {});
+}
+
+/** 心跳带的顺带活儿：开关开着、本机空闲、轮到这一轮才去领。 */
+async function pollRpa() {
+  const cfg = configStore.get();
+  if (cfg.rpaAutoRun === false || !cfg.token || rpa.isBusy()) return;
+  try {
+    await claimAndRunRpa(0);
+  } catch (error) {
+    log('warn', 'rpa claim failed: ' + error.message);
+  }
 }
 
 // --- auto start ------------------------------------------------------------
@@ -991,6 +1101,129 @@ function setupIpc() {
     } catch (error) {
       return { ok: false, error: error.message || '技能包解析失败' };
     }
+  });
+
+  // 技能中心（SkillHub）：目录数据由平台转发（同一个主机令牌），客户端只做展示与安装。
+  // 「下载」把 zip 存到本机下载目录；「安装」在临时目录解包出 SKILL.md 后入本机技能库。
+  function skillHubGate() {
+    const cfg = configStore.get();
+    if (!cfg.baseUrl) return { ok: false, error: '还没有配置平台地址' };
+    if (!cfg.token) return { ok: false, error: '还没有绑定主机，请先在「绑定」页完成配对' };
+    return { ok: true, cfg };
+  }
+
+  ipcMain.handle('skillhub:list', async (e, query) => {
+    const gate = skillHubGate();
+    if (!gate.ok) return gate;
+    const res = await platform.skillList(gate.cfg.baseUrl, gate.cfg.token, query || {});
+    if (res.transportError) return { ok: false, error: '连接平台失败：' + res.error };
+    if (!res.ok || !res.data || res.data.ok === false) {
+      return { ok: false, error: (res.data && res.data.message) || '技能中心读取失败' };
+    }
+    return { ok: true, list: res.data.list || [], total: res.data.total || 0 };
+  });
+
+  ipcMain.handle('skillhub:detail', async (e, slug) => {
+    const gate = skillHubGate();
+    if (!gate.ok) return gate;
+    const res = await platform.skillDetail(gate.cfg.baseUrl, gate.cfg.token, slug);
+    if (res.transportError) return { ok: false, error: '连接平台失败：' + res.error };
+    if (!res.ok || !res.data || res.data.ok === false) {
+      return { ok: false, error: (res.data && res.data.message) || '技能详情读取失败' };
+    }
+    return { ok: true, skill: res.data.skill };
+  });
+
+  ipcMain.handle('skillhub:download', async (e, slug) => {
+    const gate = skillHubGate();
+    if (!gate.ok) return gate;
+    const res = await platform.skillDownload(gate.cfg.baseUrl, gate.cfg.token, slug);
+    if (res.transportError) return { ok: false, error: '连接平台失败：' + res.error };
+    if (!res.ok) return { ok: false, error: res.error || '技能下载失败' };
+    const dir = path.join(db.DATA_DIR, 'downloads');
+    const name = safeFileName(res.filename || slug + '.zip');
+    try {
+      fs.mkdirSync(dir, { recursive: true });
+      const file = path.join(dir, name);
+      fs.writeFileSync(file, res.bytes);
+      log('info', 'skillhub download: ' + slug + ' -> ' + file);
+      shell.showItemInFolder(file);
+      return { ok: true, file, name };
+    } catch (error) {
+      return { ok: false, error: error.message || '技能包保存失败' };
+    }
+  });
+
+  ipcMain.handle('skillhub:install', async (e, slug) => {
+    const gate = skillHubGate();
+    if (!gate.ok) return gate;
+    const res = await platform.skillDownload(gate.cfg.baseUrl, gate.cfg.token, slug);
+    if (res.transportError) return { ok: false, error: '连接平台失败：' + res.error };
+    if (!res.ok) return { ok: false, error: res.error || '技能下载失败' };
+    const tmp = path.join(os.tmpdir(), 'botbuddy-skill-' + Date.now() + '.zip');
+    try {
+      fs.writeFileSync(tmp, res.bytes);
+      const skill = skillPackage.importFromZip(tmp);
+      const saved = agentConfig.saveSkill(skill.id, skill);
+      if (!saved.ok) return saved;
+      log('info', 'skillhub install: ' + slug + ' -> ' + skill.id + ' · ' + skill.name);
+      refreshAgentSnapshot();
+      return { ok: true, skill };
+    } catch (error) {
+      return { ok: false, error: error.message || '技能包解析失败' };
+    } finally {
+      try {
+        fs.unlinkSync(tmp);
+      } catch (error) {
+        // 临时文件已删或删除失败都不影响安装结果
+      }
+    }
+  });
+
+  // RPA（BotBuddy 浏览器设备）：清单读平台，执行走本机指纹窗口。
+  ipcMain.handle('rpa:tasks', async () => {
+    const ready = rpaReady();
+    if (!ready.ok) return ready;
+    const res = await platform.rpaTasks(ready.cfg.baseUrl, ready.cfg.token);
+    if (res.transportError) return { ok: false, error: '连接平台失败：' + res.error };
+    if (!res.ok || !res.data || res.data.ok === false) {
+      return { ok: false, error: rpaMessage(res) };
+    }
+    return {
+      ok: true,
+      list: Array.isArray(res.data.list) ? res.data.list : [],
+      running: rpa.status(),
+      last: rpaLast,
+      autoRun: configStore.get().rpaAutoRun !== false
+    };
+  });
+
+  /** 手动跑一条：先领（拿到正文与执行记录 ID），执行与回传在后台走完，结果靠 rpa:update 播回界面。 */
+  ipcMain.handle('rpa:run', async (e, taskId) => {
+    if (rpa.isBusy()) return { ok: false, error: '本机正在跑另一条 RPA 任务，请等它结束' };
+    const ready = rpaReady();
+    if (!ready.ok) return ready;
+    const id = Number(taskId) || 0;
+    const res = await platform.rpaClaim(ready.cfg.baseUrl, ready.cfg.token, id);
+    if (res.transportError) return { ok: false, error: '连接平台失败：' + res.error };
+    if (!res.ok || !res.data) return { ok: false, error: rpaMessage(res) };
+    const claimed = res.data;
+    void finishRpaTask(claimed);
+    return {
+      ok: true,
+      started: {
+        taskId: claimed.taskId,
+        executionId: claimed.executionId,
+        name: claimed.taskName || '',
+        scriptName: claimed.scriptName || '',
+        profileId: claimed.profileId || ''
+      }
+    };
+  });
+
+  ipcMain.handle('rpa:setAutoRun', (e, value) => {
+    configStore.save({ rpaAutoRun: !!value });
+    return { ok: true, autoRun: !!value };
   });
 
   // 插件包导入：ZIP 或文件夹里的 plugin.json 在本机解析后直接入插件库，

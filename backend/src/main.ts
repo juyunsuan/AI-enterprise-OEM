@@ -73,6 +73,8 @@ async function bootstrap() {
   const socialSyncScheduler = services.socialSync.scheduler;
   // GEO 独立站：每月 1 日出账、欠费宽限停服与复活、域名到期复检
   const geoSiteScheduler = services.geoSite.scheduler;
+  // 智慧分析：有启用订阅的账号按间隔重算热点（幂等，先清自动热点再重建）
+  const insightScheduler = services.insight.scheduler;
   try {
     await services.prisma.$connect();
     // OSS 配置缓存：后台保存过则用库里的配置，否则回退 .env（URL 生成是同步调用）
@@ -100,6 +102,7 @@ async function bootstrap() {
     taskAssignmentScheduler.onModuleInit();
     socialSyncScheduler.onModuleInit();
     geoSiteScheduler.onModuleInit();
+    insightScheduler.onModuleInit();
   } catch (error) {
     rpaScheduler.onModuleDestroy();
     chromeScheduleScheduler.onModuleDestroy();
@@ -123,6 +126,7 @@ async function bootstrap() {
     taskAssignmentScheduler.onModuleDestroy();
     socialSyncScheduler.onModuleDestroy();
     geoSiteScheduler.onModuleDestroy();
+    insightScheduler.onModuleDestroy();
     await services.prisma.$disconnect();
     throw error;
   }
@@ -158,6 +162,7 @@ async function bootstrap() {
     taskAssignmentScheduler.onModuleDestroy();
     socialSyncScheduler.onModuleDestroy();
     geoSiteScheduler.onModuleDestroy();
+    insightScheduler.onModuleDestroy();
     server.close(() => {
       void services.prisma.$disconnect().finally(() => process.exit(0));
     });

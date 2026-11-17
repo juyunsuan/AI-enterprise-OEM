@@ -95,6 +95,93 @@ export const botWorkspaceDetailSchema = botWorkspaceSummarySchema.extend({
 });
 export type BotWorkspaceDetail = z.infer<typeof botWorkspaceDetailSchema>;
 
+/* ---------------------------------------------------------------- 指纹窗口 */
+
+/**
+ * BotBuddy 客户端自带的内核级指纹窗口（RPA「BotBuddy 浏览器」设备的执行位）。
+ *
+ * 与工作区同一口径：平台只认客户端心跳上报的窗口候选，任务落在哪个窗口由用户在这张表里选，
+ * 平台不替用户建窗口、也不下发任何窗口配置；窗口本体、内核与内置 Automa 插件都只在客户端本机。
+ */
+export const botFingerprintWindowSchema = z.object({
+  /** 客户端本机档案 ID（形如 fp<12hex>），派发时原样带回给同一台主机。 */
+  id: z.string(),
+  name: z.string(),
+  groupName: z.string(),
+  kernelVersion: z.string(),
+  lastOpenAt: z.string().nullable(),
+});
+export type BotFingerprintWindow = z.infer<typeof botFingerprintWindowSchema>;
+
+/** 主机摘要里的指纹窗口：只带数量，明细走单主机接口（一台主机最多几百个窗口）。 */
+export const botFingerprintSummarySchema = z.object({
+  count: z.number(),
+});
+export type BotFingerprintSummary = z.infer<typeof botFingerprintSummarySchema>;
+
+/** 单主机指纹窗口详情：RPA 任务的「指纹窗口」下拉用它。 */
+export const botFingerprintDetailSchema = z.object({
+  list: z.array(botFingerprintWindowSchema),
+  /** 客户端设为「Agent 默认窗口」的档案 ID；空串＝没设，任务不指定窗口时由主机自取。 */
+  defaultWindowId: z.string(),
+});
+export type BotFingerprintDetail = z.infer<typeof botFingerprintDetailSchema>;
+
+/** 指纹窗口候选上限：与客户端单机档案上限同量级，超出部分按上报顺序截断。 */
+export const BOT_FINGERPRINT_WINDOW_LIMIT = 200;
+
+/** 客户端上报的单个窗口条目（宽松接收：名称/分组/内核缺了都能补齐）。 */
+const botFingerprintWindowInputSchema = z.object({
+  id: z.string().min(1).max(64),
+  name: z.string().max(120).optional(),
+  groupName: z.string().max(64).optional(),
+  kernelVersion: z.string().max(32).optional(),
+  lastOpenAt: z.union([z.number(), z.string(), z.null()]).optional(),
+});
+
+/** caps.agent 里只有 fingerprint 这一段与平台有关，其余键（工作区、模型等）不参与解析。 */
+const botFingerprintCapsSchema = z
+  .object({
+    fingerprint: z
+      .object({
+        defaultId: z.string().max(64).optional(),
+        windows: z.array(z.unknown()).max(BOT_FINGERPRINT_WINDOW_LIMIT).optional(),
+      })
+      .passthrough()
+      .optional(),
+  })
+  .passthrough();
+
+/**
+ * 心跳 caps.agent.fingerprint → 窗口候选表（纯函数，界面校验与派发校验共用）。
+ *
+ * 客户端没上报过就是空表：平台不臆造窗口，也不替用户建窗口。
+ * 单条形状不对只跳过那一条，不让一个坏档案拖垮整张候选表。
+ */
+export function readBotFingerprintCaps(capsAgent: unknown): BotFingerprintDetail {
+  const parsed = botFingerprintCapsSchema.safeParse(capsAgent);
+  const fingerprint = parsed.success ? parsed.data.fingerprint : undefined;
+  if (!fingerprint) return { list: [], defaultWindowId: "" };
+  const list: BotFingerprintWindow[] = [];
+  for (const item of fingerprint.windows ?? []) {
+    const row = botFingerprintWindowInputSchema.safeParse(item);
+    if (!row.success) continue;
+    const id = row.data.id.trim();
+    if (!id) continue;
+    list.push({
+      id,
+      name: row.data.name?.trim() || id,
+      groupName: row.data.groupName?.trim() || "",
+      kernelVersion: row.data.kernelVersion?.trim() || "",
+      lastOpenAt:
+        typeof row.data.lastOpenAt === "number"
+          ? new Date(row.data.lastOpenAt).toISOString()
+          : row.data.lastOpenAt?.trim() || null,
+    });
+  }
+  return { list, defaultWindowId: fingerprint.defaultId?.trim() || "" };
+}
+
 /* ---------------------------------------------------------------- 指令 */
 
 /**
@@ -199,6 +286,8 @@ export const botHostViewSchema = z.object({
     })
     .nullable(),
   workspace: botWorkspaceSummarySchema,
+  /** 指纹窗口候选数量（RPA「BotBuddy 浏览器」设备的执行位）；明细走单主机接口。 */
+  fingerprint: botFingerprintSummarySchema,
   /** 平台模型授权摘要（未授权为 null）：只给平台界面看，不下发客户端。 */
   modelGrant: z
     .object({
@@ -381,6 +470,15 @@ export const botHostEndpoints = {
     query: emptyQuery,
     body: z.undefined(),
     response: envelope(botWorkspaceDetailSchema),
+  },
+  /** 单主机指纹窗口详情：供 RPA「BotBuddy 浏览器」任务选执行落在哪个窗口。 */
+  BotHost_fingerprints: {
+    method: "get" as const,
+    path: "/enterprise/bot-hosts/:hostId/fingerprints",
+    params: hostParams,
+    query: emptyQuery,
+    body: z.undefined(),
+    response: envelope(botFingerprintDetailSchema),
   },
   /** 平台模型授权：查 / 存 / 撤销（心跳据此下发真实密钥）。 */
   BotHost_modelGrant: {

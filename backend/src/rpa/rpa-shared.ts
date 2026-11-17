@@ -2,14 +2,21 @@ import { text } from '../common/api';
 import { BusinessException } from '../common/business.exception';
 import { ErrorCode } from '../common/error-code';
 
-/** 目标设备：pc＝比特浏览器窗口，android＝安卓云手机，iphone＝iPhone 云手机，chrome＝本机 Chrome 插件。 */
-export const DEVICE_TYPES = ['pc', 'android', 'iphone', 'chrome'] as const;
+/** 目标设备：pc＝比特浏览器窗口，android＝安卓云手机，iphone＝iPhone 云手机，chrome＝本机 Chrome 插件，botbuddy＝BotBuddy 客户端的指纹窗口。 */
+export const DEVICE_TYPES = [
+  'pc',
+  'android',
+  'iphone',
+  'chrome',
+  'botbuddy',
+] as const;
 
 export const DEVICE_LABELS: Record<string, string> = {
   pc: 'PC（比特浏览器）',
   android: '安卓云手机',
   iphone: 'iPhone 云手机',
   chrome: '本地 Chrome（插件）',
+  botbuddy: 'BotBuddy 浏览器',
 };
 
 /** 设备叫法归一：界面、机器通道与 MCP 都可能传中文或扩展名式写法。 */
@@ -40,6 +47,13 @@ const DEVICE_ALIASES: Record<string, string> = {
   chrome插件: 'chrome',
   extension: 'chrome',
   浏览器插件: 'chrome',
+  botbuddy: 'botbuddy',
+  'bot buddy': 'botbuddy',
+  'bot buddy浏览器': 'botbuddy',
+  botbuddy浏览器: 'botbuddy',
+  机器人浏览器: 'botbuddy',
+  客户端浏览器: 'botbuddy',
+  指纹浏览器: 'botbuddy',
 };
 
 /**
@@ -166,7 +180,74 @@ export const SCRIPT_FILE_TYPES_BY_DEVICE: Record<string, readonly string[]> = {
   android: ['bitphone_json', 'javascript', 'python'],
   iphone: ['javascript', 'python'],
   chrome: ['chrome_actions'],
+  botbuddy: ['automa_json'],
 };
+
+/**
+ * 脚本类型能不能交给某设备执行——任务绑定脚本的第一道闸。
+ * BotBuddy 浏览器与 PC 都是「Chrome 内核 + Automa 插件」，同一份 Automa JSON 两边都能跑，
+ * 所以脚本库共用；但比特浏览器 RPA 流程、云手机流程、插件动作序列各只认自己的设备。
+ */
+export function supportsFileType(fileType: unknown, deviceType: unknown) {
+  const device = normalizeDeviceType(deviceType);
+  const type = text(fileType).trim().toLowerCase();
+  return SCRIPT_FILE_TYPES_BY_DEVICE[device].includes(type);
+}
+
+/**
+ * 设备互换组：只有这一组内「任务设备 ≠ 脚本设备」才成立（脚本照旧、任务换设备跑）。
+ * 其余设备之间不互换：云手机任务不能拿 PC 流程跑，插件动作序列也不能给浏览器跑。
+ */
+const INTERCHANGEABLE_DEVICES: Record<string, readonly string[]> = {
+  pc: ['pc', 'botbuddy'],
+  botbuddy: ['pc', 'botbuddy'],
+};
+
+/** 任务能不能绑这个脚本：先过设备互换组，再过脚本类型白名单。 */
+export function scriptRunnableByDevice(
+  script: { fileType: string; deviceType: string },
+  deviceType: unknown,
+) {
+  const device = normalizeDeviceType(deviceType);
+  if (
+    !(
+      INTERCHANGEABLE_DEVICES[script.deviceType] || [script.deviceType]
+    ).includes(device)
+  ) {
+    return false;
+  }
+  return supportsFileType(script.fileType, device);
+}
+
+/**
+ * 校验「任务设备 × 绑定脚本」这一组合真的能跑，并回规范后的设备。
+ * 报错按两道闸分开说：换不了设备＝设备组问题；设备能换但脚本类型不支持＝正文问题。
+ */
+export function assertScriptRunnable(
+  script: { name: string; fileType: string; deviceType: string },
+  deviceType: unknown,
+): string {
+  const device = normalizeDeviceType(deviceType);
+  if (scriptRunnableByDevice(script, device)) return device;
+  const label = DEVICE_LABELS[device];
+  const scriptType =
+    SCRIPT_FILE_TYPE_LABELS[script.fileType] || script.fileType;
+  const allowed = SCRIPT_FILE_TYPES_BY_DEVICE[script.deviceType];
+  if (
+    !(
+      INTERCHANGEABLE_DEVICES[script.deviceType] || [script.deviceType]
+    ).includes(device)
+  ) {
+    throw new BusinessException(
+      ErrorCode.BAD_REQUEST,
+      `任务设备跟随绑定脚本：脚本「${script.name}」是${DEVICE_LABELS[script.deviceType]}（可选 ${allowed.map((type) => SCRIPT_FILE_TYPE_LABELS[type]).join(' / ')}），不能声明成${label}`,
+    );
+  }
+  throw new BusinessException(
+    ErrorCode.BAD_REQUEST,
+    `${label}跑不了「${scriptType}」：这种设备只支持 ${SCRIPT_FILE_TYPES_BY_DEVICE[device].map((type) => SCRIPT_FILE_TYPE_LABELS[type]).join(' / ')}。请在${DEVICE_LABELS[script.deviceType]}下新建同类脚本，或改用${allowed.map((type) => SCRIPT_FILE_TYPE_LABELS[type]).join(' / ')}。`,
+  );
+}
 
 /** 扩展名 / 别名叫法 → 规范类型，界面与本地执行器都可能传 `json` / `js` / `py`。 */
 const FILE_TYPE_ALIASES: Record<string, string> = {
@@ -229,7 +310,7 @@ export function normalizeDeviceType(raw: unknown, fallback = 'pc') {
   if (mapped) return mapped;
   throw new BusinessException(
     ErrorCode.BAD_REQUEST,
-    '设备类型只能是 PC / 安卓手机 / iPhone 手机 / 本地 Chrome',
+    '设备类型只能是 PC / 安卓手机 / iPhone 手机 / 本地 Chrome / BotBuddy 浏览器',
   );
 }
 
@@ -490,6 +571,15 @@ function assertJsonObject(content: string, label: string) {
 /** Automa 画布导出的 JSON。 */
 export function assertAutomaJson(content: string) {
   assertJsonObject(content, 'Automa 脚本');
+}
+
+/**
+ * 取回可下发的 Automa 工作流正文：先按「必须是 JSON 对象」校验，再把解析结果原样交给插件执行。
+ * 与 assertAutomaJson 共用同一份形状判定，避免派发侧与存档侧两套口径。
+ */
+export function parseWorkflowContent(script: { content: string }) {
+  assertJsonObject(script.content, 'Automa 脚本');
+  return JSON.parse(script.content) as Record<string, unknown>;
 }
 
 /** 比特云手机 RPA 导出的流程文件：文档明确「仅支持 .json，且只支持比特云手机 RPA 导出的流程文件」。 */

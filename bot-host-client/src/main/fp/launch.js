@@ -103,10 +103,15 @@ async function doOpen(id) {
     relayHandle = await relay.startRelay(creds);
     relayPort = relayHandle.port;
   }
+  const chromeExtensions = require('../chrome-extensions');
   const extensionDirs = [];
+  // 内置插件（如 Automa）每个窗口都默认加载；用户勾选的插件按档案生效。
+  for (const item of chromeExtensions.builtins()) {
+    extensionDirs.push(item.path);
+  }
   for (const extensionId of profile.extensionIds) {
-    const dir = path.join(require('../chrome-extensions').DIR, extensionId);
-    if (fs.existsSync(dir)) extensionDirs.push(dir);
+    const dir = chromeExtensions.resolveDir(extensionId);
+    if (dir && !extensionDirs.includes(dir)) extensionDirs.push(dir);
   }
   const args = fingerprint.buildArgs(profile, {
     profileDir,

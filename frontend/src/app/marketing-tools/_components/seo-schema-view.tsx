@@ -3,7 +3,7 @@
 import { App, Button, Form, Input, Select, Space, Table, Tag } from "antd";
 import { useState } from "react";
 import { SEO_SCHEMA_TYPES } from "@enterprise/contracts";
-import { Notice, Panel, PillTabs } from "@/components/ui/panel";
+import { Notice, Panel, TabStrip } from "@/components/ui/panel";
 import { fmtDateTime } from "@/lib/datetime";
 import { downloadText } from "@/lib/download";
 import {
@@ -20,7 +20,7 @@ export function SeoSchemaView({ project }: { project: SeoProject }) {
   const [tab, setTab] = useState("schema");
   return (
     <div style={{ display: "grid", gap: 16 }}>
-      <PillTabs items={[{ key: "schema", label: "结构化数据" }, { key: "indexing", label: "收录提交" }]} value={tab} onChange={setTab} variant="soft" />
+      <TabStrip items={[{ key: "schema", label: "结构化数据" }, { key: "indexing", label: "收录提交" }]} value={tab} onChange={setTab} />
       {tab === "schema" ? <SchemaPanel project={project} /> : <IndexingPanel project={project} />}
     </div>
   );

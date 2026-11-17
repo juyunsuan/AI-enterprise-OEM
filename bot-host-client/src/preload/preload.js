@@ -52,6 +52,14 @@ const api = {
   saveSkill: (payload) => ipcRenderer.invoke('agent:saveSkill', payload),
   removeSkill: (id) => ipcRenderer.invoke('agent:removeSkill', id),
   importSkillPackage: (mode) => ipcRenderer.invoke('agent:importSkillPackage', mode),
+  skillHubList: (query) => ipcRenderer.invoke('skillhub:list', query),
+  skillHubDetail: (slug) => ipcRenderer.invoke('skillhub:detail', slug),
+  skillHubDownload: (slug) => ipcRenderer.invoke('skillhub:download', slug),
+  skillHubInstall: (slug) => ipcRenderer.invoke('skillhub:install', slug),
+  // RPA（BotBuddy 浏览器设备）：待办清单、手动跑一条、自动领取开关
+  rpaTasks: () => ipcRenderer.invoke('rpa:tasks'),
+  rpaRun: (taskId) => ipcRenderer.invoke('rpa:run', taskId),
+  rpaSetAutoRun: (value) => ipcRenderer.invoke('rpa:setAutoRun', value),
   readPersona: (id) => ipcRenderer.invoke('agent:readPersona', id),
   savePersona: (payload) => ipcRenderer.invoke('agent:savePersona', payload),
   removePersona: (id) => ipcRenderer.invoke('agent:removePersona', id),
@@ -116,7 +124,8 @@ const api = {
   onSelfCheck: (cb) => subscribe('selfcheck:result', cb),
   onLog: (cb) => subscribe('log:append', cb),
   onNavigate: (cb) => subscribe('nav:go', cb),
-  onBridgeUpdate: (cb) => subscribe('bridge:update', cb)
+  onBridgeUpdate: (cb) => subscribe('bridge:update', cb),
+  onRpaUpdate: (cb) => subscribe('rpa:update', cb)
 };
 
 function subscribe(channel, cb) {

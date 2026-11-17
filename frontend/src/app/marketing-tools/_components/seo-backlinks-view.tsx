@@ -4,7 +4,7 @@ import { App, Button, Form, Input, InputNumber, Modal, Select, Space, Table, Tag
 import { useState } from "react";
 import { SEO_PROSPECT_STATUSES } from "@enterprise/contracts";
 import { usePasswordConfirm } from "@/components/confirm-with-password";
-import { EmptyState, Notice, Panel, PillTabs, StatCard, StatGrid } from "@/components/ui/panel";
+import { EmptyState, Notice, Panel, StatCard, StatGrid, TabStrip } from "@/components/ui/panel";
 import { fmtDateTime } from "@/lib/datetime";
 import {
   useSeoActions,
@@ -23,7 +23,7 @@ export function SeoBacklinksView({ project }: { project: SeoProject }) {
   const [tab, setTab] = useState("analysis");
   return (
     <div style={{ display: "grid", gap: 16 }}>
-      <PillTabs items={[{ key: "analysis", label: "外链分析" }, { key: "building", label: "外链建设" }]} value={tab} onChange={setTab} variant="soft" />
+      <TabStrip items={[{ key: "analysis", label: "外链分析" }, { key: "building", label: "外链建设" }]} value={tab} onChange={setTab} />
       {tab === "analysis" ? <BacklinksAnalysis project={project} /> : <BacklinksBuilding project={project} />}
     </div>
   );

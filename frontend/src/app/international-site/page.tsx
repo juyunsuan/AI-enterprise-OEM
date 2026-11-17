@@ -1,25 +1,16 @@
 "use client";
 
-import { PageHero } from "@/components/ui/panel";
-import { PAGE_META } from "@/config/routes";
-import { GeoSiteView } from "./_components/geo-site-list";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 /**
- * 国际独立站：从「营销工具 → GEO」里拆出来的独立入口。
- * 建站器、页面/菜单/内容库、多语言、域名绑定与账单都在这一页，GEO 原页签只保留优化分析。
+ * 国际独立站已并入「营销工具」页内 tab 渲染（与其它工具同款版式）。
+ * 保留本路由仅为兼容旧链接 / 收藏，进入即跳转到营销工具的对应页签。
  */
 export default function InternationalSitePage() {
-  const meta = PAGE_META["/international-site"];
-  return (
-    <>
-      <PageHero
-        title={meta?.title ?? "国际独立站"}
-        desc={
-          meta?.description ??
-          "拖拽建站、发布到平台子域或客户自己的域名；页面与内容按多语言维护，绑定域名后即可按客户域名独立访问。"
-        }
-      />
-      <GeoSiteView />
-    </>
-  );
+  const router = useRouter();
+  useEffect(() => {
+    router.replace("/marketing-tools?tab=international-site");
+  }, [router]);
+  return null;
 }

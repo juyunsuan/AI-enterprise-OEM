@@ -27,10 +27,13 @@ import {
   deviceLabel,
   durationText,
   fileTypeLabel,
+  isBotBuddyDevice,
   isChromeDevice,
   isPhoneDevice,
   paramEntries,
   rpaApi,
+  scriptRunnableByDevice,
+  type BotHostView,
   type RpaAccount,
   type RpaExecution,
   type RpaScript,
@@ -64,6 +67,9 @@ type TaskForm = {
   accountIds: number[];
   /** 本地 Chrome 任务绑定的设备（deviceType='chrome' 时必填）。 */
   chromeClientId: string;
+  /** BotBuddy 浏览器任务绑定的主机与指纹窗口（deviceType='botbuddy' 时主机必填、窗口可选）。 */
+  botHostId: number | null;
+  fpProfileId: string;
   schedule: ScheduleDraft;
   maxRetries: string;
   timeoutSeconds: string;
@@ -77,6 +83,8 @@ const EMPTY: TaskForm = {
   scriptId: null,
   accountIds: [],
   chromeClientId: "",
+  botHostId: null,
+  fpProfileId: "",
   schedule: EMPTY_SCHEDULE,
   maxRetries: "0",
   timeoutSeconds: "3600",
@@ -87,7 +95,8 @@ const EMPTY: TaskForm = {
 /**
  * RPA 任务：云端建任务时就绑定「脚本 + 运行参数 + RPA 账号」，本地比特浏览器凭 API Key
  * 认领后拿脚本正文与账号口令执行，再把结果回传；界面这边看状态与执行记录。
- * 任务不独立声明设备类型，从绑定的脚本继承（PC / 安卓云手机 / iPhone 云手机）。
+ * 设备类型默认跟着绑定脚本走，只有 PC 与 BotBuddy 浏览器这一组可以互换（同一份 Automa JSON）；
+ * 本地 Chrome 与 BotBuddy 浏览器都跑在用户自己机器上，不绑 RPA 账号、不回传口令。
  */
 export function TaskPanel({
   tasks,
@@ -140,6 +149,8 @@ export function TaskPanel({
       scriptId: task.scriptId,
       accountIds: task.accountIds,
       chromeClientId: task.chromeClientId || "",
+      botHostId: task.botHostId ?? null,
+      fpProfileId: task.fpProfileId || "",
       schedule: scheduleDraftFrom(task),
       maxRetries: String(task.maxRetries),
       timeoutSeconds: String(task.timeoutSeconds),
@@ -172,12 +183,19 @@ export function TaskPanel({
   const body = (): Record<string, unknown> => {
     const phone = isPhoneDevice(form.deviceType);
     const chrome = isChromeDevice(form.deviceType);
+    const botbuddy = isBotBuddyDevice(form.deviceType);
     return {
       name: form.name.trim(),
       deviceType: form.deviceType,
       scriptId: form.scriptId,
-      accountIds: chrome ? [] : form.accountIds,
+      accountIds: chrome || botbuddy ? [] : form.accountIds,
       ...(chrome ? { chromeClientId: form.chromeClientId } : {}),
+      ...(botbuddy
+        ? {
+            botHostId: form.botHostId ?? 0,
+            fpProfileId: form.fpProfileId,
+          }
+        : {}),
       params: selected
         ? buildParams(selected.paramsSchema, params, form.freeJson)
         : {},
@@ -200,6 +218,11 @@ export function TaskPanel({
     if (isChromeDevice(form.deviceType)) {
       if (!form.chromeClientId) {
         message.warning("请选择要执行的本地 Chrome 设备（需在线）");
+        return;
+      }
+    } else if (isBotBuddyDevice(form.deviceType)) {
+      if (!form.botHostId) {
+        message.warning("请选择要执行的 BotBuddy 主机（需在线）：先在客户端里配对本站");
         return;
       }
     } else if (!form.accountIds.length) {
@@ -354,11 +377,13 @@ export function TaskPanel({
       render: (_, row) =>
         isChromeDevice(row.deviceType)
           ? `本地 Chrome 设备 ${row.chromeClientId ? row.chromeClientId.slice(0, 10) : "（未绑定）"}`
-          : row.accounts.length
-            ? row.accounts
-                .map((item) => `${item.platform}/${item.username}`)
-                .join("、")
-            : `${row.accountIds.length} 个（账号已删除）`,
+          : isBotBuddyDevice(row.deviceType)
+            ? `BotBuddy 主机 #${row.botHostId ?? "（未绑定）"}${row.fpProfileId ? ` · 窗口 ${row.fpProfileId}` : " · 默认窗口"}`
+            : row.accounts.length
+              ? row.accounts
+                  .map((item) => `${item.platform}/${item.username}`)
+                  .join("、")
+              : `${row.accountIds.length} 个（账号已删除）`,
     },
     {
       title: "状态",
@@ -569,6 +594,8 @@ export function TaskPanel({
                   scriptId: null,
                   accountIds: [],
                   chromeClientId: "",
+                  botHostId: null,
+                  fpProfileId: "",
                 });
                 setParams({});
                 if (!isPhoneDevice(value)) {
@@ -587,7 +614,9 @@ export function TaskPanel({
                   ? "geekblue"
                   : isChromeDevice(form.deviceType)
                     ? "purple"
-                    : "blue"
+                    : isBotBuddyDevice(form.deviceType)
+                      ? "cyan"
+                      : "blue"
               }
               style={{ fontSize: 13, padding: "2px 10px" }}
             >
@@ -596,11 +625,15 @@ export function TaskPanel({
             <span style={{ marginLeft: 8 }}>
               {isChromeDevice(form.deviceType)
                 ? "由你在下面指定的那台本地 Chrome（已登录本系统）执行；不需要 RPA 账号"
-                : "本地执行端按该设备类型认领；下方只列出该设备类型的脚本与账号"}
+                : isBotBuddyDevice(form.deviceType)
+                  ? "由你在下面指定的那台 BotBuddy 客户端打开指纹窗口跑 Automa 工作流；不需要 RPA 账号，与 PC 共用同一份 Automa 脚本"
+                  : "本地执行端按该设备类型认领；下方只列出该设备类型的脚本与账号"}
             </span>
           </div>
           <ScriptPicker
-            scripts={scripts.filter((s) => s.deviceType === form.deviceType)}
+            scripts={scripts.filter((s) =>
+              scriptRunnableByDevice(s, form.deviceType),
+            )}
             selectedId={form.scriptId}
             deviceType={form.deviceType}
             onChange={(scriptId) => {
@@ -627,6 +660,12 @@ export function TaskPanel({
             <ChromeDevicePicker
               value={form.chromeClientId}
               onChange={(chromeClientId) => patch({ chromeClientId })}
+            />
+          ) : isBotBuddyDevice(form.deviceType) ? (
+            <BotBuddyTargetPicker
+              hostId={form.botHostId}
+              profileId={form.fpProfileId}
+              onChange={(next) => patch(next)}
             />
           ) : (
             <AccountPicker
@@ -857,5 +896,120 @@ function ChromeDevicePicker({
         />
       )}
     </label>
+  );
+}
+
+/**
+ * BotBuddy 浏览器执行位：一台已配对且在线的 BotBuddy 主机 +（可选）那台主机上报的指纹窗口。
+ *
+ * 与本地 Chrome 的 ChromeDevicePicker 同一套规则：离线主机不进候选（领不到任务），
+ * 只有一台在线主机时不渲染主机下拉，直接把机器名写出来。
+ * 窗口候选只认客户端心跳上报的表，平台不替用户建窗口；没上报过就只留「本机默认窗口」。
+ */
+function BotBuddyTargetPicker({
+  hostId,
+  profileId,
+  onChange,
+}: {
+  hostId: number | null;
+  profileId: string;
+  onChange: (next: { botHostId: number | null; fpProfileId: string }) => void;
+}) {
+  const [hosts, setHosts] = useState<BotHostView[]>([]);
+  const [windows, setWindows] = useState<{ id: string; name: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let alive = true;
+    void rpaApi
+      .botHosts()
+      .then((result) => {
+        if (!alive) return;
+        if (result.message) setError(result.message);
+        setHosts((result.data?.list ?? []).filter((item) => item.online));
+      })
+      .finally(() => {
+        if (alive) setLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // 只有一台在线主机时代入它（与 ChromeDevicePicker 同一条「单选不出控件」规则）
+  useEffect(() => {
+    if (!loading && hosts.length === 1 && hostId !== hosts[0].id) {
+      onChange({ botHostId: hosts[0].id, fpProfileId: profileId });
+    }
+  }, [loading, hosts, hostId, profileId, onChange]);
+
+  useEffect(() => {
+    if (!hostId) {
+      setWindows([]);
+      return;
+    }
+    let alive = true;
+    void rpaApi.botHostWindows(hostId).then((result) => {
+      if (!alive) return;
+      setWindows(result.data?.list ?? []);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [hostId]);
+
+  const selectedHost = hosts.find((item) => item.id === hostId) || null;
+
+  return (
+    <>
+      <label className="data-table-form-item" style={{ gridColumn: "1 / -1" }}>
+        <span className="data-table-form-label">
+          BotBuddy 主机<b style={{ color: "var(--danger)" }}> *</b>
+        </span>
+        {error ? (
+          <Notice variant="error">{`BotBuddy 主机读取失败：${error}`}</Notice>
+        ) : loading ? (
+          <span className="text-12 muted">正在读取在线主机…</span>
+        ) : !hosts.length ? (
+          <Notice>
+            当前没有在线的 BotBuddy 主机：请到「Agent-Bot → Bot 主机」页下载客户端，
+            填本站地址并完成配对，主机在线后回到这里新建任务。
+          </Notice>
+        ) : hosts.length === 1 ? (
+          <span>
+            {hosts[0].name}
+            <span className="text-12 muted" style={{ marginLeft: 6 }}>
+              · 在线
+            </span>
+          </span>
+        ) : (
+          <Select
+            value={hostId ?? undefined}
+            placeholder="选择一台在线的 BotBuddy 主机"
+            options={hosts.map((item) => ({ value: item.id, label: item.name }))}
+            onChange={(next) => onChange({ botHostId: next, fpProfileId: "" })}
+          />
+        )}
+      </label>
+      {selectedHost ? (
+        <label className="data-table-form-item" style={{ gridColumn: "1 / -1" }}>
+          <span className="data-table-form-label">指纹窗口</span>
+          <Select
+            value={profileId}
+            options={[
+              { value: "", label: "本机默认窗口（由客户端自己定）" },
+              ...windows.map((item) => ({ value: item.id, label: item.name })),
+            ]}
+            onChange={(next) => onChange({ botHostId: hostId, fpProfileId: next })}
+          />
+          <span className="text-12 muted" style={{ marginTop: 4 }}>
+            {windows.length
+              ? `这台主机上报了 ${windows.length} 个指纹窗口；不指定就用客户端设的默认窗口`
+              : "这台主机还没上报指纹窗口：任务会用客户端的默认窗口，需要指定窗口请到客户端「浏览器」页新建"}
+          </span>
+        </label>
+      ) : null}
+    </>
   );
 }

@@ -15,8 +15,10 @@ import {
   BOT_SCHEDULE_STATUS_LABELS,
   BOT_TERMINAL_COMMAND_STATUSES,
   botHostOnline,
+  readBotFingerprintCaps,
   type BotChannelView,
   type BotCommandView,
+  type BotFingerprintDetail,
   type BotHostView,
   type BotMessageView,
   type BotScheduleRunView,
@@ -402,6 +404,13 @@ export class BotHostService {
         : []),
       this.prisma.workbuddyHostConversation.deleteMany({
         where: { hostId: row.id },
+      }),
+      // AI 调用账号的设备绑定是多态引用（无外键），删设备时同步清理
+      this.prisma.aiCallAccountBinding.deleteMany({
+        where: {
+          principalKind: { in: ['DESKTOP', 'MOBOT'] },
+          principalId: row.id,
+        },
       }),
       this.prisma.workbuddyHost.delete({ where: { id: row.id } }),
     ]);
@@ -1469,6 +1478,21 @@ export class BotHostService {
     };
   }
 
+  /**
+   * 单主机指纹窗口详情：客户端上报的窗口候选表，供 RPA「BotBuddy 浏览器」任务选执行位。
+   * 与 workspaces 同一口径——只读心跳 caps，平台不建窗口也不改窗口。
+   */
+  async fingerprints(
+    user: CurrentUser,
+    hostIdRaw: string,
+  ): Promise<BotFingerprintDetail> {
+    const host = await this.loadHost(user, hostIdRaw);
+    const caps = readBotFingerprintCaps(
+      toJsonObject(toJsonObject(host.caps).agent),
+    );
+    return { list: caps.list, defaultWindowId: caps.defaultWindowId };
+  }
+
   // ---------------------------------------------------------------- 内部
 
   /**
@@ -1699,6 +1723,7 @@ export class BotHostService {
             : 'OFFLINE';
     const caps = readWorkspaceCaps(toJsonObject(row.caps));
     const rawCaps = toJsonObject(row.caps);
+    const fingerprint = readBotFingerprintCaps(toJsonObject(rawCaps.agent));
     const clientKind = normalizeClientKind(row.clientKind);
     return {
       id: row.id,
@@ -1728,6 +1753,8 @@ export class BotHostService {
       channelCount,
       // 列表只带摘要：N 台主机 × 每台最多 200 条工作区候选会把列表载荷撑爆。
       workspace: { defaultPath: caps.defaultPath, count: caps.list.length },
+      // 指纹窗口候选同理只带数量：RPA 任务表单按单机接口取明细。
+      fingerprint: { count: fingerprint.list.length },
       modelGrant: grant,
       createdAt: row.createdAt.toISOString(),
     };

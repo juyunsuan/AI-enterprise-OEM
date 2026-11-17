@@ -32,7 +32,7 @@ import {
 import { okrApi } from "@/api/okr";
 import { aiApi, type AiOkrCheckKr, type AiOkrProgressSummary } from "@/api/ai";
 import { AiLevelTag, AiList, AiResultModal } from "@/components/ai-result";
-import { EmptyState, Notice, Panel, PillTabs, StatCard, StatGrid } from "@/components/ui/panel";
+import { EmptyState, Notice, Panel, StatCard, StatGrid, TabStrip } from "@/components/ui/panel";
 import { fmtDateTime } from "@/lib/datetime";
 import {
   KrLine,
@@ -1726,7 +1726,7 @@ export function OkrObjectivesTab({
               <StatCard label="进度记录" value={String(detailView.logs.length)} />
             </StatGrid>
 
-            <PillTabs
+            <TabStrip
               items={[
                 { key: "overview", label: "概览" },
                 {

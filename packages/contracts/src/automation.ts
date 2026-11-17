@@ -369,6 +369,12 @@ export const rpaTaskSchema = z
     name: z.string(),
     scriptId: z.number(),
     deviceType: z.string(),
+    /** deviceType=chrome 时绑定的本地 Chrome 设备号；其余设备空串。 */
+    chromeClientId: z.string().optional(),
+    /** deviceType=botbuddy 时绑定的 BotBuddy 主机 ID；其余设备 null。 */
+    botHostId: z.number().nullable().optional(),
+    /** deviceType=botbuddy 时指定的指纹窗口档案 ID；空串＝主机自取默认窗口。 */
+    fpProfileId: z.string().optional(),
     accountIds: z.array(z.number()),
     params: jsonObject,
     status: z.string(),
@@ -770,7 +776,12 @@ const workbuddyPlanListQuery = z
 
 // ---------- AI 调用账号 ----------
 
-export const aiCallAccountSchema = z.object({
+/** AI 调用账号的绑定主体：BotBuddy 主机 / MoBot 手机 / WorkBuddy 企业账号（设备粒度，不含设备内的细分 Agent）。 */
+export const AI_CALL_PRINCIPAL_KINDS = ["DESKTOP", "MOBOT", "WORKBUDDY"] as const;
+export type AiCallPrincipalKind = (typeof AI_CALL_PRINCIPAL_KINDS)[number];
+
+/** 凭据行本体：界面与机器通道共用；绑定关系（下面 view 才有）只在站内展示。 */
+export const aiCallAccountOpenSchema = z.object({
   id: z.number(),
   createdBy: z.string(),
   name: z.string(),
@@ -783,15 +794,18 @@ export const aiCallAccountSchema = z.object({
   hasPassword: z.boolean(),
   hasApiKey: z.boolean(),
   hasCookie: z.boolean(),
-  bindings: z.array(
-    z.object({
-      workbuddyAccountId: z.number(),
-      name: z.string(),
-      status: z.string(),
-    }),
-  ),
   createdAt: z.string(),
   updatedAt: z.string(),
+});
+
+export const aiCallAccountSchema = aiCallAccountOpenSchema.extend({
+  bindings: z.array(
+    z.object({
+      principalKind: z.enum(AI_CALL_PRINCIPAL_KINDS),
+      principalId: z.number(),
+      name: z.string(),
+    }),
+  ),
 });
 
 export const aiCallCredentialsSchema = z.object({
@@ -814,14 +828,16 @@ const aiCallListQuery = z
 
 const aiCallOpenListQuery = z
   .object({
-    workbuddyAccountId: z.coerce.number().int().positive(),
+    kind: z.enum(AI_CALL_PRINCIPAL_KINDS),
+    agentId: z.coerce.number().int().positive(),
     platform: z.string().optional(),
   })
   .passthrough();
 
 const aiCallOpenCredentialsQuery = z
   .object({
-    workbuddyAccountId: z.coerce.number().int().positive(),
+    kind: z.enum(AI_CALL_PRINCIPAL_KINDS),
+    agentId: z.coerce.number().int().positive(),
   })
   .passthrough();
 
@@ -3429,13 +3445,67 @@ export const automationEndpoints = {
     body: z.undefined(),
     response: envelope(z.object({ id: z.number() })),
   },
+  /** Agent 绑定账号（设备粒度）：查一台主机 / 一部手机 / 一个 WorkBuddy 账号已绑定的凭据库 id。 */
+  AiCall_bindings: {
+    method: "get" as const,
+    path: "/enterprise/ai-call/bindings",
+    params: z.object({}),
+    query: z
+      .object({
+        kind: z.enum(AI_CALL_PRINCIPAL_KINDS),
+        principalId: z.coerce.number().int().positive(),
+      })
+      .passthrough(),
+    body: z.undefined(),
+    response: envelope(z.object({ accountIds: z.array(z.number()) })),
+  },
+  /** 整组替换某台设备（主机 / 手机 / WorkBuddy 账号）绑定的 AI 调用账号清单。 */
+  AiCall_saveBindings: {
+    method: "put" as const,
+    path: "/enterprise/ai-call/bindings",
+    params: z.object({}),
+    query: emptyQuery,
+    body: z
+      .object({
+        kind: z.enum(AI_CALL_PRINCIPAL_KINDS),
+        principalId: z.number().int().positive(),
+        accountIds: z.array(z.number().int().positive()).max(200),
+      })
+      .strict(),
+    response: envelope(z.object({ accountIds: z.array(z.number()) })),
+  },
+  /**
+   * 整组替换某个 AI 调用账号授权给的 Agent 清单（一份凭据可同时给多台主机 / 多部手机 /
+   * 多个 WorkBuddy 企业账号用；空数组＝全部解绑）。与设备侧的 AiCall_saveBindings 是同一张绑定表的两个方向。
+   */
+  AiCall_saveAccountAgents: {
+    method: "put" as const,
+    path: "/enterprise/ai-call/accounts/:id/agents",
+    params: aiCallParams,
+    query: emptyQuery,
+    body: z
+      .object({
+        bindings: z
+          .array(
+            z
+              .object({
+                kind: z.enum(AI_CALL_PRINCIPAL_KINDS),
+                principalId: z.number().int().positive(),
+              })
+              .strict(),
+          )
+          .max(200),
+      })
+      .strict(),
+    response: envelope(aiCallAccountSchema),
+  },
   OpenApi_aiCallAccounts: {
     method: "get" as const,
     path: "/api/v1/ai-call/accounts",
     params: z.object({}),
     query: aiCallOpenListQuery,
     body: z.undefined(),
-    response: envelope(z.array(aiCallAccountSchema)),
+    response: envelope(z.array(aiCallAccountOpenSchema)),
   },
   OpenApi_aiCallCredentials: {
     method: "get" as const,

@@ -1,14 +1,17 @@
 import { ok } from '../common/api';
 import { parseId } from '../common/parse-id';
 import { CurrentUser } from '../auth/current-user';
-import { AiCallAccountService } from './ai-call-account.service';
+import {
+  AiCallAccountService,
+  type AiCallPrincipalKind,
+} from './ai-call-account.service';
 
 /**
  * AI 调用账号机器通道（x-api-key）。
  *
- * AI 自动化任务凭本系统 API Key（ek_）调用，但每次都要声明自己在哪把
- * Workbuddy Enterprise 账号下运行（`workbuddyAccountId`）：
- * 只有与该账号绑定的 AI 调用账号才列得出来、才取得到明文凭据。
+ * BotBuddy 主机 / MoBot 手机 / WorkBuddy 云端 Agent 凭本系统 API Key（ek_）调用，
+ * 每次都要声明自己是谁：`kind`＝DESKTOP / MOBOT / WORKBUDDY，`agentId`＝该设备的主体 ID。
+ * 严格按「Agent 绑定账号」放行：只有绑定给该设备的 AI 调用账号才列得出来、才取得到明文凭据。
  *
  * 列表不含任何明文；明文只在 `GET /:id/credentials` 解密一次并记审计。
  */
@@ -17,12 +20,13 @@ export class AiCallOpenController {
 
   async list(
     user: CurrentUser,
-    query: { workbuddyAccountId: number; platform?: string },
+    query: { kind: AiCallPrincipalKind; agentId: number; platform?: string },
   ) {
     return ok(
       await this.accounts.openList(
         user,
-        query.workbuddyAccountId,
+        query.kind,
+        query.agentId,
         query.platform,
       ),
     );
@@ -31,13 +35,14 @@ export class AiCallOpenController {
   async credentials(
     user: CurrentUser,
     id: string,
-    query: { workbuddyAccountId: number },
+    query: { kind: AiCallPrincipalKind; agentId: number },
   ) {
     return ok(
       await this.accounts.openCredentials(
         user,
         parseId(id, '账号 ID'),
-        query.workbuddyAccountId,
+        query.kind,
+        query.agentId,
       ),
     );
   }

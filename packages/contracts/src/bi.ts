@@ -78,6 +78,16 @@ export const BI_INTERNAL_DATASETS = [
     name: "CRM 订单",
     description: "订单金额、阶段、审批状态、客户",
   },
+  {
+    key: "INSIGHT_HOTSPOTS",
+    name: "智慧分析·热点",
+    description: "热点名称、阶段、得分、增速、内容数与首发平台",
+  },
+  {
+    key: "INSIGHT_METRICS",
+    name: "智慧分析·时序指标",
+    description: "热点/关键词互动·视觉·商业三热度时序与增速",
+  },
 ] as const;
 
 const datasourceRow = z

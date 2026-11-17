@@ -4,9 +4,11 @@
  * Chrome 插件包管理：上传 ZIP / 文件夹 → 校验 manifest.json → 落到受管目录
  * `~/.botbuddy/chrome-extensions/<id>/`，列表展示与删除都在客户端内完成。
  *
- * 真正加载发生在「客户端自带浏览器」里：builtin-browser 会把这里的每个插件
- * 尝试装进内置浏览器会话，装不进去的会在打开浏览器时列出原因。
+ * 真正加载发生在「客户端自带浏览器」里：启动指纹窗口时按勾选加载。
  * 全程不需要打开 chrome://extensions，也不会启动或扫描本机 Chrome / Edge。
+ *
+ * 另一类是随安装包一起发的「内置插件」（builtin-extensions/，见 electron-builder
+ * extraResources）：只读、不可删除，且每个浏览器窗口都默认加载——Automa 就是这一类。
  */
 
 const fs = require('node:fs');
@@ -17,6 +19,13 @@ const db = require('./db');
 const { extractZipToDir } = require('./zip-extract');
 
 const DIR = path.join(db.DATA_DIR, 'chrome-extensions');
+
+/** 内置插件目录：安装态取 extraResources（resources/builtin-extensions），开发态取仓库目录。 */
+function builtinRoot() {
+  const packaged = path.join(process.resourcesPath || '', 'builtin-extensions');
+  if (packaged && fs.existsSync(packaged)) return packaged;
+  return path.join(__dirname, '..', '..', 'builtin-extensions');
+}
 const MAX_ZIP = 50 * 1024 * 1024;
 const MAX_FILE = 10 * 1024 * 1024;
 const MAX_TOTAL = 50 * 1024 * 1024;
@@ -60,11 +69,43 @@ function slugOf(name) {
   return 'ext-' + crypto.createHash('sha1').update(String(name)).digest('hex').slice(0, 10);
 }
 
+/** 内置插件：只读目录，id 取目录名（Automa → automa），每个窗口都默认加载。 */
+function builtins() {
+  const root = builtinRoot();
+  if (!fs.existsSync(root)) return [];
+  const items = [];
+  for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
+    if (!entry.isDirectory() || entry.name.startsWith('.')) continue;
+    const dir = path.join(root, entry.name);
+    try {
+      const manifest = readManifest(dir);
+      items.push({
+        id: entry.name,
+        name: manifest.name,
+        version: manifest.version,
+        manifestVersion: manifest.manifestVersion,
+        path: dir,
+        builtin: true
+      });
+    } catch {
+      /* 内置包损坏属于打包问题，静默跳过以免拖垮整个列表 */
+    }
+  }
+  return items;
+}
+
+/** 内置插件 id 集合：这些 id 不允许删除或覆盖。 */
+function builtinIds() {
+  return builtins().map((item) => item.id);
+}
+
 function list() {
   ensureDir();
-  const items = [];
+  const items = builtins();
+  const taken = new Set(items.map((item) => item.id));
   for (const entry of fs.readdirSync(DIR, { withFileTypes: true })) {
     if (!entry.isDirectory() || entry.name.startsWith('.')) continue;
+    if (taken.has(entry.name)) continue;
     const dir = path.join(DIR, entry.name);
     try {
       const manifest = readManifest(dir);
@@ -81,6 +122,20 @@ function list() {
     }
   }
   return items;
+}
+
+/**
+ * 解析插件目录供启动内核时 --load-extension 使用：
+ * 内置插件优先，其次用户导入的受管目录；都找不到返回空串。
+ */
+function resolveDir(id) {
+  const key = String(id || '');
+  if (!key || key.includes('/') || key.includes('\\') || key.includes('..')) return '';
+  const builtin = path.join(builtinRoot(), key);
+  if (fs.existsSync(path.join(builtin, 'manifest.json'))) return builtin;
+  const managed = path.join(DIR, key);
+  if (fs.existsSync(path.join(managed, 'manifest.json'))) return managed;
+  return '';
 }
 
 function copyDir(src, dest, budget) {
@@ -105,6 +160,9 @@ function installFromDir(srcDir) {
   const manifest = readManifest(srcDir);
   ensureDir();
   const id = slugOf(manifest.name);
+  if (builtinIds().includes(id)) {
+    throw new Error('「' + manifest.name + '」与内置插件重名，请改名后再导入');
+  }
   const dest = path.join(DIR, id);
   const staging = path.join(DIR, '.staging-' + process.pid + '-' + Date.now().toString(36));
   try {
@@ -152,6 +210,9 @@ function importFromZip(file) {
 
 function remove(id) {
   const key = String(id || '');
+  if (builtinIds().includes(key)) {
+    return { ok: false, error: '内置插件不能删除' };
+  }
   if (!/^[a-z0-9-]{1,64}$/.test(key)) {
     return { ok: false, error: '插件包 id 不合法' };
   }
@@ -161,4 +222,14 @@ function remove(id) {
   return { ok: true };
 }
 
-module.exports = { DIR, list, importFromDirectory, importFromZip, remove };
+module.exports = {
+  DIR,
+  builtinRoot,
+  builtins,
+  builtinIds,
+  resolveDir,
+  list,
+  importFromDirectory,
+  importFromZip,
+  remove
+};

@@ -6,7 +6,7 @@ import { Button, Spin, Tag } from "antd";
 import { InboxOutlined } from "@ant-design/icons";
 import type { NotificationRow } from "@enterprise/contracts";
 import { notificationsApi } from "@/api/collab";
-import { PillTabs } from "@/components/ui/panel";
+import { TabStrip } from "@/components/ui/panel";
 import {
   MobileAuthGate,
   MobileShell,
@@ -110,11 +110,9 @@ export default function MobileInboxPage() {
   return (
     <MobileShell title="消息中心" sub="任务、审批与客服回复都在这里处理">
       <MobileAuthGate>
-        <PillTabs
+        <TabStrip
           items={TABS}
           value={tab}
-          size="small"
-          variant="soft"
           onChange={(key) => setTab(key)}
           style={{ marginBottom: 12 }}
         />

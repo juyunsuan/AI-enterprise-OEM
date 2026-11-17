@@ -25,7 +25,7 @@ import {
   type OnboardingRun,
   type OnboardingTemplate,
 } from "@/api/gaps";
-import { Notice, Panel, PillTabs } from "@/components/ui/panel";
+import { Notice, Panel, TabStrip } from "@/components/ui/panel";
 import { gapError, gapStatusTag, zhDay, zhTime } from "@/app/gaps/_components/gaps-common";
 
 type Mode = "templates" | "runs";
@@ -262,7 +262,7 @@ export function GapsOnboardingTab() {
       title="入职引导清单"
       titleExtra="Offer 接受时自动按「员工入职」模板开工；离职时自动按「离职交接」模板开工。事项按角色分工，全部完成后自动收口（入职清单会按登记的岗位开通权限）"
       extra={
-        <PillTabs
+        <TabStrip
           items={[
             { key: "runs", label: "入职流程" },
             { key: "templates", label: "模板配置" },

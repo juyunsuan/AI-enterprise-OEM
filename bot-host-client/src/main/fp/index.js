@@ -133,6 +133,20 @@ function ipCheckUrl() {
   return String(db.getSetting('fp.ipCheckUrl', 'https://api.ipify.org?format=json') || '');
 }
 
+/**
+ * 心跳上报的窗口候选：平台 RPA「BotBuddy 浏览器」任务按这张表选执行位，
+ * 只带界面选人用得上的字段（名称、分组、内核、最近打开），代理与种子一律不出本机。
+ */
+function profileCandidates() {
+  return profiles.list().slice(0, 200).map((item) => ({
+    id: item.id,
+    name: item.name,
+    groupName: item.groupName || '',
+    kernelVersion: item.kernelVersion || '',
+    lastOpenAt: item.lastOpenAt || null
+  }));
+}
+
 module.exports = {
   state,
   create,
@@ -149,6 +163,7 @@ module.exports = {
   setMaxOpen,
   setIpCheckUrl,
   ipCheckUrl,
+  profileCandidates,
   kernels,
   profiles
 };

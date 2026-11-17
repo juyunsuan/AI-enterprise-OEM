@@ -32,7 +32,6 @@ import {
   EmptyState,
   Notice,
   Panel,
-  PillTabs,
   StatCard,
   StatGrid,
   TabStrip,
@@ -387,11 +386,9 @@ export function AgentWorkflowTab() {
                 marginBottom: 12,
               }}
             >
-              <PillTabs
+              <TabStrip
                 items={tabs}
                 value={activeKey}
-                variant="soft"
-                size="small"
                 onChange={(key) => {
                   resetPage();
                   setGroup(key);

@@ -20,7 +20,7 @@ import {
 } from "antd";
 import type { TableProps } from "antd";
 import { useState } from "react";
-import { EmptyState, Notice, Panel, PillTabs } from "@/components/ui/panel";
+import { EmptyState, Notice, Panel, TabStrip } from "@/components/ui/panel";
 import { useOperationMutation } from "@/query/business";
 import {
   useBindQxyTaxNo,
@@ -510,7 +510,7 @@ export function TaxAdminTab() {
         每个账号最多绑定 {maxTaxNos} 个税号；到期前 {expiringDays} 天标红提醒（不拦截调用）。
       </Notice>
 
-      <PillTabs
+      <TabStrip
         items={[
           {
             key: "requests",

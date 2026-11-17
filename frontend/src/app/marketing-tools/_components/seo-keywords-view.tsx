@@ -4,7 +4,7 @@ import { App, Button, Form, Input, InputNumber, Select, Space, Table, Tag, Uploa
 import type { TableProps } from "antd";
 import { useState, type ReactNode } from "react";
 import { InboxOutlined } from "@ant-design/icons";
-import { EmptyState, Notice, Panel, PillTabs } from "@/components/ui/panel";
+import { EmptyState, Notice, Panel, TabStrip } from "@/components/ui/panel";
 import { fmtDateTime } from "@/lib/datetime";
 import {
   useSeoActions,
@@ -32,7 +32,7 @@ export function SeoKeywordsView({ project }: { project: SeoProject }) {
   const [tab, setTab] = useState("library");
   return (
     <div style={{ display: "grid", gap: 16 }}>
-      <PillTabs
+      <TabStrip
         items={[
           { key: "library", label: "关键词库" },
           { key: "research", label: "扩展研究" },
@@ -41,7 +41,6 @@ export function SeoKeywordsView({ project }: { project: SeoProject }) {
         ]}
         value={tab}
         onChange={setTab}
-        variant="soft"
       />
       {tab === "library" ? <KeywordLibrary project={project} /> : null}
       {tab === "research" ? <KeywordResearch project={project} /> : null}

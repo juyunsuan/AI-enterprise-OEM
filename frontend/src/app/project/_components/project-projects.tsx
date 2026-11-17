@@ -21,7 +21,7 @@ import { projectApi } from "@/api/project";
 import { aiApi, type AiProjectStandup } from "@/api/ai";
 import { AiList, AiResultModal } from "@/components/ai-result";
 import { CollabDrawer } from "@/components/collab/collab-drawer";
-import { EmptyState, Notice, Panel, PillTabs, StatCard, StatGrid } from "@/components/ui/panel";
+import { EmptyState, Notice, Panel, StatCard, StatGrid, TabStrip } from "@/components/ui/panel";
 import { fmtDate } from "@/lib/datetime";
 import {
   PROJECT_STATUS_OPTIONS,
@@ -567,7 +567,7 @@ function PjDetailDrawer({
             </p>
           ) : null}
 
-          <PillTabs
+          <TabStrip
             items={[
               { key: "delivery", label: "交付", count: tasks.length },
               { key: "cost", label: "成本", count: cost?.costItemCount },

@@ -37,7 +37,9 @@ const SETTING_KEYS = [
   'userToken',
   'userName',
   'userEmail',
-  'userAvatar'
+  'userAvatar',
+  // RPA「BotBuddy 浏览器」设备：本机是否自动领取并执行平台派发的 Automa 任务。
+  'rpaAutoRun'
 ];
 
 const RECENT_KEEP = 20;
@@ -65,9 +67,10 @@ const DEFAULTS = {
   userToken: '',
   userName: '',
   userEmail: '',
-  userAvatar: ''
+  userAvatar: '',
+  // 默认开：任务本来就是用户在这台主机上选定后才建的，到点不跑等于没交付。
+  rpaAutoRun: true
 };
-
 function stripSlash(value) {
   return typeof value === 'string' ? value.trim().replace(/[\\/]+$/, '') : '';
 }

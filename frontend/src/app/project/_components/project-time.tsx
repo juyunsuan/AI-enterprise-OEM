@@ -15,7 +15,7 @@ import {
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useState } from "react";
 import { projectApi } from "@/api/project";
-import { Notice, Panel, PillTabs } from "@/components/ui/panel";
+import { Notice, Panel, PillTabs, TabStrip } from "@/components/ui/panel";
 import {
   Toolbar,
   day,
@@ -220,15 +220,13 @@ export function PjTimeTab({ staff }: { staff: { value: string; label: string }[]
       title={mode === "logs" ? "工时流水" : "工时周表"}
       extra={
         <>
-          <PillTabs
+          <TabStrip
             items={[
               { key: "logs", label: "工时流水" },
               { key: "sheets", label: "工时周表" },
             ]}
             value={mode}
             onChange={setMode}
-            size="small"
-            variant="soft"
           />
           <Button
             type="primary"

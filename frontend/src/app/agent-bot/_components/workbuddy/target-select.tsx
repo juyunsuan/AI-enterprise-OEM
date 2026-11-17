@@ -282,7 +282,7 @@ export function TargetPicker({
       {activeAccounts.length ? null : (
         <div className="text-12 muted" style={{ marginTop: 8 }}>
           还没有启用的 Workbuddy Enterprise 账号：先到「Workbuddy Enterprise 账号」页签绑定腾讯云密钥。{" "}
-          <Link href="/workbuddy?tab=accounts">去绑定账号</Link>
+          <Link href="/agent-bot?tab=cloud&sub=accounts">去绑定账号</Link>
         </div>
       )}
     </>

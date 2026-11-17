@@ -31,9 +31,9 @@ import { endpoint } from "@/api/endpoint";
 import {
   Notice,
   Panel,
-  PillTabs,
   StatCard,
   StatGrid,
+  TabStrip,
 } from "@/components/ui/panel";
 import { fmtTime } from "@/lib/datetime";
 import { endpoints } from "@enterprise/contracts";
@@ -83,7 +83,7 @@ export function AcquisitionInsightsView({ tick }: { tick: number }) {
   const [tab, setTab] = useState<"qc" | "dashboard">("qc");
   return (
     <Space orientation="vertical" size={16} style={{ width: "100%" }}>
-      <PillTabs
+      <TabStrip
         items={[
           { key: "qc", label: "接待质检" },
           { key: "dashboard", label: "获客看板" },

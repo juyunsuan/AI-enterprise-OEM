@@ -324,15 +324,18 @@ function buildPrompt(
   const runtime =
     deviceType === 'pc'
       ? '运行环境：本地比特浏览器（PC 客户端）里打开窗口跑网页，用 Automa 或浏览器内 JS / Python 操作页面。'
-      : deviceType === 'android'
-        ? '运行环境：本地执行端通过比特浏览器云手机接口（POST /phone/openphone、/phone/running、/phone/installApp、/phone/launchApp、/phone/uploadFile 等）操作一台安卓云手机，脚本要用 HTTP 接口驱动设备，不要写只能在本机浏览器里跑的 DOM 代码。'
-        : '运行环境：iPhone 云手机。比特浏览器对 iOS 只开放环境管理，没有控制接口也没有 RPA，脚本要写成能被执行端自己的 iOS 工具链（Appium / WebDriverAgent）调用的通用步骤，所有对外交互走 HTTP。';
+      : deviceType === 'botbuddy'
+        ? '运行环境：BotBuddy 客户端自带的内核级指纹窗口（改造版 Chromium），窗口里默认装了 Automa 浏览器扩展；执行端把这份工作流原样交给 Automa 触发，所以只写 Automa 认得的节点，不要写只能靠外部驱动（Playwright / Appium）实现的步骤，也不要假设能读本机文件系统的凭据。'
+        : deviceType === 'android'
+          ? '运行环境：本地执行端通过比特浏览器云手机接口（POST /phone/openphone、/phone/running、/phone/installApp、/phone/launchApp、/phone/uploadFile 等）操作一台安卓云手机，脚本要用 HTTP 接口驱动设备，不要写只能在本机浏览器里跑的 DOM 代码。'
+          : '运行环境：iPhone 云手机。比特浏览器对 iOS 只开放环境管理，没有控制接口也没有 RPA，脚本要写成能被执行端自己的 iOS 工具链（Appium / WebDriverAgent）调用的通用步骤，所有对外交互走 HTTP。';
   const common = `目标设备：${deviceLabel(deviceType)}\n${runtime}\n\n需求：\n${requirement}\n\n要求：\n1) 只输出成品，不要解释文字，不要用 markdown 代码围栏；\n2) 参数一律从运行参数里取，不要硬编码账号口令；\n3) 关键步骤要有可核对的日志输出；\n4) 在脚本内容之后，另起一行输出 PARAMS_SCHEMA:{...}，JSON 格式列出脚本需要的所有运行参数，每个参数包含 label（中文名）、required（是否必填）、default（默认值，可选）。例如：PARAMS_SCHEMA:{"keyword":{"label":"搜索关键词","required":true},"city":{"label":"城市","required":false,"default":"北京"}}。如果脚本不需要任何参数，输出 PARAMS_SCHEMA:{}。\n`;
   if (fileType === 'automa_json') {
     return `${common}请输出一个可直接被 Automa（浏览器扩展）导入的工作流 JSON，且必须是合法 JSON 对象：
-顶层字段为 name、version、drawflow、settings；
-drawflow 里 nodes 与 edges 都是对象，每个节点含 id、labels、data（含 name、type、attributes）、position；
-按需求顺序选用 Automa 的节点类型，例如 new-tab、trigger、elements-action（click/type）、conditions、delay、http-request、data-table、js-code。`;
+顶层字段为 name、drawflow、settings（可选 id、icon、columns、table）；
+drawflow 里 nodes 与 edges 都是**数组**：nodes 每项含 id、label（节点类型名，如 trigger / new-tab）、type:"block"、position{x,y}、data（该节点的参数）；edges 每项含 id、source、target、sourceHandle、targetHandle；
+必须有一个 label 为 trigger 的起始节点（Automa 靠它开始执行，缺了就跑不起来），其余节点从 Automa 的节点类型里选，例如 new-tab、active-tab、forms（click / type）、elements-action、conditions、delay、http-request、js-code、loop-data；
+节点之间用 edges 串成一条从 trigger 出发的链路。`;
   }
   if (fileType === 'python') {
     return `${common}请输出一个可直接运行的 Python 3 脚本：

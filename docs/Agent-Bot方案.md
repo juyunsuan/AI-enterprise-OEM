@@ -283,6 +283,8 @@ Windows 出 nsis x64 安装包（`BotBuddy Setup 1.0.0.exe`，`oneClick:false` �
 - **超时**：`timeoutSec`（默认 300s、下限 10s）是整个任务的 deadline；超时回 `timeout`，平台落 `FAILED`，原因写明「本机执行超时（N 秒）」。
 - **队列**：`task-runner.js` 同工作区串行、跨工作区并行，`commandCode` 去重；平台侧仍然是单机一个 `PENDING` 队列（上限 50）。
 - **记忆**：`remember` 工具写入 `memories` 表，后续每轮拼进系统提示（尾部截断）；「数字分身」提供角色与风格段，「技能」以清单 + `load_skill` 按需展开全文。
+- **技能页的「技能中心」卡片**：照站内「技能 → 技能中心」同款设计——进页默认拉 `keyword=AIPDD` 的 16 条推荐，搜到结果按 20 条分页；点卡片进详情（说明 / 安全检查 / 版本记录），详情里「下载」把 zip 存到 `~/.botbuddy/downloads`，「下载并安装」下载后在本机临时目录解包 `SKILL.md` 入本机技能库并刷新「技能」列表。目录数据全部来自平台转发（`/api/public/bot-host/skills*`，主机令牌），安装动作只发生在客户端。
+- **浏览器页的「RPA 任务」Tab**：这台主机作为 RPA 目标设备「BotBuddy 浏览器」的执行面——列出平台派给本机的待办（脚本、窗口、起始地址、计划时间），可「立即执行」，也可打开/关掉「自动领取」（默认开，心跳每 4 轮领一次、一次只跑一条）。「自动领取」开关与执行状态进 `stateSnapshot()`，界面靠 `rpa:update` 实时刷新。执行走 `src/main/rpa-runner.js`：打开任务指定的指纹窗口 → 从内核的 CDP 里找一个 **Automa 自己的扩展页**当发信方 → 用 `chrome.runtime.sendMessage({name:"background--workflow:execute", data:{...工作流, options}})` 触发（这条报文形状与 Automa 自己 dashboard 的调用逐字一致；实测从 service worker 自己发是收不到自己的，必须走扩展页）→ 轮询 Automa 的执行台账（IndexedDB `logs` 库 `items` 表，按 `workflowId` + `startedAt` 认本次）到终态，再把 `success / failed` 回传平台。窗口候选随心跳 `caps.agent.fingerprint.windows` 上报，与「工作区候选」同一先例：平台只按这张表让用户选，不替用户建窗口。
 
 ---
 
@@ -376,6 +378,13 @@ Windows 出 nsis x64 安装包（`BotBuddy Setup 1.0.0.exe`，`oneClick:false` �
 | `POST /api/public/bot-host/progress` | 流式进度片段 `{commandCode, text}`（尾部保留 2 万字），响应回带 `cancelRequested` |
 | `POST /api/public/bot-host/result` | 终结回执 `{commandCode, ok, canceled, text, errorMessage, elapsedMs}`，按 `commandCode` 幂等；终态只从 `ok/canceled` 折算（`DONE / FAILED / CANCELED`）。`acpSessionId` 作为历史保留列仍在表里，客户端不再上报 |
 | `POST /api/public/bot-host/logout` | 客户端退出时主动转离线（令牌保留，重新配对才换） |
+| `GET /api/public/bot-host/skills` | 技能中心搜索 / 推荐（平台转发 SkillHub 公开目录）：`?keyword=&page=&pageSize=`，回 `{list,total,page,pageSize}`；关键词为空报错（站内不提供「浏览全库」） |
+| `GET /api/public/bot-host/skills/:slug` | 技能详情：说明、安全检查、版本记录（与站内 `/enterprise/skillhub/skills/:slug` 同一份数据） |
+| `GET /api/public/bot-host/skills/:slug/download` | 技能包 zip（二进制）。客户端拿到包后在本机解包 `SKILL.md` 入本机技能库，平台不代客户端装技能 |
+| `GET /api/public/bot-host/rpa/tasks` | 这台主机可跑的 RPA 待办清单（只列「绑给本机或还没绑过主机」的 BotBuddy 任务，并标出脚本能不能在这跑） |
+| `POST /api/public/bot-host/rpa/claim` | 领取一条 RPA 任务：`{taskId}` 指定单条，不带＝按队列派一条（没有待办回 404）。回 `{taskId, executionId, attempt, taskName, scriptName, profileId, startUrl, params, timeoutSeconds, workflow}`，`workflow` 就是 Automa 工作流 JSON 对象；**报文里没有任何目标平台口令** |
+| `POST /api/public/bot-host/rpa/finish` | 回传终态 `{executionId, status, errorMessage, output, logText}`，与比特浏览器执行端共用同一套收口语义（失败且还有重试次数则退回待执行） |
+| `POST /api/public/bot-host/rpa/release` | 窗口起不来 / 用户中断时把已抢到的任务退回待执行，避免永久卡在「执行中」 |
 
 下发给客户端的指令是扁平的 `{commandCode, kind, title, instruction, cwd, timeoutSec}`；主机侧串行队列一次只跑一条。
 

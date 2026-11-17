@@ -1,12 +1,22 @@
 "use client";
 
 import {
+  ApiOutlined,
+  ClockCircleOutlined,
+  FileTextOutlined,
+  PlayCircleOutlined,
+  PlusOutlined,
+  ProfileOutlined,
+  ThunderboltOutlined,
+} from "@ant-design/icons";
+import {
   Button,
   Form,
   Input,
   InputNumber,
   Modal,
   Select,
+  Space,
   Switch,
   Table,
   Tag,
@@ -28,7 +38,7 @@ import {
   mktSkillSchema,
 } from "@enterprise/contracts";
 import { mktApi } from "@/api/mkt";
-import { Notice, Panel, PillTabs } from "@/components/ui/panel";
+import { Notice, Panel, PillTabs, TabStrip } from "@/components/ui/panel";
 
 type Skill = z.infer<typeof mktSkillSchema>;
 type Run = z.infer<typeof mktRunSchema>;
@@ -78,6 +88,16 @@ const ARTIFACT_KIND_LABELS: Record<string, string> = {
 function mktError(error: unknown) {
   return (error as Error)?.message || "操作失败";
 }
+
+/** 页签与视图分开：TabStrip 只负责切换，每个视图自带面板与动作，与企微 SCRM 同构。 */
+const SKILL_VIEWS = [
+  { key: "skills", label: "技能库" },
+  { key: "runs", label: "运行记录" },
+  { key: "artifacts", label: "内容资产" },
+  { key: "context", label: "品牌上下文" },
+  { key: "capabilities", label: "渠道连接" },
+  { key: "loops", label: "定时任务" },
+];
 
 export function MktSkillsTab() {
   const [mode, setMode] = useState("skills");
@@ -398,6 +418,19 @@ export function MktSkillsTab() {
     }
   };
 
+  const openNewSkill = () => {
+    setEditingSkill(null);
+    skillForm.resetFields();
+    skillForm.setFieldsValue({ category: "CONTENT", outputFormat: "MARKDOWN", enabled: true });
+    setSkillOpen(true);
+  };
+
+  const openNewLoop = () => {
+    loopForm.resetFields();
+    loopForm.setFieldsValue({ enabled: true, cron: "0 9 * * *" });
+    setLoopOpen(true);
+  };
+
   const skillColumns: ColumnsType<Skill> = [
     {
       title: "技能",
@@ -576,76 +609,70 @@ export function MktSkillsTab() {
   ];
 
   return (
-    <Panel
-      title="营销技能库"
-      extra={
-        <div style={{ display: "flex", gap: 8 }}>
-          <PillTabs
-            items={[
-              { key: "skills", label: "技能库" },
-              { key: "runs", label: "运行记录" },
-              { key: "artifacts", label: "内容资产" },
-              { key: "context", label: "品牌上下文" },
-              { key: "capabilities", label: "渠道连接" },
-              { key: "loops", label: "定时任务" },
-            ]}
-            value={mode}
-            onChange={setMode}
-            size="small"
-            variant="soft"
-          />
-          {mode === "skills" || mode === "loops" ? (
-            <Button
-              type="primary"
-              onClick={() => {
-                if (mode === "loops") {
-                  loopForm.setFieldsValue({ enabled: true, cron: "0 9 * * *" });
-                  setLoopOpen(true);
-                } else {
-                  setEditingSkill(null);
-                  skillForm.resetFields();
-                  skillForm.setFieldsValue({ category: "CONTENT", outputFormat: "MARKDOWN", enabled: true });
-                  setSkillOpen(true);
-                }
-              }}
-            >
-              {mode === "loops" ? "新建定时任务" : "新建技能"}
-            </Button>
-          ) : null}
-        </div>
-      }
-    >
+    <Space orientation="vertical" size={16} style={{ width: "100%" }}>
+      <TabStrip items={SKILL_VIEWS} value={mode} onChange={setMode} />
+
       {error ? <Notice variant="error">{error}</Notice> : null}
 
       {mode === "skills" ? (
-        <Table<Skill>
-          rowKey="id"
-          size="middle"
-          loading={loading}
-          columns={skillColumns}
-          dataSource={skills}
-          scroll={{ x: "max-content" }}
-          pagination={false}
-          locale={{ emptyText: "暂无技能" }}
-        />
+        <Panel
+          title={
+            <>
+              <ThunderboltOutlined aria-hidden /> 技能库
+            </>
+          }
+          titleExtra="内置技能可直接运行；自建技能在这里维护提示词模板与输入项"
+          extra={
+            <Button type="primary" icon={<PlusOutlined aria-hidden />} onClick={openNewSkill}>
+              新建技能
+            </Button>
+          }
+        >
+          <Table<Skill>
+            rowKey="id"
+            size="middle"
+            loading={loading}
+            columns={skillColumns}
+            dataSource={skills}
+            scroll={{ x: "max-content" }}
+            pagination={false}
+            locale={{ emptyText: "暂无技能" }}
+          />
+        </Panel>
       ) : null}
 
       {mode === "runs" ? (
-        <Table<Run>
-          rowKey="id"
-          size="middle"
-          loading={loading}
-          columns={runColumns}
-          dataSource={runs}
-          scroll={{ x: "max-content" }}
-          pagination={false}
-          locale={{ emptyText: "暂无运行记录" }}
-        />
+        <Panel
+          title={
+            <>
+              <PlayCircleOutlined aria-hidden /> 运行记录
+            </>
+          }
+          titleExtra="最近 50 条；「评估」给出质量分与改进建议"
+        >
+          <Table<Run>
+            rowKey="id"
+            size="middle"
+            loading={loading}
+            columns={runColumns}
+            dataSource={runs}
+            scroll={{ x: "max-content" }}
+            pagination={false}
+            locale={{ emptyText: "暂无运行记录" }}
+          />
+        </Panel>
       ) : null}
 
       {mode === "artifacts" ? (
-        <>
-          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+        <Panel
+          title={
+            <>
+              <FileTextOutlined aria-hidden /> 内容资产
+            </>
+          }
+          titleExtra="技能产出与 SEO 模块写入的资产都在这里；审核通过后自动派发渠道发布待办"
+        >
+          <Space wrap style={{ marginBottom: 12 }}>
             <PillTabs
               items={[
                 { key: "all", label: "全部" },
@@ -658,7 +685,7 @@ export function MktSkillsTab() {
               size="small"
               variant="soft"
             />
-          </div>
+          </Space>
           <Table<Artifact>
             rowKey="id"
             size="middle"
@@ -669,60 +696,94 @@ export function MktSkillsTab() {
             pagination={false}
             locale={{ emptyText: "暂无内容资产" }}
           />
-        </>
+        </Panel>
       ) : null}
 
       {mode === "context" ? (
-        <Form form={contextForm} layout="vertical" style={{ maxWidth: 720 }}>
-          <Form.Item name="brandName" label="品牌名称">
-            <Input />
-          </Form.Item>
-          <Form.Item name="industry" label="行业">
-            <Input />
-          </Form.Item>
-          <Form.Item name="positioning" label="品牌定位">
-            <Input.TextArea rows={2} />
-          </Form.Item>
-          <Form.Item name="tone" label="品牌语气">
-            <Input placeholder="例如：专业、克制、有温度" />
-          </Form.Item>
-          <Form.Item name="audiences" label="目标人群">
-            <Select mode="tags" />
-          </Form.Item>
-          <Form.Item name="keywords" label="关键词">
-            <Select mode="tags" />
-          </Form.Item>
-          <Form.Item name="competitors" label="竞品">
-            <Select mode="tags" />
-          </Form.Item>
-          <Button type="primary" onClick={() => void saveContext()}>
-            保存上下文
-          </Button>
-        </Form>
+        <Panel
+          title={
+            <>
+              <ProfileOutlined aria-hidden /> 品牌上下文
+            </>
+          }
+          titleExtra="随每次技能运行一并交给模型，作为品牌口径与人群/关键词的约束"
+          extra={
+            <Button type="primary" onClick={() => void saveContext()}>
+              保存上下文
+            </Button>
+          }
+        >
+          <Form form={contextForm} layout="vertical" style={{ maxWidth: 720 }}>
+            <Form.Item name="brandName" label="品牌名称">
+              <Input />
+            </Form.Item>
+            <Form.Item name="industry" label="行业">
+              <Input />
+            </Form.Item>
+            <Form.Item name="positioning" label="品牌定位">
+              <Input.TextArea rows={2} />
+            </Form.Item>
+            <Form.Item name="tone" label="品牌语气">
+              <Input placeholder="例如：专业、克制、有温度" />
+            </Form.Item>
+            <Form.Item name="audiences" label="目标人群">
+              <Select mode="tags" />
+            </Form.Item>
+            <Form.Item name="keywords" label="关键词">
+              <Select mode="tags" />
+            </Form.Item>
+            <Form.Item name="competitors" label="竞品">
+              <Select mode="tags" />
+            </Form.Item>
+          </Form>
+        </Panel>
       ) : null}
 
       {mode === "capabilities" ? (
-        <Table<Capability>
-          rowKey="key"
-          size="middle"
-          loading={loading}
-          columns={capabilityColumns}
-          dataSource={capabilities}
-          pagination={false}
-          locale={{ emptyText: "暂无渠道" }}
-        />
+        <Panel
+          title={
+            <>
+              <ApiOutlined aria-hidden /> 渠道连接
+            </>
+          }
+          titleExtra="凭据加密保存，平台不存明文；断开只解绑这台设备的授权"
+        >
+          <Table<Capability>
+            rowKey="key"
+            size="middle"
+            loading={loading}
+            columns={capabilityColumns}
+            dataSource={capabilities}
+            pagination={false}
+            locale={{ emptyText: "暂无渠道" }}
+          />
+        </Panel>
       ) : null}
 
       {mode === "loops" ? (
-        <Table<Loop>
-          rowKey="id"
-          size="middle"
-          loading={loading}
-          columns={loopColumns}
-          dataSource={loops}
-          pagination={false}
-          locale={{ emptyText: "暂无定时任务" }}
-        />
+        <Panel
+          title={
+            <>
+              <ClockCircleOutlined aria-hidden /> 定时任务
+            </>
+          }
+          titleExtra="按 cron 定时运行某个技能，产出照常进入内容资产走审核与发布"
+          extra={
+            <Button type="primary" icon={<PlusOutlined aria-hidden />} onClick={openNewLoop}>
+              新建定时任务
+            </Button>
+          }
+        >
+          <Table<Loop>
+            rowKey="id"
+            size="middle"
+            loading={loading}
+            columns={loopColumns}
+            dataSource={loops}
+            pagination={false}
+            locale={{ emptyText: "暂无定时任务" }}
+          />
+        </Panel>
       ) : null}
 
       <Modal
@@ -934,6 +995,6 @@ export function MktSkillsTab() {
           </>
         ) : null}
       </Modal>
-    </Panel>
+    </Space>
   );
 }

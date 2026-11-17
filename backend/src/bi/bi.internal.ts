@@ -3,7 +3,14 @@ import { ErrorCode } from '../common/error-code';
 import type { CrmContext } from '../crm/crm.scope';
 
 export type InternalDatasetKey =
-  'LEADS' | 'CUSTOMERS' | 'OPPORTUNITIES' | 'CONTRACTS' | 'PAYMENTS' | 'ORDERS';
+  | 'LEADS'
+  | 'CUSTOMERS'
+  | 'OPPORTUNITIES'
+  | 'CONTRACTS'
+  | 'PAYMENTS'
+  | 'ORDERS'
+  | 'INSIGHT_HOTSPOTS'
+  | 'INSIGHT_METRICS';
 
 export type InternalField = {
   key: string;
@@ -249,6 +256,76 @@ export const INTERNAL_DATASETS: Record<InternalDatasetKey, InternalDataset> = {
         expression: 'COUNT(*)',
         comment: '订单数',
       },
+    ],
+  },
+  INSIGHT_HOTSPOTS: {
+    key: 'INSIGHT_HOTSPOTS',
+    name: '智慧分析·热点',
+    description:
+      '全域内容热点分析的热点事件：名称、阶段、得分、增速、内容数与首发平台',
+    ownerColumn: 'h.user_id',
+    sql: `SELECT h.id, h.name, h.stage, h.subscription_name, h.first_platform,
+                 h.hot_score, h.growth_rate, h.content_count, h.updated_at
+            FROM insight_hotspots h
+           WHERE h.user_id = $1`,
+    fields: [
+      field('id', '热点ID', 'number', 'DIMENSION', '热点唯一编号'),
+      field('name', '热点名称', 'text', 'DIMENSION', '聚类命名'),
+      field('stage', '阶段', 'text', 'DIMENSION', '萌芽/上升/峰值/衰退'),
+      field('subscription_name', '所属订阅', 'text', 'DIMENSION', '来源订阅名'),
+      field('first_platform', '首发平台', 'text', 'DIMENSION', '首发平台'),
+      field('updated_at', '更新时间', 'date', 'DIMENSION', '最近聚合时间'),
+      field(
+        'hot_score',
+        '热点得分',
+        'number',
+        'MEASURE',
+        '综合热度得分',
+        'AVG',
+      ),
+      field('growth_rate', '增速', 'number', 'MEASURE', '环比增速', 'AVG'),
+      field(
+        'content_count',
+        '内容数',
+        'number',
+        'MEASURE',
+        '关联内容条数',
+        'SUM',
+      ),
+      {
+        key: 'hotspot_count',
+        name: '热点数',
+        type: 'number',
+        role: 'MEASURE' as const,
+        aggregate: 'COUNT',
+        expression: 'COUNT(*)',
+        comment: '热点条数',
+      },
+    ],
+  },
+  INSIGHT_METRICS: {
+    key: 'INSIGHT_METRICS',
+    name: '智慧分析·时序指标',
+    description: '热点/关键词三热度时序：互动、视觉、商业，含归一值与增速',
+    ownerColumn: 'm.user_id',
+    sql: `SELECT m.id, m.metric_key, m.metric_type, m.period,
+                 m.value, m.growth_rate, m.updated_at
+            FROM insight_metrics m
+           WHERE m.user_id = $1`,
+    fields: [
+      field('id', '指标ID', 'number', 'DIMENSION', '指标唯一编号'),
+      field('metric_key', '指标键', 'text', 'DIMENSION', '标签/关键词/热点'),
+      field(
+        'metric_type',
+        '热度类型',
+        'text',
+        'DIMENSION',
+        'interaction/visual/commercial',
+      ),
+      field('period', '周期', 'text', 'DIMENSION', '按天 YYYY-MM-DD'),
+      field('updated_at', '更新时间', 'date', 'DIMENSION', '最近写入时间'),
+      field('value', '归一热度', 'number', 'MEASURE', '0–100 归一值', 'AVG'),
+      field('growth_rate', '增速', 'number', 'MEASURE', '环比增速', 'AVG'),
     ],
   },
 };

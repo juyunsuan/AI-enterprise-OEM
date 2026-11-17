@@ -86,6 +86,7 @@ import { SupplyController } from '../supply/supply.controller';
 import { TaxController } from '../tax/tax.controller';
 import { ModelKeyService } from '../aiworkin/model-key.service';
 import { SkillGeneratorService } from '../content/skill-generator.service';
+import { AssetVisionService } from '../content/vision.service';
 import { DataTableService } from '../data-table/data-table.service';
 import { DataTableAiService } from '../data-table/data-table-ai.service';
 import { DataTableViewService } from '../data-table/data-table-view.service';
@@ -130,6 +131,9 @@ import { LeadProspectingService } from '../lead-prospecting/lead-prospecting.ser
 import { LeadProspectingController } from '../lead-prospecting/lead-prospecting.controller';
 import { BigdataQueryService } from '../bigdata/bigdata-query.service';
 import { BigdataQueryController } from '../bigdata/bigdata-query.controller';
+import { InsightService } from '../insight/insight.service';
+import { InsightController } from '../insight/insight.controller';
+import { InsightScheduler } from '../insight/insight.scheduler';
 import { EcomPdpService } from '../ecom-pdp/ecom-pdp.service';
 import { EcomPdpController } from '../ecom-pdp/ecom-pdp.controller';
 import { DomesticPdpService } from '../domestic-pdp/domestic-pdp.service';
@@ -943,6 +947,14 @@ export function createServices() {
   const bigdataQueryController = new BigdataQueryController(
     bigdataQueryService,
   );
+  // 智慧分析板块：订阅 / 预置表 / 热点聚合 / 趋势只读，scheduler 由 main.ts 启停。
+  const insightService = new InsightService(
+    prismaService,
+    identityService,
+    dataTableService,
+  );
+  const insightController = new InsightController(insightService);
+  const insightScheduler = new InsightScheduler(insightService);
   const aliyunCallService = new AliyunCallService(
     prismaService,
     identityService,
@@ -1109,6 +1121,11 @@ export function createServices() {
     contentDigitalAssetService.registerDeliverable(userId, input);
   leadProspectingService.deliverableSink = (userId, input) =>
     contentDigitalAssetService.registerDeliverable(userId, input);
+  // 智慧分析：快报产物入数字资产、采集派发复用浏览器代理计划任务、打标复用视觉理解。
+  insightService.deliverableSink = (userId, input) =>
+    contentDigitalAssetService.registerDeliverable(userId, input);
+  insightService.schedule = rpaChromeScheduleService;
+  insightService.vision = new AssetVisionService(prismaService);
   const contentAgentLibraryService = new ContentAgentLibraryService(
     prismaService,
     contentModelSettingService,
@@ -2644,6 +2661,11 @@ export function createServices() {
     prisma: prismaService,
     // 平台统一插件能力目录：派发门槛（分发/获客）与后台维护复用同一实例。
     extensionCatalog: extensionCatalogService,
+    // 智慧分析板块：service 供路由与调度复用，scheduler 由 main.ts 启停。
+    insight: {
+      service: insightService,
+      scheduler: insightScheduler,
+    },
     // M6 供求广场：社交板复用企业板块同一上游通道（DemandService + AiworkinClient）。
     aiworkinClient,
     demandService,
@@ -2878,6 +2900,8 @@ export function createServices() {
     },
     // Bot 主机：客户端通道（根 app 公开路由，只认主机令牌）与界面端点共用同一份服务实例。
     botHost: botHostService,
+    // AI 调用账号：设备令牌通道（/api/public/{bot-host,mobot}/ai-call/**）按绑定取凭据。
+    aiCall: aiCallAccountService,
     controllers: {
       healthController,
       adminController,
@@ -2928,6 +2952,7 @@ export function createServices() {
       surveyController,
       helpController,
       bigdataQueryController,
+      insightController,
       aliyunCallController,
       aliyunMailController,
       agentMemoryController,

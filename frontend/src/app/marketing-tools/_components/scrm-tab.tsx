@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Space } from "antd";
-import { PillTabs } from "@/components/ui/panel";
+import { TabStrip } from "@/components/ui/panel";
 import { ScrmOverviewView } from "./scrm-overview-view";
 import { ScrmContactsView } from "./scrm-contacts-view";
 import { ScrmChatsView } from "./scrm-chats-view";
@@ -45,7 +45,7 @@ export function ScrmTab() {
 
   return (
     <Space orientation="vertical" size={16} style={{ width: "100%" }}>
-      <PillTabs items={VIEWS} value={view} onChange={(key) => setView(key as ViewKey)} />
+      <TabStrip items={VIEWS} value={view} onChange={(key) => setView(key as ViewKey)} />
       {view === "overview" ? <ScrmOverviewView onChanged={bump} /> : null}
       {view === "contacts" ? <ScrmContactsView tick={tick} /> : null}
       {view === "chats" ? <ScrmChatsView tick={tick} /> : null}

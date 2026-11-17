@@ -26,7 +26,7 @@ import {
 } from "antd";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Notice, Panel, PillTabs } from "@/components/ui/panel";
+import { Notice, Panel, TabStrip } from "@/components/ui/panel";
 import {
   acqApi,
   controlAcq,
@@ -386,7 +386,7 @@ export function AcquisitionTab() {
         </Space>
       </Panel>
 
-      <PillTabs
+      <TabStrip
         items={VIEWS}
         value={view}
         onChange={(key) => setView(key as ViewKey)}

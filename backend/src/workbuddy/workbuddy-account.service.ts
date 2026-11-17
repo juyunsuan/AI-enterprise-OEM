@@ -133,12 +133,12 @@ export class WorkbuddyAccountService {
       );
     }
     const aiCallBound = await this.prisma.aiCallAccountBinding.count({
-      where: { workbuddyAccountId: id },
+      where: { principalKind: 'WORKBUDDY', principalId: id },
     });
     if (aiCallBound) {
       throw new BusinessException(
         ErrorCode.CONFLICT,
-        `这把凭据还绑定着 ${aiCallBound} 个 AI 调用账号，请先在「AI 调用账号」里解绑`,
+        `这把凭据还绑定着 ${aiCallBound} 个 AI 调用账号，请先在该账号的「Agent 绑定账号」页签里解绑`,
       );
     }
     await this.prisma.workbuddyAccount.delete({ where: { id } });

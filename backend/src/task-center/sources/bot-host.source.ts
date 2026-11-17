@@ -33,9 +33,12 @@ export function botHostSource(prisma: PrismaService): TaskSource {
       if (!rows.length) return [];
       const hosts = await prisma.workbuddyHost.findMany({
         where: { id: { in: [...new Set(rows.map((row) => row.hostId))] } },
-        select: { id: true, name: true },
+        select: { id: true, name: true, clientKind: true },
       });
       const nameOf = new Map(hosts.map((host) => [host.id, host.name]));
+      const tabOf = new Map(
+        hosts.map((host) => [host.id, host.clientKind === 'MOBOT' ? 'mobot' : 'bots']),
+      );
       return rows.map((row) => ({
         assigneeUserId: row.userId,
         source: 'workbuddy_host',
@@ -46,7 +49,9 @@ export function botHostSource(prisma: PrismaService): TaskSource {
         }，当前${
           BOT_COMMAND_STATUS_LABELS[row.status] || row.status
         }，跑完自动办结。`,
-        link: `/bot/hosts?hostId=${row.hostId}`,
+        link: `/agent-bot?tab=${tabOf.get(row.hostId) || 'bots'}&sub=chat&hostId=${
+          row.hostId
+        }`,
         category: 'task',
         createdBy: row.userId,
         dueAt: null,

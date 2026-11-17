@@ -22,7 +22,7 @@ import {
   type VideoTemplateType,
 } from "@enterprise/contracts";
 import { contentApi } from "@/api/content";
-import { EmptyState, Notice, PageHero, Panel, PillTabs } from "@/components/ui/panel";
+import { EmptyState, Notice, PageHero, Panel, PillTabs, TabStrip } from "@/components/ui/panel";
 import { RawImg } from "@/components/ui/raw-img";
 import { GenerateTemplateModal } from "./_components/generate-modal";
 import { PublishTemplateModal } from "./_components/publish-modal";
@@ -401,8 +401,7 @@ export default function VideoTemplatesPage() {
           </Space>
         }
       >
-        <PillTabs
-          size="small"
+        <TabStrip
           items={typeTabs}
           value={type}
           onChange={(key) => setType(key as TypeKey)}

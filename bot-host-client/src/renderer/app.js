@@ -32,6 +32,30 @@
     FAILED: '上次执行失败'
   };
   const STATE_CLASS = { READY: 'ok', BUSY: 'info', UNCONFIGURED: 'warn', FAILED: 'bad' };
+
+  // 技能中心（SkillHub）：默认展示 AIPDD 推荐，搜索每页 20 条 —— 与站内「技能中心」口径一致。
+  const SKILLHUB_RECOMMEND_KEYWORD = 'AIPDD';
+  const SKILLHUB_RECOMMEND_SIZE = 16;
+  const SKILLHUB_PAGE_SIZE = 20;
+
+  /** 上游安全检查结果的中文口径；认不出的原样显示，不替它编结论。 */
+  const SKILLHUB_SECURITY_LABEL = {
+    benign: '未见风险',
+    clean: '未见风险',
+    safe: '未见风险',
+    pass: '未见风险',
+    passed: '未见风险',
+    suspicious: '可疑',
+    warning: '可疑',
+    malicious: '恶意',
+    dangerous: '恶意',
+    blocked: '已拦截',
+    failed: '检查未通过',
+    error: '检查失败',
+    unknown: '结果未知',
+    pending: '检查中',
+    scanning: '检查中'
+  };
   const FAIL_HINT = {
     NO_MODEL: '还没有可用的文本模型：到「模型渠道」填渠道地址、密钥与模型名',
     MODEL_UNREACHABLE: '模型渠道连不上：检查渠道地址与本机网络，公网渠道需要出网',
@@ -53,7 +77,28 @@
     editingChannelId: '',
     editingSkillId: '',
     editingPersonaId: '',
+    skillHub: {
+      keyword: '',
+      page: 1,
+      total: 0,
+      rows: [],
+      loading: false,
+      error: '',
+      recommended: [],
+      recommendError: '',
+      recommending: false,
+      loaded: false,
+      detail: null
+    },
     baseUrlDirty: false,
+    // RPA（BotBuddy 浏览器设备）：待办清单、本机执行态、上次结果与自动领取开关。
+    rpa: {
+      list: [],
+      running: null,
+      last: null,
+      autoRun: true,
+      error: ''
+    },
     deviceNameDirty: false,
     policyDirty: false,
     skillsLoaded: false,
@@ -137,6 +182,9 @@
       void loadChatList();
       renderChatAttachments();
       $('chatInput').focus();
+    }
+    if (target === 'skills' && !state.skillHub.loaded) {
+      void loadSkillHubRecommended();
     }
   }
 
@@ -671,6 +719,311 @@
     }
   });
 
+  /* ---------------------------------------------------------- 技能中心 */
+
+  function formatCount(value) {
+    const n = Number(value || 0);
+    if (n >= 100000000) return (n / 100000000).toFixed(1) + ' 亿';
+    if (n >= 10000) return (n / 10000).toFixed(1) + ' 万';
+    return String(n);
+  }
+
+  function skillHubDate(value) {
+    return value ? String(value).replace('T', ' ').slice(0, 16) : '—';
+  }
+
+  function skillHubSecurity(item) {
+    const raw = String((item && (item.status || item.statusText)) || '').trim().toLowerCase();
+    const known = ['benign', 'clean', 'safe', 'pass', 'passed'];
+    return {
+      label: SKILLHUB_SECURITY_LABEL[raw] || item.statusText || item.status || '未知',
+      color: ['malicious', 'dangerous', 'blocked'].includes(raw)
+        ? 'red'
+        : known.includes(raw)
+          ? 'green'
+          : 'orange'
+    };
+  }
+
+  function skillHubCard(skill) {
+    const card = el('div', 'skillhub-card');
+    const head = el('div', 'skillhub-card-head');
+    head.appendChild(el('div', 'skillhub-card-title', skill.name || skill.slug));
+    if (skill.categoryLabel) head.appendChild(el('span', 'tag', skill.categoryLabel));
+    card.appendChild(head);
+    card.appendChild(el('div', 'skillhub-card-desc', skill.summary || '这个技能还没有填写说明'));
+    card.appendChild(
+      el(
+        'div',
+        'skillhub-card-meta',
+        '下载 ' + formatCount(skill.downloads) + (skill.version ? ' · v' + skill.version : '')
+      )
+    );
+    card.addEventListener('click', () => void openSkillHubDetail(skill.slug));
+    return card;
+  }
+
+  function renderSkillHub() {
+    const hub = state.skillHub;
+    const panel = $('skillhubDetail');
+    const pager = $('skillhubPager');
+    clear($('skillhubResult'));
+    clear(panel);
+    panel.classList.add('hidden');
+    pager.classList.add('hidden');
+    hub.detail = null;
+
+    const busy = hub.keyword ? hub.loading : hub.recommending;
+    const error = hub.keyword ? hub.error : hub.recommendError;
+    if (busy) {
+      $('skillhubSummary').textContent = '';
+      note($('skillhubHint'), hub.keyword ? '正在搜索…' : '正在读取推荐技能…');
+      return;
+    }
+    if (error) {
+      $('skillhubSummary').textContent = '';
+      note($('skillhubHint'), error, 'bad');
+      return;
+    }
+    note($('skillhubHint'), '');
+
+    const rows = hub.keyword ? hub.rows : hub.recommended;
+    $('skillhubSummary').textContent = hub.keyword
+      ? '「' + hub.keyword + '」的搜索结果 · 共 ' + hub.total + ' 个'
+      : 'SkillHub 中与 ' + SKILLHUB_RECOMMEND_KEYWORD + ' 相关的 ' + SKILLHUB_RECOMMEND_SIZE + ' 个技能';
+
+    const box = $('skillhubResult');
+    if (!rows.length) {
+      box.appendChild(
+        el(
+          'div',
+          'empty',
+          hub.keyword ? '没有找到匹配的技能，换个关键词试试。' : '技能中心暂时没有推荐技能。'
+        )
+      );
+      return;
+    }
+    rows.forEach((skill) => box.appendChild(skillHubCard(skill)));
+
+    if (hub.keyword && hub.total > SKILLHUB_PAGE_SIZE) {
+      const pages = Math.max(1, Math.ceil(hub.total / SKILLHUB_PAGE_SIZE));
+      pager.classList.remove('hidden');
+      $('skillhubPageText').textContent = '第 ' + hub.page + ' / ' + pages + ' 页';
+      $('skillhubPrev').disabled = hub.page <= 1;
+      $('skillhubNext').disabled = hub.page >= pages;
+    }
+  }
+
+  function renderSkillHubDetail(detail) {
+    const panel = $('skillhubDetail');
+    clear(panel);
+
+    const head = el('div', 'skillhub-detail-title');
+    head.appendChild(el('span', '', detail.name || detail.slug));
+    if (detail.namespaceHandle) head.appendChild(el('span', 'tag', '@' + detail.namespaceHandle));
+    panel.appendChild(head);
+
+    const meta = el('div', 'skillhub-detail-meta');
+    if (detail.categoryLabel) meta.appendChild(el('span', 'tag', detail.categoryLabel));
+    if (detail.version) meta.appendChild(el('span', 'tag', 'v' + detail.version));
+    if (detail.publisherName) {
+      meta.appendChild(
+        el(
+          'span',
+          '',
+          '发布者：' + detail.publisherName + (detail.publisherVerified ? '（已认证）' : '')
+        )
+      );
+    }
+    meta.appendChild(
+      el(
+        'span',
+        '',
+        '下载 ' +
+          formatCount(detail.downloads) +
+          ' · 收藏 ' +
+          formatCount(detail.stars) +
+          ' · 安装 ' +
+          formatCount(detail.installs)
+      )
+    );
+    meta.appendChild(el('span', '', '更新于 ' + skillHubDate(detail.updatedAt)));
+    panel.appendChild(meta);
+
+    if (detail.summary) panel.appendChild(el('div', 'row-sub', detail.summary));
+
+    const security = Array.isArray(detail.security) ? detail.security : [];
+    if (security.length) {
+      const row = el('div', 'skillhub-detail-meta');
+      security.forEach((item) => {
+        const info = skillHubSecurity(item);
+        row.appendChild(el('span', 'tag ' + info.color, item.name + '：' + info.label));
+      });
+      panel.appendChild(row);
+    }
+
+    if (detail.overview) {
+      const section = el('div', 'skillhub-detail-section');
+      section.appendChild(el('div', 'k', '技能说明'));
+      section.appendChild(el('div', 'skillhub-overview', detail.overview));
+      panel.appendChild(section);
+    }
+
+    const versions = Array.isArray(detail.versions) ? detail.versions : [];
+    if (versions.length) {
+      const section = el('div', 'skillhub-detail-section');
+      section.appendChild(el('div', 'k', '版本记录'));
+      versions.forEach((item) => {
+        const row = el('div', 'skillhub-version');
+        row.appendChild(el('div', 'v', item.version ? 'v' + item.version : '—'));
+        row.appendChild(el('div', 't', skillHubDate(item.createdAt)));
+        row.appendChild(el('div', 'c', item.changelog || '—'));
+        section.appendChild(row);
+      });
+      panel.appendChild(section);
+    }
+
+    const actions = el('div', 'actions spaced');
+    const back = el('button', 'btn small ghost', '返回技能中心');
+    back.addEventListener('click', () => {
+      clear(panel);
+      panel.classList.add('hidden');
+      state.skillHub.detail = null;
+    });
+    actions.appendChild(back);
+    const download = el('button', 'btn small ghost', '下载');
+    download.addEventListener('click', () => void downloadSkillHub(detail.slug, download));
+    actions.appendChild(download);
+    const install = el('button', 'btn small primary', '下载并安装');
+    install.addEventListener('click', () => void installSkillHub(detail.slug, install));
+    actions.appendChild(install);
+    panel.appendChild(actions);
+
+    panel.appendChild(
+      el(
+        'div',
+        'card-hint',
+        '「下载」只把技能包存到本机下载目录；「下载并安装」会解包出 SKILL.md 后入本机技能库，装完可在上面的「技能」卡片里勾选启用。'
+      )
+    );
+  }
+
+  async function loadSkillHubRecommended() {
+    const hub = state.skillHub;
+    hub.keyword = '';
+    hub.recommending = true;
+    hub.recommendError = '';
+    renderSkillHub();
+    const res = await api.skillHubList({
+      keyword: SKILLHUB_RECOMMEND_KEYWORD,
+      page: 1,
+      pageSize: SKILLHUB_RECOMMEND_SIZE
+    });
+    hub.recommending = false;
+    hub.loaded = true;
+    if (res && res.ok) {
+      hub.recommended = res.list || [];
+    } else {
+      hub.recommended = [];
+      hub.recommendError = (res && res.error) || '技能中心读取失败';
+    }
+    renderSkillHub();
+  }
+
+  async function searchSkillHub(keyword, page) {
+    const hub = state.skillHub;
+    hub.keyword = keyword;
+    hub.page = page || 1;
+    hub.loading = true;
+    hub.error = '';
+    renderSkillHub();
+    const res = await api.skillHubList({
+      keyword: hub.keyword,
+      page: hub.page,
+      pageSize: SKILLHUB_PAGE_SIZE
+    });
+    hub.loading = false;
+    if (res && res.ok) {
+      hub.rows = res.list || [];
+      hub.total = res.total || 0;
+    } else {
+      hub.rows = [];
+      hub.total = 0;
+      hub.error = (res && res.error) || '技能中心读取失败';
+    }
+    renderSkillHub();
+  }
+
+  async function openSkillHubDetail(slug) {
+    const panel = $('skillhubDetail');
+    clear(panel);
+    panel.classList.remove('hidden');
+    panel.appendChild(el('div', 'card-hint', '正在读取技能详情…'));
+    const res = await api.skillHubDetail(slug);
+    if (!res || !res.ok || !res.skill) {
+      clear(panel);
+      panel.classList.add('hidden');
+      note($('skillhubHint'), (res && res.error) || '技能详情读取失败', 'bad');
+      return;
+    }
+    state.skillHub.detail = res.skill;
+    renderSkillHubDetail(res.skill);
+  }
+
+  async function downloadSkillHub(slug, button) {
+    if (button) button.disabled = true;
+    note($('skillhubHint'), '正在下载技能包…');
+    const res = await api.skillHubDownload(slug);
+    if (button) button.disabled = false;
+    if (res && res.ok) {
+      note($('skillhubHint'), '已下载到：' + res.file, 'ok');
+    } else {
+      note($('skillhubHint'), (res && res.error) || '技能下载失败', 'bad');
+    }
+  }
+
+  async function installSkillHub(slug, button) {
+    if (button) button.disabled = true;
+    note($('skillhubHint'), '正在下载并安装…');
+    const res = await api.skillHubInstall(slug);
+    if (button) button.disabled = false;
+    if (res && res.ok) {
+      const name = (res.skill && (res.skill.name || res.skill.id)) || slug;
+      note($('skillhubHint'), '已安装到本机技能库：' + name, 'ok');
+      await reloadAgent();
+    } else {
+      note($('skillhubHint'), (res && res.error) || '技能安装失败', 'bad');
+    }
+  }
+
+  $('skillhubRefresh').addEventListener('click', () => void loadSkillHubRecommended());
+  $('skillhubReset').addEventListener('click', () => {
+    $('skillhubKeyword').value = '';
+    void loadSkillHubRecommended();
+  });
+  $('skillhubSearch').addEventListener('click', () => {
+    const value = $('skillhubKeyword').value.trim();
+    if (!value) {
+      note($('skillhubHint'), '请输入技能关键词', 'bad');
+      return;
+    }
+    void searchSkillHub(value, 1);
+  });
+  $('skillhubKeyword').addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter') return;
+    const value = $('skillhubKeyword').value.trim();
+    if (!value) return;
+    void searchSkillHub(value, 1);
+  });
+  $('skillhubPrev').addEventListener('click', () => {
+    if (state.skillHub.page > 1) {
+      void searchSkillHub(state.skillHub.keyword, state.skillHub.page - 1);
+    }
+  });
+  $('skillhubNext').addEventListener('click', () => {
+    void searchSkillHub(state.skillHub.keyword, state.skillHub.page + 1);
+  });
+
   /* ------------------------------------------------------------ 数字分身 */
 
   function renderPersonas(list, activeId) {
@@ -974,13 +1327,165 @@
   let fpEditingId = '';
 
   function showBrowserTab(tab) {
-    const name = tab === 'plugins' ? 'plugins' : 'windows';
+    const name = tab === 'plugins' ? 'plugins' : tab === 'rpa' ? 'rpa' : 'windows';
     document.querySelectorAll('[data-browser-tab]').forEach((btn) => {
       btn.classList.toggle('active', btn.dataset.browserTab === name);
     });
     document.querySelectorAll('[data-browser-panel]').forEach((panel) => {
       panel.classList.toggle('hidden', panel.dataset.browserPanel !== name);
     });
+    if (name === 'rpa') void loadRpaTasks();
+  }
+
+  /* ------------------------------------------------ RPA（BotBuddy 浏览器设备） */
+
+  const RPA_STATUS_LABEL = { success: '执行完成', failed: '执行失败', cancelled: '已取消' };
+  const RPA_STATUS_CLASS = { success: 'ok', failed: 'bad', cancelled: 'warn' };
+
+  function rpaTimeText(iso) {
+    if (!iso) return '';
+    const date = new Date(iso);
+    return Number.isFinite(date.getTime()) ? date.toLocaleString() : String(iso);
+  }
+
+  function renderRpaRunning() {
+    const box = $('rpaRunning');
+    if (!box) return;
+    clear(box);
+    const running = state.rpa && state.rpa.running;
+    if (!running || !running.active) {
+      box.classList.add('hidden');
+      return;
+    }
+    box.classList.remove('hidden');
+    box.appendChild(
+      el(
+        'div',
+        'rpa-running-line',
+        '正在执行：' + (running.name || '任务 #' + running.taskId) + ' · ' + (running.note || '')
+      )
+    );
+  }
+
+  function renderRpaList() {
+    const box = $('rpaList');
+    if (!box) return;
+    clear(box);
+    const hint = $('rpaHint');
+    if (hint) hint.textContent = state.rpa.error || '';
+    const rows = state.rpa.list || [];
+    if (state.rpa.last) {
+      const line = el(
+        'div',
+        'rpa-last ' + (RPA_STATUS_CLASS[state.rpa.last.status] || 'muted'),
+        '上次执行：' +
+          (state.rpa.last.name || '任务 #' + state.rpa.last.taskId) +
+          ' · ' +
+          (RPA_STATUS_LABEL[state.rpa.last.status] || state.rpa.last.status) +
+          (state.rpa.last.message ? ' · ' + state.rpa.last.message : '') +
+          ' · ' +
+          rpaTimeText(state.rpa.last.finishedAt)
+      );
+      box.appendChild(line);
+    }
+    if (!rows.length) {
+      box.appendChild(
+        el('div', 'empty', state.rpa.error ? '读不到平台待办' : '这台主机当前没有待执行的 RPA 任务')
+      );
+      return;
+    }
+    rows.forEach((row) => {
+      const card = el('div', 'rpa-row');
+      const main = el('div', 'rpa-row-main');
+      main.appendChild(el('div', 'rpa-row-title', row.name || '未命名任务'));
+      const meta = [
+        '脚本：' + (row.scriptName || '—'),
+        row.profileId ? '窗口：' + row.profileId : '窗口：本机默认',
+        row.startUrl ? '起始：' + row.startUrl : '',
+        row.scheduledAt ? '计划：' + rpaTimeText(row.scheduledAt) : ''
+      ].filter(Boolean);
+      main.appendChild(el('div', 'rpa-row-meta', meta.join(' · ')));
+      card.appendChild(main);
+      const actions = el('div', 'rpa-row-actions');
+      if (!row.runnable) {
+        actions.appendChild(el('span', 'tag orange', '脚本不兼容 Automa'));
+      } else {
+        const button = el('button', 'btn small primary', '立即执行');
+        button.type = 'button';
+        button.disabled = Boolean(state.rpa.running && state.rpa.running.active);
+        button.addEventListener('click', () => void runRpaTask(row.taskId));
+        actions.appendChild(button);
+      }
+      card.appendChild(actions);
+      box.appendChild(card);
+    });
+  }
+
+  async function loadRpaTasks() {
+    if (!api || !api.rpaTasks) return;
+    try {
+      const res = await api.rpaTasks();
+      if (!res || !res.ok) {
+        state.rpa.error = (res && res.error) || '读取 RPA 待办失败';
+        state.rpa.list = [];
+      } else {
+        state.rpa.error = '';
+        state.rpa.list = res.list || [];
+        state.rpa.running = res.running || state.rpa.running;
+        state.rpa.last = res.last || state.rpa.last;
+        state.rpa.autoRun = res.autoRun !== false;
+      }
+    } catch (error) {
+      state.rpa.error = String((error && error.message) || error);
+    }
+    const summary = $('rpaSummary');
+    if (summary) {
+      summary.textContent =
+        (state.rpa.list || []).length + ' 条待办' + (state.rpa.autoRun ? ' · 自动领取已开' : ' · 自动领取已关');
+    }
+    const toggle = $('rpaAutoRun');
+    if (toggle) toggle.checked = state.rpa.autoRun !== false;
+    renderRpaRunning();
+    renderRpaList();
+  }
+
+  async function runRpaTask(taskId) {
+    if (!api || !api.rpaRun) return;
+    const res = await api.rpaRun(taskId).catch((error) => ({ ok: false, error: String(error) }));
+    if (!res || !res.ok) {
+      state.rpa.error = (res && res.error) || '领取任务失败';
+      renderRpaList();
+      return;
+    }
+    state.rpa.error = '';
+    state.rpa.running = { active: true, name: res.started.name, note: '已领取，正在准备窗口' };
+    renderRpaRunning();
+    renderRpaList();
+  }
+
+  function bindRpaEvents() {
+    const reload = $('rpaReload');
+    if (reload) reload.addEventListener('click', () => void loadRpaTasks());
+    const toggle = $('rpaAutoRun');
+    if (toggle) {
+      toggle.addEventListener('change', async () => {
+        state.rpa.autoRun = Boolean(toggle.checked);
+        if (api && api.rpaSetAutoRun) await api.rpaSetAutoRun(state.rpa.autoRun);
+        const summary = $('rpaSummary');
+        if (summary) {
+          summary.textContent =
+            (state.rpa.list || []).length + ' 条待办' + (state.rpa.autoRun ? ' · 自动领取已开' : ' · 自动领取已关');
+        }
+      });
+    }
+    if (api && api.onRpaUpdate) {
+      api.onRpaUpdate((payload) => {
+        state.rpa.running = (payload && payload.running) || state.rpa.running;
+        state.rpa.last = (payload && payload.last) || state.rpa.last;
+        renderRpaRunning();
+        void loadRpaTasks();
+      });
+    }
   }
 
   function renderFpExtChips(selected) {
@@ -997,10 +1502,14 @@
       const label = el('label', 'chip manual');
       const input = document.createElement('input');
       input.type = 'checkbox';
-      input.checked = ids.includes(item.id);
+      // 内置插件不可取消：每个窗口都默认带上（如 Automa）。
+      input.checked = item.builtin ? true : ids.includes(item.id);
+      input.disabled = !!item.builtin;
       input.dataset.extId = item.id;
+      if (item.builtin) label.title = '内置插件，随浏览器默认加载';
       label.appendChild(input);
       label.appendChild(document.createTextNode(' ' + item.name));
+      if (item.builtin) label.appendChild(el('span', 'tag on', '内置'));
       box.appendChild(label);
     });
   }
@@ -1172,9 +1681,10 @@
         user: $('fpProxyUser').value,
         password: $('fpProxyPass').value
       },
-      extensionIds: Array.from($('fpExts').querySelectorAll('input[type="checkbox"]:checked')).map(
-        (input) => input.dataset.extId
-      )
+      // 内置插件不写进档案（每个窗口默认加载），只保存用户自己勾选的。
+      extensionIds: Array.from(
+        $('fpExts').querySelectorAll('input[type="checkbox"]:checked:not(:disabled)')
+      ).map((input) => input.dataset.extId)
     };
   }
 
@@ -2204,6 +2714,11 @@
     const agent = snap.agent || {};
     $('navSkillCount').textContent = String(agent.skillCount || 0);
     $('navPersonaCount').textContent = String(agent.personaCount || 0);
+    // RPA 执行端跟着状态广播走：界面开着就能看到「本机正在跑哪条、上一条什么结果」
+    if (snap.rpa) state.rpa.running = snap.rpa;
+    if (snap.rpaLast) state.rpa.last = snap.rpaLast;
+    if (typeof snap.rpaAutoRun === 'boolean') state.rpa.autoRun = snap.rpaAutoRun;
+    renderRpaRunning();
     $('pathVersion').textContent = snap.agent ? 'v' + (snap.agent.version || '1.0.0') : 'v1.0.0';
     $('pathDb').textContent = snap.dbPath || '—';
     $('pathDb').title = snap.dbPath || '';
@@ -2253,6 +2768,8 @@
   }
 
   /* ---------------------------------------------------------------- 事件 */
+
+  bindRpaEvents();
 
   api.onStateUpdate((snap) => applyState(snap));
   api.onAgentUpdate(() => void reloadAgent());

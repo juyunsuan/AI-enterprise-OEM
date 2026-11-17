@@ -10,7 +10,7 @@ import { App, Button, Checkbox, Input, Select, Table, Tag } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { mechanismsApi } from "@/api/mechanisms";
-import { Notice, Panel, PillTabs } from "@/components/ui/panel";
+import { Notice, Panel, TabStrip } from "@/components/ui/panel";
 import { fmtDateTime } from "@/lib/datetime";
 import {
   IMPORT_MODULES,
@@ -366,7 +366,7 @@ export function ImportExportPanel() {
     <Panel
       title="导入导出中心"
       extra={
-        <PillTabs
+        <TabStrip
           items={[
             { key: "import", label: "导入" },
             { key: "export", label: "导出" },

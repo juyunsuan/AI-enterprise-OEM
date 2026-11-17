@@ -29,9 +29,9 @@ import { recruitApi } from "@/api/recruit";
 import {
   EmptyState,
   Panel,
-  PillTabs,
   StatCard,
   StatGrid,
+  TabStrip,
 } from "@/components/ui/panel";
 import { fmtDate } from "@/lib/datetime";
 
@@ -444,7 +444,7 @@ export function RecruitAiTab() {
     <>
       <Panel
         title="AI 简历代投"
-        extra={<PillTabs items={SUB_TABS} value={sub} onChange={setSub} />}
+        extra={<TabStrip items={SUB_TABS} value={sub} onChange={setSub} />}
       >
         {sub === "profile" ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>

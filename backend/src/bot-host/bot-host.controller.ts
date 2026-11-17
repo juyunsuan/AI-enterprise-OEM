@@ -41,6 +41,11 @@ export class BotHostController {
     return ok(await this.hosts.workspaces(user, hostId));
   }
 
+  /** 指纹窗口候选：RPA「BotBuddy 浏览器」任务选执行位。 */
+  async fingerprints(user: CurrentUser, hostId: string) {
+    return ok(await this.hosts.fingerprints(user, hostId));
+  }
+
   async modelGrant(user: CurrentUser, hostId: string) {
     return ok(await this.hosts.modelGrant(user, hostId));
   }

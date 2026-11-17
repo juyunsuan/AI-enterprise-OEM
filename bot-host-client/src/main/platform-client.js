@@ -17,6 +17,9 @@
  *   POST {baseUrl}/api/public/bot-host/model-settings (x-bot-token; local model -> platform)
  *   DELETE {baseUrl}/api/public/bot-host/model-settings (x-bot-token)
  *   POST {baseUrl}/api/public/bot-host/logout        (x-bot-token)
+ *   GET  {baseUrl}/api/public/bot-host/skills          (x-bot-token; keyword/page/pageSize)
+ *   GET  {baseUrl}/api/public/bot-host/skills/:slug     (x-bot-token)
+ *   GET  {baseUrl}/api/public/bot-host/skills/:slug/download (x-bot-token; zip bytes)
  *   GET  {baseUrl}/health
  *
  * Zero third-party dependencies: Node http/https only.
@@ -110,6 +113,100 @@ function request(baseUrl, method, pathname, options) {
     if (body) req.write(body);
     req.end();
   });
+}
+
+/**
+ * 二进制 GET（技能包 zip）。与 request() 一样不抛异常：非 2xx 或 JSON 错误体
+ * 统一回 { ok:false, error }，成功才回 { ok:true, bytes, filename }。
+ */
+function requestBytes(baseUrl, pathname, options) {
+  const opts = options || {};
+  return new Promise((resolve) => {
+    let target;
+    try {
+      target = new URL(pathname, normalizeBase(baseUrl));
+    } catch (err) {
+      resolve({ transportError: true, error: 'invalid baseUrl: ' + err.message });
+      return;
+    }
+
+    const isHttps = target.protocol === 'https:';
+    const lib = isHttps ? https : http;
+
+    const headers = Object.assign(
+      {
+        Accept: 'application/zip,application/octet-stream',
+        'User-Agent': 'botbuddy/' + CLIENT_VERSION
+      },
+      opts.headers || {}
+    );
+    if (opts.token) {
+      headers[TOKEN_HEADER] = opts.token;
+    }
+    if (opts.userToken) {
+      headers.Authorization = 'Bearer ' + opts.userToken;
+    }
+
+    const req = lib.request(
+      {
+        protocol: target.protocol,
+        hostname: target.hostname,
+        port: target.port || (isHttps ? 443 : 80),
+        path: target.pathname + target.search,
+        method: 'GET',
+        headers,
+        timeout: opts.timeoutMs || 60000
+      },
+      (res) => {
+        const chunks = [];
+        res.on('data', (c) => chunks.push(c));
+        res.on('end', () => {
+          const bytes = Buffer.concat(chunks);
+          const type = String(res.headers['content-type'] || '');
+          if (res.statusCode < 200 || res.statusCode >= 300 || /json/i.test(type)) {
+            let message = 'HTTP ' + res.statusCode;
+            try {
+              const parsed = JSON.parse(bytes.toString('utf8'));
+              if (parsed && parsed.message) message = parsed.message;
+            } catch (err) {
+              // 二进制错误体：拿不到 message，就用状态码兜底
+            }
+            resolve({ httpStatus: res.statusCode, ok: false, error: message });
+            return;
+          }
+          resolve({
+            httpStatus: res.statusCode,
+            ok: true,
+            bytes,
+            contentType: type,
+            filename: filenameOf(res.headers['content-disposition'])
+          });
+        });
+      }
+    );
+
+    req.on('timeout', () => {
+      req.destroy(new Error('request timeout'));
+    });
+    req.on('error', (err) => {
+      resolve({ transportError: true, error: err.message });
+    });
+    req.end();
+  });
+}
+
+function filenameOf(disposition) {
+  const raw = String(disposition || '');
+  const star = /filename\*=UTF-8''([^;]+)/i.exec(raw);
+  if (star) {
+    try {
+      return decodeURIComponent(star[1].trim());
+    } catch (err) {
+      // 非法的百分号编码，退回普通 filename
+    }
+  }
+  const plain = /filename="?([^";]+)"?/i.exec(raw);
+  return plain ? plain[1].trim() : '';
 }
 
 function normalizeBase(baseUrl) {
@@ -210,10 +307,79 @@ function logout(baseUrl, token) {
   });
 }
 
+// --- RPA（BotBuddy 浏览器设备）：主机令牌通道，与技能中心同一份令牌 ---
+
+/** 这台主机可跑的待办清单（界面展示用；领取仍按 taskId 单条来）。 */
+function rpaTasks(baseUrl, token) {
+  return request(baseUrl, 'GET', '/api/public/bot-host/rpa/tasks', {
+    token,
+    timeoutMs: 15000
+  });
+}
+
+/** 领取一条任务：不传 taskId＝让平台按队列派一条；报文里带回 Automa 工作流正文。 */
+function rpaClaim(baseUrl, token, taskId) {
+  return request(baseUrl, 'POST', '/api/public/bot-host/rpa/claim', {
+    token,
+    body: taskId ? { taskId: Number(taskId) } : {},
+    timeoutMs: 20000
+  });
+}
+
+/** 回传终态：executionId 由领取报文给出，重复回传由平台按 CAS 拒绝。 */
+function rpaFinish(baseUrl, token, payload) {
+  return request(baseUrl, 'POST', '/api/public/bot-host/rpa/finish', {
+    token,
+    body: payload,
+    timeoutMs: 20000
+  });
+}
+
+/** 本机起不来窗口时把已抢到的任务退回待执行，别让它卡在「执行中」。 */
+function rpaRelease(baseUrl, token, taskId) {
+  return request(baseUrl, 'POST', '/api/public/bot-host/rpa/release', {
+    token,
+    body: { taskId: Number(taskId) || 0 },
+    timeoutMs: 15000
+  });
+}
+
+// --- 技能中心（SkillHub）：平台转发，客户端只负责展示与安装 ---
+
+function skillList(baseUrl, token, query) {
+  const q = query || {};
+  const params = new URLSearchParams();
+  params.set('keyword', String(q.keyword || ''));
+  params.set('page', String(q.page || 1));
+  params.set('pageSize', String(q.pageSize || 16));
+  return request(baseUrl, 'GET', '/api/public/bot-host/skills?' + params.toString(), {
+    token,
+    timeoutMs: 30000
+  });
+}
+
+function skillDetail(baseUrl, token, slug) {
+  return request(
+    baseUrl,
+    'GET',
+    '/api/public/bot-host/skills/' + encodeURIComponent(slug),
+    { token, timeoutMs: 30000 }
+  );
+}
+
+function skillDownload(baseUrl, token, slug) {
+  return requestBytes(
+    baseUrl,
+    '/api/public/bot-host/skills/' + encodeURIComponent(slug) + '/download',
+    { token, timeoutMs: 60000 }
+  );
+}
+
 module.exports = {
   CLIENT_VERSION,
   TOKEN_HEADER,
   request,
+  requestBytes,
   normalizeBase,
   currentPlatform,
   health,
@@ -226,5 +392,12 @@ module.exports = {
   result,
   syncModel,
   clearModel,
-  logout
+  logout,
+  skillList,
+  skillDetail,
+  skillDownload,
+  rpaTasks,
+  rpaClaim,
+  rpaFinish,
+  rpaRelease
 };

@@ -316,6 +316,30 @@
         <section class="pane" data-pane="skills">
           <div class="card">
             <div class="card-head">
+              <span class="card-title">技能中心</span>
+              <span class="card-hint">来自 SkillHub 的公开技能目录；可直接下载，或下载并安装给本机 Agent 使用</span>
+              <span class="card-actions">
+                <button id="skillhubRefresh" class="btn small ghost" title="重新拉取默认推荐列表">刷新</button>
+              </span>
+            </div>
+            <div class="skillhub-search">
+              <input id="skillhubKeyword" type="text" spellcheck="false" placeholder="输入关键词搜索技能，例如：编程、搜索、办公" />
+              <button id="skillhubSearch" class="btn small primary">搜索</button>
+              <button id="skillhubReset" class="btn small ghost" title="回到默认推荐列表">推荐</button>
+            </div>
+            <div id="skillhubSummary" class="card-hint"></div>
+            <p id="skillhubHint" class="card-note"></p>
+            <div id="skillhubResult" class="skillhub-grid"></div>
+            <div id="skillhubDetail" class="skillhub-detail hidden"></div>
+            <div id="skillhubPager" class="skillhub-pager hidden">
+              <button id="skillhubPrev" class="btn small ghost">上一页</button>
+              <span id="skillhubPageText" class="card-hint"></span>
+              <button id="skillhubNext" class="btn small ghost">下一页</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
               <span class="card-title">技能</span>
               <span class="card-hint">不勾选＝全部可用；勾选后只带这些进上下文</span>
               <span class="card-actions">
@@ -481,6 +505,7 @@
           <div class="tabbar">
             <button class="tabbtn active" type="button" data-browser-tab="windows">指纹窗口</button>
             <button class="tabbtn" type="button" data-browser-tab="plugins">Chrome 插件</button>
+            <button class="tabbtn" type="button" data-browser-tab="rpa">RPA 任务</button>
           </div>
 
           <div class="tabpanel" data-browser-panel="windows">
@@ -622,6 +647,27 @@
               <div class="actions spaced">
                 <button id="openChromeExtFolder" class="btn small ghost">打开插件目录</button>
               </div>
+            </div>
+          </div>
+
+          <div class="tabpanel hidden" data-browser-panel="rpa">
+            <div class="card">
+              <div class="card-head">
+                <span class="card-title">RPA 任务</span>
+                <span class="card-hint" id="rpaSummary">—</span>
+                <span class="card-actions">
+                  <label class="switch-line"><input id="rpaAutoRun" type="checkbox" /> 自动领取</label>
+                  <button id="rpaReload" class="btn small ghost">刷新</button>
+                </span>
+              </div>
+              <p class="card-note">
+                在平台「RPA → RPA 任务」里把目标设备选成 <b>BotBuddy 浏览器</b>、绑好这台主机与指纹窗口，
+                任务就会在这里排队：到点由本机打开对应窗口，交给内置 Automa 插件跑这份流程，跑完把结果回传平台。
+                任务用的正文就是平台「RPA 脚本」里的 JSON（Automa 脚本），账号口令不经过这里。
+              </p>
+              <div id="rpaRunning" class="rpa-running hidden"></div>
+              <div id="rpaList" class="list"><div class="empty">正在读取平台待办…</div></div>
+              <p id="rpaHint" class="card-note"></p>
             </div>
           </div>
         </section>

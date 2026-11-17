@@ -9,7 +9,11 @@
  * 3) RPA 周期排期的号数 / 分钟超出取值直接报错，不再静默收口成 0
  *    （0 号、0 分永远匹配不上，任务会一次都不跑）；界面提交形态是字符串，落库要仍是原值；
  * 4) RPA 账号接口只回「存过没有」，登录口令与代理口令的明文、密文都不出现在响应里；
- * 5) AI 调用账号接口同样不回凭据明文，且「其他字段」夹带 token/password 这类键直接拒。
+ * 5) AI 调用账号接口同样不回凭据明文，且「其他字段」夹带 token/password 这类键直接拒；
+ * 6) 取用授权按设备主体绑定：`PUT /enterprise/ai-call/bindings`（kind + principalId + accountIds）
+ *    整组替换某台 Agent 的可用凭据，还绑着凭据的 WorkBuddy 企业账号禁止直接删除，解绑后才放行；
+ * 7) 反向入口 `PUT /enterprise/ai-call/accounts/:id/agents`：一份凭据可同时授权给多台 Agent，
+ *    同批重复主体去重、含不存在主体整批拒绝、空清单＝解除全部授权，与设备侧读写同一张绑定表。
  *
  * 口径：
  * - 打在开发实例（默认 1690，见 [[project-local-runtime]]）。测试主体用 seed 账号 demo_user，
@@ -236,7 +240,6 @@ const aiBadExtra = await call("POST", "/enterprise/ai-call/accounts", ACCOUNT, {
   name: AI_ACCOUNT_NAME,
   platform: `ai-platform-${stamp}`,
   apiKey: FAKE_AI_API_KEY,
-  workbuddyAccountIds: [wbId],
   extra: { token: "should-be-rejected" },
 });
 assert(aiBadExtra.code === 400, "AI 账号「其他字段」夹带 token 被拒", aiBadExtra.message);
@@ -245,7 +248,6 @@ const aiAccount = await call("POST", "/enterprise/ai-call/accounts", ACCOUNT, {
   name: AI_ACCOUNT_NAME,
   platform: `ai-platform-${stamp}`,
   apiKey: FAKE_AI_API_KEY,
-  workbuddyAccountIds: [wbId],
   extra: { 店铺编号: `shop-${stamp}` },
 });
 assert(aiAccount.code === 0, "AI 账号建号成功", aiAccount.message);
@@ -256,6 +258,115 @@ const aiList = await call("GET", "/enterprise/ai-call/accounts", ACCOUNT);
 const aiBody = JSON.stringify(aiList.data ?? {});
 assert(!aiBody.includes(FAKE_AI_API_KEY), "AI 账号清单不含 API Key 明文");
 assert(!/apiKeyCipher|passwordCipher|cookieCipher/.test(aiBody), "AI 账号清单不含密文列");
+
+// ---------- 4b) 取用授权按设备主体绑定（Agent 绑定账号） ----------
+const bound = await call("PUT", "/enterprise/ai-call/bindings", ACCOUNT, {
+  kind: "WORKBUDDY",
+  principalId: wbId,
+  accountIds: aiId ? [aiId] : [],
+});
+assert(
+  bound.code === 0 && (bound.data?.accountIds || []).includes(aiId),
+  "把 AI 凭据绑定给 Workbuddy 企业账号",
+  bound.message,
+);
+const boundBack = await call(
+  "GET",
+  `/enterprise/ai-call/bindings?kind=WORKBUDDY&principalId=${wbId}`,
+  ACCOUNT,
+);
+assert(
+  boundBack.code === 0 && (boundBack.data?.accountIds || []).includes(aiId),
+  "按设备主体回读绑定清单",
+  boundBack.message,
+);
+const listed = await call("GET", "/enterprise/ai-call/accounts", ACCOUNT);
+const listedRows = Array.isArray(listed.data) ? listed.data : listed.data?.list || [];
+const bindingsShown = listedRows.find((row) => row.id === aiId);
+assert(
+  (bindingsShown?.bindings || []).some(
+    (row) => row.principalKind === "WORKBUDDY" && row.principalId === wbId,
+  ),
+  "AI 账号清单回显绑定的 Agent 主体",
+  JSON.stringify(bindingsShown?.bindings),
+);
+// 还绑着凭据的 Workbuddy 账号不许直接删（否则设备侧授权会静默消失）。
+const wbBlocked = await call("DELETE", `/enterprise/workbuddy/accounts/${wbId}`, ACCOUNT);
+assert(wbBlocked.code !== 0, "已绑定 AI 凭据的 Workbuddy 账号禁止直接删除", wbBlocked.message);
+const unbound = await call("PUT", "/enterprise/ai-call/bindings", ACCOUNT, {
+  kind: "WORKBUDDY",
+  principalId: wbId,
+  accountIds: [],
+});
+assert(
+  unbound.code === 0 && (unbound.data?.accountIds || []).length === 0,
+  "整组解绑后设备取不到任何凭据",
+  unbound.message,
+);
+const wbAfterUnbind = await call("DELETE", `/enterprise/workbuddy/accounts/${wbId}`, ACCOUNT);
+assert(wbAfterUnbind.code === 0, "解绑后可以删除 Workbuddy 账号", wbAfterUnbind.message);
+// 已在这一步删掉的 Workbuddy 凭据不再进收尾清理（否则会报「删除 Workbuddy 凭据」失败）。
+const wbCleanupIndex = cleanup.findIndex(([label]) => label === "Workbuddy 凭据");
+if (wbCleanupIndex >= 0) cleanup.splice(wbCleanupIndex, 1);
+
+// ---------- 4c) 凭据侧多 Agent 绑定：一份凭据可同时授权给多台 Agent ----------
+// 再造两把 Workbuddy 企业凭据，凑出「一份凭据 → 两个主体」。
+const wb2 = await call("POST", "/enterprise/workbuddy/accounts", ACCOUNT, {
+  name: `复核批次-企云二号-${stamp}`,
+  secretId: `AKIDfake2${stamp}`,
+  secretKey: `fakeSecret2${stamp}`,
+});
+const wb2Id = wb2.data?.id;
+if (wb2Id) cleanup.push(["Workbuddy 二号凭据", `/enterprise/workbuddy/accounts/${wb2Id}`]);
+const wb3 = await call("POST", "/enterprise/workbuddy/accounts", ACCOUNT, {
+  name: `复核批次-企云三号-${stamp}`,
+  secretId: `AKIDfake3${stamp}`,
+  secretKey: `fakeSecret3${stamp}`,
+});
+const wb3Id = wb3.data?.id;
+if (wb3Id) cleanup.push(["Workbuddy 三号凭据", `/enterprise/workbuddy/accounts/${wb3Id}`]);
+
+const badAgents = await call("PUT", `/enterprise/ai-call/accounts/${aiId}/agents`, ACCOUNT, {
+  bindings: [
+    { kind: "WORKBUDDY", principalId: wb2Id },
+    { kind: "DESKTOP", principalId: 999999 },
+  ],
+});
+assert(badAgents.code !== 0, "凭据侧绑定含不存在的主体时整批拒绝", badAgents.message);
+
+const multiBound = await call("PUT", `/enterprise/ai-call/accounts/${aiId}/agents`, ACCOUNT, {
+  bindings: [
+    { kind: "WORKBUDDY", principalId: wb2Id },
+    { kind: "WORKBUDDY", principalId: wb3Id },
+    { kind: "WORKBUDDY", principalId: wb3Id },
+  ],
+});
+assert(multiBound.code === 0, "凭据侧一次授权给多台 Agent", multiBound.message);
+assert(
+  (multiBound.data?.bindings || []).length === 2,
+  "同批重复主体去重后仍是 2 个授权对象",
+  JSON.stringify(
+    (multiBound.data?.bindings || []).map((row) => `${row.principalKind}:${row.principalId}`),
+  ),
+);
+const deviceView = await call(
+  "GET",
+  `/enterprise/ai-call/bindings?kind=WORKBUDDY&principalId=${wb3Id}`,
+  ACCOUNT,
+);
+assert(
+  (deviceView.data?.accountIds || []).includes(aiId),
+  "设备侧回读看到同一份凭据（两张入口写的是同一张绑定表）",
+  deviceView.message,
+);
+const agentsCleared = await call("PUT", `/enterprise/ai-call/accounts/${aiId}/agents`, ACCOUNT, {
+  bindings: [],
+});
+assert(
+  agentsCleared.code === 0 && (agentsCleared.data?.bindings || []).length === 0,
+  "凭据侧空清单＝解除全部授权",
+  agentsCleared.message,
+);
 
 // ---------- 收尾：本次创建的测试数据全部删除 ----------
 console.log("清理测试数据：");

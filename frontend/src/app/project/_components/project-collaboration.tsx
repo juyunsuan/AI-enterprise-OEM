@@ -27,7 +27,7 @@ import {
 } from "@enterprise/contracts";
 import { projectApi } from "@/api/project";
 import { partyApi } from "@/api/party";
-import { Notice, Panel, PillTabs } from "@/components/ui/panel";
+import { Notice, Panel, PillTabs, TabStrip } from "@/components/ui/panel";
 import { Toolbar, day, money, pjError, type PjProject } from "./project-common";
 
 type PjEngagement = z.infer<typeof pjEngagementSchema>;
@@ -410,15 +410,13 @@ export function PjCollabTab() {
         }
       >
         <Toolbar hint={view === "engagements" ? `共 ${engagementTotal} 项合作` : `共 ${partyTotal} 个合作方`}>
-          <PillTabs
+          <TabStrip
             items={[
               { key: "engagements", label: "合作项目" },
               { key: "parties", label: "合作方目录" },
             ]}
             value={view}
             onChange={setView}
-            size="small"
-            variant="soft"
           />
           {view === "engagements" ? (
             <>
