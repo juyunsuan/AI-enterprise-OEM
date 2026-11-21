@@ -1,4 +1,4 @@
-# OEM Enterprise · Bàn làm việc dịch vụ doanh nghiệp mã nguồn mở + Mạng xã hội doanh nhân
+# OEM Enterprise · Bàn làm việc dịch vụ doanh nghiệp mã nguồn mở SaaS
 
 <p align="center">
   <a href="README.md">简体中文</a> · <a href="README.en.md">English</a> · <strong>Tiếng Việt</strong> · <a href="README.ja.md">日本語</a> · <a href="README.ar.md">العربية</a> · <a href="README.fr.md">Français</a> · <a href="README.es.md">Español</a> · <a href="README.ru.md">Русский</a>
@@ -6,14 +6,14 @@
 
 **Demo trực tuyến：<https://enterprise.aiworkin.com>**
 
-Một dự án mã nguồn mở hợp nhất và chuyển đổi **bàn làm việc dịch vụ doanh nghiệp**（Hono + Prisma + MySQL + Next.js / Ant Design）với **mạng xã hội doanh nhân SNS**
-（quan hệ / dòng trạng thái / nhóm / tin nhắn riêng / hồ sơ xin việc / chợ cung cầu / tuyển dụng）.
+Một dự án **SaaS** mã nguồn mở lấy **bàn làm việc dịch vụ doanh nghiệp**（Hono + Prisma + MySQL + Next.js / Ant Design）làm nền tảng；
+không chỉ là phần mềm cài đặt cục bộ, hệ thống cung cấp sẵn một bộ **dịch vụ SaaS** hoàn chỉnh：**quản lý tiểu trình tự**（tiểu trình tự phía người dùng＋kho gói mã ở hậu đài và tải thẳng lên WeChat）、**khung dữ liệu thống nhất**（một khóa tài khoản / tổ chức / tenant＋một chuẩn phân quyền dữ liệu）、**xây dựng website trọn gói**（trang chủ chính thức＋các tiểu trình tự xây site＋site độc lập quốc tế）、**chợ sức mạnh tính toán AI**（danh mục mô hình＋cổng tương thích OpenAI＋nền tảng tính toán AIPDD）、**bộ Agent đi kèm**——**điều khiển cụm Agent trên PC**（một nền tảng phân việc cho N máy chủ Agent）và **kết nối Agent trên di động**（AWBot：một nền tảng quản lý N chiếc điện thoại）.
 
 Đây không phải một công cụ đơn lẻ mà là một nền tảng hoàn chỉnh cho 「quản trị nội bộ + thu hút khách hàng bên ngoài + kết nối giao dịch」：trên nền tảng tài khoản và danh tính,
 trước tiên là **trang chủ chính thức**（`/`，trang đích cho khách chưa đăng nhập, trên cùng chỉ có đăng nhập / đăng ký）để tiếp nhận khách truy cập, sau đó vào bảng điều khiển điều hành, 25 lối vào bàn làm việc（Tác vụ của tôi、Agent、Luồng công việc、Cơ sở tri thức、Agent-Bot (máy chủ Bot và cụm điện thoại AWBot)、Workbuddy Enterprise Cloud、Bảng đa chiều、RPA、Sáng tạo nội dung、Công cụ marketing、Site Builder（các tiểu trình Kiến thức trả phí / Dịch vụ tận nơi / Mall thương hiệu / Quản lý sức khỏe / Sàn nhiều cửa hàng / Người kỹ thuật số / Cửa hàng mã thẻ / Chuyển phát nhanh + Site độc lập quốc tế）、Smart Insights（phân tích chủ đề nội dung / phân tích xu hướng / phân tích triển khai AI-FDE / tư vấn doanh nghiệp）、Site độc lập quốc tế、
 Tài sản số、Email AI、CRM、BI、OA、OKR、CS tiếp thị AI、Bàn làm việc HR、Quản lý dự án、Quản lý kho bán hàng、Trung tâm ứng dụng、Sảnh chủ đề）,
-11 tuyến dịch vụ nghiệp vụ（Marketing / Cung ứng / Thuế kế toán / Vươn ra toàn cầu / Lao động linh hoạt / Logistics / IT / Sở hữu trí tuệ / Pháp lý / Think tank / Giao dịch tài sản）、mạng xã hội doanh nhân và tuyển dụng,
-cùng một trang quản trị nền tảng được tổ chức theo 5 nhóm lớn với 31 mục（tổng quan dữ liệu nền tảng đã được hợp nhất vào bảng điều khiển `/dashboard`）。Toàn bộ tính năng mạng xã hội và cung cầu đều **khép kín cục bộ, không cần Key**；
+11 tuyến dịch vụ nghiệp vụ（Marketing / Cung ứng / Thuế kế toán / Vươn ra toàn cầu / Lao động linh hoạt / Logistics / IT / Sở hữu trí tuệ / Pháp lý / Think tank / Giao dịch tài sản）,
+cùng một trang quản trị nền tảng được tổ chức theo 5 nhóm lớn với 31 mục（tổng quan dữ liệu nền tảng đã được hợp nhất vào bảng điều khiển `/dashboard`）。Các năng lực nghiệp vụ và cung ứng chạy cục bộ **không cần Key**；
 khi cần công bố nhu cầu / dịch vụ lên thị trường thượng nguồn（AIworkin）, làm hồ sơ doanh nghiệp và xét duyệt tư cách, chỉ cần liên kết một APIKey AIPDD là thông suốt
 ——**hệ thống này không liên quan đến tiền mã hóa, không lưu giữ tài khoản thượng nguồn, toàn bộ phong cách và tương tác đều được viết lại cục bộ**.
 

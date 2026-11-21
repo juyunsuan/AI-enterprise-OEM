@@ -1,4 +1,4 @@
-# OEM Enterprise · Open-Source Service Workbench + AI Social
+# OEM Enterprise · Open-Source Enterprise Service Workbench SaaS
 
 <p align="center">
   <a href="README.md">简体中文</a> · <strong>English</strong> · <a href="README.vi.md">Tiếng Việt</a> · <a href="README.ja.md">日本語</a> · <a href="README.ar.md">العربية</a> · <a href="README.fr.md">Français</a> · <a href="README.es.md">Español</a> · <a href="README.ru.md">Русский</a>
@@ -6,16 +6,15 @@
 
 **Online demo: <https://enterprise.aiworkin.com>**
 
-An open-source **enterprise service workbench** (Hono + Prisma + MySQL + Next.js / Ant Design)
-with an **AI Social** entry that mirrors AIworkin's **DSH social plugin** (chat / twin / discover / groups / hiring / matching / skill market / app market / friends / mail / notifications / developers); all social data stays on AIworkin.
+An open-source **enterprise service workbench** (Hono + Prisma + MySQL + Next.js / Ant Design) delivered as **SaaS**;
+it is not only software you can deploy locally but a complete set of services you can operate for customers out of the box: **mini-program management** (the user-facing mini program plus an admin code-package ledger with direct upload to WeChat), a **unified data framework** (one account / organization / tenancy key and one data-permission standard), **full site building** (the official landing page plus the site-builder mini programs and international sites), an **AI compute marketplace** (the model plaza catalogue, an OpenAI-compatible gateway and the AIPDD compute platform) and an **Agent suite** — **PC Agent fleet control** (one platform dispatching to N Agent hosts) and **Agent mobile docking** (AWBot: one platform driving N phones).
 
 It is not a single-purpose tool but a complete foundation for "internal enterprise management + external customer acquisition + business matching": built on a unified account and identity
 system, it first receives visitors on the **official landing page** (`/`, the logged-out landing page whose header only offers Sign in / Sign up), then leads into the executive dashboard,
 25 workbench entries (My Tasks, Agent, Workflows, Knowledge Base, Agent-Bot (Bot hosts and AWBot phone fleet), Workbuddy Enterprise Cloud, Multi-dimensional Tables, RPA, Content Creation, Marketing Tools, Site Builder (Knowledge Pay / On-site Services / Brand Mall / Health Management / Multi-store Marketplace / Digital Human / Card-code Shop / Express Delivery mini programs + International Sites), Smart Insights (Content Hotspot Analysis / Trend Analysis / AI-FDE Implementation Analysis / Enterprise Consulting), International Sites,
 Digital Assets, AI Mail, CRM, BI, OA, OKR, AI Service Desk, HR Workbench, Project Management, Inventory & Purchasing, App Center, Topic Hall),
-11 business service lines (Marketing / Supply & Distribution / Tax & Accounting / Cross-border / Flexible Employment / Logistics / IT / IP / Legal / Think Tank / Asset Trading), AI Social (AIworkin DSH plugin),
-plus a platform admin console organized into 5 groups with 31 sections in total (the platform data overview is merged into the dashboard `/dashboard`). AI Social is provided by AIworkin's DSH plugin
-(a bound AIPDD API key is required; admins can disable it in feature toggles), while local business and supply capabilities remain keyless; to publish demands / services to the upstream marketplace (AIworkin), maintain the company profile or apply for qualifications, simply bind one AIPDD API key
+11 business service lines (Marketing / Supply & Distribution / Tax & Accounting / Cross-border / Flexible Employment / Logistics / IT / IP / Legal / Think Tank / Asset Trading),
+plus a platform admin console organized into 5 groups with 31 sections in total (the platform data overview is merged into the dashboard `/dashboard`). Local business and supply capabilities remain keyless; to publish demands / services to the upstream marketplace (AIworkin), maintain the company profile or apply for qualifications, simply bind one AIPDD API key
 — **this system involves no crypto assets, never custody upstream accounts, and rewrites all styles and interactions locally**.
 
 > For the design and migration specification see [`docs/开源版整体设计方案.md`](docs/开源版整体设计方案.md).

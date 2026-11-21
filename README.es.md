@@ -1,4 +1,4 @@
-# OEM Enterprise · Suite open source de trabajo empresarial + red de negocios
+# OEM Enterprise · Suite open source de trabajo empresarial SaaS
 
 <p align="center">
   <a href="README.md">简体中文</a> · <a href="README.en.md">English</a> · <a href="README.vi.md">Tiếng Việt</a> · <a href="README.ja.md">日本語</a> · <a href="README.ar.md">العربية</a> · <a href="README.fr.md">Français</a> · <strong>Español</strong> · <a href="README.ru.md">Русский</a>
@@ -6,14 +6,16 @@
 
 **Demo en línea: <https://enterprise.aiworkin.com>**
 
-Un proyecto open source que fusiona y traslada a un mismo código un **workbench de trabajo empresarial** (Hono + Prisma + MySQL + Next.js / Ant Design)
-y una **red social de negocios (SNS)** (relaciones / publicaciones / grupos / mensajes directos / currículos / plaza de oferta y demanda / reclutamiento).
+Un proyecto open source entregado como **SaaS** sobre la base de un **workbench de trabajo empresarial** (Hono + Prisma + MySQL + Next.js / Ant Design);
+no es solo un software que se despliega en local: ya trae un conjunto completo de **servicios SaaS** listos para operar: **gestión de mini programas** (el mini programa de usuario, el registro de paquetes de código en el panel y la subida directa a WeChat),
+un **marco de datos unificado** (una sola clave de cuenta / organización / tenant y un mismo criterio de permisos de datos), **construcción de sitios completa** (página de inicio oficial + los mini programas del constructor de sitios + sitios internacionales autónomos),
+un **mercado de capacidad de cálculo de IA** (catálogo de modelos + puerta compatible con OpenAI + plataforma de cálculo AIPDD) y una **batería de componentes Agent**: **control de flota de Agents en PC** (una plataforma que reparte tareas a N hosts Agent) y **conexión de Agents en el móvil** (AWBot: una plataforma para N teléfonos).
 
 No es una herramienta puntual, sino una base completa de «gestión interna de la empresa + captación externa + intermediación de negocio»: sobre el sistema de cuentas e identidades,
 primero recibe a los visitantes la **página de inicio del sitio** (`/`, landing para usuarios sin sesión, arriba solo inicio de sesión / registro) y desde ahí se entra al cockpit y a los 25 accesos del workbench (Mis tareas, Agent, Flujos de trabajo, Base de conocimiento, Agent-Bot (hosts Bot y flotas de móviles AWBot), Workbuddy Cloud empresarial, Tablas multidimensionales, RPA, Creación de contenido, Herramientas de marketing, Constructor de sitios (ocho mini programas WeChat autoservicio — contenido de pago / servicios a domicilio / tienda de marca / gestión de salud / marketplace multi-tienda / humano digital / tienda de códigos de canje / envíos exprés — más el sitio internacional autónomo), Smart Insights (Análisis de tendencias y temas candentes / análisis de implementación AI-FDE / consultoría empresarial), Sitios independientes internacionales,
 Activos digitales, Correo IA, CRM, BI, OA, OKR, Atención al cliente IA, Workbench de RR. HH., Gestión de proyectos, Compras-ventas-inventario, Centro de aplicaciones, Sala de temas),
-las 11 líneas de servicios de negocio (marketing / suministro y distribución / fiscal y contable / internacionalización / empleo flexible / logística / TI / propiedad intelectual / legal / consultoría estratégica / intercambio de activos), la red social de negocios y el reclutamiento,
-y un panel de administración de plataforma organizado en 5 grandes categorías con 31 secciones en total (la visión general de datos de la plataforma se integra en el cockpit `/dashboard`). Toda la capacidad social y de oferta/demanda funciona **en circuito cerrado local y sin necesidad de clave**;
+las 11 líneas de servicios de negocio (marketing / suministro y distribución / fiscal y contable / internacionalización / empleo flexible / logística / TI / propiedad intelectual / legal / consultoría estratégica / intercambio de activos),
+y un panel de administración de plataforma organizado en 5 grandes categorías con 31 secciones en total (la visión general de datos de la plataforma se integra en el cockpit `/dashboard`). La capacidad de negocio y de suministro funciona **en circuito cerrado local y sin necesidad de clave**;
 cuante publiques demandas / servicios al mercado upstream (AIworkin), prepares el perfil de la empresa o solicites cualificaciones, basta con vincular una AIPDD APIKey para conectarlo todo
 —**este sistema no maneja criptomonedas, no custodia cuentas upstream y todos los estilos e interacciones están reescritos en local**.
 

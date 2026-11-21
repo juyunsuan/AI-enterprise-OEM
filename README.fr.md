@@ -1,4 +1,4 @@
-# OEM Enterprise · Espace de travail de services d'entreprise open source + Réseautage d'affaires
+# OEM Enterprise · Espace de travail de services d'entreprise open source SaaS
 
 <p align="center">
   <a href="README.md">简体中文</a> · <a href="README.en.md">English</a> · <a href="README.vi.md">Tiếng Việt</a> · <a href="README.ja.md">日本語</a> · <a href="README.ar.md">العربية</a> · <strong>Français</strong> · <a href="README.es.md">Español</a> · <a href="README.ru.md">Русский</a>
@@ -6,17 +6,21 @@
 
 **Démo en ligne : <https://enterprise.aiworkin.com>**
 
-Un projet open source qui fusionne et porte deux systèmes en un : l'**espace de travail de services d'entreprise**
-(Hono + Prisma + MySQL + Next.js / Ant Design) et le **réseautage d'affaires SNS**
-(relations / publications / groupes / messages privés / CV / place d'offre et de demande / recrutement).
+Un projet open source délivré en **SaaS**, bâti sur l'**espace de travail de services d'entreprise**
+(Hono + Prisma + MySQL + Next.js / Ant Design) ; bien plus qu'un logiciel que l'on déploie localement, il fournit d'emblée un jeu complet de **services SaaS** exploitables :
+**gestion des mini-programmes** (mini-programme utilisateur, registre des paquets de code dans le back-office et téléversement direct vers WeChat),
+**socle de données unifié** (une seule clé de compte / d'organisation / de tenant et une seule norme d'habilitation des données),
+**construction de sites complète** (page d'accueil officielle, mini-programmes du concepteur de sites et sites internationaux autonomes),
+**place de marché de calcul IA** (catalogue de modèles, passerelle compatible OpenAI et plateforme de calcul AIPDD),
+et **suite Agent associée** — **pilotage en flotte des Agents sur PC** (une plateforme qui distribue les tâches à N hôtes Agent) et **interconnexion des Agents sur mobile** (AWBot : une plateforme pour N téléphones).
 
 Ce n'est pas un outil isolé, mais une base complète pour « gestion interne de l'entreprise + acquisition externe de clients + mise en relation d'affaires » : au-dessus d'un système unifié de comptes et d'identités,
 une **page d'accueil officielle** (`/`, page d'atterrissage pour visiteurs non connectés, dont l'en-tête ne propose que Connexion / Inscription) accueille d'abord le visiteur, puis mène au cockpit,
 à 25 entrées d'espace de travail (Mes tâches, Agent, Flux de travail, Base de connaissances, Agent-Bot (hôtes Bot et flottes de téléphones AWBot), Workbuddy Cloud d'entreprise, Tableaux multidimensionnels, RPA, Création de contenu, Outils marketing, Concepteur de sites : huit mini-programmes WeChat — contenu payant / services à domicile / boutique de marque / gestion santé / place de marché multi-vendeurs / humain numérique / boutique de codes / expédition express — plus le site international autonome, Smart Insights (analyse des sujets et tendances + analyse de mise en œuvre AI-FDE / conseil aux entreprises), Sites indépendants internationaux,
 Actifs numériques, E-mail IA, CRM, BI, OA, OKR, Service client IA, Espace RH, Gestion de projet, Achats et stocks, Centre d'applications, Hall thématique),
-à 11 lignes de services métier (Marketing / Distribution et approvisionnement / Fiscalité et comptabilité / International / Emploi flexible / Logistique / IT / Propriété intellectuelle / Juridique / Think tank / Transaction d'actifs), au réseautage d'affaires et au recrutement,
-ainsi qu'à une console d'administration de plateforme organisée en 5 catégories et 31 sections au total (la vue d'ensemble des données de plateforme est fusionnée dans le cockpit `/dashboard`). Toutes les capacités sociales et d'offre/demande sont
-**entièrement locales et utilisables sans clé** ; pour publier des demandes / services sur la place amont (AIworkin), tenir le profil d'entreprise ou demander des qualifications, il suffit de lier une clé API AIPDD
+à 11 lignes de services métier (Marketing / Distribution et approvisionnement / Fiscalité et comptabilité / International / Emploi flexible / Logistique / IT / Propriété intellectuelle / Juridique / Think tank / Transaction d'actifs),
+ainsi qu'à une console d'administration de plateforme organisée en 5 catégories et 31 sections au total (la vue d'ensemble des données de plateforme est fusionnée dans le cockpit `/dashboard`). Les capacités métier
+et d'approvisionnement locales sont **utilisables sans clé** ; pour publier des demandes / services sur la place amont (AIworkin), tenir le profil d'entreprise ou demander des qualifications, il suffit de lier une clé API AIPDD
 — **ce système n'implique aucune crypto-monnaie, ne conserve jamais les comptes amont et réécrit localement tous les styles et interactions**.
 
 > Pour la spécification de conception et de migration, voir [`docs/开源版整体设计方案.md`](docs/开源版整体设计方案.md).

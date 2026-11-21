@@ -1,4 +1,4 @@
-# OEM Enterprise · 开源企业服务工作台 + AI社交
+# OEM Enterprise · 开源企业服务工作台 SaaS
 
 <p align="center">
   <strong>简体中文</strong> · <a href="README.en.md">English</a> · <a href="README.vi.md">Tiếng Việt</a> · <a href="README.ja.md">日本語</a> · <a href="README.ar.md">العربية</a> · <a href="README.fr.md">Français</a> · <a href="README.es.md">Español</a> · <a href="README.ru.md">Русский</a>
@@ -6,14 +6,16 @@
 
 **在线 Demo：<https://enterprise.aiworkin.com>**
 
-一个以 **企业服务工作台**（Hono + Prisma + MySQL + Next.js / Ant Design）为底座的开源项目；
-工作台的「AI社交」入口与 AIworkin 的 **DSH 社交插件**一致（聊天 / 分身 / 人脉 / 小组 / 招聘 / 撮合 / 技能市场 / 应用市场 / 好友 / 私信 / 通知 / 开发者），社交数据全部落在 AIworkin。
+一个以 **企业服务工作台**（Hono + Prisma + MySQL + Next.js / Ant Design）为底座的开源 **SaaS** 项目；
+它不只是一套可本地部署的软件，而是一整套可直接对外运营的 **SaaS 服务**：**小程序管理**（用户版小程序 + 后台代码包台账与直传微信）、
+**统一数据框架**（账号 / 组织 / 租户与数据权限同一口径）、**完整建站服务**（官网首页 + 建站管理各小程序 + 国际独立站）、
+**AI 算力市场**（模型广场目录 + OpenAI 兼容网关 + AIPDD 算力平台）、**Agent 配套**——PC 的 **Agent 群控**（一套平台调度 N 台 Agent 主机）与 **Agent 手机端对接**（AWBot 一部平台管 N 部手机）。
 
 它不是一个单点工具，而是一套「企业内管 + 对外获客 + 业务撮合」的完整底座：账号与身份体系之上，
 先用**官网首页**（`/`，未登录落地页，顶部只有登录 / 注册）承接访客，再进入驾驶舱、工作台入口（我的任务、Agent、Agent-Bot（Bot 主机、AWBot 手机群控、Workbuddy 企业版）、RPA、知识库、AI 邮箱、多维表格、内容创作、营销工具、建站管理（知识付费 / 上门服务 / 品牌商城 / 健康管理 / 多店铺商城 / 数字人 / 卡密商城 / 快递寄件 / 跑腿 / 圈子社区 / 外卖点餐小程序 + 国际独立站）、租赁管理、园区管理、智慧分析（全域内容热点分析 / 流行趋势分析 / AI-FDE 实施分析 / 企业咨询）、
 数字资产、CRM、BI、OA、OKR、AI 客服、HR 工作台、项目管理、进销存、应用中心、专题大厅、答题小程序）、
-11 条业务服务线（营销 / 供销 / 财税 / 出海 / 灵活用工 / 物流 / IT / 知识产权 / 法律 / 智库 / 资产交易）、AI社交（AIworkin DSH 插件），
-以及一个按 5 大分类组织、共 31 个板块的平台管理后台（平台数据总览并入驾驶舱 `/dashboard`）。AI社交由 AIworkin 的 DSH 插件提供（绑定 AIPDD API Key 后进入，管理员可在功能开关中关闭）；本地业务与供销能力仍免 Key 可用；
+11 条业务服务线（营销 / 供销 / 财税 / 出海 / 灵活用工 / 物流 / IT / 知识产权 / 法律 / 智库 / 资产交易），
+以及一个按 5 大分类组织、共 31 个板块的平台管理后台（平台数据总览并入驾驶舱 `/dashboard`）。本地业务与供销能力免 Key 可用；
 需要面向上游市场（AIworkin）发布需求 / 服务、做企业档案与资格申请时，绑定一把 AIPDD APIKey 即可打通
 ——**本系统不涉币、不托管上游账号、样式与交互全部本地重写**。
 
