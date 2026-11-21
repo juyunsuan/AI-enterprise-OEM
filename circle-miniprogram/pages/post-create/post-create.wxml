@@ -1,0 +1,27 @@
+<view class="container">
+  <view class="card">
+    <view class="muted">发到圈子</view>
+    <picker range="{{groups}}" range-key="name" value="{{groupIndex}}" bindchange="pickGroup">
+      <view class="input">{{groups[groupIndex].name || '请先加入一个圈子'}}</view>
+    </picker>
+
+    <view class="muted" style="margin-top:20rpx">内容</view>
+    <textarea class="textarea" value="{{content}}" bindinput="input" maxlength="5000" placeholder="分享你的想法…" />
+
+    <view class="muted" style="margin-top:20rpx">图片（最多 9 张）</view>
+    <view class="images">
+      <view wx:for="{{images}}" wx:key="*this" style="position:relative">
+        <image class="image" src="{{item}}" mode="aspectFill" />
+        <view data-index="{{index}}" bindtap="removeImage" style="position:absolute;right:12rpx;top:12rpx;background:rgba(0,0,0,.6);color:#fff;border-radius:50%;width:40rpx;height:40rpx;text-align:center;line-height:40rpx">×</view>
+      </view>
+      <view class="image" style="display:flex;align-items:center;justify-content:center;color:#8a8f99" bindtap="pickImages" wx:if="{{images.length < 9}}">+</view>
+    </view>
+
+    <view class="muted" style="margin-top:20rpx">话题（最多 5 个）</view>
+    <view class="images" style="margin-top:10rpx">
+      <view wx:for="{{topics}}" wx:key="id" class="tag" data-id="{{item.id}}" bindtap="toggleTopic" style="{{item.selected ? 'background:#1677ff;color:#fff' : ''}}">#{{item.name}}</view>
+    </view>
+  </view>
+
+  <view class="btn" bindtap="submit">{{submitting ? '发布中…' : '发布'}}</view>
+</view>

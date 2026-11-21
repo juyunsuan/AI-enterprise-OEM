@@ -1,0 +1,114 @@
+{
+  "pages": [
+    "pages/home/home",
+    "pages/service/list",
+    "pages/consult/list",
+    "pages/me/me"
+  ],
+  "subPackages": [
+    {
+      "root": "consumer/",
+      "pages": [
+        "service/list",
+        "service/detail",
+        "service/booking",
+        "doctor/list",
+        "doctor/detail",
+        "consult/detail",
+        "consult/chat",
+        "mall/list",
+        "mall/detail",
+        "mall/cart",
+        "order/confirm",
+        "order/list",
+        "order/detail",
+        "order/aftersale",
+        "order/review",
+        "patient/list",
+        "patient/edit",
+        "patient/archive",
+        "metrics/index",
+        "followup/list",
+        "followup/detail",
+        "medication/index",
+        "member/index",
+        "address/list",
+        "address/edit",
+        "article/list",
+        "article/detail",
+        "report/list",
+        "report/detail",
+        "search/index",
+        "settings/settings",
+        "webview/webview",
+        "tongue/index",
+        "promoter/index"
+      ]
+    },
+    {
+      "root": "practitioner/",
+      "pages": [
+        "bind/index",
+        "workbench/index",
+        "patient/list",
+        "patient/detail",
+        "metrics/index",
+        "followup/list",
+        "followup/detail",
+        "consult/list",
+        "ai/index",
+        "prescription/list",
+        "schedule/index",
+        "verify/index",
+        "income/index",
+        "article/list",
+        "article/edit"
+      ]
+    }
+  ],
+  "preloadRule": {
+    "pages/home/home": {
+      "network": "all",
+      "packages": ["consumer"]
+    },
+    "pages/me/me": {
+      "network": "all",
+      "packages": ["consumer"]
+    }
+  },
+  "window": {
+    "navigationBarBackgroundColor": "#1a73e8",
+    "navigationBarTitleText": "健康管理",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#f5f6f8",
+    "backgroundTextStyle": "dark",
+    "enablePullDownRefresh": false
+  },
+  "tabBar": {
+    "color": "#8a8f99",
+    "selectedColor": "#1a73e8",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/home/home",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/service/list",
+        "text": "服务"
+      },
+      {
+        "pagePath": "pages/consult/list",
+        "text": "问诊"
+      },
+      {
+        "pagePath": "pages/me/me",
+        "text": "我的"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

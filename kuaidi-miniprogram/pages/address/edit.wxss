@@ -1,0 +1,13 @@
+.field.last {
+  border-bottom: none;
+}
+
+.triple {
+  width: 0;
+  flex: 1;
+  margin-right: 12rpx;
+}
+
+.triple:last-child {
+  margin-right: 0;
+}

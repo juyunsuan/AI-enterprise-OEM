@@ -1,0 +1,32 @@
+.field {
+  margin-top: 24rpx;
+}
+
+.field-label {
+  margin-bottom: 10rpx;
+  color: #5c6068;
+  font-size: 26rpx;
+}
+
+.input,
+.picker-field {
+  height: 84rpx;
+  line-height: 84rpx;
+  padding: 0 20rpx;
+  border-radius: 12rpx;
+  background: #f5f6f8;
+  font-size: 28rpx;
+}
+
+.button-primary {
+  margin-top: 32rpx;
+}
+
+.value {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.value.abnormal {
+  color: #f5413d;
+}

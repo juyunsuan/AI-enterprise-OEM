@@ -1,0 +1,50 @@
+<view class="empty" wx:if="{{loading}}">正在加载退款记录…</view>
+
+<view class="card closed" wx:elif="{{notReady}}">
+  <view class="title">店铺暂未开通</view>
+  <view class="muted note">{{readyReason}}</view>
+</view>
+
+<view class="empty" wx:elif="{{error}}">{{error}}</view>
+
+<block wx:else>
+  <scroll-view class="tabs" scroll-x="true">
+    <view class="tab-row">
+      <view
+        class="tab {{item.key === activeStatus ? 'on' : ''}}"
+        wx:for="{{tabs}}"
+        wx:key="key"
+        data-key="{{item.key}}"
+        bindtap="switchTab"
+      >{{item.label}}</view>
+    </view>
+  </scroll-view>
+
+  <view class="muted filter-note" wx:if="{{activeStatus !== 'all' && loadedCount < total}}">
+    当前按已加载的 {{loadedCount}}/{{total}} 条筛选，上拉可继续加载更多
+  </view>
+
+  <view class="empty" wx:if="{{!list.length}}">暂无退款记录</view>
+
+  <view
+    class="card"
+    wx:for="{{list}}"
+    wx:key="id"
+    data-id="{{item.id}}"
+    bindtap="openDetail"
+  >
+    <view class="row">
+      <text class="title">退款单 {{item.refundNo}}</text>
+      <text class="status">{{item.statusText}}</text>
+    </view>
+    <view class="muted row-line">订单号 {{item.orderNo || '—'}}</view>
+    <view class="row amount-row">
+      <text class="muted">申请金额</text>
+      <text class="amount">{{item.applyAmountText}}</text>
+    </view>
+    <view class="muted row-line">申请时间 {{item.timeText}}</view>
+  </view>
+
+  <view class="empty" wx:if="{{loadingMore}}">正在加载更多…</view>
+  <view class="empty" wx:elif="{{list.length && loadedAll}}">没有更多了</view>
+</block>

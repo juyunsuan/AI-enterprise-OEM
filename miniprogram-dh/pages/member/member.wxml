@@ -1,0 +1,82 @@
+<view class="page" style="{{themeStyle}}">
+  <view class="assets-card">
+    <view class="assets-row">
+      <view class="asset">
+        <view class="asset-value">{{member.point || 0}}</view>
+        <view class="asset-label">算力</view>
+      </view>
+      <view class="asset">
+        <view class="asset-value">{{member.bodyQuota || 0}}</view>
+        <view class="asset-label">形象点</view>
+      </view>
+      <view class="asset">
+        <view class="asset-value">{{member.voiceQuota || 0}}</view>
+        <view class="asset-label">声音点</view>
+      </view>
+    </view>
+    <view class="vip-line">
+      <text>{{vipText}}</text>
+      <text class="orders-link" bindtap="goOrders">我的订单 ›</text>
+    </view>
+    <view wx:if="{{giftText}}" class="gift">{{giftText}}</view>
+  </view>
+
+  <view class="chips tabs">
+    <view
+      wx:for="{{tabs}}"
+      wx:key="key"
+      class="chip {{tab === item.key ? 'on' : ''}}"
+      data-key="{{item.key}}"
+      bindtap="switchTab"
+    >{{item.label}}</view>
+    <view
+      wx:if="{{cardEnabled}}"
+      class="chip {{tab === 'card' ? 'on' : ''}}"
+      data-key="card"
+      bindtap="switchTab"
+    >卡密兑换</view>
+  </view>
+
+  <block wx:for="{{groups}}" wx:key="type" wx:for-item="group">
+    <view wx:if="{{tab === group.type}}" class="pkg-list">
+      <view wx:for="{{group.list}}" wx:key="id" class="card pkg">
+        <view class="row between">
+          <view>
+            <view class="pkg-name">
+              {{item.name}}
+              <text wx:if="{{item.recommended}}" class="tag">推荐</text>
+            </view>
+            <view class="pkg-desc">
+              <text wx:if="{{item.vipDays}}">会员 {{item.vipDays}} 天 </text>
+              <text wx:if="{{item.point}}">算力 {{item.point}} </text>
+              <text wx:if="{{item.bodyQuota}}">形象点 {{item.bodyQuota}} </text>
+              <text wx:if="{{item.voiceQuota}}">声音点 {{item.voiceQuota}}</text>
+            </view>
+            <view wx:if="{{item.limitNum}}" class="pkg-limit">每人限购 {{item.limitNum}} 次</view>
+          </view>
+          <view class="pkg-price">
+            <view class="price">{{item.priceText}}</view>
+            <view wx:if="{{item.originalText}}" class="price-origin">{{item.originalText}}</view>
+          </view>
+        </view>
+        <view class="buy {{buying === item.id ? 'disabled' : ''}}" data-id="{{item.id}}" bindtap="buy">
+          {{buying === item.id ? '处理中…' : '立即购买'}}
+        </view>
+      </view>
+      <view wx:if="{{!group.list.length}}" class="empty">暂无套餐</view>
+    </view>
+  </block>
+
+  <view wx:if="{{tab === 'card'}}" class="card">
+    <view class="card-title">卡密兑换</view>
+    <input class="input" value="{{cardCode}}" placeholder="请输入 16 位卡密" bindinput="onCardInput" />
+    <view class="buy card-submit" bindtap="redeem">兑换</view>
+    <view class="muted hint">卡密由站点管理员发放，兑换后资产立即到账。</view>
+  </view>
+
+  <view wx:if="{{!loading && !tabs.length && !cardEnabled}}" class="empty">
+    站点暂未开放套餐与卡密
+  </view>
+
+  <view class="promoter-entry" bindtap="goPromoter">成为推广员，分享作品赚佣金 ›</view>
+</view>

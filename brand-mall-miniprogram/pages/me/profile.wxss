@@ -1,0 +1,11 @@
+.head { display: flex; align-items: center; }
+.avatar { width: 108rpx; height: 108rpx; border-radius: 50%; background: #f2f3f5; }
+.who { margin-left: 24rpx; }
+.name { font-size: 32rpx; font-weight: 600; }
+.stat { display: flex; }
+.stat-item { flex: 1; text-align: center; }
+.stat-value { font-size: 36rpx; font-weight: 600; color: #fa3534; }
+.title { padding-bottom: 12rpx; }
+.bill { display: flex; align-items: center; padding: 20rpx 0; border-top: 1rpx solid #f0f1f3; font-size: 26rpx; }
+.right { text-align: right; }
+.plus { color: #fa3534; }

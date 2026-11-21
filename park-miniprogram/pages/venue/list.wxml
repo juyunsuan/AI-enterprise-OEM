@@ -1,0 +1,13 @@
+<view class="wrap">
+  <view wx:if="{{!list.length && !loading}}" class="empty">园区暂未开放场地/会议室预约。</view>
+  <view wx:for="{{list}}" wx:key="id" class="card" data-id="{{item.id}}" bindtap="book">
+    <view class="row">
+      <view class="section-title">{{item.name}}</view>
+      <text class="tag">{{item.kindLabel}}</text>
+    </view>
+    <view class="muted">容量 {{item.capacity}} 人 · {{item.location || item.buildingName}}</view>
+    <view wx:if="{{item.kind === 'EQUIPMENT'}}" class="muted">日租 ¥{{item.feeAmount}} · 押金 ¥{{item.deposit}}/件 · 可租 {{item.stock}} 件{{item.approvalRequired ? ' · 需审批' : ' · 免审批'}}</view>
+    <view wx:else class="muted">可约时段 {{item.slots.length}} 个{{item.approvalRequired ? ' · 需审批' : ' · 免审批'}} · {{item.feeAmount > 0 ? '¥' + item.feeAmount : '免费'}}</view>
+    <view class="btn small" style="margin-top: 12rpx;">去预约</view>
+  </view>
+</view>

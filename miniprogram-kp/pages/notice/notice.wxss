@@ -1,0 +1,24 @@
+.notice-cell {
+  display: flex;
+  align-items: center;
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid var(--line);
+}
+
+.notice-cell:last-child {
+  border-bottom: none;
+}
+
+.notice-body {
+  flex: 1;
+  overflow: hidden;
+}
+
+.notice-title {
+  font-size: 28rpx;
+  line-height: 42rpx;
+}
+
+.notice-date {
+  margin-top: 8rpx;
+}

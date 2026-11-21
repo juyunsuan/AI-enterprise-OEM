@@ -1,0 +1,115 @@
+<view class="detail-page" wx:if="{{order}}">
+  <view class="hero">
+    <view class="hero-status">{{statusLabel}}</view>
+    <view class="hero-tip" wx:if="{{expireText}}">未付款，剩余 {{expireText}} 自动取消</view>
+    <view class="hero-tip" wx:elif="{{order.status === 'PENDING_PAYMENT'}}">请尽快完成支付</view>
+    <view class="hero-tip" wx:elif="{{order.status === 'SHIPPED'}}">{{order.expressCompany || '商家'}} 已发货</view>
+    <view class="hero-tip" wx:elif="{{order.status === 'COMPLETED'}}">订单已完成，感谢支持</view>
+  </view>
+
+  <view class="card" wx:if="{{receiverText}}">
+    <view class="line">
+      <text class="name">{{order.receiver.name}}</text>
+      <text class="phone">{{order.receiver.phone}}</text>
+    </view>
+    <view class="addr">{{receiverText}}</view>
+  </view>
+
+  <view class="card" wx:if="{{order.expressNo}}">
+    <view class="row-line">
+      <text class="label">物流</text>
+      <text class="value">{{order.expressCompany}} · {{order.expressNo}}</text>
+      <text class="link" bindtap="copyExpressNo">复制单号</text>
+    </view>
+    <view class="muted">公开接口暂无轨迹，复制单号后可在快递官网查询。</view>
+  </view>
+
+  <view class="card">
+    <view class="goods" wx:for="{{items}}" wx:key="id">
+      <image class="pic" src="{{item.image}}" mode="aspectFill" data-id="{{item.productId}}" bindtap="openGoods" />
+      <view class="goods-info">
+        <view class="goods-title ellipsis-2" data-id="{{item.productId}}" bindtap="openGoods">{{item.title}}</view>
+        <view class="muted" wx:if="{{item.skuName}}">{{item.skuName}}</view>
+        <view class="goods-foot">
+          <text class="price">¥{{item.priceText}}</text>
+          <text class="muted">×{{item.quantity}}</text>
+        </view>
+        <view class="refund-row" wx:if="{{refundEnabled}}">
+          <text
+            class="refund-btn"
+            wx:if="{{item.refundStatus === 'NONE' && order.status !== 'PENDING_PAYMENT' && order.status !== 'CANCELLED'}}"
+            data-id="{{item.id}}"
+            data-type="REFUND_ONLY"
+            bindtap="applyRefund"
+          >
+            申请退款
+          </text>
+          <text
+            class="refund-btn"
+            wx:if="{{item.refundStatus === 'NONE' && order.status !== 'PENDING_PAYMENT' && order.status !== 'CANCELLED'}}"
+            data-id="{{item.id}}"
+            data-type="RETURN_REFUND"
+            bindtap="applyRefund"
+          >
+            退货退款
+          </text>
+          <text class="refund-state" wx:if="{{item.refundLabel}}">{{item.refundLabel}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="card amounts">
+    <view class="amount-row"><text>商品金额</text><text>¥{{goodsAmountText}}</text></view>
+    <view class="amount-row"><text>运费</text><text>¥{{freightText}}</text></view>
+    <view class="amount-row" wx:if="{{discountText !== '0.00'}}"><text>优惠</text><text class="minus">-¥{{discountText}}</text></view>
+    <view class="amount-row" wx:if="{{order.pointsDeduct > 0}}"><text>积分抵扣</text><text class="minus">{{order.pointsDeduct}} 分</text></view>
+    <view class="amount-row total"><text>实付</text><text class="price">¥{{payAmountText}}</text></view>
+  </view>
+
+  <view class="card info">
+    <view class="row-line"><text class="label">订单编号</text><text class="value">{{order.orderNo}}</text><text class="link" bindtap="copyOrderNo">复制</text></view>
+    <view class="row-line"><text class="label">下单时间</text><text class="value">{{createdAtText}}</text></view>
+    <view class="row-line" wx:if="{{paidAtText}}"><text class="label">支付时间</text><text class="value">{{paidAtText}}</text></view>
+    <view class="row-line" wx:if="{{shippedAtText}}"><text class="label">发货时间</text><text class="value">{{shippedAtText}}</text></view>
+    <view class="row-line" wx:if="{{completedAtText}}"><text class="label">完成时间</text><text class="value">{{completedAtText}}</text></view>
+    <view class="row-line"><text class="label">支付方式</text><text class="value">{{payTypeLabel}}</text></view>
+    <view class="row-line" wx:if="{{order.buyerRemark}}"><text class="label">买家留言</text><text class="value">{{order.buyerRemark}}</text></view>
+  </view>
+
+  <view class="card" wx:if="{{refunds.length}}">
+    <view class="section-title">售后记录</view>
+    <view class="refund-item" wx:for="{{refunds}}" wx:key="id">
+      <view class="line">
+        <text>{{item.refundNo}}</text>
+        <text class="price">{{item.statusLabel}} ¥{{item.amountText}}</text>
+      </view>
+      <view class="muted">{{item.reason}} · {{item.createdAtText}}</view>
+    </view>
+    <view class="link" bindtap="goRefundList">全部售后 ›</view>
+  </view>
+
+  <view class="card" wx:if="{{logs.length}}">
+    <view class="section-title">订单跟踪</view>
+    <view class="log" wx:for="{{logs}}" wx:key="id">
+      <view class="log-dot"></view>
+      <view class="log-main">
+        <view class="log-title">{{item.title}}</view>
+        <view class="muted">{{item.text}}</view>
+        <view class="muted">{{item.timeText}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="footer-gap"></view>
+
+  <view class="bar">
+    <view class="bar-plain" bindtap="callService">客服</view>
+    <view class="bar-plain" wx:if="{{canCancel}}" bindtap="cancel">取消订单</view>
+    <view class="bar-main" wx:if="{{canPay}}" bindtap="goPay">去支付</view>
+    <view class="bar-main" wx:if="{{canReceive}}" bindtap="receive">确认收货</view>
+  </view>
+</view>
+
+<view class="empty" wx:elif="{{!loading}}">{{error || '订单不存在'}}</view>
+<view class="empty" wx:else>加载中…</view>

@@ -6,7 +6,11 @@ import { CurrentUser } from '../auth/current-user';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { IdentityService } from '../identity/identity.service';
 import type { UserLookupService } from '../directory/user-lookup.service';
-import type { OssService } from '../oss/oss.service';
+import type { StorageService } from '../storage/storage.service';
+import type {
+  SystemAssetPutInput,
+  SystemAssetService,
+} from '../system-asset/system-asset.service';
 import type { ComfyCrypto } from './comfy-crypto';
 import type { CommunityAwardService } from './community-award.service';
 import { stub } from '../../test/doubles';
@@ -219,14 +223,24 @@ function build() {
     view: jest.fn(),
     save: jest.fn(),
   };
+  // 存储门面与系统资产层的双件：字节仍然打到同一份 OSS 桩上，
+  // 因此「对象路径 / 返回键 / 尺寸」这些断言口径完全不变。
+  const storage = { urlOf: (key: string) => oss.keyUrlOf(key) };
+  const assets = {
+    put: async (input: SystemAssetPutInput) => ({
+      ...(await oss.upload(input.path, input.bytes)),
+      assetId: 1,
+    }),
+  };
   const service = new CommunityService(
     stub<PrismaService>(prisma),
     stub<IdentityService>(identity),
     stub<UserLookupService>(users),
-    stub<OssService>(oss),
+    stub<StorageService>(storage),
     stub<ComfyClient>(comfy),
     stub<ComfyCrypto>(crypto),
     stub<CommunityAwardService>(awards),
+    stub<SystemAssetService>(assets),
   );
   // 目录取数：默认按 code / id 取到的都是同一行，具体用例再覆盖
   const byCode = (overrides?: Record<string, unknown>) => {

@@ -23,6 +23,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { HelpChapter, HelpSearchHit, HelpTopicDetail } from "@enterprise/contracts";
+import { MiniProgramPublishGuide } from "@/components/mini-program/publish-guide";
 import { PageHero } from "@/components/ui/panel";
 import { useI18n } from "@/lib/i18n/i18n";
 import { helpApi } from "./_components/help-common";
@@ -121,6 +122,93 @@ type HelpMenuItem = {
   children?: HelpMenuItem[];
 };
 
+/**
+ * 「小程序开发与发布」章节（前端挂账，正文不在这里写第二份）：
+ * 后端 help 知识库是随代码版本化的只读内置条目，而这一章的真源在 mini-guide
+ * （平台后台「小程序管理 → 小程序开发与发布」页签维护，存 system_settings）。
+ * 所以这里只往章节目录里补一条入口，正文交给 `<MiniProgramPublishGuide />`
+ * 调 `/enterprise/mini-guide/detail|shared` 渲染 —— 与「建站管理 → 小程序开发与发布」
+ * 独立页、各工具发布页看到的一字不差，服务器域名清单与本账号要填的值也一起带上。
+ */
+const MINI_GUIDE_CHAPTER_CODE = "mini-program-publish";
+const MINI_GUIDE_TOPIC_CODE = "mini-program-publish-guide";
+
+const miniGuideChapter = (): HelpChapter => ({
+  code: MINI_GUIDE_CHAPTER_CODE,
+  title: "小程序开发与发布",
+  intro:
+    "下载统一源码分发包后可导入 Codex / Qoder / TREA / AWBotDSH 等客户端改代码；平台不代编译、不代传微信，预览与上传仍在微信开发者工具完成，再到微信公众平台提审发布。",
+  audience: [],
+  topics: [
+    {
+      code: MINI_GUIDE_TOPIC_CODE,
+      title: "小程序开发与发布（下载源码 → AI 改码 → 微信提审）",
+      summary:
+        "看这一章拿到：源码包下载、本账号要填的参数（apiBase / 寻址码 / AppID / 主题色）、AI 客户端改码建议、微信开发者工具编译预览步骤，以及要抄进微信后台的服务器域名清单。",
+      routePath: "/site-builder/mini-dev-guide",
+    },
+  ],
+});
+
+/** 选中该主题时给正文区用的壳：content 恒空，正文由发布说明组件按接口渲染。 */
+const miniGuideTopicDetail = (): HelpTopicDetail => ({
+  code: MINI_GUIDE_TOPIC_CODE,
+  title: "小程序开发与发布（下载源码 → AI 改码 → 微信提审）",
+  summary:
+    "看这一章拿到：源码包下载、本账号要填的参数（apiBase / 寻址码 / AppID / 主题色）、AI 客户端改码建议、微信开发者工具编译预览步骤，以及要抄进微信后台的服务器域名清单。",
+  content: "",
+  routePath: "/site-builder/mini-dev-guide",
+  audience: [],
+  keywords: [
+    "小程序开发与发布",
+    "小程序发布",
+    "源码分发包",
+    "Codex",
+    "Qoder",
+    "TREA",
+    "AWBotDSH",
+    "微信开发者工具",
+    "服务器域名",
+    "提审",
+  ],
+  chapterCode: MINI_GUIDE_CHAPTER_CODE,
+  chapterTitle: "小程序开发与发布",
+});
+
+/** 把选中的主题落到 URL 上（与深链 ?topic= 同一口径），刷新后还能停在同一章。 */
+/** 本地补进搜索结果的那条：字段与后端 `HelpSearchHit` 对齐，点开走同一套 openTopic。 */
+function miniGuideSearchHit(): HelpSearchHit {
+  const topic = miniGuideTopicDetail();
+  return {
+    code: topic.code,
+    title: topic.title,
+    summary: topic.summary,
+    routePath: topic.routePath,
+    chapterTitle: topic.chapterTitle,
+    audience: [],
+    excerpt: topic.summary,
+    score: 1,
+  };
+}
+
+/** 能命中这章的检索词（标题与发布口径关键词）。 */
+const MINI_GUIDE_SEARCH_KEYS = [
+  "小程序发布",
+  "源码分发包",
+  "源码包",
+  "微信开发者工具",
+  "提审",
+  "服务器域名",
+  "发布说明",
+];
+
+function syncTopicToUrl(code: string) {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("topic") !== code) {
+    window.history.replaceState(null, "", `?topic=${encodeURIComponent(code)}`);
+  }
+}
+
 export default function HelpCenterPage() {
   const router = useRouter();
   const { t } = useI18n();
@@ -141,19 +229,26 @@ export default function HelpCenterPage() {
     [],
   );
 
+  /** 打开主题：后端知识库走 Help_topic，「小程序发布说明」章用 mini-guide 接口渲染。 */
   const openTopic = useCallback(async (code: string, menuKey?: string) => {
     setActiveCode(code);
     if (menuKey !== undefined) setActiveMenuKey(menuKey);
+    // 「小程序发布说明」这一章的真源在 mini-guide 接口（正文见 MiniProgramPublishGuide），
+    // 不发 Help_topic 请求，免得拿后端知识库的条目造出第二份说法。
+    if (code === MINI_GUIDE_TOPIC_CODE) {
+      setTopic(miniGuideTopicDetail());
+      setLoadError("");
+      setLoadingTopic(false);
+      syncTopicToUrl(code);
+      return;
+    }
     setLoadingTopic(true);
     setTopic(null);
     try {
       const detail = await helpApi.topic({ params: { code } });
       setTopic(detail);
       setLoadError("");
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("topic") !== code) {
-        window.history.replaceState(null, "", `?topic=${encodeURIComponent(code)}`);
-      }
+      syncTopicToUrl(code);
     } catch (error) {
       setActiveCode("");
       setLoadError(error instanceof Error ? error.message : "加载帮助主题失败");
@@ -162,14 +257,14 @@ export default function HelpCenterPage() {
     }
   }, []);
 
-  // 载入章节目录；默认选中深链 topic 或第一条主题。
+  // 载入章节目录（后端内置知识）+ 挂上「小程序发布说明」章；默认选中深链 topic 或第一条主题。
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       try {
         const data = await helpApi.chapters();
         if (cancelled) return;
-        const list = data ?? [];
+        const list = [...(data ?? []), miniGuideChapter()];
         setChapters(list);
         const want = pendingCode;
         const first = list[0]?.topics[0]?.code || "";
@@ -195,7 +290,15 @@ export default function HelpCenterPage() {
     setSearching(true);
     try {
       const data = await helpApi.search({ query: { keyword: trimmed } });
-      setHits(data);
+      // 「小程序发布说明」这章的真源在 mini-guide 接口、不在后端知识库，后端检索自然搜不到它。
+      // 用户搜「小程序发布」时本地补一条命中，否则答案最全的一章反而显示「没有匹配的主题」。
+      setHits(
+        MINI_GUIDE_SEARCH_KEYS.some((word) =>
+          trimmed.toLowerCase().includes(word.toLowerCase()),
+        )
+          ? [miniGuideSearchHit(), ...(data ?? [])]
+          : data,
+      );
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : "搜索失败");
     } finally {
@@ -386,7 +489,13 @@ export default function HelpCenterPage() {
                   <Typography.Text type="secondary">{topic.routePath}</Typography.Text>
                 </Space>
               )}
-              <div style={{ fontSize: 14, lineHeight: 1.9 }}>{renderMarkdown(topic.content)}</div>
+              {activeCode === MINI_GUIDE_TOPIC_CODE ? (
+                // 这一章不渲染本地写死的文字：组件进页面即调 mini-guide 接口（帮助中心用通用版，
+                // 不传 tool），与「建站管理」抽屉、各工具发布页拿到同一份正文 + 域名清单。
+                <MiniProgramPublishGuide />
+              ) : (
+                <div style={{ fontSize: 14, lineHeight: 1.9 }}>{renderMarkdown(topic.content)}</div>
+              )}
             </div>
           )}
         </div>

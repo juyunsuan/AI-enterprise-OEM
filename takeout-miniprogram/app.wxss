@@ -1,0 +1,123 @@
+page {
+  background: #f6f4f1;
+  color: #2c2622;
+  font-size: 28rpx;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+view,
+text,
+image,
+scroll-view,
+button,
+input,
+textarea {
+  box-sizing: border-box;
+}
+
+.card {
+  background: #ffffff;
+  border-radius: 24rpx;
+  padding: 28rpx;
+  box-shadow: 0 8rpx 24rpx rgba(44, 38, 34, 0.05);
+}
+
+.muted {
+  color: #948b84;
+}
+
+.text-12 {
+  font-size: 24rpx;
+}
+
+.price {
+  color: #e64340;
+  font-weight: 700;
+}
+
+.price-symbol {
+  font-size: 22rpx;
+  margin-right: 2rpx;
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 88rpx;
+  border-radius: 44rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  border: none;
+  line-height: 1;
+}
+
+.btn::after {
+  border: none;
+}
+
+.btn-primary {
+  background: #e64340;
+  color: #ffffff;
+}
+
+.btn-primary[disabled] {
+  background: #f0b6b4;
+  color: #ffffff;
+}
+
+.btn-ghost {
+  background: #f7efec;
+  color: #b23b35;
+}
+
+.empty {
+  padding: 120rpx 0;
+  text-align: center;
+  color: #948b84;
+  font-size: 26rpx;
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+}
+
+.row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.flex-1 {
+  flex: 1;
+  min-width: 0;
+}
+
+.ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  height: 34rpx;
+  padding: 0 12rpx;
+  border-radius: 8rpx;
+  background: #fdf0ef;
+  color: #d0453f;
+  font-size: 20rpx;
+}
+
+.divider {
+  height: 1rpx;
+  background: #f1ece8;
+  margin: 20rpx 0;
+}

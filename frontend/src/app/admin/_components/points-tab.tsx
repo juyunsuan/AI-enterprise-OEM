@@ -26,6 +26,7 @@ import {
 } from "@/api/points";
 import { billingRuleApi, type BillingRule } from "@/api/governance";
 import { CardSpecPane } from "./card-spec-pane";
+import { ToolLaunchTab } from "./tool-launch-tab";
 import { GapsPromoPanel } from "@/app/points/_components/gaps-promo";
 import {
   AI_MODULE_LABELS,
@@ -98,6 +99,7 @@ export function PointsTab() {
         { key: "billing", label: "用量计费", children: <BillingRulesPane /> },
         { key: "accounts", label: "账户与调整", children: <AccountsPane /> },
         { key: "orders", label: "充值订单", children: <OrdersPane /> },
+        { key: "toolLaunch", label: "建站启动计费", children: <ToolLaunchTab /> },
         { key: "cardSpec", label: "时长卡规格", children: <CardSpecPane /> },
         { key: "redeem", label: "兑换码", children: <GapsPromoPanel /> },
       ]}

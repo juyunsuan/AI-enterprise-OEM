@@ -1,0 +1,144 @@
+.hero {
+  padding: 40rpx 32rpx 48rpx;
+  background: linear-gradient(135deg, #1a73e8, #4b8ff2);
+  color: #fff;
+}
+
+.hero-status {
+  font-size: 30rpx;
+  opacity: 0.92;
+}
+
+.hero-amount {
+  margin-top: 12rpx;
+  font-size: 56rpx;
+  font-weight: 600;
+}
+
+.hero-meta {
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  opacity: 0.8;
+}
+
+.hero-expire {
+  margin-top: 18rpx;
+  padding: 14rpx 18rpx;
+  border-radius: 12rpx;
+  background: rgba(255, 255, 255, 0.16);
+  font-size: 24rpx;
+  line-height: 1.5;
+}
+
+.block-title {
+  margin-bottom: 12rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.center {
+  text-align: center;
+}
+
+.line {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #f0f1f5;
+}
+
+.line:last-child {
+  border-bottom: none;
+}
+
+.line-thumb {
+  width: 96rpx;
+  height: 96rpx;
+  margin-right: 16rpx;
+}
+
+.line-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.line-price {
+  margin-left: 16rpx;
+  color: #1f2329;
+  font-size: 28rpx;
+}
+
+.pay-amount {
+  color: #f5413d;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.more {
+  justify-content: flex-end;
+  margin-top: 12rpx;
+}
+
+.review-stars {
+  color: #f5a623;
+  font-size: 32rpx;
+  letter-spacing: 4rpx;
+}
+
+.timeline {
+  padding-top: 4rpx;
+}
+
+.tl-item {
+  display: flex;
+}
+
+.tl-axis {
+  position: relative;
+  width: 32rpx;
+  margin-right: 12rpx;
+}
+
+.tl-axis::after {
+  content: "";
+  position: absolute;
+  top: 22rpx;
+  bottom: 0;
+  left: 10rpx;
+  width: 2rpx;
+  background: #f0f1f5;
+}
+
+.tl-item:last-child .tl-axis::after {
+  display: none;
+}
+
+.tl-dot {
+  width: 22rpx;
+  height: 22rpx;
+  margin-top: 8rpx;
+  border-radius: 50%;
+  background: #1a73e8;
+}
+
+.tl-item:first-child .tl-dot {
+  box-shadow: 0 0 0 6rpx #eef3ff;
+}
+
+.tl-body {
+  flex: 1;
+  padding-bottom: 24rpx;
+}
+
+.tl-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.bar-button {
+  padding: 0 40rpx;
+  margin-left: 16rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+}

@@ -49,6 +49,25 @@ import { GeoSitePageService } from '../geo-site/geo-site-page.service';
 import { GeoSiteTemplateService } from '../geo-site/geo-site-template.service';
 import { GeoSiteRenderDataService } from '../geo-site/geo-site.render-data.service';
 import { GeoSiteScheduler } from '../geo-site/geo-site.scheduler';
+import { ToolLaunchAdminService } from '../tool-launch/tool-launch.admin.service';
+import { ToolLaunchBillingService } from '../tool-launch/tool-launch.billing.service';
+import {
+  ToolLaunchAdminController,
+  ToolLaunchController,
+} from '../tool-launch/tool-launch.controller';
+import { bindToolLaunch } from '../tool-launch/tool-launch.holder';
+import { ToolLaunchMeterService } from '../tool-launch/tool-launch.meter';
+import { ToolLaunchScheduler } from '../tool-launch/tool-launch.scheduler';
+import { bindToolLaunchBilling } from '../tool-launch/tool-launch.billing.holder';
+import { ToolLaunchService } from '../tool-launch/tool-launch.service';
+import { ToolLaunchSettingsService } from '../tool-launch/tool-launch.settings.service';
+import { MiniGuideService } from '../mini-guide/mini-guide.service';
+import {
+  MiniGuideAdminController,
+  MiniGuideController,
+} from '../mini-guide/mini-guide.controller';
+import { DevGuideService } from '../dev-guide/dev-guide.service';
+import { DevGuideAdminController } from '../dev-guide/dev-guide.controller';
 import { IdentityController } from '../identity/identity.controller';
 import { QxySettingsService } from '../qixiangyun/qxy-settings.service';
 import { QxyClient } from '../qixiangyun/qxy.client';
@@ -96,10 +115,9 @@ import { FeishuBitableClient } from '../feishu/feishu-bitable.client';
 import { FeishuSyncCrypto } from '../feishu/feishu-crypto';
 import { DataTableFeishuService } from '../feishu/data-table-feishu.service';
 import { DataTableFeishuController } from '../feishu/data-table-feishu.controller';
-import { AiworkinSocialService } from '../social/aiworkin-social.service';
-import { SocialAffinityService } from '../social/social-affinity.service';
-import { SocialSyncService } from '../social/social-sync.service';
-import { SocialSyncScheduler } from '../social/social-sync.scheduler';
+import { AiSocialService } from '../ai-social/ai-social.service';
+import { AiSocialController } from '../ai-social/ai-social.controller';
+import { AiSocialNotificationsService } from '../ai-social/ai-social-notifications.service';
 import { RpaCrypto } from '../rpa/rpa-crypto';
 import { RpaScriptService } from '../rpa/rpa-script.service';
 import { RpaAccountService } from '../rpa/rpa-account.service';
@@ -147,6 +165,8 @@ import { ExtensionCatalogService } from '../platform/extension-catalog.service';
 import { BrowserTaskService } from '../platform/browser-task.service';
 import { SurveyService } from '../survey/survey.service';
 import { SurveyController } from '../survey/survey.controller';
+import { QuizService } from '../quiz/quiz.service';
+import { QuizController } from '../quiz/quiz.controller';
 import { PublishReviewService } from '../moderation/publish-review.service';
 import { HelpService } from '../help/help.service';
 import { HelpController } from '../help/help.controller';
@@ -217,9 +237,181 @@ import { WechatMpController } from '../wechat-mp/wechat-mp.controller';
 import { WechatMpRetryScheduler } from '../wechat-mp/wechat-mp.scheduler';
 import { MiniProgramSettingsService } from '../miniprogram/miniprogram.settings';
 import { MiniProgramClient } from '../miniprogram/miniprogram.client';
-import { MiniProgramCiService } from '../miniprogram/miniprogram-ci.service';
 import { MiniProgramService } from '../miniprogram/miniprogram.service';
 import { MiniProgramController } from '../miniprogram/miniprogram.controller';
+// 建站管理底座：自营主体凭据 + 出包器（上门服务与后续电商工具共用同一套凭据台账）
+import { MiniAppService } from '../private-mini/mini-app.service';
+import { OnsitePlatformService } from '../onsite/onsite.platform.service';
+import { OnsiteShopService } from '../onsite/onsite.shop.service';
+import { OnsiteReleaseService } from '../onsite/onsite.release.service';
+import { OnsitePosterService } from '../onsite/onsite.poster.service';
+import { OnsiteCustomerService } from '../onsite/onsite.customer.service';
+import { OnsiteCatalogService } from '../onsite/onsite.catalog.service';
+import { OnsiteStaffService } from '../onsite/onsite.staff.service';
+import { OnsiteScheduleService } from '../onsite/onsite.schedule.service';
+import { OnsiteCityService } from '../onsite/onsite.city.service';
+import { OnsiteContentService } from '../onsite/onsite.content.service';
+import { OnsiteNotifyService } from '../onsite/onsite.notify.service';
+import { OnsiteOrderService } from '../onsite/onsite.order.service';
+import { OnsiteRefundService } from '../onsite/onsite.refund.service';
+import { OnsiteReviewService } from '../onsite/onsite.review.service';
+import { OnsiteAlertService } from '../onsite/onsite.alert.service';
+import { OnsiteAssistService } from '../onsite/onsite.assist.service';
+import { OnsiteMarketingService } from '../onsite/onsite.marketing.service';
+import { OnsiteWalletService } from '../onsite/onsite.wallet.service';
+import { OnsiteCommissionService } from '../onsite/onsite.commission.service';
+import { OnsiteAgentService } from '../onsite/onsite.agent.service';
+import { OnsiteController } from '../onsite/onsite.controller';
+import { OnsiteAdminController } from '../onsite/onsite.admin.controller';
+import { RentalService } from '../rental/rental.service';
+import { RentalPayService } from '../rental/rental.pay.service';
+import { RentalScrmService } from '../rental/rental.scrm.service';
+import { RentalController } from '../rental/rental.controller';
+import { ParkController } from '../park/park.controller';
+import { ParkSiteService } from '../park/park.site.service';
+import { ParkPackageService } from '../park/park.package.service';
+import { ParkApprovalService } from '../park/park.approval.service';
+import { ParkReservationService } from '../park/park.reservation.service';
+import { ParkWorkOrderService } from '../park/park.workorder.service';
+import { ParkIdentityService } from '../park/park.identity.service';
+import { ParkResourceService } from '../park/park.resource.service';
+import { ParkActivityService } from '../park/park.activity.service';
+import { ParkOrderService } from '../park/park.order.service';
+import { ParkLeaseService } from '../park/park.lease.service';
+import { ParkOpsService } from '../park/park.ops.service';
+import { ParkNotifyService } from '../park/park.notify.service';
+import { ParkPayService } from '../park/park.pay.service';
+import { MpCategoryService } from '../marketplace/mp.category.service';
+import { MpMarketService } from '../marketplace/mp.market.service';
+import { MpMerchantService } from '../marketplace/mp.merchant.service';
+import { MpPlatformService } from '../marketplace/mp.platform.service';
+import { MpCatalogService } from '../marketplace/mp.catalog.service';
+import { MpPayService } from '../marketplace/mp.pay.service';
+import { MpTradeService } from '../marketplace/mp.trade.service';
+import { MpAftersaleService } from '../marketplace/mp.aftersale.service';
+import { MpFinanceService } from '../marketplace/mp.finance.service';
+import { MpReleaseService } from '../marketplace/mp.release.service';
+import { MpDiyService } from '../marketplace/mp.diy.service';
+import { MpCouponService } from '../marketplace/mp.coupon.service';
+import { MpFollowService } from '../marketplace/mp.follow.service';
+import { MpScrmService } from '../marketplace/mp.scrm.service';
+import { MarketplaceController } from '../marketplace/mp.controller';
+import { MarketplaceAdminController } from '../marketplace/mp.admin.controller';
+import { BrandPlatformService } from '../brand-mall/brand.platform.service';
+import { BrandShopService } from '../brand-mall/brand.shop.service';
+import { BrandShippingService } from '../brand-mall/brand.shipping.service';
+import { BrandGoodsService } from '../brand-mall/brand.goods.service';
+import { BrandDiyService } from '../brand-mall/brand.diy.service';
+import { BrandReleaseService } from '../brand-mall/brand.release.service';
+import { BrandStatService } from '../brand-mall/brand.stat.service';
+import { BrandCouponService } from '../brand-mall/brand.coupon.service';
+import { BrandCustomerService } from '../brand-mall/brand.customer.service';
+import { BrandPayService } from '../brand-mall/brand.pay.service';
+import { BrandOrderService } from '../brand-mall/brand.order.service';
+import { BrandScrmService } from '../brand-mall/brand.scrm.service';
+import { BrandController } from '../brand-mall/brand.controller';
+import { BrandAdminController } from '../brand-mall/brand.admin.controller';
+import { TakeoutShopService } from '../takeout/takeout.shop.service';
+import { TakeoutGoodsService } from '../takeout/takeout.goods.service';
+import { TakeoutCustomerService } from '../takeout/takeout.customer.service';
+import { TakeoutCouponService } from '../takeout/takeout.coupon.service';
+import { TakeoutScrmService } from '../takeout/takeout.scrm.service';
+import { TakeoutPayService } from '../takeout/takeout.pay.service';
+import { TakeoutOrderService } from '../takeout/takeout.order.service';
+import { TakeoutController } from '../takeout/takeout.controller';
+import { CardShopPlatformService } from '../card-shop/card-shop.platform.service';
+import { CardShopSiteService } from '../card-shop/card-shop.site.service';
+import { CardShopGoodsService } from '../card-shop/card-shop.goods.service';
+import { CardShopCardService } from '../card-shop/card-shop.card.service';
+import { CardShopContentService } from '../card-shop/card-shop.content.service';
+import { CardShopCouponService } from '../card-shop/card-shop.coupon.service';
+import { CardShopCustomerService } from '../card-shop/card-shop.customer.service';
+import { CardShopOrderService } from '../card-shop/card-shop.order.service';
+import { CardShopPayService } from '../card-shop/card-shop.pay.service';
+import { CardShopReleaseService } from '../card-shop/card-shop.release.service';
+import { CardShopController } from '../card-shop/card-shop.controller';
+import { CardShopAdminController } from '../card-shop/card-shop.admin.controller';
+import { KuaidiPlatformService } from '../kuaidi/kuaidi.platform.service';
+import { KuaidiSiteService } from '../kuaidi/kuaidi.site.service';
+import { KuaidiCompanyService } from '../kuaidi/kuaidi.company.service';
+import { KuaidiCustomerService } from '../kuaidi/kuaidi.customer.service';
+import { KuaidiPayService } from '../kuaidi/kuaidi.pay.service';
+import { KuaidiOrderService } from '../kuaidi/kuaidi.order.service';
+import { KuaidiReleaseService } from '../kuaidi/kuaidi.release.service';
+import { KuaidiController } from '../kuaidi/kuaidi.controller';
+import { KuaidiAdminController } from '../kuaidi/kuaidi.admin.controller';
+import { CircleCommunityService } from '../circle/circle.community.service';
+import { CircleUserService } from '../circle/circle.user.service';
+import { CircleGroupService } from '../circle/circle.group.service';
+import { CirclePostService } from '../circle/circle.post.service';
+import { CircleCommentService } from '../circle/circle.comment.service';
+import { CircleInteractionService } from '../circle/circle.interaction.service';
+import { CircleNotificationService } from '../circle/circle.notification.service';
+import { CircleReportService } from '../circle/circle.report.service';
+import { CircleMediaService } from '../circle/circle.media.service';
+import { CircleAiService } from '../circle/circle.ai.service';
+import { CircleActivityService } from '../circle/circle.activity.service';
+import { CircleMedalService } from '../circle/circle.medal.service';
+import { CircleSubscribeService } from '../circle/circle.subscribe.service';
+import { CircleController } from '../circle/circle.controller';
+import { CircleAdminController } from '../circle/circle.admin.controller';
+import { ErrandPlatformService } from '../errand/errand.platform.service';
+import { ErrandSiteService } from '../errand/errand.site.service';
+import { ErrandCityService } from '../errand/errand.city.service';
+import { ErrandAgentService } from '../errand/errand.agent.service';
+import { ErrandCustomerService } from '../errand/errand.customer.service';
+import { ErrandRiderService } from '../errand/errand.rider.service';
+import { ErrandCouponService } from '../errand/errand.coupon.service';
+import { ErrandWalletService } from '../errand/errand.wallet.service';
+import { ErrandPayService } from '../errand/errand.pay.service';
+import { ErrandOrderService } from '../errand/errand.order.service';
+import { ErrandAiService } from '../errand/errand.ai.service';
+import { ErrandMapService } from '../errand/errand.map.service';
+import { ErrandNotifyService } from '../errand/errand.notify.service';
+import { ErrandReleaseService } from '../errand/errand.release.service';
+import {
+  ErrandController,
+  ErrandAdminController,
+} from '../errand/errand.controller';
+import { HealthPlatformService } from '../health/health.platform.service';
+import { HealthShopService } from '../health/health.shop.service';
+import { HealthReleaseService } from '../health/health.release.service';
+import { HealthScrmService } from '../health/health.scrm.service';
+import { HealthSubjectService } from '../health/health.subject.service';
+import { HealthStatService } from '../health/health.stat.service';
+import { HealthArchiveService } from '../health/health.archive.service';
+import { HealthMonitorService } from '../health/health.monitor.service';
+import { HealthCareService } from '../health/health.care.service';
+import { HealthServiceItemService } from '../health/health.service-item.service';
+import { HealthClinicService } from '../health/health.clinic.service';
+import { HealthExamService } from '../health/health.exam.service';
+import { HealthCrypto } from '../health/health-crypto';
+import { HealthController as HealthWorkbenchController } from '../health/health.controller';
+import { HealthAdminController } from '../health/health.admin.controller';
+import { HealthMallService } from '../health/health.mall.service';
+import { HealthMarketingService } from '../health/health.marketing.service';
+import { HealthOrderService } from '../health/health.order.service';
+import { HealthFinanceService } from '../health/health.finance.service';
+import { HealthPromoterService } from '../health/health.promoter.service';
+import { HealthContentService } from '../health/health.content.service';
+import { HealthPublicService } from '../health/health.public.service';
+import { HealthStaffService } from '../health/health.staff.service';
+import { HealthTongueService } from '../health/health.tongue.service';
+import { KnowledgePayService } from '../knowledge-pay/kp.service';
+import { KnowledgePayMemberService } from '../knowledge-pay/kp.member';
+import { KnowledgePayPayService } from '../knowledge-pay/kp.pay.service';
+import { KnowledgePayController } from '../knowledge-pay/kp.controller';
+import { DhChannelService } from '../digital-human/dh.channel.service';
+import { DhSiteService } from '../digital-human/dh.site.service';
+import { DhMemberService } from '../digital-human/dh.member.service';
+import { DhLibraryService } from '../digital-human/dh.library.service';
+import { DhSynthService } from '../digital-human/dh.synth.service';
+import { DhContentService } from '../digital-human/dh.content.service';
+import { DhPayService } from '../digital-human/dh.pay.service';
+import { DhCommissionService } from '../digital-human/dh.commission.service';
+import { DhStoreService } from '../digital-human/dh.store.service';
+import { DhReleaseService } from '../digital-human/dh.release.service';
+import { DigitalHumanController } from '../digital-human/dh.controller';
 import { SnsService } from '../sns/sns.service';
 import { SnsController } from '../sns/sns.controller';
 import { OrgStaffService } from '../org-staff/org-staff.service';
@@ -271,6 +463,8 @@ import { OkrBriefService } from '../okr/okr-brief.service';
 import { OkrDecompositionService } from '../okr/okr-decomposition.service';
 import { OkrTaskLinkageService } from '../okr/okr.task-linkage.service';
 import { OkrController } from '../okr/okr.controller';
+import { RbacService } from '../rbac/rbac.service';
+import { RbacController } from '../rbac/rbac.controller';
 import { TenantScopeService } from '../tenant/tenant-scope.service';
 import { PartyService } from '../party/party.service';
 import { PartyController } from '../party/party.controller';
@@ -361,6 +555,7 @@ import { PointsBillingService } from '../points/points-billing.service';
 import { ServicePackageService } from '../service-package/service-package.service';
 import { ServicePackageFulfillmentService } from '../service-package/service-package-fulfillment.service';
 import { StorageService } from '../storage/storage.service';
+import { SystemAssetService } from '../system-asset/system-asset.service';
 import { StorageMigrationService } from '../storage/storage-migration.service';
 import { MechanismService } from '../mechanisms/mechanism.service';
 import { MechanismController } from '../mechanisms/mechanism.controller';
@@ -374,11 +569,12 @@ import { ProjectCostService } from '../project/project-cost.service';
 import { ProjectDemandService } from '../project/project-demand.service';
 import { ProjectController } from '../project/project.controller';
 import { ErpService } from '../erp/erp.service';
+import { registerErpMechanismModules } from '../erp/erp-mechanism.module';
+import { ErpBridge } from '../erp/erp.bridge';
+import { ErpWriteBridge } from '../erp/erp-write.bridge';
 import { ErpController } from '../erp/erp.controller';
 import { MktService } from '../marketing/mkt.service';
 import { MktController } from '../marketing/mkt.controller';
-import { RecruitService } from '../recruit/recruit.service';
-import { RecruitController } from '../recruit/recruit.controller';
 import { SeoDataForSeoClient } from '../seo/seo-dataforseo.client';
 import { SeoProjectService } from '../seo/seo-project.service';
 import { SeoAuditService } from '../seo/seo-audit.service';
@@ -422,6 +618,9 @@ import { ScrmSyncService } from '../wecom-scrm/scrm-sync.service';
 import { ScrmCallbackService } from '../wecom-scrm/scrm-callback';
 import { ScrmScheduler } from '../wecom-scrm/scrm.scheduler';
 import { ScrmController } from '../wecom-scrm/scrm.controller';
+import { WecomScrmBridge } from '../wecom-scrm/scrm-bridge';
+import { ScrmSourceTagService } from '../wecom-scrm/scrm-source-tag.service';
+import { TerminalScrmService } from '../wecom-scrm/terminal-scrm.service';
 import { CollabService } from '../collab/collab.service';
 import { CollabController } from '../collab/collab.controller';
 import { GapScopeService } from '../gaps/gaps.scope';
@@ -472,11 +671,7 @@ export function createServices() {
   const ossSettingsService = new OssSettingsService(prismaService);
   const ossService = new OssService(ossSettingsService);
   const storageService = new StorageService(ossService);
-  const identityService = new IdentityService(
-    prismaService,
-    userLookupService,
-    ossService,
-  );
+  const identityService = new IdentityService(prismaService, userLookupService);
   // HRM 组织口径（数据按 (orgType, orgUserId) 隔离）是多个基础服务的公共依赖，
   // 且「离职撤权」复核也复用这里，故尽早构造、全站共用同一实例。
   const hrmScopeService = new HrmScopeService(prismaService, identityService);
@@ -507,20 +702,12 @@ export function createServices() {
   const aiworkinClient = new AiworkinClient();
   const aipddKeyService = new AipddKeyService(prismaService);
   const marketMcpService = new MarketMcpService(aipddKeyService);
-  // 商务社交 AIworkin 赋能：个人 Key 的 SNS 身份、outbox 同步与亲密度推荐。
-  const socialAiworkinService = new AiworkinSocialService(
-    prismaService,
+  // AI 社交：全部能力由 AIworkin 的 DSH 社交插件提供，本站只做 Key 准入与入口聚合。
+  const aiSocialService = new AiSocialService(prismaService);
+  const aiSocialController = new AiSocialController(aiSocialService);
+  // 插件通知按绑定的每把 AIPDD Key 所属账号聚合（一个账号可绑多把 Key）。
+  const aiSocialNotifications = new AiSocialNotificationsService(
     aipddKeyService,
-  );
-  const socialSyncService = new SocialSyncService(
-    prismaService,
-    socialAiworkinService,
-    aipddKeyService,
-  );
-  const socialAffinityService = new SocialAffinityService(prismaService);
-  const socialSyncScheduler = new SocialSyncScheduler(
-    prismaService,
-    socialSyncService,
   );
   const marketListingRecordService = new MarketListingRecordService(
     prismaService,
@@ -570,7 +757,6 @@ export function createServices() {
     demandSyncService,
     userLookupService,
     contactResolver,
-    ossService,
   );
   const flexController = new FlexController(flexService);
   const geoService = new GeoService(
@@ -799,6 +985,14 @@ export function createServices() {
     identityService,
   );
   const surveyController = new SurveyController(surveyService);
+  // 答题小程序：题库与交卷记录落账号自己的多维表格，公开通道只做判分与限流。
+  const quizService = new QuizService(
+    prismaService,
+    dataTableService,
+    identityService,
+    storageService,
+  );
+  const quizController = new QuizController(quizService);
   // 发布审核：后台配置阿里云内容安全凭据，四类发布动作在鉴权后统一送审。
   const publishReviewService = new PublishReviewService(prismaService);
   const dataTableOpenController = new DataTableOpenController(dataTableService);
@@ -916,7 +1110,7 @@ export function createServices() {
     workbuddyPlanService,
     workbuddyCloudService,
   );
-  // Bot 主机（Agent-Bot）：本机装 WorkBuddy + BotBuddy 客户端，
+  // Bot 主机（Agent-Bot）：本机装 WorkBuddy + AWBotDSH 客户端，
   // 平台按心跳下发指令、客户端串行执行；设备通道免登录，只认主机令牌。
   const botHostService = new BotHostService(prismaService, hrmScopeService);
   const botHostController = new BotHostController(botHostService);
@@ -1118,6 +1312,15 @@ export function createServices() {
     storageService,
     publishReviewService,
   );
+  // 系统资产层：字节仍由门面落桶，这里补台账（入账才可计费/可治理），见 system-asset 目录注释。
+  const systemAssetService = new SystemAssetService(
+    storageService,
+    contentDigitalAssetService,
+  );
+  // IdentityService / FlexService 构造早于台账服务（DigitalAssetService 依赖 IdentityService），
+  // 拿不到构造函数注入，故按 deliverableSink 同口径后置回填字节写入槽位。
+  identityService.systemAsset = systemAssetService;
+  flexService.systemAsset = systemAssetService;
   // 存储底座巡检/迁移：存量 AIPDD 资产按批转存本站 OSS，可中断续跑。
   const storageMigrationService = new StorageMigrationService(
     prismaService,
@@ -1135,6 +1338,7 @@ export function createServices() {
   insightService.schedule = rpaChromeScheduleService;
   insightService.hostChannel = botHostService;
   insightService.vision = new AssetVisionService(prismaService);
+  insightService.media = contentMediaService;
   const contentAgentLibraryService = new ContentAgentLibraryService(
     prismaService,
     contentModelSettingService,
@@ -1144,7 +1348,10 @@ export function createServices() {
   );
   // 智能硬件：型号/开发包/设备/工具/授权 + 设备通道 + 独立 MCP；控制器由契约 moduleHandlers（Hw_/AdminHw_）注册。
   // 实例化提前到 Agent 工具装配之前：站内 Agent 的 hw__ 工具派发要用它（prisma/oss 均已就绪）。
-  const hardwareService = new HardwareService(prismaService, ossService);
+  const hardwareService = new HardwareService(
+    prismaService,
+    systemAssetService,
+  );
   const contentAgentTools = {
     media: contentMediaService,
     memory: contentAgentMemoryService,
@@ -1205,12 +1412,6 @@ export function createServices() {
         saveDraft: (user: CurrentUser, body: Record<string, unknown>) =>
           oaService.saveDraft(user, body),
         submit: (user: CurrentUser, id: string) => oaService.submit(user, id),
-      },
-      recruit: {
-        updateApplicationStatus: (
-          user: CurrentUser,
-          body: Record<string, unknown>,
-        ) => recruitService.updateApplicationStatus(user, body),
       },
       // 本地 Chrome 插件 RPA：设备清单与会话生命周期，均以登录人身份进真实服务。
       rpaChrome: {
@@ -1284,7 +1485,6 @@ export function createServices() {
   const contentController = new ContentController(
     contentModelSettingService,
     contentAssetService,
-    aipddAssetClient,
     contentAgentService,
     contentJobService,
     contentDigitalAssetService,
@@ -1295,6 +1495,7 @@ export function createServices() {
     contentAgentConnectorService,
     contentAgentSkillService,
     canvasProjectService,
+    systemAssetService,
     (user) =>
       workflowRef.service
         ? workflowRef.service.toolSpecs(user)
@@ -1347,14 +1548,12 @@ export function createServices() {
     prismaService,
   );
   const miniProgramClient = new MiniProgramClient(miniProgramSettingsService);
-  const miniProgramCiService = new MiniProgramCiService();
   const miniProgramService = new MiniProgramService(
     prismaService,
-    ossService,
+    storageService,
+    systemAssetService,
     miniProgramSettingsService,
     miniProgramClient,
-    identityService,
-    miniProgramCiService,
   );
   const miniProgramController = new MiniProgramController(
     miniProgramSettingsService,
@@ -1362,10 +1561,734 @@ export function createServices() {
     miniProgramClient,
     identityService,
   );
+  // 微信支付 v3 客户端（积分充值与自营店铺收款共用一个实例，凭据按次传入）
+  const wechatPayClient = new WechatPayClient();
+  // 工具用量计量：圈子等模块在装配早期就要注入，声明必须早于使用点。
+  const toolLaunchMeterService = new ToolLaunchMeterService(prismaService);
+
+  // 建站管理底座：按店铺归属的自营主体凭据（上门服务工具第一站用上，后续电商工具同表）。
+  const miniAppService = new MiniAppService(prismaService, miniProgramClient);
+  // 上门服务小程序工具：店铺与平台参数 → 出包直传 → C 端顾客，公开通道由 app.ts 注册。
+  const onsitePlatformService = new OnsitePlatformService(
+    prismaService,
+    identityService,
+  );
+  const onsiteShopService = new OnsiteShopService(
+    prismaService,
+    miniAppService,
+    onsitePlatformService,
+  );
+  const onsiteReleaseService = new OnsiteReleaseService(
+    prismaService,
+    storageService,
+    systemAssetService,
+    miniAppService,
+    miniProgramClient,
+    onsiteShopService,
+  );
+  const onsitePosterService = new OnsitePosterService(
+    prismaService,
+    onsiteReleaseService,
+    systemAssetService,
+    onsiteShopService,
+  );
+  const onsiteCustomerService = new OnsiteCustomerService(
+    prismaService,
+    miniProgramClient,
+    miniAppService,
+    onsiteShopService,
+  );
+  // P1 目录与引擎：服务目录、技师档案、排期时间轴（唯一实现点）、城市与车费、内容表单。
+  const onsiteCatalogService = new OnsiteCatalogService(
+    prismaService,
+    onsiteShopService,
+  );
+  const onsiteStaffService = new OnsiteStaffService(
+    prismaService,
+    onsiteShopService,
+  );
+  const onsiteScheduleService = new OnsiteScheduleService(
+    prismaService,
+    onsiteShopService,
+  );
+  const onsiteCityService = new OnsiteCityService(
+    prismaService,
+    onsiteShopService,
+    miniAppService,
+  );
+  const onsiteContentService = new OnsiteContentService(
+    prismaService,
+    onsiteShopService,
+    onsiteStaffService,
+  );
+
+  // 电商小程序工具（工作台 → 建站管理 → 电商小程序工具）：主体凭据与出包直传走私域底座，
+  // 一个店铺一部独立小程序；公开顾客通道由 app.ts 注册。
+  const brandPlatformService = new BrandPlatformService(
+    prismaService,
+    identityService,
+  );
+  const brandShopService = new BrandShopService(
+    prismaService,
+    miniAppService,
+    brandPlatformService,
+  );
+  const brandShippingService = new BrandShippingService(prismaService);
+  // SCRM 松耦合格子：商城只经 ScrmBridge 类型调用；真实实现落在 wecom-scrm 侧，
+  // 未接入/停用时它自己返回降级值，永不抛错，所以这里始终注入真实桥即可。
+  // 来源渠道标签：同一企微联系人可同时拥有多个小程序的来源 AUTO 标签。
+  const scrmSourceTagService = new ScrmSourceTagService(prismaService);
+  const brandScrmService = new BrandScrmService(
+    prismaService,
+    new WecomScrmBridge(prismaService),
+    scrmSourceTagService,
+  );
+  const brandGoodsService = new BrandGoodsService(
+    prismaService,
+    brandShippingService,
+  );
+  brandGoodsService.productQuotaLoader = async () =>
+    (await brandPlatformService.limits()).productQuota;
+  const brandDiyService = new BrandDiyService(prismaService);
+  const brandReleaseService = new BrandReleaseService(
+    prismaService,
+    storageService,
+    systemAssetService,
+    miniAppService,
+    miniProgramClient,
+    brandShopService,
+  );
+  const brandStatService = new BrandStatService(
+    prismaService,
+    identityService,
+    brandPlatformService,
+  );
+  const brandCouponService = new BrandCouponService(
+    prismaService,
+    brandScrmService,
+  );
+  const brandCustomerService = new BrandCustomerService(
+    prismaService,
+    miniProgramClient,
+    miniAppService,
+    brandShopService,
+    brandScrmService,
+  );
+  const brandPayService = new BrandPayService(
+    prismaService,
+    miniAppService,
+    brandPlatformService,
+    wechatPayClient,
+  );
+  const brandOrderService = new BrandOrderService(
+    prismaService,
+    brandShopService,
+    brandCustomerService,
+    brandCouponService,
+    brandPayService,
+    brandShippingService,
+    brandScrmService,
+  );
+  // 外卖点餐：独立 takeout_* 数据域，只复用登录令牌、微信支付客户端、SCRM 桥与算价引擎。
+  const takeoutShopService = new TakeoutShopService(prismaService);
+  const takeoutGoodsService = new TakeoutGoodsService(prismaService);
+  const takeoutScrmService = new TakeoutScrmService(
+    prismaService,
+    new WecomScrmBridge(prismaService),
+    scrmSourceTagService,
+  );
+  const takeoutCustomerService = new TakeoutCustomerService(
+    prismaService,
+    miniProgramClient,
+    miniAppService,
+    takeoutScrmService,
+  );
+  const takeoutCouponService = new TakeoutCouponService(prismaService);
+  const takeoutPayService = new TakeoutPayService(
+    prismaService,
+    takeoutShopService,
+    miniAppService,
+    wechatPayClient,
+    async () => (await brandPlatformService.limits()).payAllowed,
+  );
+  const takeoutOrderService = new TakeoutOrderService(
+    prismaService,
+    takeoutShopService,
+    takeoutCustomerService,
+    takeoutCouponService,
+    takeoutPayService,
+    takeoutScrmService,
+  );
+  const takeoutController = new TakeoutController(
+    takeoutShopService,
+    takeoutGoodsService,
+    takeoutOrderService,
+    takeoutCouponService,
+    miniAppService,
+  );
+
+  const brandController = new BrandController(
+    brandShopService,
+    brandGoodsService,
+    brandDiyService,
+    brandReleaseService,
+    brandStatService,
+    brandPlatformService,
+    miniAppService,
+    brandCustomerService,
+    brandOrderService,
+    brandCouponService,
+    brandShippingService,
+    brandScrmService,
+  );
+  const brandAdminController = new BrandAdminController(
+    prismaService,
+    brandStatService,
+    brandPlatformService,
+    identityService,
+  );
+  // 卡密商城小程序工具（工作台 → 建站管理）：店主自有微信商户号直收，平台只管配额与处置；
+  // 顾客端走 app.ts 注册的 /api/public/card-shop 公开通道，客服复用系统 AI 客服（service-desk）。
+  const cardShopPlatformService = new CardShopPlatformService(
+    prismaService,
+    identityService,
+  );
+  const cardShopSiteService = new CardShopSiteService(
+    prismaService,
+    miniAppService,
+    cardShopPlatformService,
+  );
+  const cardShopGoodsService = new CardShopGoodsService(
+    prismaService,
+    cardShopSiteService,
+    cardShopPlatformService,
+  );
+  const cardShopCardService = new CardShopCardService(
+    prismaService,
+    cardShopSiteService,
+    cardShopPlatformService,
+  );
+  const cardShopReleaseService = new CardShopReleaseService(
+    prismaService,
+    storageService,
+    systemAssetService,
+    miniAppService,
+    miniProgramClient,
+    cardShopSiteService,
+  );
+  // 知识付费小程序工具（工作台 → 建站管理）：管理端由契约 moduleHandlers（Kp_）派发，
+  // 小程序端会员走 app.ts 注册的 /api/public/knowledge-pay 公开通道。
+  const knowledgePayService = new KnowledgePayService(
+    prismaService,
+    storageService,
+  );
+  const knowledgePayMemberService = new KnowledgePayMemberService(
+    prismaService,
+    knowledgePayService,
+    miniProgramClient,
+  );
+  const knowledgePayPayService = new KnowledgePayPayService(
+    prismaService,
+    knowledgePayService,
+    wechatPayClient,
+  );
+  const knowledgePayController = new KnowledgePayController(
+    knowledgePayService,
+    miniProgramClient,
+    knowledgePayPayService,
+  );
+  // 数字人小程序工具（工作台 → 建站管理 → 数字人小程序工具）：管理端由契约 moduleHandlers（Dh_）派发，
+  // 小程序端走 app.ts 注册的 /api/public/digital-human 公开通道；客服复用 service-desk。
+  const dhChannelService = new DhChannelService(prismaService);
+  const dhSiteService = new DhSiteService(
+    prismaService,
+    miniAppService,
+    dhChannelService,
+  );
+  const dhMemberService = new DhMemberService(
+    prismaService,
+    miniAppService,
+    miniProgramClient,
+  );
+  const dhLibraryService = new DhLibraryService(prismaService, dhMemberService);
+  const dhSynthService = new DhSynthService(
+    prismaService,
+    dhMemberService,
+    dhChannelService,
+  );
+  const dhContentService = new DhContentService(prismaService, dhMemberService);
+  const dhPayService = new DhPayService(
+    prismaService,
+    miniAppService,
+    wechatPayClient,
+  );
+  const dhCommissionService = new DhCommissionService(
+    prismaService,
+    dhMemberService,
+    dhPayService,
+  );
+  const dhStoreService = new DhStoreService(
+    prismaService,
+    systemAssetService,
+    dhMemberService,
+    dhPayService,
+    dhCommissionService,
+  );
+  const dhReleaseService = new DhReleaseService(
+    prismaService,
+    storageService,
+    systemAssetService,
+    miniAppService,
+    miniProgramClient,
+    dhMemberService,
+  );
+  const digitalHumanController = new DigitalHumanController(
+    dhSiteService,
+    dhMemberService,
+    dhChannelService,
+    dhLibraryService,
+    dhSynthService,
+    dhContentService,
+    dhStoreService,
+    dhCommissionService,
+    dhReleaseService,
+    miniAppService,
+  );
   const notificationService = new NotificationService(
     prismaService,
-    snsService,
+    aiSocialNotifications,
     wechatMpPushService,
+  );
+  // 卡密商城交易域：订单售出通知依赖 NotificationService，所以这一组必须在它之后装配。
+  const cardShopContentService = new CardShopContentService(
+    prismaService,
+    cardShopSiteService,
+  );
+  const cardShopCouponService = new CardShopCouponService(
+    prismaService,
+    cardShopSiteService,
+  );
+  const cardShopCustomerService = new CardShopCustomerService(
+    prismaService,
+    cardShopSiteService,
+    miniProgramClient,
+    miniAppService,
+  );
+  const cardShopPayService = new CardShopPayService(
+    prismaService,
+    cardShopSiteService,
+    miniAppService,
+    cardShopPlatformService,
+    wechatPayClient,
+  );
+  const cardShopOrderService = new CardShopOrderService(
+    prismaService,
+    cardShopSiteService,
+    cardShopPlatformService,
+    cardShopGoodsService,
+    cardShopContentService,
+    cardShopCouponService,
+    cardShopCustomerService,
+    cardShopPayService,
+    notificationService,
+  );
+  const cardShopController = new CardShopController(
+    cardShopSiteService,
+    cardShopGoodsService,
+    cardShopCardService,
+    cardShopReleaseService,
+    cardShopPlatformService,
+    miniAppService,
+    cardShopOrderService,
+    cardShopCouponService,
+    cardShopCustomerService,
+    cardShopContentService,
+  );
+  const cardShopAdminController = new CardShopAdminController(
+    cardShopPlatformService,
+    identityService,
+    cardShopOrderService,
+  );
+  // 快递寄件小程序工具：站点 / 报价 / 订单履约 / 顾客 / 支付 / 出包，C 端走 app.ts 的公开通道。
+  const kuaidiPlatformService = new KuaidiPlatformService(
+    prismaService,
+    identityService,
+  );
+  const kuaidiSiteService = new KuaidiSiteService(
+    prismaService,
+    miniAppService,
+    kuaidiPlatformService,
+  );
+  const kuaidiCompanyService = new KuaidiCompanyService(
+    prismaService,
+    kuaidiSiteService,
+  );
+  const kuaidiCustomerService = new KuaidiCustomerService(
+    prismaService,
+    kuaidiSiteService,
+    miniProgramClient,
+    miniAppService,
+  );
+  const kuaidiPayService = new KuaidiPayService(
+    prismaService,
+    kuaidiSiteService,
+    miniAppService,
+    kuaidiPlatformService,
+    identityService,
+    wechatPayClient,
+  );
+  const kuaidiOrderService = new KuaidiOrderService(
+    prismaService,
+    kuaidiSiteService,
+    kuaidiCustomerService,
+    kuaidiPayService,
+    kuaidiCompanyService,
+  );
+  const kuaidiReleaseService = new KuaidiReleaseService(
+    prismaService,
+    storageService,
+    systemAssetService,
+    miniAppService,
+    miniProgramClient,
+    kuaidiSiteService,
+  );
+  const kuaidiController = new KuaidiController(
+    kuaidiSiteService,
+    kuaidiCompanyService,
+    kuaidiOrderService,
+    kuaidiCustomerService,
+    kuaidiReleaseService,
+    kuaidiPlatformService,
+    miniAppService,
+    kuaidiPayService,
+  );
+  const kuaidiAdminController = new KuaidiAdminController(
+    kuaidiPlatformService,
+    identityService,
+  );
+  // 圈子社区：账号负责人＝社区管理员；C 端成员独立于站内账号，公开通道走 app.ts。
+  const circleCommunityService = new CircleCommunityService(
+    prismaService,
+    miniAppService,
+    userLookupService,
+  );
+  const circleUserService = new CircleUserService(
+    prismaService,
+    circleCommunityService,
+    miniAppService,
+    miniProgramClient,
+    publishReviewService,
+  );
+  const circleGroupService = new CircleGroupService(
+    prismaService,
+    circleCommunityService,
+    publishReviewService,
+  );
+  const circlePostService = new CirclePostService(
+    prismaService,
+    circleCommunityService,
+    publishReviewService,
+    toolLaunchMeterService,
+  );
+  const circleCommentService = new CircleCommentService(
+    prismaService,
+    circleCommunityService,
+    publishReviewService,
+  );
+  const circleInteractionService = new CircleInteractionService(prismaService);
+  const circleNotificationService = new CircleNotificationService(
+    prismaService,
+  );
+  const circleReportService = new CircleReportService(prismaService);
+  const circleMediaService = new CircleMediaService(
+    prismaService,
+    storageService,
+    publishReviewService,
+  );
+  const circleAiService = new CircleAiService(prismaService);
+  const circleActivityService = new CircleActivityService(prismaService);
+  const circleMedalService = new CircleMedalService(prismaService);
+  const circleSubscribeService = new CircleSubscribeService(
+    prismaService,
+    miniAppService,
+    miniProgramClient,
+    circleCommunityService,
+  );
+  const circleController = new CircleController(
+    circleCommunityService,
+    miniAppService,
+    circleGroupService,
+    circlePostService,
+    circleCommentService,
+    circleNotificationService,
+    circleReportService,
+    circleUserService,
+    circleAiService,
+    circleActivityService,
+    circleMedalService,
+    circleSubscribeService,
+  );
+  const circleAdminController = new CircleAdminController(
+    circleCommunityService,
+    identityService,
+  );
+
+  // 跑腿小程序：站点 / 计价 / 顾客 / 骑手 / 优惠券 / 钱包 / 支付 / 出包 / AI，C 端走 app.ts 公开通道。
+  const errandPlatformService = new ErrandPlatformService(
+    prismaService,
+    identityService,
+  );
+  const errandSiteService = new ErrandSiteService(
+    prismaService,
+    miniAppService,
+    errandPlatformService,
+  );
+  const errandCityService = new ErrandCityService(
+    prismaService,
+    errandSiteService,
+  );
+  const errandAgentService = new ErrandAgentService(
+    prismaService,
+    errandSiteService,
+  );
+  const errandCustomerService = new ErrandCustomerService(
+    prismaService,
+    errandSiteService,
+    miniProgramClient,
+    miniAppService,
+  );
+  const errandCouponService = new ErrandCouponService(
+    prismaService,
+    errandSiteService,
+  );
+  const errandPayService = new ErrandPayService(
+    prismaService,
+    miniAppService,
+    errandPlatformService,
+    wechatPayClient,
+  );
+  const errandWalletService = new ErrandWalletService(
+    prismaService,
+    errandSiteService,
+    errandPayService,
+  );
+  const errandRiderService = new ErrandRiderService(
+    prismaService,
+    errandSiteService,
+    miniProgramClient,
+    miniAppService,
+    errandWalletService,
+  );
+  const errandMapService = new ErrandMapService(miniAppService);
+  const errandNotifyService = new ErrandNotifyService(
+    miniAppService,
+    miniProgramClient,
+    notificationService,
+  );
+  const errandOrderService = new ErrandOrderService(
+    prismaService,
+    errandSiteService,
+    errandCustomerService,
+    errandRiderService,
+    errandPayService,
+    errandWalletService,
+    errandMapService,
+    errandNotifyService,
+    errandAgentService,
+  );
+  const errandAiService = new ErrandAiService(
+    prismaService,
+    errandSiteService,
+    errandPlatformService,
+  );
+  const errandReleaseService = new ErrandReleaseService(
+    prismaService,
+    storageService,
+    systemAssetService,
+    miniAppService,
+    miniProgramClient,
+    errandSiteService,
+  );
+  const errandController = new ErrandController(
+    prismaService,
+    errandSiteService,
+    errandCityService,
+    errandAgentService,
+    errandOrderService,
+    errandRiderService,
+    errandCustomerService,
+    errandCouponService,
+    errandWalletService,
+    errandReleaseService,
+    errandAiService,
+    miniAppService,
+  );
+  const errandAdminController = new ErrandAdminController(
+    errandPlatformService,
+    identityService,
+  );
+  // 订单与触达：通知服务构造更晚，这两个必须在它之后装配（触达是旁路，不参与鉴权链）。
+  const onsiteNotifyService = new OnsiteNotifyService(
+    prismaService,
+    miniAppService,
+    miniProgramClient,
+    notificationService,
+  );
+  // P2：钱包与分账只依赖 prisma + 店铺鉴权，先于订单构造，订单支付后要发佣与发邀请奖励。
+  const onsiteWalletService = new OnsiteWalletService(
+    prismaService,
+    onsiteShopService,
+  );
+  const onsiteCommissionService = new OnsiteCommissionService(
+    prismaService,
+    onsiteShopService,
+  );
+  const onsiteMarketingService = new OnsiteMarketingService(
+    prismaService,
+    onsiteShopService,
+    onsiteWalletService,
+  );
+  const onsiteAgentService = new OnsiteAgentService(
+    prismaService,
+    onsiteShopService,
+  );
+  const onsiteOrderService = new OnsiteOrderService(
+    prismaService,
+    onsiteShopService,
+    onsiteScheduleService,
+    onsiteCityService,
+    miniAppService,
+    wechatPayClient,
+    onsiteNotifyService,
+    onsiteCommissionService,
+    onsiteMarketingService,
+    onsiteWalletService,
+  );
+  // 售后与口碑：退款要能打微信原路退回并回写台账，评价要能重算口碑分，报警只走站内提醒。
+  const onsiteRefundService = new OnsiteRefundService(
+    prismaService,
+    onsiteShopService,
+    miniAppService,
+    wechatPayClient,
+    onsiteScheduleService,
+    onsiteNotifyService,
+    onsiteCommissionService,
+  );
+  const onsiteReviewService = new OnsiteReviewService(
+    prismaService,
+    onsiteShopService,
+    onsiteNotifyService,
+  );
+  const onsiteAlertService = new OnsiteAlertService(
+    prismaService,
+    onsiteShopService,
+    onsiteNotifyService,
+  );
+  const onsiteAssistService = new OnsiteAssistService(
+    prismaService,
+    onsiteShopService,
+    {
+      // 运行时才取用，此时 featureToggleService 已装配完成
+      isOpen: (code, orgUserId) => featureToggleService.isOpen(code, orgUserId),
+    },
+  );
+  const onsiteController = new OnsiteController(
+    onsiteShopService,
+    miniAppService,
+    onsiteReleaseService,
+    onsitePosterService,
+    onsiteCatalogService,
+    onsiteStaffService,
+    onsiteScheduleService,
+    onsiteCityService,
+    onsiteContentService,
+    onsiteOrderService,
+    onsiteRefundService,
+    onsiteReviewService,
+    onsiteAlertService,
+    onsiteAssistService,
+    onsiteCustomerService,
+    onsiteMarketingService,
+    onsiteWalletService,
+    onsiteCommissionService,
+    onsiteAgentService,
+  );
+  const onsiteAdminController = new OnsiteAdminController(
+    onsitePlatformService,
+  );
+  // 多店铺商城平台（B2B2C）B0：市场运营方（Market_）、商户后台（独立令牌通道）、
+  // 平台类目与平台管理员台账（MpAdmin_）四个服务；商户通道由根 app 手写注册。
+  const mpCategoryService = new MpCategoryService(prismaService);
+  const mpMarketService = new MpMarketService(prismaService);
+  const mpMerchantService = new MpMerchantService(prismaService);
+  const mpPlatformService = new MpPlatformService(prismaService);
+  const mpCatalogService = new MpCatalogService(
+    prismaService,
+    mpMerchantService,
+  );
+  const mpPayService = new MpPayService(
+    prismaService,
+    miniAppService,
+    wechatPayClient,
+  );
+  const mpFinanceService = new MpFinanceService(
+    prismaService,
+    mpMerchantService,
+  );
+  const mpDiyService = new MpDiyService(prismaService, mpMerchantService);
+  // 企微 SCRM：与品牌商城共用端口与真实桥，但 outbox 按商户维度记账（B4）。
+  const mpScrmService = new MpScrmService(
+    prismaService,
+    new WecomScrmBridge(prismaService),
+    scrmSourceTagService,
+  );
+  const mpCouponService = new MpCouponService(
+    prismaService,
+    mpMerchantService,
+    mpScrmService,
+  );
+  const mpFollowService = new MpFollowService(prismaService);
+  const mpTradeService = new MpTradeService(
+    prismaService,
+    mpMerchantService,
+    miniAppService,
+    miniProgramClient,
+    mpPayService,
+    mpFinanceService,
+    mpDiyService,
+    mpCouponService,
+    mpFollowService,
+    mpScrmService,
+  );
+  const mpAftersaleService = new MpAftersaleService(
+    prismaService,
+    mpMerchantService,
+    mpPayService,
+    mpScrmService,
+  );
+  const mpReleaseService = new MpReleaseService(
+    prismaService,
+    storageService,
+    systemAssetService,
+    miniAppService,
+    miniProgramClient,
+    mpMarketService,
+  );
+  const marketplaceController = new MarketplaceController(
+    mpMarketService,
+    mpMerchantService,
+    mpCategoryService,
+    mpCatalogService,
+    mpAftersaleService,
+    mpFinanceService,
+    mpReleaseService,
+    mpDiyService,
+    mpCouponService,
+    mpScrmService,
+  );
+  const marketplaceAdminController = new MarketplaceAdminController(
+    mpPlatformService,
+    (user) => identityService.requireAdmin(user),
   );
   // 群控任务终态的站内信出口（方案 §4.4、§4.7）：通知服务比这两个服务构造更晚，装配后再交给设备回执与云端追平两条链路。
   const dispatchTerminalNotice = async (
@@ -1416,10 +2339,27 @@ export function createServices() {
     identityService,
     userLookupService,
     notificationService,
-    ossService,
+    systemAssetService,
     contentModelSettingService,
   );
   const serviceDeskController = new ServiceDeskController(serviceDeskService);
+  // 商城开店即自动开通专属客服站点：客服服务构建在商城之后，用钩子回填避免装配乱序
+  takeoutShopService.deskSiteHook = {
+    view: (ownerUserId, id) => serviceDeskService.siteRef(ownerUserId, id),
+    ensure: (ownerUserId, name) =>
+      serviceDeskService.ensureSite(ownerUserId, name),
+  };
+  brandShopService.deskSiteHook = {
+    view: (ownerUserId, id) => serviceDeskService.siteRef(ownerUserId, id),
+    ensure: (ownerUserId, name) =>
+      serviceDeskService.ensureSite(ownerUserId, name),
+  };
+  // 多店铺商城：市场 = 一个小程序实例，客服站点同样落到市场运营方名下
+  mpMarketService.deskSiteHook = {
+    view: (ownerUserId, id) => serviceDeskService.siteRef(ownerUserId, id),
+    ensure: (ownerUserId, name) =>
+      serviceDeskService.ensureSite(ownerUserId, name),
+  };
   const livecodeService = new LivecodeService(prismaService, ossService);
   const livecodeController = new LivecodeController(livecodeService);
   const overseasNavService = new OverseasNavService(prismaService);
@@ -1648,6 +2588,9 @@ export function createServices() {
     okrBriefService,
     okrDecompositionService,
   );
+  // 租户 RBAC：主账号子账号与写操作留痕（守卫在 app.ts 挂载）。
+  const rbacService = new RbacService(prismaService);
+  const rbacController = new RbacController(rbacService);
   const oaScopeService = new OaScopeService(
     prismaService,
     userLookupService,
@@ -1746,6 +2689,55 @@ export function createServices() {
   const geoSiteScheduler = new GeoSiteScheduler(
     geoSiteBillingService,
     geoSiteDomainService,
+  );
+  // 建站工具「启动设置」：一个账号一个工具一条订阅，未启动＝C 端停服 + 禁出包 + 管理端只读，且不扣积分。
+  // 依赖积分台账出首期，构造同样晚于 pointsService；日批调度在 main.ts 启停。
+  const toolLaunchSettingsService = new ToolLaunchSettingsService(
+    prismaService,
+    identityService,
+  );
+  const toolLaunchService = new ToolLaunchService(
+    prismaService,
+    pointsService,
+    toolLaunchSettingsService,
+  );
+  const toolLaunchBillingService = new ToolLaunchBillingService(
+    prismaService,
+    pointsService,
+    toolLaunchSettingsService,
+    toolLaunchService,
+  );
+  // 公开通道与出包链路按工具名取闸门：横切依赖在此装配一次，见 tool-launch.holder.ts。
+  bindToolLaunch(toolLaunchService);
+  bindToolLaunchBilling(toolLaunchBillingService);
+  const toolLaunchScheduler = new ToolLaunchScheduler(
+    toolLaunchBillingService,
+    toolLaunchMeterService,
+  );
+  const toolLaunchAdminService = new ToolLaunchAdminService(
+    prismaService,
+    toolLaunchService,
+    toolLaunchSettingsService,
+    userLookupService,
+  );
+  const toolLaunchController = new ToolLaunchController(toolLaunchService);
+  const toolLaunchAdminController = new ToolLaunchAdminController(
+    toolLaunchAdminService,
+    toolLaunchService,
+    (user) => identityService.requireAdmin(user),
+  );
+  // 小程序发布说明：正文后台维护，域名/账号参数按站点与本账号根实体自动渲染。
+  const miniGuideService = new MiniGuideService(prismaService, storageService);
+  const miniGuideController = new MiniGuideController(miniGuideService);
+  const miniGuideAdminController = new MiniGuideAdminController(
+    miniGuideService,
+    (user) => identityService.requireAdmin(user),
+  );
+  // 二次开发指引：正文真源在 docs/dev-kit/，后台只读渲染并分发套件；库内仅存本站补充说明。
+  const devGuideService = new DevGuideService(prismaService);
+  const devGuideAdminController = new DevGuideAdminController(
+    devGuideService,
+    (user) => identityService.requireAdmin(user),
   );
   // 视频模版社区：发布、付费查看（查看者扣分 / 发布者入账）、评分与复刻生成；
   // AIWORKIN 平台模版的展示开关与定时补充由后台设置驱动，调度器在 main.ts 启动。
@@ -1887,21 +2879,27 @@ export function createServices() {
     () => kbRetrieveService,
     () => aiEvalService,
   );
-  // 客服 AI 回复前先召回绑定空间（consumerType=SERVICE_DESK，consumerId=客服主账号）
-  serviceDeskService.kbRecall = (ownerUserId, query) =>
+  // 客服 AI 回复前先召回知识：给了 spaceIds 就按空间召（纯AI客服员工自带范围），
+  // 没给才按账号级 SERVICE_DESK 消费者绑定召（老配置行为不变）。
+  serviceDeskService.kbRecall = (ownerUserId, query, spaceIds) =>
     kbRetrieveService
       .retrieve(new CurrentUser(ownerUserId, '', ''), {
         query,
-        consumerType: 'SERVICE_DESK',
-        consumerId: ownerUserId,
+        ...(spaceIds?.length
+          ? { spaceIds }
+          : { consumerType: 'SERVICE_DESK' as const, consumerId: ownerUserId }),
         topK: 4,
         maxChars: 1200,
       })
-      .then((result) =>
-        result.snippets
+      .then((result) => ({
+        text: result.snippets
           .map((snippet) => `- ${snippet.title}：${snippet.text}`)
           .join('\n'),
-      );
+        references: result.snippets.map((snippet) => ({
+          title: snippet.title,
+          ref: snippet.ref,
+        })),
+      }));
   // 客服闭环（P4-5）：会话派交付任务进任务中心；解决稿写成待审知识页（绝不直发）。
   serviceDeskService.tasks = taskCenterService;
   serviceDeskService.kbDraft = async (input) => {
@@ -2035,9 +3033,18 @@ export function createServices() {
   crmContractService.attachMechanisms(mechanismService);
   crmLeadService.attachMechanisms(mechanismService);
   // 增长驾驶舱：OKR / 销售 / 交付 / 获客 / 客服 的当期快照。
+  // ERP 读侧桥：增长/项目域只经 ErpPort 读 ERP 表，超时与降级在调用方落地。
+  const erpReadPort = new ErpBridge(prismaService);
+  // ERP 写侧桥：跨域落 ERP 单据只走这里（单号流水、审批态、归属自证、事件都在 ERP 域内）。
+  const erpWritePort = new ErpWriteBridge(
+    prismaService,
+    mechanismService,
+    erpReadPort,
+  );
   const growthCockpitService = new GrowthCockpitService(
     prismaService,
     hrmScopeService,
+    erpReadPort,
   );
   // 经营异常（P4-6）：五类异常扫描 → 责任任务派发；关闭前复核与驾驶舱共用同一扫描口径。
   const operationRiskService = new OperationRiskService(
@@ -2045,6 +3052,8 @@ export function createServices() {
     hrmScopeService,
     mechanismService,
     taskCenterService,
+    erpReadPort,
+    erpWritePort,
   );
   riskServiceRef.current = operationRiskService;
   // 合同履约助手（P4-8）：四态事实 → 卡点与下一步动作；派履约任务走任务中心同一入口。
@@ -2251,6 +3260,11 @@ export function createServices() {
     scrmSyncService,
     scrmCodeService,
   );
+  const terminalScrmService = new TerminalScrmService(
+    prismaService,
+    new WecomScrmBridge(prismaService),
+    scrmSourceTagService,
+  );
   const scrmController = new ScrmController(
     scrmSettingsService,
     scrmSyncService,
@@ -2264,6 +3278,7 @@ export function createServices() {
     scrmStatsService,
     scrmMaterialService,
     scrmSidebarService,
+    terminalScrmService,
   );
   const scrmScheduler = new ScrmScheduler(
     scrmMassService,
@@ -2271,17 +3286,148 @@ export function createServices() {
     scrmSopService,
     scrmCodeService,
   );
+  // 建站管理 · 健康管理小程序工具（C1/C2）：凭据与出包复用私域底座 scene='HEALTH'，
+  // 沟通复用 AI客服，SCRM 只做单向出站（本域不写 scrm_* 表）。
+  const healthPlatformService = new HealthPlatformService(
+    prismaService,
+    identityService,
+  );
+  const healthShopService = new HealthShopService(
+    prismaService,
+    healthPlatformService,
+    miniAppService,
+  );
+  const healthReleaseService = new HealthReleaseService(
+    prismaService,
+    storageService,
+    systemAssetService,
+    miniAppService,
+    miniProgramClient,
+    healthShopService,
+  );
+  const healthScrmService = new HealthScrmService(
+    prismaService,
+    scrmSopService,
+    undefined,
+    scrmSourceTagService,
+  );
+  const healthSubjectService = new HealthSubjectService(prismaService);
+  const healthStatService = new HealthStatService(prismaService);
+  const healthCrypto = new HealthCrypto();
+  const healthArchiveService = new HealthArchiveService(
+    prismaService,
+    systemAssetService,
+    healthCrypto,
+  );
+  const healthMonitorService = new HealthMonitorService(prismaService);
+  const healthCareService = new HealthCareService(
+    prismaService,
+    healthMonitorService,
+  );
+  const healthServiceItemService = new HealthServiceItemService(prismaService);
+  const healthClinicService = new HealthClinicService(
+    prismaService,
+    serviceDeskService,
+  );
+  const healthExamService = new HealthExamService(prismaService);
+  const healthMallService = new HealthMallService(prismaService);
+  const healthMarketingService = new HealthMarketingService(prismaService);
+  const healthOrderService = new HealthOrderService(
+    prismaService,
+    systemAssetService,
+    miniAppService,
+    wechatPayClient,
+    healthMallService,
+    healthClinicService,
+    healthCareService,
+    healthMarketingService,
+  );
+  const healthFinanceService = new HealthFinanceService(
+    prismaService,
+    healthCrypto,
+  );
+  const healthPromoterService = new HealthPromoterService(prismaService);
+  const healthContentService = new HealthContentService(
+    prismaService,
+    miniAppService,
+    miniProgramClient,
+  );
+  // 舌象分析增值服务：视觉模型走统一网关，原图入数字资产台账。
+  const healthTongueService = new HealthTongueService(
+    prismaService,
+    systemAssetService,
+  );
+  // 平台自检的 HealthController（src/health.controller.ts）已在上面注册为 `healthController`，
+  // 这里的工具工作台控制器用独立键名，避免与自检控制器重名。
+  const healthWorkbenchController = new HealthWorkbenchController(
+    healthPlatformService,
+    healthShopService,
+    healthReleaseService,
+    healthScrmService,
+    healthSubjectService,
+    healthStatService,
+    healthArchiveService,
+    healthMonitorService,
+    healthCareService,
+    healthServiceItemService,
+    healthClinicService,
+    healthExamService,
+    healthMallService,
+    healthMarketingService,
+    healthOrderService,
+    healthFinanceService,
+    healthPromoterService,
+    healthContentService,
+    healthTongueService,
+    miniAppService,
+  );
+  const healthAdminController = new HealthAdminController(
+    healthPlatformService,
+    identityService,
+  );
+  // 健康管理小程序 C 端公开通道：顾客令牌只来自 private-mini 底座（scene=HEALTH），
+  // 支付用店铺自有商户号，沟通复用 AI客服站点。
+  const healthPublicService = new HealthPublicService(
+    prismaService,
+    miniProgramClient,
+    miniAppService,
+    healthPlatformService,
+    healthMonitorService,
+    healthCrypto,
+    serviceDeskService,
+    wechatPayClient,
+  );
+  // 医护工作台通道：医护令牌与顾客令牌物理隔离，服务层按 shopId + practitionerId 双条件过滤。
+  const healthStaffService = new HealthStaffService(
+    prismaService,
+    healthMonitorService,
+    healthCrypto,
+  );
+  // AI 医护接线（后置挂钩子，与 serviceDeskService.kbRecall 同一写法）：
+  // 健康域只存「开没开」和「每位医护绑了哪位纯AI客服员工」，
+  // 问答走 AI客服的通用口 answerForAgent，员工清单走 aiAgents；健康侧不拼提示词、不查知识库。
+  const aiAgentListOf = (ownerUserId: string) =>
+    serviceDeskService.aiAgents(new CurrentUser(ownerUserId, '', ''));
+  healthStaffService.aiAnswer = (input) =>
+    serviceDeskService.answerForAgent(input);
+  healthStaffService.aiAgentList = aiAgentListOf;
+  // 业主端的「AI 医护」配置卡与医护绑定同一份员工清单，避免两处口径不一致。
+  healthShopService.aiAgentList = aiAgentListOf;
   // L2 项目 / 任务 / 工时（§5.2）：组织口径复用 HRM，业务事件走 mechanisms 分发。
   const projectCostService = new ProjectCostService(
     prismaService,
     hrmScopeService,
     mechanismService,
+    erpReadPort,
+    erpWritePort,
   );
   const projectService = new ProjectService(
     prismaService,
     hrmScopeService,
     mechanismService,
     aiEvalService,
+    erpReadPort,
+    erpWritePort,
   );
   const projectDemandService = new ProjectDemandService(
     prismaService,
@@ -2300,6 +3446,9 @@ export function createServices() {
     mechanismService,
     aiEvalService,
   );
+  // ERP 主数据的导入导出挂到机制层：机制层因此不再直读直写 erp_* 表，
+  // 「供应商要挂 bizParty、税率要截断」这些规则只留在 ERP 域一份实现里。
+  registerErpMechanismModules(mechanismService, prismaService, erpService);
   const erpController = new ErpController(erpService);
   // L3 营销技能库（§5.5）：内置技能种子 + LLM 运行 + 内容资产；平台凭据走 AccountCrypto。
   const mktService = new MktService(
@@ -2348,14 +3497,6 @@ export function createServices() {
     programmatic: seoProgrammatic,
     reports: seoReports,
   });
-  // L3 AI 简历代投（§5.6，求职者视角）：资料/岗位/评估/定制/投递确认。
-  const recruitService = new RecruitService(
-    prismaService,
-    hrmScopeService,
-    mechanismService,
-    aiEvalService,
-  );
-  const recruitController = new RecruitController(recruitService);
   const hrmProfileService = new HrmProfileService(
     prismaService,
     hrmScopeService,
@@ -2422,7 +3563,6 @@ export function createServices() {
   const timeAuditService = new TimeAuditService(prismaService, gapScopeService);
   // 时长卡（日卡 / 30 天卡）：规格目录只软停用，发卡/扣额/兑换订单集中在 CardService。
   // 支付客户端提前到这里构造——现金购卡与充值共用同一个微信商户客户端。
-  const wechatPayClient = new WechatPayClient();
   const cardTemplateService = new CardTemplateService(
     prismaService,
     gapScopeService,
@@ -2653,10 +3793,11 @@ export function createServices() {
     prismaService,
     identityService,
     userLookupService,
-    ossService,
+    storageService,
     comfyClient,
     comfyCrypto,
     communityAwardService,
+    systemAssetService,
   );
   const communityController = new CommunityController(
     communityService,
@@ -2667,6 +3808,7 @@ export function createServices() {
       userLookupService,
       ossService,
       comfyClient,
+      systemAssetService,
     ),
   );
   const communityRunScheduler = new CommunityRunScheduler(
@@ -2674,6 +3816,104 @@ export function createServices() {
     comfyClient,
     communityService,
     contentDigitalAssetService,
+  );
+  // 租赁管理小程序：复用站内账号、微信支付客户端、SCRM 桥、service-desk 与对象存储。
+  const rentalScrmService = new RentalScrmService(
+    prismaService,
+    new WecomScrmBridge(prismaService),
+    scrmSourceTagService,
+  );
+  const rentalPayService = new RentalPayService(
+    prismaService,
+    miniAppService,
+    wechatPayClient,
+    rentalScrmService,
+  );
+  const rentalService = new RentalService(
+    prismaService,
+    miniProgramClient,
+    miniAppService,
+    rentalPayService,
+    rentalScrmService,
+    storageService,
+    {
+      isOpen: (code, orgUserId) => featureToggleService.isOpen(code, orgUserId),
+    },
+  );
+  const rentalController = new RentalController(rentalService);
+  // 园区管理：独立身份/令牌/数据域，只复用平台级 AI 客服、文件、支付与通知。
+  const parkSiteService = new ParkSiteService(prismaService);
+  const parkPackageService = new ParkPackageService(
+    parkSiteService,
+    storageService,
+  );
+  const parkApprovalService = new ParkApprovalService(
+    prismaService,
+    parkSiteService,
+  );
+  const parkPayService = new ParkPayService(
+    prismaService,
+    miniAppService,
+    wechatPayClient,
+  );
+  const parkOrderService = new ParkOrderService(
+    prismaService,
+    parkSiteService,
+    parkPayService,
+  );
+  const parkNotifyService = new ParkNotifyService(
+    prismaService,
+    miniAppService,
+    miniProgramClient,
+  );
+  const parkReservationService = new ParkReservationService(
+    prismaService,
+    parkSiteService,
+    parkApprovalService,
+    appointmentService,
+    parkOrderService,
+    parkNotifyService,
+  );
+  const parkWorkOrderService = new ParkWorkOrderService(
+    prismaService,
+    parkSiteService,
+    parkNotifyService,
+    parkOrderService,
+  );
+  const parkResourceService = new ParkResourceService(
+    prismaService,
+    parkSiteService,
+    appointmentService,
+  );
+  const parkActivityService = new ParkActivityService(
+    prismaService,
+    parkSiteService,
+  );
+  const parkIdentityService = new ParkIdentityService(
+    prismaService,
+    parkSiteService,
+    miniAppService,
+    miniProgramClient,
+  );
+  const parkLeaseService = new ParkLeaseService(
+    prismaService,
+    parkSiteService,
+    hrmScopeService,
+    erpWritePort,
+  );
+  const parkOpsService = new ParkOpsService(prismaService, parkSiteService);
+  const parkController = new ParkController(
+    parkSiteService,
+    parkApprovalService,
+    parkReservationService,
+    parkWorkOrderService,
+    parkResourceService,
+    parkActivityService,
+    parkOrderService,
+    parkLeaseService,
+    parkOpsService,
+    miniAppService,
+    parkPackageService,
   );
   return {
     prisma: prismaService,
@@ -2689,13 +3929,6 @@ export function createServices() {
     demandService,
     users: userLookupService,
     identity: identityService,
-    // 商务社交：本地为主，个人 Key 可选同步 AIworkin；调度器由 main.ts 启停。
-    socialSync: {
-      aiworkin: socialAiworkinService,
-      sync: socialSyncService,
-      affinity: socialAffinityService,
-      scheduler: socialSyncScheduler,
-    },
     external: externalService,
     collection: geoCollectionService,
     // GEO 独立站：公开投递通道取 domain 解析站点，scheduler 由 main.ts 启停。
@@ -2710,6 +3943,18 @@ export function createServices() {
       menu: geoSiteMenuService,
       content: geoSiteContentService,
       render: geoSiteRenderDataService,
+    },
+    // 建站工具启动设置：闸门（管理端中间件 / C 端通道 / 出包）与日批调度共用这一个服务实例。
+    toolLaunch: {
+      service: toolLaunchService,
+      billing: toolLaunchBillingService,
+      meter: toolLaunchMeterService,
+      settings: toolLaunchSettingsService,
+      scheduler: toolLaunchScheduler,
+    },
+    // 小程序发布说明（源码分发包口径）：用户侧说明页与平台侧正文维护共用这一个服务实例。
+    miniGuide: {
+      service: miniGuideService,
     },
     rpaTaskService,
     workbuddyPlanService,
@@ -2735,6 +3980,173 @@ export function createServices() {
       client: miniProgramClient,
       service: miniProgramService,
       controller: miniProgramController,
+    },
+    // 建站管理底座（自营主体凭据）：上门服务与后续电商工具共用。
+    privateMini: { app: miniAppService },
+    // 多店铺商城平台：根 app 的商户通道与 /api/public/market 公开通道都从这里取同一批实例。
+    marketplace: {
+      market: mpMarketService,
+      merchant: mpMerchantService,
+      category: mpCategoryService,
+      platform: mpPlatformService,
+      catalog: mpCatalogService,
+      trade: mpTradeService,
+      pay: mpPayService,
+      aftersale: mpAftersaleService,
+      finance: mpFinanceService,
+      diy: mpDiyService,
+      coupons: mpCouponService,
+      follows: mpFollowService,
+      scrm: mpScrmService,
+    },
+    onsite: {
+      platform: onsitePlatformService,
+      shops: onsiteShopService,
+      releases: onsiteReleaseService,
+      poster: onsitePosterService,
+      customers: onsiteCustomerService,
+      miniApp: miniAppService,
+      catalog: onsiteCatalogService,
+      staff: onsiteStaffService,
+      schedule: onsiteScheduleService,
+      cities: onsiteCityService,
+      content: onsiteContentService,
+      orders: onsiteOrderService,
+      refunds: onsiteRefundService,
+      reviews: onsiteReviewService,
+      alerts: onsiteAlertService,
+      assist: onsiteAssistService,
+      notify: onsiteNotifyService,
+      pay: wechatPayClient,
+      marketing: onsiteMarketingService,
+      wallet: onsiteWalletService,
+      commission: onsiteCommissionService,
+      agents: onsiteAgentService,
+    },
+    // 租赁管理小程序：后台管理走 Rental_，C 端与员工端走 /api/public/rental/*。
+    rental: {
+      orders: rentalService,
+      pay: rentalPayService,
+      scrm: rentalScrmService,
+    },
+    park: {
+      sites: parkSiteService,
+      approvals: parkApprovalService,
+      reservations: parkReservationService,
+      workOrders: parkWorkOrderService,
+      resources: parkResourceService,
+      activities: parkActivityService,
+      orders: parkOrderService,
+      pay: parkPayService,
+      leases: parkLeaseService,
+      ops: parkOpsService,
+      notify: parkNotifyService,
+      identity: parkIdentityService,
+      controller: parkController,
+    },
+    brand: {
+      platform: brandPlatformService,
+      shops: brandShopService,
+      goods: brandGoodsService,
+      diy: brandDiyService,
+      releases: brandReleaseService,
+      stats: brandStatService,
+      miniApp: miniAppService,
+      customers: brandCustomerService,
+      orders: brandOrderService,
+      coupons: brandCouponService,
+      pay: brandPayService,
+      scrm: brandScrmService,
+    },
+    takeout: {
+      shops: takeoutShopService,
+      goods: takeoutGoodsService,
+      customers: takeoutCustomerService,
+      coupons: takeoutCouponService,
+      pay: takeoutPayService,
+      orders: takeoutOrderService,
+      scrm: takeoutScrmService,
+    },
+    // 卡密商城小程序：管理端控制器由契约 CardShop_ 派发，C 端公开通道在 app.ts 注册；
+    // 顾客态一律按 siteId + customerId 双条件过滤，pay 只做商户号解密与下单。
+    cardShop: {
+      sites: cardShopSiteService,
+      goods: cardShopGoodsService,
+      cards: cardShopCardService,
+      contents: cardShopContentService,
+      coupons: cardShopCouponService,
+      customers: cardShopCustomerService,
+      orders: cardShopOrderService,
+      pay: cardShopPayService,
+      releases: cardShopReleaseService,
+    },
+    // 快递寄件小程序：管理端控制器由契约 Kuaidi_ 派发，C 端公开通道在 app.ts 注册；
+    // 报价与金额只由后端算，支付只做商户号直连解密。
+    kuaidi: {
+      platform: kuaidiPlatformService,
+      sites: kuaidiSiteService,
+      companies: kuaidiCompanyService,
+      customers: kuaidiCustomerService,
+      orders: kuaidiOrderService,
+      pay: kuaidiPayService,
+      releases: kuaidiReleaseService,
+    },
+    circle: {
+      prisma: prismaService,
+      communityService: circleCommunityService,
+      userService: circleUserService,
+      groupService: circleGroupService,
+      postService: circlePostService,
+      commentService: circleCommentService,
+      interactionService: circleInteractionService,
+      notificationService: circleNotificationService,
+      reportService: circleReportService,
+      mediaService: circleMediaService,
+      aiService: circleAiService,
+      activityService: circleActivityService,
+      medalService: circleMedalService,
+      subscribeService: circleSubscribeService,
+    },
+    // 跑腿小程序：管理端控制器由契约 Errand_/ErrandAdmin_ 派发，C 端与骑手通道在 app.ts 注册；
+    // 金额只由后端算，支付走账号级小程序主体的商户号，AI 走统一模型网关。
+    errand: {
+      prisma: prismaService,
+      platform: errandPlatformService,
+      sites: errandSiteService,
+      cities: errandCityService,
+      agents: errandAgentService,
+      customers: errandCustomerService,
+      riders: errandRiderService,
+      coupons: errandCouponService,
+      wallet: errandWalletService,
+      orders: errandOrderService,
+      pay: errandPayService,
+      ai: errandAiService,
+      map: errandMapService,
+      notify: errandNotifyService,
+      releases: errandReleaseService,
+    },
+    knowledgePay: {
+      service: knowledgePayService,
+      member: knowledgePayMemberService,
+      pay: knowledgePayPayService,
+      controller: knowledgePayController,
+    },
+    // 数字人小程序工具：管理端控制器由契约 Dh_ 派发，C 端公开通道在 app.ts 注册；
+    // oss 供 C 端素材上传直传对象存储（返回公网 URL 给供应商回调）。
+    digitalHuman: {
+      site: dhSiteService,
+      member: dhMemberService,
+      channel: dhChannelService,
+      library: dhLibraryService,
+      synth: dhSynthService,
+      content: dhContentService,
+      store: dhStoreService,
+      pay: dhPayService,
+      commission: dhCommissionService,
+      release: dhReleaseService,
+      oss: ossService,
+      controller: digitalHumanController,
     },
     orgStaff: orgStaffService,
     serviceDesk: serviceDeskService,
@@ -2773,6 +4185,7 @@ export function createServices() {
     },
     livecode: livecodeService,
     survey: surveyService,
+    quiz: quizService,
     publishReview: publishReviewService,
     okrMetrics: okrMetricsService,
     oa: oaService,
@@ -2789,6 +4202,7 @@ export function createServices() {
     bi: biController,
     oss: ossService,
     ossSettings: ossSettingsService,
+    systemAsset: systemAssetService,
     storage: {
       service: storageService,
       migration: storageMigrationService,
@@ -2853,8 +4267,6 @@ export function createServices() {
     erp: erpService,
     // 营销技能库（§5.5 L3）：控制器由契约 moduleHandlers（Mkt_）注册。
     mkt: mktService,
-    // AI 简历代投（§5.6 L3）：控制器由契约 moduleHandlers（Recruit_）注册。
-    recruit: recruitService,
     // HRM 域（§5.1 L2）：档案/假勤/招聘/评估/Offer，控制器由契约 moduleHandlers 注册。
     hrm: {
       scope: hrmScopeService,
@@ -2918,8 +4330,16 @@ export function createServices() {
     },
     // Bot 主机：客户端通道（根 app 公开路由，只认主机令牌）与界面端点共用同一份服务实例。
     botHost: botHostService,
-    // AI 调用账号：设备令牌通道（/api/public/{bot-host,mobot}/ai-call/**）按绑定取凭据。
+    // AI 调用账号：设备令牌通道（/api/public/{bot-host,awbot}/ai-call/**）按绑定取凭据。
     aiCall: aiCallAccountService,
+    // 健康管理小程序：C 端公开通道与工作台控制器共用同一批领域服务。
+    health: {
+      publicService: healthPublicService,
+      staffService: healthStaffService,
+      tongueService: healthTongueService,
+    },
+    // 通用终端 SCRM：onsite/card/kuaidi/errand/circle/dh/kp 的关键节点打标。
+    terminalScrm: terminalScrmService,
     controllers: {
       healthController,
       adminController,
@@ -2969,6 +4389,7 @@ export function createServices() {
       domesticPdpController,
       distributionController,
       surveyController,
+      quizController,
       helpController,
       bigdataQueryController,
       insightController,
@@ -2982,6 +4403,32 @@ export function createServices() {
       notificationController,
       wechatMpController,
       miniProgramController,
+      onsiteController,
+      onsiteAdminController,
+      rentalController,
+      parkController,
+      marketplaceController,
+      marketplaceAdminController,
+      toolLaunchController,
+      toolLaunchAdminController,
+      miniGuideController,
+      miniGuideAdminController,
+      devGuideAdminController,
+      brandController,
+      brandAdminController,
+      takeoutController,
+      cardShopController,
+      cardShopAdminController,
+      kuaidiController,
+      kuaidiAdminController,
+      circleController,
+      circleAdminController,
+      errandController,
+      errandAdminController,
+      healthWorkbenchController,
+      healthAdminController,
+      knowledgePayController,
+      digitalHumanController,
       snsController,
       orgStaffController,
       serviceDeskController,
@@ -2992,6 +4439,8 @@ export function createServices() {
       growthController,
       lowcodeController,
       okrController,
+      rbacService,
+      rbacController,
       partyController,
       oaController,
       taskCenterController,
@@ -3008,9 +4457,9 @@ export function createServices() {
       projectController,
       erpController,
       mktController,
-      recruitController,
       kbController,
       aiController,
+      aiSocialController,
       platformController,
       pointsBillingController,
       modelPlazaController,

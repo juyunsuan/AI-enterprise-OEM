@@ -101,6 +101,7 @@ const prismaOf = (overrides: Record<string, unknown> = {}) =>
     loginLog: { create: jest.fn(async () => ({})) },
     auditLog: { create: jest.fn(async () => ({})) },
     userDirectory: { upsert: jest.fn(async () => ({})) },
+    subAccount: { findUnique: jest.fn(async () => null) },
     ...overrides,
   });
 

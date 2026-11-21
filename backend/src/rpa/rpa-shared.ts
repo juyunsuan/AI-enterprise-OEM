@@ -2,7 +2,7 @@ import { text } from '../common/api';
 import { BusinessException } from '../common/business.exception';
 import { ErrorCode } from '../common/error-code';
 
-/** 目标设备：pc＝比特浏览器窗口，android＝安卓云手机，iphone＝iPhone 云手机，chrome＝本机 Chrome 插件，botbuddy＝BotBuddy 客户端的指纹窗口。 */
+/** 目标设备：pc＝比特浏览器窗口，android＝安卓云手机，iphone＝iPhone 云手机，chrome＝本机 Chrome 插件，botbuddy＝AWBotDSH 客户端的指纹窗口。 */
 export const DEVICE_TYPES = [
   'pc',
   'android',
@@ -16,7 +16,7 @@ export const DEVICE_LABELS: Record<string, string> = {
   android: '安卓云手机',
   iphone: 'iPhone 云手机',
   chrome: '本地 Chrome（插件）',
-  botbuddy: 'BotBuddy 浏览器',
+  botbuddy: 'AWBotDSH 浏览器',
 };
 
 /** 设备叫法归一：界面、机器通道与 MCP 都可能传中文或扩展名式写法。 */
@@ -185,7 +185,7 @@ export const SCRIPT_FILE_TYPES_BY_DEVICE: Record<string, readonly string[]> = {
 
 /**
  * 脚本类型能不能交给某设备执行——任务绑定脚本的第一道闸。
- * BotBuddy 浏览器与 PC 都是「Chrome 内核 + Automa 插件」，同一份 Automa JSON 两边都能跑，
+ * AWBotDSH 浏览器与 PC 都是「Chrome 内核 + Automa 插件」，同一份 Automa JSON 两边都能跑，
  * 所以脚本库共用；但比特浏览器 RPA 流程、云手机流程、插件动作序列各只认自己的设备。
  */
 export function supportsFileType(fileType: unknown, deviceType: unknown) {
@@ -310,7 +310,7 @@ export function normalizeDeviceType(raw: unknown, fallback = 'pc') {
   if (mapped) return mapped;
   throw new BusinessException(
     ErrorCode.BAD_REQUEST,
-    '设备类型只能是 PC / 安卓手机 / iPhone 手机 / 本地 Chrome / BotBuddy 浏览器',
+    '设备类型只能是 PC / 安卓手机 / iPhone 手机 / 本地 Chrome / AWBotDSH 浏览器',
   );
 }
 

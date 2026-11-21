@@ -1,0 +1,7 @@
+<view class="diy-notice" wx:if="{{text}}">
+  <image wx:if="{{icon}}" class="icon" src="{{icon}}" mode="aspectFit" />
+  <text wx:else class="icon-text">公告</text>
+  <view class="track">
+    <text class="roll" style="animation-duration: {{duration}}s">{{text}}</text>
+  </view>
+</view>

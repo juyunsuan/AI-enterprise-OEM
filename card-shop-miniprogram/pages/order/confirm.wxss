@@ -1,0 +1,109 @@
+.goods-row {
+  align-items: flex-start;
+}
+
+.goods-thumb {
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: 12rpx;
+  background: #f2f3f5;
+  margin-right: 20rpx;
+  flex-shrink: 0;
+}
+
+.goods-name {
+  font-size: 28rpx;
+  font-weight: 500;
+  line-height: 40rpx;
+}
+
+.field-label {
+  font-size: 26rpx;
+  font-weight: 500;
+  margin-bottom: 12rpx;
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+}
+
+.step-btn {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 12rpx;
+  background: #f2f3f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 34rpx;
+}
+
+.step-value {
+  min-width: 90rpx;
+  text-align: center;
+  font-size: 30rpx;
+}
+
+.qty-hint {
+  margin-top: 8rpx;
+}
+
+.coupon-row {
+  gap: 12rpx;
+}
+
+.coupon-btn {
+  padding: 0 28rpx;
+  height: 80rpx;
+  border-radius: 12rpx;
+  background: rgba(51, 112, 255, 0.1);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  font-size: 26rpx;
+}
+
+.money-row {
+  padding: 8rpx 0;
+}
+
+.price-lg {
+  font-size: 40rpx;
+}
+
+.protocol {
+  padding: 20rpx 24rpx;
+}
+
+.checkbox {
+  width: 34rpx;
+  height: 34rpx;
+  border-radius: 8rpx;
+  border: 2rpx solid #c9cdd4;
+  margin-right: 12rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22rpx;
+  color: #ffffff;
+  box-sizing: border-box;
+}
+
+.checkbox-on {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.protocol-link {
+  color: var(--primary);
+  font-size: 24rpx;
+}
+
+.bottom-space {
+  height: 160rpx;
+}
+
+.submit-btn {
+  min-width: 240rpx;
+}

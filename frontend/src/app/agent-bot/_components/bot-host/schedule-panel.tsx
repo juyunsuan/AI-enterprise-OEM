@@ -101,7 +101,7 @@ export function SchedulePanel({
   reload: () => Promise<void>;
   kind?: BotClientKind;
 }) {
-  const isMobile = kind === "MOBOT";
+  const isMobile = kind === "AWBOT";
   const { message } = App.useApp();
   const { t } = useI18n();
   const { request, modal } = usePasswordConfirm();
@@ -351,11 +351,11 @@ export function SchedulePanel({
 
   if (!hosts.length) {
     return (
-      <Panel title={isMobile ? "Mobot 定时任务" : "主机定时任务"}>
+      <Panel title={isMobile ? "AWBot 定时任务" : "主机定时任务"}>
         <EmptyState
           text={
             isMobile
-              ? "先在「设备」页签配对一台 Mobot 手机"
+              ? "先在「设备」页签配对一台 AWBot 手机"
               : "先在「主机」页签配对一台主机"
           }
         />
@@ -366,7 +366,7 @@ export function SchedulePanel({
   return (
     <>
       <div className="agent-shell">
-        <Panel title={isMobile ? "Mobot 手机" : "主机"}>
+        <Panel title={isMobile ? "AWBot 手机" : "主机"}>
           <div className="agent-conv-list">
             {hosts.map((row) => (
               <div
@@ -384,7 +384,7 @@ export function SchedulePanel({
           </div>
           <div className="text-12 muted" style={{ marginTop: 8 }}>
             {isMobile
-              ? "点一台 Mobot 手机查看定时任务；手机离线时到点指令保持待执行，上线即领取。"
+              ? "点一台 AWBot 手机查看定时任务；手机离线时到点指令保持待执行，上线即领取。"
               : "点一台主机查看它的定时任务；主机离线时到点指令保持待执行，上线即领取。"}
           </div>
         </Panel>
@@ -419,7 +419,7 @@ export function SchedulePanel({
           editing
             ? `修改定时任务（${editing.title}）`
             : isMobile
-              ? "新建 Mobot 定时任务"
+              ? "新建 AWBot 定时任务"
               : "新建主机定时任务"
         }
         onCancel={close}

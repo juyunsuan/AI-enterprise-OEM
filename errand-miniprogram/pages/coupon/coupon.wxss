@@ -1,0 +1,19 @@
+.coupon {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #f2f3f5;
+}
+.coupon:last-child {
+  border-bottom: none;
+}
+.coupon-name {
+  font-weight: 600;
+  margin-bottom: 4rpx;
+}
+.small {
+  height: 60rpx;
+  padding: 0 26rpx;
+  font-size: 26rpx;
+}

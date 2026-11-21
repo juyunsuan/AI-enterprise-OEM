@@ -57,7 +57,7 @@ export function ChatPanel({
   onHostChange: (hostId: number) => void;
   kind?: BotClientKind;
 }) {
-  const isMobile = kind === "MOBOT";
+  const isMobile = kind === "AWBOT";
   const { message } = App.useApp();
   const { t } = useI18n();
   const [messages, setMessages] = useState<BotMessageView[]>([]);
@@ -291,11 +291,11 @@ export function ChatPanel({
                 <RobotOutlined aria-hidden />
               </div>
               <div className="agent-empty-title">
-                {isMobile ? "开始一台 Mobot 手机的对话" : "开始一台主机的对话"}
+                {isMobile ? "开始一台 AWBot 手机的对话" : "开始一台主机的对话"}
               </div>
               <p className="agent-empty-desc">
                 {isMobile
-                  ? "左侧先点一台 Mobot 手机，说一句要它做的事。手机前台服务在线时由本地 Agent 执行，过程与结果回在这里；离线时指令先排队。"
+                  ? "左侧先点一台 AWBot 手机，说一句要它做的事。手机前台服务在线时由本地 Agent 执行，过程与结果回在这里；离线时指令先排队。"
                   : "左侧先点一台主机，然后在面板右上角选工作区，说一句要它做的事。客户端领到后在它本机跑，过程与结果回在这里。"}
               </p>
             </div>

@@ -38,14 +38,11 @@ export class AccountModule {
   readonly channels: NotifyChannelService;
   readonly account: AccountService;
   readonly aipdd: AipddKeyService;
-  /** 解绑 Key 时同步作废 AIworkin 社交身份与待执行的同步任务。 */
-  readonly socialAiworkin: Services['socialSync']['aiworkin'];
   /** 微信回调地址要按站点域名拼，路由层借它读后台站点设置。 */
   readonly prisma: Services['prisma'];
 
   constructor(services: Services) {
     this.prisma = services.prisma;
-    this.socialAiworkin = services.socialSync.aiworkin;
     this.settings = new AccountSettingsService(services.prisma);
     this.channels = new NotifyChannelService(services.prisma, this.settings);
     this.account = new AccountService(
@@ -102,6 +99,11 @@ type LoginSession = {
   tokenVersion: number;
   mustChangePassword: boolean;
   public: unknown;
+  /** 子账号附加声明（主账号为空）。 */
+  actorUserId?: string;
+  subAccountId?: number;
+  subAccountName?: string;
+  scopes?: string[];
 };
 /** 签发会话令牌（勾选记住则 30 天）并写 Cookie。 */
 function setSessionCookie(
@@ -115,6 +117,14 @@ function setSessionCookie(
     session.role,
     session.tokenVersion,
     remember === true ? REMEMBER_TTL_SECONDS : undefined,
+    session.subAccountId
+      ? {
+          actorUserId: session.actorUserId,
+          subAccountId: session.subAccountId,
+          scopes: session.scopes,
+          subAccountName: session.subAccountName,
+        }
+      : undefined,
   );
   parseIssue(token);
   setCookie(c, ACCESS_COOKIE, token, cookieOptions());
@@ -538,6 +548,10 @@ export function registerAccountBusinessRoutes(
       username: string;
       role: string;
       tokenVersion: number;
+      actorUserId?: string;
+      subAccountId?: number;
+      subAccountName?: string;
+      scopes?: string[];
     },
   ) => {
     const keepTtl = tokenRemainingSeconds(
@@ -549,6 +563,14 @@ export function registerAccountBusinessRoutes(
       session.role,
       session.tokenVersion,
       keepTtl > 0 ? keepTtl : undefined,
+      session.subAccountId
+        ? {
+            actorUserId: session.actorUserId,
+            subAccountId: session.subAccountId,
+            scopes: session.scopes,
+            subAccountName: session.subAccountName,
+          }
+        : undefined,
     );
     setCookie(c, ACCESS_COOKIE, token, cookieOptions());
   };
@@ -683,9 +705,14 @@ export function registerAccountBusinessRoutes(
     );
   });
   app.delete('/enterprise/account/aipdd-key', async (c) => {
-    const result = await module.aipdd.unbind(userOf(c).userId);
-    await module.socialAiworkin.revokeIdentity(userOf(c).userId);
-    return json(c, result, '已解绑');
+    const keyId = z.coerce
+      .number()
+      .int()
+      .positive()
+      .optional()
+      .parse(c.req.query('keyId'));
+    const result = await module.aipdd.unbind(userOf(c).userId, keyId);
+    return json(c, result, keyId ? '已解绑该 Key' : '已清空全部 Key');
   });
 
   // ---------- 平台管理员 ----------

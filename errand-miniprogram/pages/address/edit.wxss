@@ -1,0 +1,9 @@
+.field {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1rpx solid #eef0f3;
+  border-radius: 14rpx;
+  padding: 20rpx;
+  margin-bottom: 16rpx;
+  background: #fafbfc;
+}

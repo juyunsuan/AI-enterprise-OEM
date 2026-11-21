@@ -34,8 +34,8 @@ import { ErrorCode } from '../common/error-code';
 import { ContractsService } from '../contracts/contracts.service';
 import { UserLookupService } from '../directory/user-lookup.service';
 import { IdentityService } from '../identity/identity.service';
-import { OssService } from '../oss/oss.service';
 import { parseAttachmentFiles } from '../oss/attachment-files';
+import type { SystemAssetService } from '../system-asset/system-asset.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { sideContactBody } from '../shared/contacts';
 import { requireLocation, resolveLocation } from '../shared/locations';
@@ -78,6 +78,13 @@ const CANDIDATE_STAGES: Record<string, string> = {
   REJECTED: '未通过',
 };
 export class FlexService {
+  /**
+   * 系统资产层写入槽位（后置注入）：装配顺序上 DigitalAssetService 需要 IdentityService，
+   * 本服务与它同批构造拿不到 SystemAssetService，故沿用 `deliverableSink` 的既有口径，
+   * 由 http/services.ts 回填。缺失时直接拒绝上传——宁可报错，也不写不落账的字节。
+   */
+  systemAsset?: SystemAssetService;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly identity: IdentityService,
@@ -85,7 +92,6 @@ export class FlexService {
     private readonly demandSync: DemandSyncService,
     private readonly users: UserLookupService,
     private readonly contacts: ContactResolver,
-    private readonly oss: OssService,
   ) {}
   /**
    * 资源库查询：按机构 / 代理人两个分区（recordType）分别取数，筛选只有**省、市与关键词**
@@ -294,13 +300,24 @@ export class FlexService {
   ) {
     await this.identity.requireRoles(user, 'ENTERPRISE_USER');
     const validated = parseAttachmentFiles(files);
+    const assets = this.systemAsset;
+    if (!assets) {
+      throw new BusinessException(
+        ErrorCode.SERVICE_UNAVAILABLE,
+        '系统资产层未装配，进件材料暂时无法上传，请稍后重试',
+      );
+    }
     const ts = Date.now();
     const uploaded: OnboardingFile[] = [];
     for (const [index, { name, safe, content }] of validated.entries()) {
-      const result = await this.oss.upload(
-        `flex-onboardings/${user.userId}/${ts}-${index + 1}-${safe}`,
-        content,
-      );
+      // 进件材料归上传者账号入账，存储用量与费用才可见
+      const result = await assets.put({
+        ownerUserId: user.userId,
+        path: `flex-onboardings/${user.userId}/${ts}-${index + 1}-${safe}`,
+        bytes: content,
+        name,
+        bizRef: `flex-onboarding:${index + 1}`,
+      });
       uploaded.push({
         id: `fja-${ts}-${index + 1}`,
         name,

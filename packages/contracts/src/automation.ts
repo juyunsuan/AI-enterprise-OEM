@@ -371,7 +371,7 @@ export const rpaTaskSchema = z
     deviceType: z.string(),
     /** deviceType=chrome 时绑定的本地 Chrome 设备号；其余设备空串。 */
     chromeClientId: z.string().optional(),
-    /** deviceType=botbuddy 时绑定的 BotBuddy 主机 ID；其余设备 null。 */
+    /** deviceType=botbuddy 时绑定的 AWBotDSH 主机 ID；其余设备 null。 */
     botHostId: z.number().nullable().optional(),
     /** deviceType=botbuddy 时指定的指纹窗口档案 ID；空串＝主机自取默认窗口。 */
     fpProfileId: z.string().optional(),
@@ -776,8 +776,8 @@ const workbuddyPlanListQuery = z
 
 // ---------- AI 调用账号 ----------
 
-/** AI 调用账号的绑定主体：BotBuddy 主机 / MoBot 手机 / WorkBuddy 企业账号（设备粒度，不含设备内的细分 Agent）。 */
-export const AI_CALL_PRINCIPAL_KINDS = ["DESKTOP", "MOBOT", "WORKBUDDY"] as const;
+/** AI 调用账号的绑定主体：AWBotDSH 主机 / AWBot 手机 / WorkBuddy 企业账号（设备粒度，不含设备内的细分 Agent）。 */
+export const AI_CALL_PRINCIPAL_KINDS = ["DESKTOP", "AWBOT", "WORKBUDDY"] as const;
 export type AiCallPrincipalKind = (typeof AI_CALL_PRINCIPAL_KINDS)[number];
 
 /** 凭据行本体：界面与机器通道共用；绑定关系（下面 view 才有）只在站内展示。 */

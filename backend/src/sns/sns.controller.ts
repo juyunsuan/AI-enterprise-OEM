@@ -11,8 +11,4 @@ export class SnsController {
   async sendMessage(user: CurrentUser, body: Row) {
     return ok(await this.service.send(user, body));
   }
-
-  async readSns(user: CurrentUser, id: string) {
-    return ok(await this.service.read(user.userId, id));
-  }
 }

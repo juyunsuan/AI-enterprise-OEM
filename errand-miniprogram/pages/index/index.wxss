@@ -1,0 +1,79 @@
+.hero {
+  border-radius: 24rpx;
+  padding: 32rpx;
+  color: #ffffff;
+  margin-bottom: 20rpx;
+}
+.hero-title {
+  font-size: 40rpx;
+  font-weight: 700;
+}
+.hero-sub {
+  font-size: 26rpx;
+  opacity: 0.9;
+  margin-top: 6rpx;
+}
+.hero-meta {
+  margin-top: 24rpx;
+  font-size: 24rpx;
+  opacity: 0.85;
+}
+.city-picker {
+  margin-top: 12rpx;
+  display: inline-block;
+  padding: 6rpx 16rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.18);
+  font-size: 24rpx;
+}
+.logo {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 24rpx;
+  background: rgba(255, 255, 255, 0.2);
+}
+.notice {
+  font-size: 26rpx;
+  color: #8a5a00;
+  background: #fff8e6;
+}
+.service-row {
+  display: flex;
+  gap: 20rpx;
+}
+.service-item {
+  flex: 1;
+  border: 1rpx solid #eef0f3;
+  border-radius: 18rpx;
+  padding: 24rpx;
+  text-align: center;
+}
+.service-icon {
+  width: 88rpx;
+  height: 88rpx;
+  line-height: 88rpx;
+  border-radius: 50%;
+  background: #eef4ff;
+  color: #1f6feb;
+  font-size: 36rpx;
+  font-weight: 700;
+  margin: 0 auto 12rpx;
+}
+.service-name {
+  font-size: 30rpx;
+  font-weight: 600;
+  margin-bottom: 4rpx;
+}
+.menu-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid #f2f3f5;
+}
+.menu-row:last-child {
+  border-bottom: none;
+}
+.protocol text {
+  white-space: pre-wrap;
+}

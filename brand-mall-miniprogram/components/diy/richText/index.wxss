@@ -1,0 +1,11 @@
+.diy-rich-text {
+  padding: 16rpx 24rpx;
+  box-sizing: border-box;
+}
+
+.body {
+  font-size: 28rpx;
+  line-height: 1.7;
+  color: #333;
+  word-break: break-word;
+}

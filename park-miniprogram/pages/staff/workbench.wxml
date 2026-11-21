@@ -1,0 +1,87 @@
+<view class="wrap">
+  <view class="card" wx:if="{{workbench}}">
+    <view class="row">
+      <view>
+        <view class="section-title">{{workbench.staff.name}} · {{workbench.staff.department}}</view>
+        <view class="muted">{{workbench.site.name}}（{{workbench.site.parkCode}}）</view>
+      </view>
+      <text class="tag">{{workbench.staff.role}}</text>
+    </view>
+    <view class="quick-grid" style="margin-top: 16rpx;">
+      <view class="quick">审批 {{workbench.counts.approvals}}</view>
+      <view class="quick">待核验 {{workbench.counts.reservations}}</view>
+      <view class="quick">工单 {{workbench.counts.workOrders}}</view>
+      <view class="quick">今日核验 {{workbench.counts.checkins}}</view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="row">
+      <text class="btn small {{tab === 'approvals' ? '' : 'ghost'}}" data-tab="approvals" bindtap="switchTab">审批</text>
+      <text class="btn small {{tab === 'checkin' ? '' : 'ghost'}}" data-tab="checkin" bindtap="switchTab">核验</text>
+      <text class="btn small {{tab === 'workorders' ? '' : 'ghost'}}" data-tab="workorders" bindtap="switchTab">工单</text>
+      <text class="btn small ghost" data-path="/pages/patrol/list" bindtap="goPage">巡检</text>
+    </view>
+  </view>
+
+  <block wx:if="{{tab === 'approvals'}}">
+    <view wx:if="{{!approvals.length}}" class="empty">暂无待审批事项</view>
+    <view wx:for="{{approvals}}" wx:key="id" class="card">
+      <view class="row">
+        <view class="section-title">{{item.title}}</view>
+        <text class="tag orange">{{item.bizLabel}}</text>
+      </view>
+      <view class="muted">{{item.applicantName}} · {{item.nodeName}} · {{item.createdAt}}</view>
+      <view class="row" style="margin-top: 12rpx;">
+        <view></view>
+        <view>
+          <text class="btn small" data-id="{{item.id}}" data-action="approve" bindtap="actApproval">通过</text>
+          <text class="btn small danger" data-id="{{item.id}}" data-action="reject" bindtap="actApproval">驳回</text>
+        </view>
+      </view>
+    </view>
+  </block>
+
+  <block wx:if="{{tab === 'checkin'}}">
+    <view class="card">
+      <view class="section-title">通行码核验</view>
+      <view class="muted">让访客出示通行码，或扫描二维码/条码。</view>
+      <view class="field" style="margin-top: 12rpx;">
+        <input class="input grow" value="{{checkinCode}}" bindinput="onCheckinInput" placeholder="输入通行码" />
+        <text class="btn small ghost" bindtap="scan">扫码</text>
+      </view>
+      <view class="btn" bindtap="checkin">核验通行码</view>
+    </view>
+    <view class="card">
+      <view class="section-title">已通过待入园</view>
+      <view wx:if="{{!reservations.length}}" class="muted">暂无待核验预约</view>
+      <view wx:for="{{reservations}}" wx:key="id" class="field">
+        <view class="grow">
+          <view>{{item.visitorName}} · {{item.kindLabel}}</view>
+          <view class="muted">{{item.startAt}} → {{item.endAt}}</view>
+        </view>
+        <text class="tag">{{item.statusLabel}}</text>
+      </view>
+    </view>
+  </block>
+
+  <block wx:if="{{tab === 'workorders'}}">
+    <view wx:if="{{!workorders.length}}" class="empty">暂无待处理工单</view>
+    <view wx:for="{{workorders}}" wx:key="id" class="card">
+      <view class="row">
+        <view class="section-title">{{item.title}}</view>
+        <text class="tag">{{item.statusLabel}}</text>
+      </view>
+      <view class="muted">{{item.orderNo}} · {{item.categoryLabel}} · {{item.reporterName}}</view>
+      <view class="muted" wx:if="{{item.location}}">位置：{{item.location}}</view>
+      <view class="row" style="margin-top: 12rpx;">
+        <view></view>
+        <view>
+          <text wx:if="{{item.status === 'ASSIGNED'}}" class="btn small" data-id="{{item.id}}" data-action="accept" bindtap="actWorkOrder">接单</text>
+          <text wx:if="{{item.status === 'PROCESSING'}}" class="btn small" data-id="{{item.id}}" bindtap="doneWorkOrder">完成</text>
+          <text wx:if="{{item.status === 'DONE'}}" class="btn small ghost" data-id="{{item.id}}" data-action="close" bindtap="actWorkOrder">关闭</text>
+        </view>
+      </view>
+    </view>
+  </block>
+</view>

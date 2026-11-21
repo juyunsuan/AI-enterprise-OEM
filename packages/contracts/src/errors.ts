@@ -120,6 +120,16 @@ export const ErrorCode = {
     message: "工作区不在本机白名单内",
     httpStatus: 400,
   },
+  /**
+   * 建站工具未启动（启动设置）：C 端停服、禁止出包/直传、管理端写操作拒绝。
+   * message 必须带启动设置页地址，data 带 { toolCode, toolName, reason, startUrl }，
+   * 前端据此把「不行」变成「点这里去启动」。
+   */
+  TOOL_NOT_STARTED: {
+    code: 26008,
+    message: "该建站工具尚未启动，请先在「启动设置」页确认后启动",
+    httpStatus: 403,
+  },
   NOT_IMPLEMENTED: {
     code: 501,
     message: "not implemented",

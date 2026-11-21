@@ -1,0 +1,19 @@
+{
+  "component": true,
+  "usingComponents": {
+    "diy-search-bar": "/components/diy/searchBar/index",
+    "diy-image-ads": "/components/diy/imageAds/index",
+    "diy-image-cube": "/components/diy/imageCube/index",
+    "diy-nav": "/components/diy/nav/index",
+    "diy-notice": "/components/diy/notice/index",
+    "diy-title": "/components/diy/title/index",
+    "diy-goods-list": "/components/diy/goodsList/index",
+    "diy-coupon": "/components/diy/coupon/index",
+    "diy-store-head": "/components/diy/storeHead/index",
+    "diy-category-line": "/components/diy/categoryLine/index",
+    "diy-rich-text": "/components/diy/richText/index",
+    "diy-assist": "/components/diy/assist/index",
+    "diy-spacer": "/components/diy/spacer/index",
+    "diy-page-foot": "/components/diy/pageFoot/index"
+  }
+}

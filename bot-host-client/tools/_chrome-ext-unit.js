@@ -13,7 +13,7 @@ const path = require('node:path');
 const zlib = require('node:zlib');
 
 const HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'bb-chrome-ext-home-'));
-process.env.BOTBUDDY_HOME = HOME;
+process.env.AWBOTDSH_HOME = HOME;
 
 const chromeExtensions = require('../src/main/chrome-extensions');
 

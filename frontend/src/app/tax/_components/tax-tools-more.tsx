@@ -527,7 +527,7 @@ export function AnnualInspectionPanel({
             }}
           >
             <span className="tool-name"><BankOutlined aria-hidden /> 工商年检</span>
-            <span className="tool-hint">工商年报信息填报与台账留存</span>
+            <span className="tool-hint">工商年报信息填报与台账留存（小程序同台账）</span>
           </button>
           <LegacyImportCard />
         </div>
@@ -545,6 +545,7 @@ export function AnnualInspectionPanel({
       >
         <div className="text-12 muted" style={{ marginBottom: 12 }}>
           填报 {year} 年度工商年报信息，保存后可在「填报记录」台账回看。
+          手机端可在小程序「工商年报」直接填报，记录与本台账同步。
           当前工具仅保存本系统记录，尚未接入国家企业信用信息公示系统；正式年报公示需另行办理。
         </div>
         <Form form={form} layout="vertical">

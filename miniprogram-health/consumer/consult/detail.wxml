@@ -1,0 +1,81 @@
+<view class="page {{(canCancel || canFinish || canChat || canEval) ? 'page-with-bar' : ''}}" wx:if="{{consult}}">
+  <view class="card">
+    <view class="head">
+      <view class="title">{{consult.title || consult.wayLabel}}</view>
+      <text class="tag tag-blue">{{consult.statusLabel}}</text>
+    </view>
+    <view class="kv">
+      <text class="kv-label">问诊单号</text>
+      <text class="kv-value">
+        {{consult.consultNo}}
+        <text class="link" bindtap="onCopy">复制</text>
+      </text>
+    </view>
+    <view class="kv">
+      <text class="kv-label">问诊方式</text>
+      <text class="kv-value">{{consult.wayLabel}}</text>
+    </view>
+    <view class="kv" wx:if="{{consult.patientName}}">
+      <text class="kv-label">就诊人</text>
+      <text class="kv-value">{{consult.patientName}}</text>
+    </view>
+    <view class="kv" wx:if="{{consult.practitionerName}}">
+      <text class="kv-label">接诊医护</text>
+      <text class="kv-value">{{consult.practitionerName}}</text>
+    </view>
+    <view class="kv" wx:if="{{consult.appointText}}">
+      <text class="kv-label">预约时间</text>
+      <text class="kv-value">{{consult.appointText}}</text>
+    </view>
+    <view class="kv">
+      <text class="kv-label">提交时间</text>
+      <text class="kv-value">{{consult.timeText}}</text>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{consult.symptomText}}">
+    <view class="block-title">病情描述</view>
+    <view class="detail-text">{{consult.symptomText}}</view>
+  </view>
+
+  <view class="card" wx:if="{{attachments.length}}">
+    <view class="block-title">检查资料</view>
+    <view class="images">
+      <image
+        class="image"
+        wx:for="{{attachments}}"
+        wx:key="*this"
+        src="{{item}}"
+        mode="aspectFill"
+        data-url="{{item}}"
+        bindtap="onPreview"
+      />
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{consult.conclusion}}">
+    <view class="block-title">医生结论</view>
+    <view class="detail-text">{{consult.conclusion}}</view>
+  </view>
+
+  <view class="card" wx:if="{{consult.evalScore}}">
+    <view class="block-title">我的评价</view>
+    <view class="eval-score">评分 {{consult.evalScore}} 分</view>
+    <view class="detail-text" wx:if="{{consult.evalContent}}">{{consult.evalContent}}</view>
+  </view>
+
+  <view class="notice notice-warn tip">
+    线上问诊不提供急救指导，急危重症请拨打 120 或就近急诊。
+  </view>
+
+  <view class="action-bar" wx:if="{{canCancel || canFinish || canChat || canEval}}">
+    <view class="action-bar-spacer"></view>
+    <button wx:if="{{canCancel}}" class="button-sm" bindtap="onCancel">取消问诊</button>
+    <button wx:if="{{canFinish}}" class="button-sm" bindtap="onFinish">结束问诊</button>
+    <button wx:if="{{canEval}}" class="button-sm" bindtap="onEval">评价</button>
+    <button wx:if="{{canChat}}" class="button-primary bar-button" bindtap="onChat">进入问诊会话</button>
+  </view>
+</view>
+
+<view class="empty" wx:elif="{{!loading}}">问诊单不存在</view>
+<view class="empty" wx:else>正在加载…</view>

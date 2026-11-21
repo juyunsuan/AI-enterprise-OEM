@@ -7,9 +7,9 @@ const { Text, Title } = Typography;
 
 const STEP_ITEMS = [
   {
-    title: "在主机上装 BotBuddy 客户端",
+    title: "在主机上装 AWBotDSH 客户端",
     content:
-      "BotBuddy 是跑在你机器上的桌面客户端：怎么配模型、用什么工具都由它自己管，不需要再装 WorkBuddy、ChatGPT（Codex）或任何外部执行软件。本期支持 Windows 与 macOS 主机。",
+      "AWBotDSH 是跑在你机器上的桌面客户端：怎么配模型、用什么工具都由它自己管，不需要再装 WorkBuddy、ChatGPT（Codex）或任何外部执行软件。本期支持 Windows 与 macOS 主机。",
   },
   {
     title: "在客户端里填本站地址",
@@ -60,7 +60,7 @@ export function BotHostGuideButton() {
           整体架构
         </Title>
         <Text type="secondary">
-          BotBuddy 客户端跑在你自己的机器上。平台只负责下发「做什么」、指定「落到哪个目录」，
+          AWBotDSH 客户端跑在你自己的机器上。平台只负责下发「做什么」、指定「落到哪个目录」，
           再记录「做到哪了」；客户端里怎么配模型、装了哪些技能与数字分身，是它自己的设置，
           不上报、不展示、也不校验。主机令牌只走客户端通道、只按配对账号归属，不能调用任何业务接口；
           账号一旦离职，令牌立即作废，客户端随即掉线。

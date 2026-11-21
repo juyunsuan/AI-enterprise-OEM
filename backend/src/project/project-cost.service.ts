@@ -7,6 +7,9 @@ import { BusinessException } from '../common/business.exception';
 import { ErrorCode } from '../common/error-code';
 import { text } from '../common/api';
 import { clip, ds, orgKey } from '../hrm/hrm.helpers';
+import { withBridgeTimeout } from '../commerce-core/outbox-policy';
+import { unwiredErpPort, type ErpPort } from '../erp/erp-port';
+import { failingErpWritePort, type ErpWritePort } from '../erp/erp-write-port';
 import type { Prisma } from '../../generated/prisma';
 
 type Row = Record<string, unknown>;
@@ -65,6 +68,13 @@ export class ProjectCostService {
     private readonly prisma: PrismaService,
     private readonly scope: HrmScopeService,
     private readonly mechanisms: MechanismService,
+    /** ERP 读侧端口：读数走端口并带超时降级（withBridgeTimeout），ERP 故障不拖垮项目成本页。 */
+    private readonly erp: ErpPort = unwiredErpPort(),
+    /**
+     * ERP 写侧端口：应付单的建/改/取消。
+     * 读数可以降级，写单不行——所以它缺装配时是抛错而不是空转，见 `erp-write-port.ts`。
+     */
+    private readonly erpWrites: ErpWritePort = failingErpWritePort,
   ) {}
 
   private async org(user: CurrentUser): Promise<HrmOrg> {
@@ -541,39 +551,24 @@ export class ProjectCostService {
     org: HrmOrg,
     project: { id: number; customerName: string; contractId: number },
   ) {
-    const projectOrders = await this.prisma.erpPurchaseOrder.findMany({
-      where: {
-        orgType: org.orgType,
-        orgUserId: org.orgUserId,
-        projectId: project.id,
-        status: { not: 'CANCELED' },
-      },
-      select: { id: true, amount: true, status: true },
-    });
+    const erpKey = { orgType: org.orgType, orgUserId: org.orgUserId };
+    // ERP 读数走端口 + 超时降级：失败回空值，成本页其余口径（工时/台账/合作）照常可用。
+    const ordersRead = await withBridgeTimeout(() =>
+      this.erp.listPurchaseOrdersByProject(erpKey, project.id),
+    );
+    const projectOrders = ordersRead.ok ? ordersRead.value : [];
     const orderIds = projectOrders.map((row) => row.id);
-    const [receipts, payables, engagements] = await Promise.all([
+    const [receivedRead, paidRead, engagements] = await Promise.all([
       orderIds.length
-        ? this.prisma.erpReceipt.findMany({
-            where: {
-              orgType: org.orgType,
-              orgUserId: org.orgUserId,
-              purchaseOrderId: { in: orderIds },
-              status: 'RECEIVED',
-            },
-            select: { purchaseOrderId: true },
-          })
-        : Promise.resolve([]),
+        ? withBridgeTimeout(() =>
+            this.erp.listReceivedOrderIds(erpKey, orderIds),
+          )
+        : Promise.resolve({ ok: true as const, value: [] as number[] }),
       orderIds.length
-        ? this.prisma.erpPayable.findMany({
-            where: {
-              orgType: org.orgType,
-              orgUserId: org.orgUserId,
-              sourceType: 'PURCHASE_ORDER',
-              sourceId: { in: orderIds },
-            },
-            select: { paidAmount: true },
-          })
-        : Promise.resolve([]),
+        ? withBridgeTimeout(() =>
+            this.erp.sumPaidByPurchaseOrders(erpKey, orderIds),
+          )
+        : Promise.resolve({ ok: true as const, value: 0 }),
       this.prisma.pjEngagement.findMany({
         where: {
           orgType: org.orgType,
@@ -583,7 +578,8 @@ export class ProjectCostService {
         select: { amount: true, status: true },
       }),
     ]);
-    const receivedOrders = new Set(receipts.map((row) => row.purchaseOrderId));
+    const erpAvailable = ordersRead.ok && receivedRead.ok && paidRead.ok;
+    const receivedOrders = new Set(receivedRead.ok ? receivedRead.value : []);
     const confirmedOrders = projectOrders.filter((row) =>
       receivedOrders.has(row.id),
     );
@@ -603,14 +599,15 @@ export class ProjectCostService {
     );
     const sum = (rows: Array<{ amount: unknown }>): number =>
       rows.reduce((total: number, row) => total + num(row.amount), 0);
-    let paidOnOrders = 0;
-    for (const row of payables) paidOnOrders += num(row.paidAmount);
+    const paidOnOrders = paidRead.ok ? paidRead.value : 0;
     return {
       revenueAmount: ds(await this.projectRevenue(org, project)),
       committedAmount: ds(round(sum(pendingOrders) + sum(openExternal))),
       confirmedAmount: ds(round(sum(confirmedOrders) + sum(settledExternal))),
       paidAmount: ds(round(paidOnOrders + sum(settledExternal))),
       purchaseAmount: ds(round(sum(projectOrders))),
+      // ERP 暂不可用时采购三口径按空态计 0，页面据此提示「ERP 数据暂不可用」。
+      erpAvailable,
     };
   }
 
@@ -666,46 +663,23 @@ export class ProjectCostService {
     query: { onlyIssues?: boolean | string },
   ) {
     const org = await this.org(user);
-    const [orders, payables] = await Promise.all([
-      this.prisma.erpPurchaseOrder.findMany({
-        where: {
-          orgType: org.orgType,
-          orgUserId: org.orgUserId,
-          status: { notIn: ['DRAFT', 'CANCELED'] },
-        },
-        select: {
-          id: true,
-          orderNo: true,
-          vendorId: true,
-          projectId: true,
-          amount: true,
-          taxAmount: true,
-          status: true,
-        },
-        orderBy: { id: 'desc' },
-      }),
-      this.prisma.erpPayable.findMany({
-        where: {
-          orgType: org.orgType,
-          orgUserId: org.orgUserId,
-          sourceType: 'PURCHASE_ORDER',
-          status: { not: 'CANCELED' },
-        },
-        select: { sourceId: true, amount: true, paidAmount: true },
-      }),
+    const erpKey = { orgType: org.orgType, orgUserId: org.orgUserId };
+    // ERP 读数走端口 + 超时降级：失败按空态渲染（列表为空），对账页不整页报错。
+    const [ordersRead, payablesRead] = await Promise.all([
+      withBridgeTimeout(() => this.erp.listPurchaseOrdersForReconcile(erpKey)),
+      withBridgeTimeout(() => this.erp.listPurchaseOrderPayables(erpKey)),
     ]);
-    const receipts = orders.length
-      ? await this.prisma.erpReceipt.findMany({
-          where: {
-            orgType: org.orgType,
-            orgUserId: org.orgUserId,
-            purchaseOrderId: { in: orders.map((row) => row.id) },
-            status: 'RECEIVED',
-          },
-          select: { purchaseOrderId: true },
-        })
-      : [];
-    const received = new Set(receipts.map((row) => row.purchaseOrderId));
+    const orders = ordersRead.ok ? ordersRead.value : [];
+    const payables = payablesRead.ok ? payablesRead.value : [];
+    const receiptsRead = orders.length
+      ? await withBridgeTimeout(() =>
+          this.erp.listReceivedOrderIds(
+            erpKey,
+            orders.map((row) => row.id),
+          ),
+        )
+      : undefined;
+    const received = new Set(receiptsRead?.ok ? receiptsRead.value : []);
     const payableOf = new Map<
       number,
       { amount: number; paid: number; count: number }
@@ -721,11 +695,15 @@ export class ProjectCostService {
       bucket.count += 1;
       payableOf.set(row.sourceId, bucket);
     }
-    const vendors = await this.prisma.erpVendor.findMany({
-      where: { orgType: org.orgType, orgUserId: org.orgUserId },
-      select: { id: true, name: true },
-    });
-    const vendorName = new Map(vendors.map((row) => [row.id, row.name]));
+    const vendorsRead = await withBridgeTimeout(() =>
+      this.erp.listVendors(erpKey),
+    );
+    const vendorName = new Map(
+      (vendorsRead.ok ? vendorsRead.value : []).map((row) => [
+        row.id,
+        row.name,
+      ]),
+    );
     const rows = orders.map((order) => {
       const payable = payableOf.get(order.id);
       const orderAmount = num(order.amount);
@@ -767,6 +745,12 @@ export class ProjectCostService {
       list,
       total: list.length,
       issueCount: rows.filter((row) => row.issue).length,
+      // ERP 暂不可用时列表为空态，页面据此提示「ERP 数据暂不可用」。
+      erpAvailable:
+        ordersRead.ok &&
+        payablesRead.ok &&
+        vendorsRead.ok &&
+        (receiptsRead === undefined || receiptsRead.ok),
     };
   }
 
@@ -1042,6 +1026,26 @@ export class ProjectCostService {
         ErrorCode.BAD_REQUEST,
         `当前状态（${ENGAGEMENT_STATUS_LABELS[row.status] || row.status}）不能执行该动作`,
       );
+    // 取消合作之前先问 ERP：这张应付已经有付款就不能取消。
+    // 合作状态一旦落库再去作废应付，失败只能事后补救（备注留痕），财务要跨两张表才看得懂；
+    // 放在提交前拒绝，才是「账实一致」的真正闸门。
+    if (next === 'CANCELED') {
+      const payable = await this.erp.findPayableBySource(
+        { orgType: org.orgType, orgUserId: org.orgUserId },
+        'ENGAGEMENT',
+        row.id,
+      );
+      if (
+        payable &&
+        payable.status !== 'CANCELED' &&
+        num(payable.paidAmount) > 0
+      ) {
+        throw new BusinessException(
+          ErrorCode.BAD_REQUEST,
+          `该外部合作的应付已付款 ${num(payable.paidAmount)}，请先在「ERP · 应付」冲销付款后再取消合作`,
+        );
+      }
+    }
     const acceptance =
       next === 'SETTLED'
         ? {
@@ -1141,67 +1145,34 @@ export class ProjectCostService {
       },
       select: { name: true },
     });
+    const erpKey = { orgType: org.orgType, orgUserId: org.orgUserId };
     // 应付按供应商登记：外部主体与供应商各自独立维护，按同名供应商匹配，无匹配则留空待财务补。
     const vendor = party?.name
-      ? await this.prisma.erpVendor.findFirst({
-          where: {
-            orgType: org.orgType,
-            orgUserId: org.orgUserId,
-            name: party.name,
-          },
-          select: { id: true },
-        })
+      ? await this.erp.findVendorByName(erpKey, party.name)
       : null;
-    const existing = await this.prisma.erpPayable.findFirst({
-      where: {
-        orgType: org.orgType,
-        orgUserId: org.orgUserId,
-        sourceType: 'ENGAGEMENT',
-        sourceId: row.id,
-      },
-    });
-    if (existing) {
-      if (existing.status === 'CANCELED') return;
-      await this.prisma.erpPayable.update({
-        where: { id: existing.id },
-        data: { amount: num(row.amount) },
-      });
-      return;
-    }
-    const stamp = today().replace(/-/g, '');
-    const count = await this.prisma.erpPayable.count({
-      where: { orgType: org.orgType, orgUserId: org.orgUserId },
-    });
-    await this.prisma.erpPayable.create({
-      data: {
-        ...orgKey(org),
-        code: `YF-${stamp}-${String(count + 1).padStart(4, '0')}`,
-        vendorId: vendor?.id || 0,
-        sourceType: 'ENGAGEMENT',
-        sourceId: row.id,
-        amount: num(row.amount),
-        dueDate: today(),
-        note: `外部合作验收：${party?.name || ''}`.slice(0, 500),
-      },
+    // 建/改应付都交给 ERP 写端口：幂等键、YF 当日流水号、大额审批态与归属自证只在 ERP 域实现一份。
+    // 原先这里改金额只写 amount、不重算 approvalStatus——把一笔 8 万的应付改成 3 万就绕过了财务审批；
+    // 号源又用「全量计数」而 ERP 用「当日计数」，同一个 YF- 前缀两套流水（表上没有唯一索引，
+    // 重码不报错，只在月底对账时才发现）。
+    await this.erpWrites.syncSourcePayable(org, {
+      sourceType: 'ENGAGEMENT',
+      sourceId: row.id,
+      vendorId: vendor?.id || 0,
+      amount: num(row.amount),
+      note: `外部合作验收：${party?.name || ''}`,
     });
   }
 
   private async cancelEngagementPayable(org: HrmOrg, engagementId: number) {
-    const row = await this.prisma.erpPayable.findFirst({
-      where: {
-        orgType: org.orgType,
-        orgUserId: org.orgUserId,
-        sourceType: 'ENGAGEMENT',
-        sourceId: engagementId,
-      },
-      select: { id: true, paidAmount: true },
-    });
-    // 已有付款的应付不能静默取消，交由财务处理，避免账实不符。
-    if (!row || num(row.paidAmount) > 0) return;
-    await this.prisma.erpPayable.update({
-      where: { id: row.id },
-      data: { status: 'CANCELED' },
-    });
+    // 取消交给写端口：「已有付款不许静默取消」这条闸门与留痕都在 ERP 域内实现
+    // （原代码在这里 `update({ where: { id } })` 直写别人的表，既不带组织条件，
+    // 也只是把有付款的单据跳过、什么痕迹都不留）。
+    await this.erpWrites.cancelSourcePayable(
+      org,
+      'ENGAGEMENT',
+      engagementId,
+      `外部合作 #${engagementId} 已取消`,
+    );
   }
 
   async removeEngagement(user: CurrentUser, body: Row) {

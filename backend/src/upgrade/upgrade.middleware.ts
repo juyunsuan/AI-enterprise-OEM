@@ -14,6 +14,8 @@ const ALLOW_PREFIXES = [
   '/health',
 ];
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+/** 业务子应用挂在 /api/backend 下，维护闸按去掉前缀后的路径判断（与 app.ts 的 canonicalPath 同口径）。 */
+const BUSINESS_PREFIX = /^\/api\/backend(?=\/|$)/;
 
 /**
  * 升级维护闸：升级/还原任务创建时置位，runner 结束后由任务同步清除。
@@ -26,7 +28,8 @@ export function maintenanceMiddleware(
     const state = await jobs.maintenance();
     if (!state.on) return next();
     if (SAFE_METHODS.has(context.req.method)) return next();
-    if (ALLOW_PREFIXES.some((prefix) => context.req.path.startsWith(prefix))) {
+    const path = context.req.path.replace(BUSINESS_PREFIX, '') || '/';
+    if (ALLOW_PREFIXES.some((prefix) => path.startsWith(prefix))) {
       return next();
     }
     throw new BusinessException(

@@ -41,6 +41,7 @@ import {
   StatGrid,
 } from "@/components/ui/panel";
 import { HardwareAdminTools } from "./hardware-admin-tools";
+import { formatBytes as formatSize } from "@/lib/format";
 
 type Tab = "models" | "kits" | "tools";
 
@@ -101,14 +102,6 @@ const EMPTY_KIT: KitDraft = {
   fileSize: 0,
   sha256: "",
 };
-
-function formatSize(bytes: number) {
-  if (!bytes) return "—";
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-  return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
-}
 
 export function HardwareAdminTab() {
   const { message } = App.useApp();

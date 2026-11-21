@@ -1,0 +1,84 @@
+<view class="empty" wx:if="{{loading}}">正在加载服务…</view>
+
+<view class="card" wx:elif="{{notReady}}">
+  <view class="title">店铺暂未开通</view>
+  <view class="muted detail-text">{{readyReason}}</view>
+</view>
+
+<view class="empty" wx:elif="{{error}}">{{error}}</view>
+
+<block wx:elif="{{service}}">
+  <swiper class="banner" wx:if="{{images.length}}" indicator-dots circular>
+    <swiper-item wx:for="{{images}}" wx:key="*this">
+      <image class="banner-image" src="{{item}}" mode="aspectFill" data-src="{{item}}" bindtap="previewImage"></image>
+    </swiper-item>
+  </swiper>
+
+  <view class="card">
+    <view class="title">{{service.title}}</view>
+    <view class="muted detail-text" wx:if="{{service.subtitle}}">{{service.subtitle}}</view>
+    <view class="price-row">
+      <text class="amount price">{{service.priceText}}</text>
+      <text class="muted market" wx:if="{{service.marketText}}">门市价 {{service.marketText}}</text>
+      <text class="muted duration">{{service.durationText}}</text>
+    </view>
+    <view class="muted detail-text" wx:if="{{service.materialText}}">{{service.materialText}}</view>
+    <view class="muted detail-text" wx:if="{{service.ratingText}}">
+      评分 {{service.ratingText}} · {{service.reviewText}} · {{service.salesText}}
+    </view>
+    <view class="tags" wx:if="{{service.highlights.length}}">
+      <text class="tag tag-blue" wx:for="{{service.highlights}}" wx:key="*this">{{item}}</text>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="title">费用说明</view>
+    <view class="kv">
+      <text class="kv-label">服务费</text>
+      <text class="kv-value">{{service.priceText}} / 次</text>
+    </view>
+    <view class="kv" wx:if="{{service.materialText}}">
+      <text class="kv-label">材料费</text>
+      <text class="kv-value">{{service.materialText}}</text>
+    </view>
+    <view class="kv">
+      <text class="kv-label">车费</text>
+      <text class="kv-value">{{service.travelText}}</text>
+    </view>
+    <view class="kv" wx:if="{{service.addonText}}">
+      <text class="kv-label">加钟</text>
+      <text class="kv-value">{{service.addonText}}</text>
+    </view>
+    <view class="notice">最终应付金额以下单确认页为准，页面不做自行计算。</view>
+  </view>
+
+  <view class="card" wx:if="{{staff.length}}">
+    <view class="row">
+      <text class="title">可服务技师</text>
+      <text class="muted">点「选 TA」可直接约这位</text>
+    </view>
+    <view class="staff-row" wx:for="{{staff}}" wx:key="id">
+      <image class="avatar" src="{{item.avatar}}" mode="aspectFill" wx:if="{{item.avatar}}"></image>
+      <view class="staff-avatar" wx:else>{{item.name[0]}}</view>
+      <view class="staff-main" data-id="{{item.id}}" bindtap="openStaff">
+        <view class="staff-name">{{item.name}}</view>
+        <view class="muted">
+          <text wx:if="{{item.ratingText}}">{{item.ratingText}} 分</text>
+          <text wx:if="{{item.priceText}}"> · {{item.priceText}}</text>
+        </view>
+      </view>
+      <view class="button-sm primary" data-id="{{item.id}}" bindtap="bookStaff">选 TA</view>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{service.detail}}">
+    <view class="title">服务介绍</view>
+    <rich-text class="rich" nodes="{{service.detail}}"></rich-text>
+  </view>
+
+  <view class="footer">
+    <button class="button-primary" bindtap="book" disabled="{{!bookingEnabled}}">
+      {{bookingEnabled ? '立即预约' : '暂未开放预约'}}
+    </button>
+  </view>
+</block>

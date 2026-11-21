@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import type { ServiceDeskAgent, OrgStaffRow } from "@enterprise/contracts";
 import { orgStaffApi, serviceDeskApi } from "@/api/collab";
 import { Panel } from "@/components/ui/panel";
+import { AiAgentsPanel } from "./ai-agent-panel";
 
 const STATUS_COLOR: Record<string, string> = {
   ONLINE: "green",
@@ -128,6 +129,7 @@ export function TeamPanel() {
           ]}
         />
       </Panel>
+      <AiAgentsPanel groups={groups} />
       <Modal
         open={open}
         title="添加客服成员"

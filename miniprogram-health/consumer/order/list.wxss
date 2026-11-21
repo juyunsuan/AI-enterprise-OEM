@@ -1,0 +1,53 @@
+.tab-scroll {
+  white-space: nowrap;
+}
+
+.tab-pills {
+  padding: 16rpx 24rpx;
+}
+
+.order-card {
+  padding: 0 24rpx;
+}
+
+.order {
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid #f0f1f5;
+}
+
+.order:last-child {
+  border-bottom: none;
+}
+
+.order-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.order-body {
+  margin-top: 12rpx;
+}
+
+.order-name {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.order-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 12rpx;
+}
+
+.order-foot .amount {
+  margin-right: auto;
+}
+
+.list-tip {
+  padding: 24rpx;
+  text-align: center;
+  color: #8a8f99;
+  font-size: 24rpx;
+}

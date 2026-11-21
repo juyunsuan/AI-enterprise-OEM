@@ -1,0 +1,29 @@
+.result {
+  text-align: center;
+}
+
+.result-icon {
+  width: 96rpx;
+  height: 96rpx;
+  margin: 12rpx auto 16rpx;
+  border-radius: 50%;
+  line-height: 96rpx;
+  font-size: 52rpx;
+  color: #fff;
+}
+
+.result-icon.ok {
+  background: #12a150;
+}
+
+.result-icon.warn {
+  background: #f0a020;
+}
+
+.result-title {
+  margin-bottom: 12rpx;
+}
+
+.result-hint {
+  margin-bottom: 12rpx;
+}

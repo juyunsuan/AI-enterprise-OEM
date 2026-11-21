@@ -11,6 +11,8 @@ import { ProjectPlanningService } from './project-planning.service';
 import { ProjectPlatformService } from './project-platform.service';
 import { ProjectTaskService } from './project-task.service';
 import { ProjectTimeService } from './project-time.service';
+import { unwiredErpPort, type ErpPort } from '../erp/erp-port';
+import { failingErpWritePort, type ErpWritePort } from '../erp/erp-write-port';
 
 /**
  * §5.2 项目门面：项目主档 / 迭代里程碑 / 任务 / 风险洞察 / 工时按服务拆分，
@@ -29,9 +31,20 @@ export class ProjectService extends ProjectBase {
     scope: HrmScopeService,
     mechanisms: MechanismService,
     aiEval: AiEvalService,
+    /** ERP 读侧端口：透传给持有 ERP 读数的子服务（主档）。 */
+    erp: ErpPort = unwiredErpPort(),
+    /** ERP 写侧端口：合同→应收由主档触发，同样透传。 */
+    erpWrites: ErpWritePort = failingErpWritePort,
   ) {
     super(prisma, scope, mechanisms, aiEval);
-    this.projects = new ProjectCoreService(prisma, scope, mechanisms, aiEval);
+    this.projects = new ProjectCoreService(
+      prisma,
+      scope,
+      mechanisms,
+      aiEval,
+      erp,
+      erpWrites,
+    );
     this.planning = new ProjectPlanningService(
       prisma,
       scope,

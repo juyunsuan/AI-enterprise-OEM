@@ -1,0 +1,92 @@
+.consult-warn {
+  margin: 24rpx 24rpx 0;
+}
+
+.ways-card {
+  display: flex;
+  padding: 12rpx;
+}
+
+.way {
+  flex: 1;
+  margin: 0 6rpx;
+  padding: 20rpx 10rpx;
+  border-radius: 12rpx;
+  background: #f7f8fa;
+  text-align: center;
+}
+
+.way-active {
+  background: #eef3ff;
+  box-shadow: inset 0 0 0 2rpx #1a73e8;
+}
+
+.way-label {
+  color: #1a73e8;
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.way-desc {
+  margin-top: 6rpx;
+  color: #8a8f99;
+  font-size: 20rpx;
+  line-height: 1.5;
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx 24rpx 0;
+}
+
+.login-card {
+  text-align: center;
+}
+
+.login-title {
+  margin-bottom: 20rpx;
+  color: #5c6068;
+  font-size: 28rpx;
+}
+
+.doctor {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #f0f1f5;
+}
+
+.doctor:last-child {
+  border-bottom: none;
+}
+
+.doctor-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.doctor-line {
+  display: flex;
+  align-items: center;
+}
+
+.doctor-name {
+  margin-right: 12rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.arrow {
+  margin-left: 12rpx;
+  color: #c4c8d0;
+  font-size: 36rpx;
+}
+
+.footer-tip {
+  padding: 32rpx 24rpx 48rpx;
+  text-align: center;
+  color: #1a73e8;
+  font-size: 26rpx;
+}

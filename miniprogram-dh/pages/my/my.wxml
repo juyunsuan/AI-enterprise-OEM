@@ -1,0 +1,50 @@
+<view class="page" style="{{themeStyle}}">
+  <view class="profile">
+    <image wx:if="{{member.avatar}}" class="profile-avatar" src="{{member.avatar}}" mode="aspectFill" />
+    <view wx:else class="profile-avatar profile-avatar-empty">我</view>
+    <view class="profile-info">
+      <view class="profile-name">{{member.nickname || '点击登录'}}</view>
+      <view wx:if="{{member}}" class="profile-vip">{{vipText}}</view>
+      <view wx:else class="profile-vip" bindtap="onLoginTap">微信一键登录</view>
+    </view>
+  </view>
+
+  <view class="assets" bindtap="goMember">
+    <view class="asset">
+      <view class="asset-value">{{member.point || 0}}</view>
+      <view class="asset-label">算力</view>
+    </view>
+    <view class="asset">
+      <view class="asset-value">{{member.bodyQuota || 0}}</view>
+      <view class="asset-label">形象点</view>
+    </view>
+    <view class="asset">
+      <view class="asset-value">{{member.voiceQuota || 0}}</view>
+      <view class="asset-label">声音点</view>
+    </view>
+    <view class="asset">
+      <view class="asset-value">{{member.commissionBalance || 0}}</view>
+      <view class="asset-label">佣金(分)</view>
+    </view>
+  </view>
+
+  <view class="card menu-card">
+    <view wx:for="{{menus}}" wx:key="key" class="line" data-url="{{item.url}}" bindtap="openMenu">
+      <text>{{item.title}}</text>
+      <text class="arrow">›</text>
+    </view>
+    <view wx:if="{{deskUrl}}" class="line" bindtap="openDesk">
+      <text>在线客服</text>
+      <text class="arrow">›</text>
+    </view>
+  </view>
+
+  <view wx:if="{{agreements.length}}" class="card menu-card">
+    <view wx:for="{{agreements}}" wx:key="key" class="line" data-url="{{item.url}}" bindtap="openMenu">
+      <text>{{item.title}}</text>
+      <text class="arrow">›</text>
+    </view>
+  </view>
+
+  <view class="footer">{{siteName}}</view>
+</view>

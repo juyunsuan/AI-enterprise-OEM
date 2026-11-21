@@ -1,0 +1,44 @@
+.tabs {
+  display: flex;
+  padding: 0 24rpx;
+  background: #fff;
+}
+
+.tab {
+  flex: 1;
+  padding: 24rpx 0;
+  text-align: center;
+  color: #5c6068;
+  font-size: 28rpx;
+  border-bottom: 4rpx solid transparent;
+}
+
+.tab.active {
+  color: #1a73e8;
+  font-weight: 600;
+  border-bottom-color: #1a73e8;
+}
+
+.tag {
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+  background: #eef3ff;
+  color: #2b5bd7;
+  font-size: 22rpx;
+}
+
+.tag.OVERDUE {
+  background: #fdecec;
+  color: #f5413d;
+}
+
+.tag.DONE {
+  background: #eaf7ef;
+  color: #1a9b5c;
+}
+
+.tag.CANCELED,
+.tag.SKIPPED {
+  background: #f0f1f5;
+  color: #8a8f99;
+}

@@ -1,0 +1,50 @@
+<view class="page-flush cat-page" style="{{themeStyle}}">
+  <view class="empty" wx:if="{{!enabled}}">店主未开启「分类」页签，可回首页查看商品。</view>
+
+  <block wx:else>
+    <view class="cat-side">
+      <scroll-view scroll-y class="cat-scroll">
+        <view
+          class="cat-tab {{activeId === item.id ? 'cat-tab-active' : ''}}"
+          wx:for="{{categories}}"
+          wx:key="id"
+          bindtap="switchCategory"
+          data-id="{{item.id}}"
+        >
+          {{item.name}}
+        </view>
+      </scroll-view>
+    </view>
+
+    <view class="cat-main">
+      <view class="search-bar" bindtap="goSearch" wx:if="{{searchEnabled && categories.length}}">
+        <view class="search-box">
+          <text class="muted">搜索卡密商品</text>
+        </view>
+      </view>
+      <scroll-view scroll-y class="goods-scroll" bindscrolltolower="onReachBottom">
+        <view class="empty" wx:if="{{error}}">{{error}}</view>
+        <view class="empty" wx:elif="{{!goods.length && !loading}}">这个分类还没有在售商品</view>
+        <view
+          class="goods-row"
+          wx:for="{{goods}}"
+          wx:key="id"
+          bindtap="openGoods"
+          data-id="{{item.id}}"
+        >
+          <image class="goods-thumb" src="{{item.coverImage}}" mode="aspectFill" />
+          <view class="flex1 col goods-info">
+            <text class="goods-name ellipsis-2">{{item.name}}</text>
+            <text class="goods-sub ellipsis" wx:if="{{item.subtitle}}">{{item.subtitle}}</text>
+            <view class="row between goods-foot">
+              <text class="price">¥{{item.priceText}}</text>
+              <text class="muted">{{item.stockText}}</text>
+            </view>
+          </view>
+        </view>
+        <view class="muted loading-text" wx:if="{{loading}}">加载中…</view>
+        <view class="muted loading-text" wx:elif="{{goods.length && finished}}">没有更多了</view>
+      </scroll-view>
+    </view>
+  </block>
+</view>

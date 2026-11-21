@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "讲师主页",
+  "usingComponents": {
+    "resource-card": "/components/resource-card/index"
+  }
+}

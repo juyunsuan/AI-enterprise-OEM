@@ -1,0 +1,79 @@
+<view class="wrap">
+  <view class="tab-line">
+    <view
+      wx:for="{{tabs}}"
+      wx:key="value"
+      class="tab-line-item {{status === item.value ? 'active' : ''}}"
+      data-status="{{item.value}}"
+      bindtap="pickTab"
+    >{{item.label}}</view>
+  </view>
+
+  <view wx:if="{{loading}}" class="empty">正在加载售后记录…</view>
+
+  <view wx:elif="{{error}}" class="card">
+    <view class="error-box">{{error}}</view>
+    <view class="btn btn-primary" style="margin-top:20rpx" bindtap="reload">重新加载</view>
+  </view>
+
+  <view wx:elif="{{!list.length}}" class="card">
+    <view class="empty" style="padding:80rpx 0">还没有售后记录</view>
+  </view>
+
+  <block wx:else>
+    <view wx:for="{{list}}" wx:key="id" class="card">
+      <view class="row">
+        <text class="muted">{{item.afterSaleNo}}</text>
+        <text style="font-weight:600">{{item.statusText}}</text>
+      </view>
+      <view class="muted" style="margin-top:4rpx">
+        {{item.shopName}} · {{item.typeText}} · 子单 {{item.subOrderNo}}
+      </view>
+
+      <view wx:for="{{item.items}}" wx:key="id" wx:for-item="line" class="row order-line">
+        <image class="thumb small" src="{{line.image}}" mode="aspectFill" />
+        <view class="grow">
+          <view>{{line.title}}</view>
+          <view class="muted">{{line.skuName}} ×{{line.quantity}}</view>
+        </view>
+        <text class="money">¥{{line.priceText}}</text>
+      </view>
+
+      <view class="divider"></view>
+      <view class="pay-row muted">
+        <text>退款金额</text>
+        <text class="money">{{item.amountText}}</text>
+      </view>
+      <view class="pay-row muted">
+        <text>申请原因</text>
+        <text>{{item.reason}}</text>
+      </view>
+      <view wx:if="{{item.description}}" class="pay-row muted">
+        <text>补充说明</text>
+        <text>{{item.description}}</text>
+      </view>
+      <view wx:if="{{item.merchantRemark}}" class="pay-row muted">
+        <text>商家说明</text>
+        <text>{{item.merchantRemark}}</text>
+      </view>
+      <view wx:if="{{item.rejectReason}}" class="pay-row muted">
+        <text>驳回原因</text>
+        <text>{{item.rejectReason}}</text>
+      </view>
+      <view wx:if="{{item.returnExpressNo}}" class="pay-row muted">
+        <text>退货物流</text>
+        <text>{{item.returnExpress}} {{item.returnExpressNo}}</text>
+      </view>
+      <view class="pay-row muted">
+        <text>申请时间</text>
+        <text>{{item.timeText}}</text>
+      </view>
+
+      <view wx:if="{{item.status === 'PENDING'}}" class="actions">
+        <view class="btn btn-small" data-id="{{item.id}}" bindtap="cancel">撤销申请</view>
+      </view>
+    </view>
+
+    <view class="muted footer">{{hasMore ? '上拉加载更多' : '已经到底了'}}</view>
+  </block>
+</view>

@@ -31,7 +31,7 @@ import type { WorkbuddyCloudService } from '../workbuddy/workbuddy-cloud.service
 
 /**
  * Agent 群控（docs/Agent群控（替换插件页签）产品设计方案.md）的视图与工具层：
- * 三条通道（BotBuddy 主机 / Mobot 手机 / WorkBuddy 企业云）各自的读取口径仍留在各自服务里，
+ * 三条通道（AWBotDSH 主机 / AWBot 手机 / WorkBuddy 企业云）各自的读取口径仍留在各自服务里，
  * 这里只把它们归一成同一形状的目标清单与派单台账，页签与 Agent 工具共用。
  * 写侧派单不在这里落库——设备走 BotHostService、云端走 WorkbuddyCloudService 的受控方法
  * （归属复权、队列上限、长度上限、启用状态都在那边校验），保证与界面手动下发同一套安全口径。
@@ -169,9 +169,9 @@ function hostTarget(row: BotHostView): BotDispatchDevice {
     pendingCount: row.pendingCount,
     lastSeenAt: row.lastSeenAt,
     workspacePath: kind === 'DESKTOP' ? row.workspace?.defaultPath || '' : '',
-    battery: row.mobot?.battery ?? null,
-    charging: row.mobot?.charging ?? false,
-    network: row.mobot?.network || '',
+    battery: row.awbot?.battery ?? null,
+    charging: row.awbot?.charging ?? false,
+    network: row.awbot?.network || '',
     modelLabel: row.modelGrant
       ? `${row.modelGrant.channelName}${row.modelGrant.model ? ` / ${row.modelGrant.model}` : ''}`
       : '跟随平台默认渠道',
@@ -277,7 +277,7 @@ export class AgentDispatchService {
     const payload = toJsonObject(row.payload);
     const result = toJsonObject(row.result);
     const clientKind =
-      (host?.clientKind || 'DESKTOP') === 'MOBOT' ? 'MOBOT' : 'DESKTOP';
+      (host?.clientKind || 'DESKTOP') === 'AWBOT' ? 'AWBOT' : 'DESKTOP';
     return {
       type: 'command',
       id: row.id,
@@ -303,7 +303,7 @@ export class AgentDispatchService {
 
   private scheduleTask(row: ScheduleRow, host?: HostRow): BotDispatchTask {
     const clientKind =
-      (host?.clientKind || 'DESKTOP') === 'MOBOT' ? 'MOBOT' : 'DESKTOP';
+      (host?.clientKind || 'DESKTOP') === 'AWBOT' ? 'AWBOT' : 'DESKTOP';
     const lastLabel = BOT_SCHEDULE_LAST_STATUS_LABELS[row.lastStatus] || '';
     return {
       type: 'schedule',
@@ -1077,7 +1077,7 @@ export class AgentDispatchService {
     if (hostHit && cloudHit) {
       return {
         kind: '',
-        error: `编号 ${targetId} 在这个账号里既是一台设备也是一把企云凭据：派单时请同时给 kind（DESKTOP / MOBOT / WORKBUDDY）。`,
+        error: `编号 ${targetId} 在这个账号里既是一台设备也是一把企云凭据：派单时请同时给 kind（DESKTOP / AWBOT / WORKBUDDY）。`,
       };
     }
     if (cloudHit) return { kind: 'WORKBUDDY', error: '' };

@@ -1,0 +1,7 @@
+<view class="diy-page" style="{{pageStyle}}">
+  <diy-block wx:for="{{blocks}}" wx:key="key" type="{{item.type}}" props="{{item.props}}" ctx="{{ctx}}" />
+  <view class="empty" wx:if="{{loading}}">加载中…</view>
+  <view class="empty" wx:elif="{{error}}">{{error}}</view>
+  <view class="empty" wx:elif="{{!blocks.length}}">这个活动页还没有内容</view>
+  <view class="footer-gap"></view>
+</view>

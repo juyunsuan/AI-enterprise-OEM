@@ -1,0 +1,140 @@
+<view class="empty" wx:if="{{loading}}">正在加载…</view>
+
+<view class="card closed" wx:elif="{{notReady}}">
+  <view class="title">店铺暂未开通</view>
+  <view class="muted note">{{readyReason}}</view>
+</view>
+
+<view class="empty" wx:elif="{{error}}">{{error}}</view>
+
+<block wx:else>
+  <!-- 无 orderId：先选一单 -->
+  <block wx:if="{{needSelect}}">
+    <view class="card">
+      <view class="title">选择要退款的订单</view>
+      <view class="muted note">仅列出已付款且没有在途退款的订单。</view>
+    </view>
+    <view class="empty" wx:if="{{ordersLoading}}">正在加载订单…</view>
+    <view class="empty" wx:elif="{{ordersError}}">{{ordersError}}</view>
+    <view class="empty" wx:elif="{{!orders.length}}">没有可申请退款的订单</view>
+    <view
+      class="card order-item"
+      wx:for="{{orders}}"
+      wx:key="id"
+      data-id="{{item.id}}"
+      bindtap="pickOrder"
+    >
+      <view class="row">
+        <text class="title">订单 {{item.orderNo}}</text>
+        <text class="muted">{{item.statusText}}</text>
+      </view>
+      <view class="row">
+        <text class="muted">{{item.timeText}}</text>
+        <text class="amount">{{item.amountText}}</text>
+      </view>
+    </view>
+  </block>
+
+  <block wx:else>
+    <view class="card" wx:if="{{quote}}">
+      <view class="row">
+        <text class="title">订单 {{quote.orderNo}}</text>
+        <text class="muted">{{quote.statusText}}</text>
+      </view>
+      <view class="row amount-row">
+        <text class="muted">可退金额上限</text>
+        <text class="amount">{{quote.refundableText}}</text>
+      </view>
+      <view class="warn" wx:if="{{pendingRefund}}">该订单已有一笔退款在处理，暂不能再提交申请。</view>
+      <view class="muted note">金额由后端试算给出，页面不做加减；实际退款金额以提交后店主处理结果为准。</view>
+      <view class="row">
+        <text class="link" bindtap="loadQuote">刷新试算</text>
+        <text class="link" bindtap="resetOrder">更换订单</text>
+      </view>
+    </view>
+
+    <view class="empty" wx:if="{{quoting}}">正在试算可退金额…</view>
+    <view class="card" wx:elif="{{quoteError}}">
+      <view class="title">试算失败</view>
+      <view class="muted note">{{quoteError}}</view>
+      <view class="row">
+        <text class="link" bindtap="loadQuote">重新试算</text>
+        <text class="link" bindtap="resetOrder">更换订单</text>
+      </view>
+    </view>
+
+    <block wx:if="{{quote}}">
+      <view class="card">
+        <view class="title">退款服务明细</view>
+        <view class="muted note">勾选要退的服务并调整份数；份数不能超过可退份数。</view>
+        <view class="line" wx:for="{{lines}}" wx:key="id">
+          <view class="line-head">
+            <view
+              class="check {{item.checked ? 'on' : ''}}"
+              data-index="{{index}}"
+              bindtap="toggleLine"
+            >{{item.checked ? '已选' : '选择'}}</view>
+            <text class="line-title">{{item.title}}</text>
+            <text class="muted">{{item.priceText}}/份</text>
+          </view>
+          <view class="row line-meta">
+            <text class="muted">已购 {{item.quantity}} 份 · 可退 {{item.refundableQuantity}} 份 · 已退 {{item.refundedQuantity}} 份</text>
+            <text class="muted">{{item.durationText}}</text>
+          </view>
+          <view class="stepper" wx:if="{{item.checked}}">
+            <view class="step-btn" data-index="{{index}}" data-delta="-1" bindtap="changePick">减少</view>
+            <text class="step-value">{{item.pick}} 份</text>
+            <view class="step-btn" data-index="{{index}}" data-delta="1" bindtap="changePick">增加</view>
+          </view>
+        </view>
+      </view>
+
+      <view class="card">
+        <view class="title">退款原因</view>
+        <input
+          class="text-input"
+          value="{{reason}}"
+          maxlength="200"
+          placeholder="请填写退款原因（必填）"
+          bindinput="onReasonInput"
+        />
+        <textarea
+          class="text-input area"
+          value="{{description}}"
+          maxlength="2000"
+          placeholder="补充说明（选填）"
+          bindinput="onDescriptionInput"
+        ></textarea>
+      </view>
+
+      <view class="card">
+        <view class="row images-head">
+          <text class="title">凭证图</text>
+          <text class="muted">最多 {{imageMax}} 张</text>
+        </view>
+        <view class="images">
+          <view class="image-item" wx:for="{{images}}" wx:key="*this">
+            <image
+              class="image"
+              src="{{item}}"
+              mode="aspectFill"
+              data-index="{{index}}"
+              bindtap="previewImage"
+            ></image>
+            <view class="image-del" data-index="{{index}}" catchtap="removeImage">删除</view>
+          </view>
+          <view class="image-add" bindtap="chooseImages" wx:if="{{images.length < imageMax}}">添加图片</view>
+        </view>
+      </view>
+
+      <view class="footer">
+        <button
+          class="button-primary"
+          bindtap="submit"
+          loading="{{submitting}}"
+          disabled="{{submitting || uploading || pendingRefund}}"
+        >提交退款申请</button>
+      </view>
+    </block>
+  </block>
+</block>

@@ -1,0 +1,14 @@
+<view class="page">
+  <view class="brand">
+    <view class="brand-mark">餐</view>
+    <view class="brand-title">外卖点餐</view>
+    <view class="brand-sub">登录后同步订单、优惠券与积分</view>
+  </view>
+
+  <view wx:if="{{error}}" class="error">{{error}}</view>
+
+  <view class="btn btn-primary login-btn" bindtap="login">
+    {{busy ? '登录中...' : '微信一键登录'}}
+  </view>
+  <view class="muted text-12 tip">登录只用于识别顾客身份，不会获取你的手机号或通讯录</view>
+</view>

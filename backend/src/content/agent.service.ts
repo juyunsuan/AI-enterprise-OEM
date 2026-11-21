@@ -87,7 +87,7 @@ function parseMode(raw: unknown): 'text' | 'image' | 'video' {
 
 /**
  * 本轮「+ → Agent 群控任务」勾选的目标范围（docs/Agent群控（替换插件页签）产品设计方案.md §4.5、§4.7）：
- * 只认 DESKTOP / MOBOT / WORKBUDDY 三种值，去重后原样交给引擎；空数组＝这一轮不进群控模式。
+ * 只认 DESKTOP / AWBOT / WORKBUDDY 三种值，去重后原样交给引擎；空数组＝这一轮不进群控模式。
  */
 export function parseDispatchScope(raw: unknown): BotDispatchTargetKind[] {
   const list = Array.isArray(raw) ? raw : [];
@@ -107,7 +107,7 @@ export function dispatchScopeBlock(scope: BotDispatchTargetKind[]) {
   return [
     `【本轮开启 Agent 群控】本轮可指挥的目标范围：${label}。`,
     '你可以用 list_dispatch_devices 读目标清单，用 dispatch_device_task 派一次性任务，用 create_device_schedule 建目标侧定时任务，用 list_dispatch_tasks 查进度，用 cancel_dispatch_task 取消排队中的指令。',
-    '派单必须按这个顺序走：① 先调 list_dispatch_devices 拿到真实目标与在线/负载情况，分配方案只能基于它返回的编号；② 按任务性质给方案——需要桌面软件、本地文件、浏览器自动化、IDE/命令行的活派 BotBuddy 主机，需要 APP 操作、短信验证码、拍照定位、移动端账号运营的活派 Mobot 手机，企业侧已有的 WorkBuddy Agent（数字员工）能干的、或不落用户本机纯服务端跑的活派 WorkBuddy 企业云，拿不准就把几种方案都摆出来让用户选；③ 把方案讲清楚并等用户确认，未确认不要派单；④ 确认后逐台（逐个账号）调用派单工具，多目标协作请拆成多条任务分别派发（一个目标一条独立指令），逐条回报成败与指令码；⑤ 告诉用户结果会进「Agent 群控」页签，跑完或失败会收到站内通知。',
+    '派单必须按这个顺序走：① 先调 list_dispatch_devices 拿到真实目标与在线/负载情况，分配方案只能基于它返回的编号；② 按任务性质给方案——需要桌面软件、本地文件、浏览器自动化、IDE/命令行的活派 AWBotDSH 主机，需要 APP 操作、短信验证码、拍照定位、移动端账号运营的活派 AWBot 手机，企业侧已有的 WorkBuddy Agent（数字员工）能干的、或不落用户本机纯服务端跑的活派 WorkBuddy 企业云，拿不准就把几种方案都摆出来让用户选；③ 把方案讲清楚并等用户确认，未确认不要派单；④ 确认后逐台（逐个账号）调用派单工具，多目标协作请拆成多条任务分别派发（一个目标一条独立指令），逐条回报成败与指令码；⑤ 告诉用户结果会进「Agent 群控」页签，跑完或失败会收到站内通知。',
     '设备离线可以派发但会排队到上线后执行，必须先说明并取得同意；已停用的设备不能派发，提示用户到「Agent-Bot」设备页启用。主机任务可以指定工作区，但只能用该设备上报过的目录；手机任务没有工作区概念。手机电量低于 15% 或不在 Wi-Fi 时提醒风险。',
     'WorkBuddy 企业云没有排队：账号凭据停用或校验失败就是派不出去，这时提示用户到「Agent-Bot → 企云账号」启用或重新校验。派给企云要指定该账号下的 Agent（list_dispatch_devices 会给出清单），不指定就用该账号最近用过的。',
     '派给目标的指令要自包含：设备上的客户端与云端 Agent 都看不到本会话的上下文，请把文件路径、网址、账号、验收标准写全（单条上限 4000 字）。',

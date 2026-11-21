@@ -14,12 +14,12 @@ const STEP_ITEMS = [
   {
     title: "绑定给具体 Agent",
     content:
-      "两个方向都能设：① 在「BotBuddy 主机」「MoBot 手机」「WorkBuddy 企业云」各自的「Agent 绑定账号」页签里，选中某一台设备/账号，勾选它可用的 AI 调用账号；② 在本页签点某条凭据的「绑定」，一次勾选多台 Agent。一份凭据可同时授权给多台 Agent，绑定关系随时可改。",
+      "两个方向都能设：① 在「AWBotDSH 主机」「AWBot 手机」「WorkBuddy 企业云」各自的「Agent 绑定账号」页签里，选中某一台设备/账号，勾选它可用的 AI 调用账号；② 在本页签点某条凭据的「绑定」，一次勾选多台 Agent。一份凭据可同时授权给多台 Agent，绑定关系随时可改。",
   },
   {
     title: "Agent 侧取用（两种通道）",
     content:
-      "① 已配对的客户端（BotBuddy / MoBot）带主机令牌 x-bot-token 直接取：GET /api/public/bot-host/ai-call/accounts（手机是 /api/public/mobot/…），身份就是本机，不用传设备 ID。\n② 外部任务/脚本用平台 API Key（「模型服务 → API Key 管理」生成，头 x-api-key）取：GET /api/v1/ai-call/accounts?kind=DESKTOP&agentId=<主机ID>。kind 取 DESKTOP / MOBOT / WORKBUDDY。",
+      "① 已配对的客户端（AWBotDSH / AWBot）带主机令牌 x-bot-token 直接取：GET /api/public/bot-host/ai-call/accounts（手机是 /api/public/awbot/…），身份就是本机，不用传设备 ID。\n② 外部任务/脚本用平台 API Key（「模型服务 → API Key 管理」生成，头 x-api-key）取：GET /api/v1/ai-call/accounts?kind=DESKTOP&agentId=<主机ID>。kind 取 DESKTOP / AWBOT / WORKBUDDY。",
   },
   {
     title: "运行时按列表取凭据",
@@ -53,7 +53,7 @@ export function AiCallGuideButton() {
         </Title>
         <Text type="secondary">
           很多平台没有给 AI 用的开放接口，只能靠账号登录或 Cookie 操作。这里把各平台的凭据集中加密保存，
-          再以「哪台 Agent 在用」为授权边界：BotBuddy 主机、MoBot 手机、WorkBuddy 企业账号各自只能取绑给自己的凭据。
+          再以「哪台 Agent 在用」为授权边界：AWBotDSH 主机、AWBot 手机、WorkBuddy 企业账号各自只能取绑给自己的凭据。
         </Text>
 
         <Title level={5} style={{ marginTop: 20 }}>

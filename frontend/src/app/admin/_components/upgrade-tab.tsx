@@ -290,6 +290,10 @@ export function UpgradeTab() {
   const backups = useAdminData("admin-platform-upgrade-backups", (signal) =>
     upgradeApi.backups({}, { signal }),
   );
+  const maintenanceView = useAdminData(
+    "admin-platform-upgrade-maintenance",
+    (signal) => upgradeApi.maintenance({}, { signal }),
+  );
 
   const [tab, setTab] = useState("wizard");
   const [wizardStep, setWizardStep] = useState(0);
@@ -317,6 +321,9 @@ export function UpgradeTab() {
   const [restoreMode, setRestoreMode] = useState<"FULL" | "DATABASE">("FULL");
   const [restoreText, setRestoreText] = useState("");
   const [restoring, setRestoring] = useState(false);
+  const [stopOpen, setStopOpen] = useState(false);
+  const [stopReason, setStopReason] = useState("");
+  const [stopping, setStopping] = useState(false);
   const logRef = useRef<HTMLPreElement | null>(null);
   const finishedRef = useRef<number | null>(null);
   const wizardTopRef = useRef<HTMLDivElement | null>(null);
@@ -690,6 +697,29 @@ export function UpgradeTab() {
     },
   ];
 
+  /** 平台停服：与升级任务共用维护闸，手动停服不会被任务结束清掉。 */
+  const stopped = Boolean(maintenanceView.data?.on);
+  const manualStopped = Boolean(maintenanceView.data?.manual);
+  const maintenanceReason = maintenanceView.data?.reason || "";
+  const maintenanceSince = maintenanceView.data?.startedAt || "";
+
+  const applyMaintenance = async (on: boolean) => {
+    setStopping(true);
+    try {
+      await upgradeApi.setMaintenance({
+        body: { on, reason: on ? stopReason.trim() : "" },
+      });
+      message.success(on ? "平台已停服，写请求将返回 503" : "平台已恢复服务");
+      setStopOpen(false);
+      setStopReason("");
+      await Promise.all([maintenanceView.reload(), overview.reload()]);
+    } catch (error) {
+      presentMutationError(error, message.error);
+    } finally {
+      setStopping(false);
+    }
+  };
+
   const stepOne = (
     <Space orientation="vertical" size={16} style={{ width: "100%" }}>
       <Descriptions
@@ -770,7 +800,7 @@ export function UpgradeTab() {
 
       {tools && !toolsReady ? <ToolSetupGuide tools={tools} /> : null}
 
-      {data?.maintenance ? (
+      {stopped && !manualStopped ? (
         <Alert
           type="warning"
           showIcon
@@ -1568,7 +1598,101 @@ export function UpgradeTab() {
 
   return (
     <>
-      <PermissionNotice denied={overview.denied || packages.denied || backups.denied} />
+      <PermissionNotice
+        denied={
+          overview.denied ||
+          packages.denied ||
+          backups.denied ||
+          maintenanceView.denied
+        }
+      />
+
+      <Panel
+        title="平台停服"
+        extra={
+          <Space size={8}>
+            <Tag color={stopped ? "red" : "green"}>
+              {stopped
+                ? manualStopped
+                  ? "已停服（手动）"
+                  : "维护中（任务）"
+                : "运行中"}
+            </Tag>
+            {stopped ? (
+              <Popconfirm
+                title="恢复平台服务"
+                description="恢复后所有用户即可正常写入数据。"
+                okText="确认恢复"
+                cancelText="取消"
+                disabled={stopping || !manualStopped}
+                onConfirm={() => void applyMaintenance(false)}
+              >
+                <Button
+                  type="primary"
+                  loading={stopping}
+                  disabled={!manualStopped}
+                >
+                  恢复服务
+                </Button>
+              </Popconfirm>
+            ) : (
+              <Button danger onClick={() => setStopOpen(true)}>
+                停服
+              </Button>
+            )}
+          </Space>
+        }
+      >
+        <Space orientation="vertical" size={12} style={{ width: "100%" }}>
+          <Typography.Text type="secondary">
+            停服后全平台写请求返回 503，读请求、登录、健康检查与升级/AI
+            编程后台仍可用；不改动任何数据，恢复即回原样，停服与恢复都会写入审计日志。
+          </Typography.Text>
+          {stopped ? (
+            <Alert
+              type="warning"
+              showIcon
+              title={manualStopped ? "平台已手动停服" : "平台正在执行升级/还原任务"}
+              description={
+                <Space orientation="vertical" size={2}>
+                  <span>{maintenanceReason || "未填写原因"}</span>
+                  <span className="muted">
+                    {maintenanceSince ? `开始时间：${fmtTime(maintenanceSince)}` : ""}
+                  </span>
+                </Space>
+              }
+            />
+          ) : null}
+        </Space>
+      </Panel>
+
+      <Modal
+        title="停服平台"
+        open={stopOpen}
+        okText="确认停服"
+        cancelText="取消"
+        okButtonProps={{ danger: true }}
+        confirmLoading={stopping}
+        onOk={() => void applyMaintenance(true)}
+        onCancel={() => {
+          setStopOpen(false);
+          setStopReason("");
+        }}
+        destroyOnHidden
+      >
+        <Notice variant="warn">
+          停服期间用户端与后台的写操作都会被拒绝（503），读操作照常；不会删除或修改任何数据，恢复后立即回到原样。
+        </Notice>
+        <Input.TextArea
+          rows={3}
+          style={{ marginTop: 12 }}
+          maxLength={200}
+          showCount
+          placeholder="停服原因（会展示给全体用户，建议写明预计恢复时间）"
+          value={stopReason}
+          onChange={(event) => setStopReason(event.target.value)}
+        />
+      </Modal>
 
       <PanelTabs
         value={tab}

@@ -42,7 +42,7 @@ const STEP_ITEMS = [
  * RPA 使用说明：点页头标题右侧的「使用说明」按钮弹出。
  * 三类执行端——比特浏览器（云端配置、本地凭 Key 认领执行，六步走）、
  * 本地 Chrome 插件（浏览器代理：插件登录本系统，侧边栏一句话下目标、Agent 自主多步执行），
- * 以及 BotBuddy 客户端自带的「BotBuddy 浏览器」（内核级指纹窗口，内置 Automa 开箱即用）。
+ * 以及 AWBotDSH 客户端自带的「AWBotDSH 浏览器」（内核级指纹窗口，内置 Automa 开箱即用）。
  * 只读内容，不做任何数据操作。
  */
 export function BitBrowserGuideButton() {
@@ -68,9 +68,9 @@ export function BitBrowserGuideButton() {
           Key 属于哪个账号就只能看到并认领那个账号的 RPA 内容，支持 PC（比特浏览器窗口）、安卓云手机、
           iPhone 云手机三种目标设备；二是本机「本地 Chrome 插件（浏览器代理）」——插件登录本系统后，
           本机浏览器成为该账号名下的一台在线设备，模型与工具都走本系统配置，Agent 在你已登录的站点里自主多步执行；
-          三是 BotBuddy 客户端自带的「BotBuddy 浏览器」——装在你自己机器上的内核级指纹窗口，
+          三是 AWBotDSH 客户端自带的「AWBotDSH 浏览器」——装在你自己机器上的内核级指纹窗口，
           随客户端内置 Automa 插件、开箱即用。它已经是**可新建任务的第四类目标设备**：任务里选定
-          一台已配对且在线的 BotBuddy 主机与它的某个指纹窗口，到点由那台客户端打开窗口、把
+          一台已配对且在线的 AWBotDSH 主机与它的某个指纹窗口，到点由那台客户端打开窗口、把
           JSON（Automa 工作流）正文原样交给插件执行并回传结果；它与 PC 共用同一份 Automa 脚本，
           不绑 RPA 账号，也不回传任何口令。
         </Text>
@@ -132,7 +132,7 @@ export function BitBrowserGuideButton() {
         />
 
         <Title level={5} style={{ marginTop: 20 }}>
-          BotBuddy 浏览器接入步骤
+          AWBotDSH 浏览器接入步骤
         </Title>
         <Steps
           orientation="vertical"
@@ -140,9 +140,9 @@ export function BitBrowserGuideButton() {
           current={-1}
           items={[
             {
-              title: "1. 安装 BotBuddy 客户端",
+              title: "1. 安装 AWBotDSH 客户端",
               content:
-                "到「Agent-Bot → Bot 主机」页下载并安装 BotBuddy 客户端（本期支持 Windows 与 macOS），按该页说明填平台地址并完成配对。浏览器就在客户端里，不需要再装 Chrome / Edge，也不扫描本机已装的浏览器。",
+                "到「Agent-Bot → Bot 主机」页下载并安装 AWBotDSH 客户端（本期支持 Windows 与 macOS），按该页说明填平台地址并完成配对。浏览器就在客户端里，不需要再装 Chrome / Edge，也不扫描本机已装的浏览器。",
             },
             {
               title: "2. 新建指纹窗口",
@@ -157,7 +157,7 @@ export function BitBrowserGuideButton() {
             {
               title: "4. 也可以让本机 Agent 驱动",
               content:
-                "同一台机器上 BotBuddy 客户端自带 Agent，在「主机对话」里说清要它做什么、落到哪个工作区，它会在这台机器上自己干活；指纹窗口既是它的执行环境，也可以你自己手动操作。两条路互不冲突。",
+                "同一台机器上 AWBotDSH 客户端自带 Agent，在「主机对话」里说清要它做什么、落到哪个工作区，它会在这台机器上自己干活；指纹窗口既是它的执行环境，也可以你自己手动操作。两条路互不冲突。",
             },
           ].map((item) => ({
             title: item.title,
@@ -175,7 +175,7 @@ export function BitBrowserGuideButton() {
 • 安卓云手机：脚本类型支持比特云手机 RPA 流程、JS、Python；账号要填云手机环境 ID 与计费方式（套餐 / 按时），同一任务里的云手机计费方式必须统一。
 • iPhone 云手机：脚本类型只支持 JS、Python（比特浏览器未开放 iPhone 的控制 API 与 RPA 导出）；账号要填云手机环境 ID 与计费方式。
 • 本地 Chrome（插件）：只回放闭集动作序列（契约 RC_ACTIONS），不接任意脚本、不做 LLM 决策；不绑 RPA 账号，要选一台在线的插件设备。
-• BotBuddy 浏览器：脚本类型只支持 JSON（Automa）；不绑 RPA 账号，要选一台已配对且在线的 BotBuddy 主机，可以再指定它上报的某个指纹窗口（不指定就用客户端的默认窗口）。到点由那台客户端打开窗口，把工作流正文原样交给内置 Automa 执行并回传结果。它与 PC 共用同一份 Automa 脚本——同一份 JSON 既能建 PC 任务也能建 BotBuddy 任务。`}
+• AWBotDSH 浏览器：脚本类型只支持 JSON（Automa）；不绑 RPA 账号，要选一台已配对且在线的 AWBotDSH 主机，可以再指定它上报的某个指纹窗口（不指定就用客户端的默认窗口）。到点由那台客户端打开窗口，把工作流正文原样交给内置 Automa 执行并回传结果。它与 PC 共用同一份 Automa 脚本——同一份 JSON 既能建 PC 任务也能建 AWBotDSH 任务。`}
         </Text>
 
         <Title level={5} style={{ marginTop: 20 }}>
@@ -186,17 +186,17 @@ export function BitBrowserGuideButton() {
 A：检查三件事——① 执行端配置的 API Key 与建任务的账号一致；② 执行端配置的 RPA 服务地址能访问到本系统后端；③ 任务状态是「待执行」且没被取消。
 
 Q：脚本类型选错了能改吗？
-A：能改，但设备类型只有 PC 与 BotBuddy 浏览器之间可以互换（两者吃的都是同一份 JSON（Automa 脚本））。
+A：能改，但设备类型只有 PC 与 AWBotDSH 浏览器之间可以互换（两者吃的都是同一份 JSON（Automa 脚本））。
 要换到云手机或本地 Chrome，得新建一份对应类型的脚本。
 
 Q：云手机任务跑完后会自动关机吗？
 A：取决于建任务时选的「任务结束后」动作：保持开机 / 关机 / 挂起。按时计费的建议选挂起或关机省算力。
 
-Q：BotBuddy 浏览器里的 Automa 是哪来的？要自己装吗？
-A：不用。Automa 随 BotBuddy 客户端一起分发，是内置插件（客户端插件清单里带「内置」标记、不能删除），每个指纹窗口默认加载；升级 Automa 等客户端出新版即可。
+Q：AWBotDSH 浏览器里的 Automa 是哪来的？要自己装吗？
+A：不用。Automa 随 AWBotDSH 客户端一起分发，是内置插件（客户端插件清单里带「内置」标记、不能删除），每个指纹窗口默认加载；升级 Automa 等客户端出新版即可。
 
-Q：BotBuddy 浏览器和「本地 Chrome 插件」是一回事吗？
-A：不是。本地 Chrome 插件（浏览器代理）是你自己电脑上的 Chrome / Edge 装了插件、登录本系统后成为在线设备，出现在「本地RPA状态」；BotBuddy 浏览器是 BotBuddy 客户端自带的内核级指纹窗口，浏览器与 Automa 都在客户端里，这里的「BotBuddy 浏览器」卡片只登记这些主机的在线状态，下载与新建窗口都在客户端完成。`}
+Q：AWBotDSH 浏览器和「本地 Chrome 插件」是一回事吗？
+A：不是。本地 Chrome 插件（浏览器代理）是你自己电脑上的 Chrome / Edge 装了插件、登录本系统后成为在线设备，出现在「本地RPA状态」；AWBotDSH 浏览器是 AWBotDSH 客户端自带的内核级指纹窗口，浏览器与 Automa 都在客户端里，这里的「AWBotDSH 浏览器」卡片只登记这些主机的在线状态，下载与新建窗口都在客户端完成。`}
         </Text>
       </Modal>
     </>

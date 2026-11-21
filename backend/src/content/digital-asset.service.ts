@@ -855,7 +855,11 @@ export class DigitalAssetService {
    * 自有 OSS 直传 + 台账登记（新底座唯一入口）：
    * 本地行以 `ossKey` 非空判别、`aipddAssetId` 落 `-行id`（负数永不与平台正数 id 撞唯一键）。
    */
-  private async storeOwned(
+  /**
+   * 站方自有字节入库：直传本站 OSS + 写台账。
+   * 公开给 `SystemAssetService` 复用，避免各域自己拼对象键、绕出台账。
+   */
+  async storeOwned(
     userId: string,
     input: {
       bytes: Buffer;
@@ -908,6 +912,105 @@ export class DigitalAssetService {
       });
     });
     return fromEntry(row);
+  }
+
+  /**
+   * 已落桶字节的台账登记：各私域沿用**自己的对象键约定**（历史 URL 不变），
+   * 但字节必须在这里入账——否则存储用量与费用永远算不到站主头上。
+   * 返回台账行 id（`digital_asset_entries.id`）。
+   */
+  async registerOwned(
+    userId: string,
+    input: {
+      ossKey: string;
+      url: string;
+      sizeBytes: number;
+      name?: string;
+      type?: string;
+      labels?: string[];
+    },
+  ): Promise<number> {
+    const owner = String(userId || '').trim();
+    if (!owner || !input.ossKey) {
+      throw new BusinessException(
+        ErrorCode.BAD_REQUEST,
+        '台账登记缺少归属或对象键，拒绝写入无主字节记录',
+      );
+    }
+    const name = String(
+      input.name || input.ossKey.split('/').pop() || 'asset',
+    ).slice(0, 200);
+    const ext = name.toLowerCase().split('.').pop() || '';
+    // 同一个对象键重复入账＝覆盖写（重新生成小程序码、重出同名版本）。
+    // 不这么做的话 GB·天快照按行求和，用户每点一次「生成小程序码」就多一份字节账，
+    // 只涨不跌——那是最容易被忽略的一种多收钱。
+    const existing = await this.prisma.digitalAssetEntry.findFirst({
+      where: { userId: owner, ossKey: input.ossKey },
+      select: { id: true },
+    });
+    if (existing) {
+      return this.prisma.digitalAssetEntry
+        .update({
+          where: { id: existing.id },
+          data: {
+            name,
+            url: input.url,
+            previewUrl: input.url,
+            fileSize: Number(input.sizeBytes || 0) / 1024 / 1024,
+            type: input.type || EXT_TYPE[ext] || 'file',
+            ...(input.labels?.length
+              ? { labels: toJsonInput(labelsOf(input.labels)) }
+              : {}),
+          },
+        })
+        .then((row) => row.id);
+    }
+    // 自有字节没有 AIPDD 资产 id：先随机负占位，再改写成稳定的 `-行id`（与 storeOwned 同口径）
+    const row = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.digitalAssetEntry.create({
+        data: {
+          userId: owner,
+          aipddAssetId: -(1 + Math.floor(Math.random() * 2_000_000_000)),
+          type: input.type || EXT_TYPE[ext] || 'file',
+          name,
+          url: input.url,
+          previewUrl: input.url,
+          fileSize: Number(input.sizeBytes || 0) / 1024 / 1024,
+          ossKey: input.ossKey,
+          migratedFrom: 'system',
+          labels: toJsonInput(labelsOf(input.labels ?? [])),
+        },
+      });
+      return tx.digitalAssetEntry.update({
+        where: { id: created.id },
+        data: { aipddAssetId: -created.id },
+      });
+    });
+    return row.id;
+  }
+
+  /**
+   * 按对象键清账：字节被删除（或工件被替换）时，台账行必须同批消失。
+   * 存储 GB·天是按台账行求和算的，行留着就是**为已经不存在的字节持续收费**。
+   * 返回删掉的行数（同一键理论上只有一行，历史脏数据可能多行）。
+   */
+  async forgetByOssKey(ossKey: string): Promise<number> {
+    const key = String(ossKey || '').trim();
+    if (!key) return 0;
+    const rows = await this.prisma.digitalAssetEntry.findMany({
+      where: { ossKey: key },
+      select: { id: true, userId: true },
+    });
+    if (!rows.length) return 0;
+    await this.prisma.$transaction([
+      this.prisma.contentSharedAsset.deleteMany({
+        where: { assetId: { in: rows.map((row) => String(row.id)) } },
+      }),
+      this.prisma.digitalAssetEntry.deleteMany({
+        where: { id: { in: rows.map((row) => row.id) } },
+      }),
+    ]);
+    return rows.length;
   }
 
   /** 把一段文本（多为 Agent 产出的报告）存成数字资产：直传本站 OSS + 台账。 */

@@ -1,8 +1,9 @@
+import { randomUUID } from 'node:crypto';
 import { ok, text } from '../common/api';
 import { BusinessException } from '../common/business.exception';
 import { ErrorCode } from '../common/error-code';
 import { CurrentUser } from '../auth/current-user';
-import { AipddAssetClient, mimeOf } from './aipdd-asset.client';
+import { mimeOf } from './aipdd-asset.client';
 import { ContentAssetService } from './asset-registry.service';
 import { ContentModelSettingService } from './model-setting.service';
 import { ContentAgentService, type StreamEmit } from './agent.service';
@@ -23,7 +24,7 @@ import { ContentJobService } from './content-job.service';
 import { CanvasProjectService, type CanvasRunBody } from './canvas.service';
 import { DigitalAssetService } from './digital-asset.service';
 import { AssetShareService } from './asset-share.service';
-import { aipddBaseUrl } from './content-shared';
+import type { SystemAssetService } from '../system-asset/system-asset.service';
 
 /** 允许上传的素材类型：图片 / 视频 / 音频 / 文本（模型网关都要 URL，这里只做中转）。 */
 const UPLOAD_EXT_KIND: Record<string, string> = {
@@ -48,7 +49,6 @@ export class ContentController {
   constructor(
     private readonly settings: ContentModelSettingService,
     private readonly assets: ContentAssetService,
-    private readonly client: AipddAssetClient,
     private readonly agent: ContentAgentService,
     private readonly jobs: ContentJobService,
     private readonly digitalAssets: DigitalAssetService,
@@ -59,6 +59,9 @@ export class ContentController {
     private readonly agentConnectors: ContentAgentConnectorService,
     private readonly agentSkills: ContentAgentSkillService,
     private readonly canvases: CanvasProjectService,
+    private readonly systemAsset: SystemAssetService,
+    /** 素材中转不再走 AIPDD 数字资产云：字节落本站 OSS 并入台账，AIPDD Key 因此不再必需。
+     *  token 仍保留在 upload() 形参上（路由与契约未动），这里只是不再消费它。*/
     /** 已共享工作流工具目录（wf__）：工作流服务在 orgContext 之后构造，故以惰性回调注入 */
     private readonly workflowTools: (
       user: CurrentUser,
@@ -591,7 +594,15 @@ export class ContentController {
     return this.agent.stream(user, token, id, body, emit);
   }
 
-  /** 素材上传：直接落到 AIPDD 数字资产云，返回模型网关可抓取的公网直链。 */
+  /**
+   * 素材上传：字节落本站 OSS 并入数字资产台账，返回模型网关可抓取的公网直链。
+   *
+   * 原先这里把字节中转给 AIPDD 数字资产云，下游（`UPLOAD_EXT_KIND` 注释、前端
+   * `uploadResultSchema`、`content-media` 的 `imageUrls / video_url.url`）拿到的
+   * 始终只有一个 URL，从不使用 AIPDD 资产 id，所以换成本站桶不切断任何链路；
+   * 反过来还让这批字节进了台账（可计费、可按账号核对）。
+   * 字节经应用服务器中转，仍受 bodyLimit（/enterprise/content/uploads = 100MB）约束。
+   */
   async upload(user: CurrentUser, token: string | undefined, file: File) {
     const name = String(file.name || 'upload.bin');
     const ext = name.toLowerCase().split('.').pop() || '';
@@ -608,14 +619,15 @@ export class ContentController {
     if (!file.size) {
       throw new BusinessException(ErrorCode.BAD_REQUEST, '文件内容为空');
     }
-    const apiKey = this.settings.aipddKey(user, token);
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    const uploaded = await this.client.upload({
-      baseUrl: aipddBaseUrl(),
-      apiKey,
+    const bytes = Buffer.from(await file.arrayBuffer());
+    // 对象键沿用历史前缀 assets/enterprise/{userId}/inputs，已发出的直链形状不变
+    const uploaded = await this.systemAsset.put({
+      ownerUserId: user.userId,
+      path: `assets/enterprise/${user.userId}/inputs/${randomUUID()}.${ext}`,
       bytes,
-      filename: name,
-      prefix: `assets/enterprise/${user.userId}/inputs`,
+      name,
+      assetType: kind === 'text' ? undefined : kind,
+      bizRef: 'content-input',
     });
     return {
       url: uploaded.url,

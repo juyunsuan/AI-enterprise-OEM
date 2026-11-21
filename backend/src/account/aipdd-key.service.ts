@@ -102,7 +102,7 @@ export class AipddKeyService {
     );
   }
 
-  /** 绑定/换绑：验真 → 指纹归并 → 加密落库 → 用户唯一绑定。 */
+  /** 绑定/追加：验真 → 指纹归并 → 加密落库 → 按 (用户, Key) 建绑定；不删除既有 Key。 */
   async bind(userId: string, plainKey: string) {
     const key = plainKey.trim();
     if (!AIPDD_KEY_PATTERN.test(key)) {
@@ -138,9 +138,9 @@ export class AipddKeyService {
         });
     const boundAt = new Date();
     await this.prisma.userAipddBinding.upsert({
-      where: { userId },
+      where: { userId_keyId: { userId, keyId: keyRow.id } },
       create: { userId, keyId: keyRow.id, boundAt },
-      update: { keyId: keyRow.id, boundAt },
+      update: { boundAt },
     });
     await this.prisma.auditLog
       .create({
@@ -167,82 +167,154 @@ export class AipddKeyService {
     };
   }
 
-  /** 当前绑定状态（脱敏）：永不返回原文；附带注册引导（registerUrl / referralCode）。 */
+  /** 用户的全部 Key 绑定（按绑定时间升序；最早绑定的可用 Key 为主 Key）。 */
+  private async bindingsOf(userId: string) {
+    const bindings = await this.prisma.userAipddBinding.findMany({
+      where: { userId },
+      orderBy: { boundAt: 'asc' },
+    });
+    if (!bindings.length) return [];
+    const keys = await this.prisma.aipddKey.findMany({
+      where: { id: { in: bindings.map((row) => row.keyId) } },
+    });
+    const byId = new Map(keys.map((key) => [key.id, key]));
+    const items: Array<{
+      binding: (typeof bindings)[number];
+      key: (typeof keys)[number];
+    }> = [];
+    for (const binding of bindings) {
+      const key = byId.get(binding.keyId);
+      if (key) items.push({ binding, key });
+    }
+    return items;
+  }
+
+  /** 当前绑定状态（脱敏）：永不返回原文；keys 为全部绑定，bound 表示至少一把可用。 */
   async status(userId: string) {
     const referral = await this.referralInfo();
-    const binding = await this.prisma.userAipddBinding.findUnique({
-      where: { userId },
-    });
-    if (!binding) return { bound: false as const, ...referral };
-    const key = await this.prisma.aipddKey.findUnique({
-      where: { id: binding.keyId },
-    });
-    if (!key || key.status !== 'ACTIVE')
-      return { bound: false as const, ...referral };
-    const sharers = await this.prisma.userAipddBinding.count({
-      where: { keyId: key.id },
-    });
-    return {
-      bound: true as const,
-      masked: this.mask(key.keyCipher),
-      aipddUserId: key.aipddUserId || '',
-      profile: key.aipddProfile ?? null,
-      boundAt: binding.boundAt.toISOString(),
-      lastVerifiedAt: key.lastVerifiedAt?.toISOString() || null,
+    const items = await this.bindingsOf(userId);
+    if (!items.length) return { bound: false as const, keys: [], ...referral };
+    const shared = await Promise.all(
+      items.map((item) =>
+        this.prisma.userAipddBinding.count({
+          where: { keyId: item.key.id },
+        }),
+      ),
+    );
+    const primary = items.find((item) => item.key.status === 'ACTIVE');
+    const keys = items.map((item, index) => ({
+      bindingId: item.binding.id,
+      keyId: item.key.id,
+      masked: this.mask(item.key.keyCipher),
+      aipddUserId: item.key.aipddUserId || '',
+      profile: item.key.aipddProfile ?? null,
+      boundAt: item.binding.boundAt.toISOString(),
+      lastVerifiedAt: item.key.lastVerifiedAt?.toISOString() || null,
+      status: item.key.status,
       /** 同一把上游 Key 当前被多少个本地用户绑定（N:1 可见性）。 */
-      sharedWith: sharers,
+      sharedWith: shared[index] || 0,
+      primary: primary?.key.id === item.key.id,
+    }));
+    const head = primary || items[0];
+    return {
+      bound: Boolean(primary),
+      masked: this.mask(head.key.keyCipher),
+      aipddUserId: head.key.aipddUserId || '',
+      profile: head.key.aipddProfile ?? null,
+      boundAt: head.binding.boundAt.toISOString(),
+      lastVerifiedAt: head.key.lastVerifiedAt?.toISOString() || null,
+      sharedWith: shared[items.indexOf(head)] || 0,
+      keys,
       ...referral,
     };
   }
 
-  async unbind(userId: string) {
+  /** 解绑指定 Key；不传 keyId 时清空该用户全部绑定（兼容旧调用）。 */
+  async unbind(userId: string, keyId?: number) {
     const deleted = await this.prisma.userAipddBinding.deleteMany({
-      where: { userId },
+      where: { userId, ...(keyId ? { keyId } : {}) },
     });
     if (!deleted.count)
       throw new BusinessException(ErrorCode.NOT_FOUND, '尚未绑定 AIPDD APIKey');
     await this.prisma.auditLog
-      .create({ data: { userId, action: 'AIPDD_KEY_UNBOUND', detail: '' } })
+      .create({
+        data: {
+          userId,
+          action: 'AIPDD_KEY_UNBOUND',
+          detail: keyId ? `key#${keyId}` : `all(${deleted.count})`,
+        },
+      })
       .catch(() => undefined);
-    return { unbound: true };
+    return { unbound: true, count: deleted.count };
   }
 
-  /**
-   * 凭证解析器（全系统唯一入口）：本地用户 → 绑定 → 解密出上游 Bearer 令牌。
-   * 未绑定时抛业务错误，前端引导去「模型服务 → API Key 管理」页绑定。
-   */
-  async resolveToken(userId: string): Promise<string> {
-    const binding = await this.prisma.userAipddBinding.findUnique({
-      where: { userId },
-    });
-    if (!binding) {
-      throw new BusinessException(
-        ErrorCode.FORBIDDEN,
-        '请先在「模型服务 → API Key 管理」绑定 AIPDD API Key，再使用需要同步上游的功能',
-      );
+  /** 主 Key：最早绑定的可用 Key；新增 Key 只用于通知聚合，不改变模型/计费通道。 */
+  private async primaryKeyOf(userId: string) {
+    const items = await this.bindingsOf(userId);
+    return items.find((item) => item.key.status === 'ACTIVE')?.key || null;
+  }
+
+  /** 全部可用绑定（通知按 Key 所属账号聚合时使用；明文只在调用栈内存活）。 */
+  async activeBindings(userId: string) {
+    const items = await this.bindingsOf(userId);
+    const out: Array<{
+      keyId: number;
+      aipddUserId: string;
+      boundAt: Date;
+      plain: string;
+    }> = [];
+    for (const item of items) {
+      if (item.key.status !== 'ACTIVE') continue;
+      try {
+        out.push({
+          keyId: item.key.id,
+          aipddUserId: String(item.key.aipddUserId || ''),
+          boundAt: item.binding.boundAt,
+          plain: this.crypto.decrypt(item.key.keyCipher),
+        });
+      } catch {
+        // 单把 Key 密文损坏时跳过，不影响其他 Key 的通知与调用。
+      }
     }
+    return out;
+  }
+
+  /** 指定 Key 的明文（通知标记已读要用到具体 Key）。 */
+  async resolveTokenForKey(keyId: number): Promise<string> {
     const key = await this.prisma.aipddKey.findUnique({
-      where: { id: binding.keyId },
+      where: { id: keyId },
     });
     if (!key || key.status !== 'ACTIVE') {
       throw new BusinessException(
         ErrorCode.FORBIDDEN,
-        '绑定的 AIPDD APIKey 已失效，请重新绑定',
+        '指定的 AIPDD APIKey 已失效，请重新绑定',
       );
     }
     return this.crypto.decrypt(key.keyCipher);
   }
 
-  /** 绑定 Key 对应的 AIPDD 用户身份（模型配置贯通用：绑定了就整体一致）。 */
+  /**
+   * 凭证解析器（全系统唯一入口）：本地用户 → 最早绑定的可用 Key → 解密出上游 Bearer 令牌。
+   * 未绑定时抛业务错误，前端引导去「模型服务 → API Key 管理」页绑定。
+   */
+  async resolveToken(userId: string): Promise<string> {
+    const key = await this.primaryKeyOf(userId);
+    if (!key) {
+      const items = await this.bindingsOf(userId);
+      throw new BusinessException(
+        ErrorCode.FORBIDDEN,
+        items.length
+          ? '绑定的 AIPDD APIKey 已失效，请重新绑定'
+          : '请先在「模型服务 → API Key 管理」绑定 AIPDD API Key，再使用需要同步上游的功能',
+      );
+    }
+    return this.crypto.decrypt(key.keyCipher);
+  }
+
+  /** 主 Key 对应的 AIPDD 用户身份（模型配置贯通用：取最早绑定的可用 Key）。 */
   async resolveAipddUserId(userId: string): Promise<string> {
-    const binding = await this.prisma.userAipddBinding.findUnique({
-      where: { userId },
-    });
-    if (!binding) return '';
-    const key = await this.prisma.aipddKey.findUnique({
-      where: { id: binding.keyId },
-    });
-    return key?.status === 'ACTIVE' ? String(key.aipddUserId || '') : '';
+    const key = await this.primaryKeyOf(userId);
+    return key ? String(key.aipddUserId || '') : '';
   }
 
   // ---------- 平台级 AIPDD APIKey（基础数据通道） ----------

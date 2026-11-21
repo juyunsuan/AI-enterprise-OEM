@@ -17,6 +17,8 @@ interface RequestStore {
     upstreamMs: number;
     sessionRefreshMs?: number;
   };
+  /** 本次请求命中的建站工具与归属人：公开通道计量按它把 PV/流量记到站主名下。 */
+  toolHit?: { code: string; userId: string };
 }
 const storage = new AsyncLocalStorage<RequestStore>();
 /** 包裹一次请求（`main.ts` 的最外层中间件调用）。 */
@@ -85,6 +87,16 @@ export function isIdentityWrite(model: unknown, action: unknown) {
 }
 
 export const currentRequest = () => storage.getStore();
+
+/** 记下本请求归属的工具与站主（闸门放行时调用；不在请求上下文内时静默忽略）。 */
+export function markToolHit(hit: { code: string; userId: string }) {
+  const store = storage.getStore();
+  // 一次请求只记第一笔命中：按多市场循环调用闸门时（`mp.trade.service` 会连查多个市场），
+  // 覆盖成最后一个就把整条请求的 PV/流量记到了别人名下，看板与将来出账都会算错。
+  if (store && !store.toolHit) store.toolHit = hit;
+}
+
+export const takeToolHit = () => storage.getStore()?.toolHit;
 
 /**
  * 长任务脱钩：暂时抹掉当前请求上的连接信号。

@@ -1,0 +1,7 @@
+<web-view wx:if="{{url}}" src="{{url}}" />
+
+<view wx:else class="fallback">
+  <view class="title">{{shopName}}</view>
+  <view class="muted text-12">门店暂未开通在线客服，可直接电话联系</view>
+  <view class="btn btn-primary call" bindtap="callShop">拨打门店电话</view>
+</view>

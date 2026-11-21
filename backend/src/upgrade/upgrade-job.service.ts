@@ -112,6 +112,8 @@ type MaintenanceState = {
   reason: string;
   jobId: number;
   startedAt: string;
+  /** true＝管理员手动停服；任务结束只清任务维护，不动手动停服 */
+  manual: boolean;
 };
 
 const STALE_MS = 30 * 60_000;
@@ -598,6 +600,7 @@ export class UpgradeJobService {
       reason: '',
       jobId: 0,
       startedAt: '',
+      manual: false,
     };
     if (row?.value) {
       try {
@@ -607,12 +610,61 @@ export class UpgradeJobService {
           reason: String(parsed.reason || ''),
           jobId: Number(parsed.jobId || 0),
           startedAt: String(parsed.startedAt || ''),
+          manual: Boolean(parsed.manual),
         };
       } catch {
-        value = { on: false, reason: '', jobId: 0, startedAt: '' };
+        value = {
+          on: false,
+          reason: '',
+          jobId: 0,
+          startedAt: '',
+          manual: false,
+        };
       }
     }
     this.maintenanceCache = { at: Date.now(), value };
+    return value;
+  }
+
+  /**
+   * 平台侧手动停服 / 恢复服务：与升级任务共用同一维护闸
+   *（停服期间读请求照常，写请求 503）。
+   * 任务执行期间不允许手动恢复；手动停服也不会被任务结束清掉。
+   */
+  async setManualMaintenance(user: CurrentUser, on: boolean, reason: string) {
+    const current = await this.maintenance();
+    if (!on) {
+      const active = await this.prisma.platformUpgradeJob.findFirst({
+        where: { status: { in: ['PENDING', 'RUNNING'] } },
+        orderBy: { id: 'desc' },
+      });
+      if (active) {
+        throw new BusinessException(
+          ErrorCode.BAD_REQUEST,
+          '升级或还原任务正在执行，请等任务结束后再恢复服务',
+        );
+      }
+    } else if (current.on && !current.manual) {
+      throw new BusinessException(
+        ErrorCode.BAD_REQUEST,
+        '平台当前处于任务维护模式，任务结束后会自动恢复，无需手动停服',
+      );
+    }
+    const value: MaintenanceState = on
+      ? {
+          on: true,
+          reason: reason.trim() || '平台已停服维护',
+          jobId: 0,
+          startedAt: timestamp(),
+          manual: true,
+        }
+      : { on: false, reason: '', jobId: 0, startedAt: '', manual: false };
+    await this.setMaintenance(value);
+    await this.audit(
+      user,
+      on ? '平台停服' : '平台恢复服务',
+      value.reason || '管理员手动操作',
+    );
     return value;
   }
 
@@ -685,16 +737,19 @@ export class UpgradeJobService {
         steps: config.steps.map((step) => ({ ...step, status: 'PENDING' })),
       }),
     );
+    const current = await this.maintenance();
     await this.setMaintenance({
       on: true,
-      reason:
-        payload.type === 'RESTORE'
+      reason: current.manual
+        ? current.reason
+        : payload.type === 'RESTORE'
           ? '平台正在还原备份，服务即将短暂停止'
           : payload.type === 'CODE_EDIT'
             ? '平台正在应用 AI 编程改动，服务即将短暂停止'
             : '平台正在升级，服务即将短暂停止',
       jobId: job.id,
-      startedAt: timestamp(),
+      startedAt: current.manual ? current.startedAt : timestamp(),
+      manual: current.manual,
     });
     const runner = runnerScript();
     if (!existsSync(runner)) {
@@ -731,12 +786,16 @@ export class UpgradeJobService {
       where: { id: jobId },
       data: { status: 'FAILED', error: message, finishedAt: new Date() },
     });
-    await this.setMaintenance({
-      on: false,
-      reason: '',
-      jobId: 0,
-      startedAt: '',
-    });
+    const current = await this.maintenance();
+    if (!current.manual) {
+      await this.setMaintenance({
+        on: false,
+        reason: '',
+        jobId: 0,
+        startedAt: '',
+        manual: false,
+      });
+    }
     throw new BusinessException(ErrorCode.BAD_REQUEST, message);
   }
 
@@ -853,12 +912,16 @@ export class UpgradeJobService {
         data: { status: 'approved', appliedJobId: null },
       });
     }
-    await this.setMaintenance({
-      on: false,
-      reason: '',
-      jobId: 0,
-      startedAt: '',
-    });
+    const current = await this.maintenance();
+    if (!current.manual) {
+      await this.setMaintenance({
+        on: false,
+        reason: '',
+        jobId: 0,
+        startedAt: '',
+        manual: false,
+      });
+    }
     await this.audit(
       { userId: job.operatorId } as CurrentUser,
       '平台升级任务结束',

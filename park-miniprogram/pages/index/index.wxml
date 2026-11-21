@@ -1,0 +1,65 @@
+<view class="wrap">
+  <view wx:if="{{error}}" class="card">
+    <view class="section-title">园区未配置或服务不可用</view>
+    <view class="muted">{{error}}</view>
+    <view class="field" style="margin-top: 16rpx;">
+      <view class="field-label">园区码</view>
+      <input class="input grow" value="{{parkCode}}" placeholder="如 A1B2C3D4" bindinput="onCodeInput" />
+    </view>
+    <view class="btn" bindtap="saveCode">保存园区码并重试</view>
+  </view>
+
+  <block wx:if="{{!error}}">
+    <view class="card">
+      <view class="section-title">{{site.name}}</view>
+      <view class="muted">{{site.addressLine}}</view>
+      <view wx:if="{{site.notice}}" class="tag orange" style="margin-top: 12rpx;">{{site.notice}}</view>
+    </view>
+
+    <view class="quick-grid">
+      <view class="quick" data-path="/pages/visitor/apply" bindtap="go">
+        <text class="quick-icon">访</text>
+        <text>访客预约</text>
+      </view>
+      <view class="quick" data-path="/pages/visitor/list" bindtap="go">
+        <text class="quick-icon">约</text>
+        <text>我的预约</text>
+      </view>
+      <view class="quick" data-path="/pages/venue/list" bindtap="go">
+        <text class="quick-icon">场</text>
+        <text>场地预约</text>
+      </view>
+      <view class="quick" data-path="/pages/repair/apply" bindtap="go">
+        <text class="quick-icon">修</text>
+        <text>园区报修</text>
+      </view>
+      <view class="quick" data-path="/pages/activity/list" bindtap="go">
+        <text class="quick-icon">活</text>
+        <text>园区活动</text>
+      </view>
+      <view class="quick" data-path="/pages/chat/chat" bindtap="go">
+        <text class="quick-icon">客</text>
+        <text>AI 客服</text>
+      </view>
+    </view>
+
+    <view class="card" wx:if="{{announcements.length}}">
+      <view class="section-title">园区公告</view>
+      <view
+        wx:for="{{announcements}}"
+        wx:key="id"
+        class="field"
+        data-item="{{item}}"
+        bindtap="openAnnouncement"
+      >
+        <view class="grow">
+          <view>{{item.title}}</view>
+          <view class="muted">{{item.categoryLabel}} · {{item.publishedAt}}</view>
+        </view>
+        <text class="tag">{{item.categoryLabel}}</text>
+      </view>
+    </view>
+
+    <view wx:else class="empty">暂无公告</view>
+  </block>
+</view>

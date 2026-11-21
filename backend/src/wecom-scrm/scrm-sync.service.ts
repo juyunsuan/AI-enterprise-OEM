@@ -166,16 +166,18 @@ export class ScrmSyncService {
         seenTags.add(externalTagId);
         await this.prisma.scrmTag.upsert({
           where: {
-            orgType_orgUserId_externalId: {
+            orgType_orgUserId_externalId_localKey: {
               orgType: org.orgType,
               orgUserId: org.orgUserId,
               externalId: externalTagId,
+              localKey: '',
             },
           },
           create: {
             ...orgKey(org),
             groupId: groupRow.id,
             externalId: externalTagId,
+            localKey: '',
             name: clip(tag.name || '未命名标签', 60),
             source: 'WECOM',
             sortOrder: Number(tag.order ?? tagIndex) || tagIndex,

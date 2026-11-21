@@ -1,0 +1,74 @@
+.tip {
+  margin: 20rpx 24rpx;
+  padding: 20rpx 24rpx;
+  border-radius: 16rpx;
+  background: #eef2ff;
+  color: #3b5bdb;
+  font-size: 24rpx;
+  line-height: 1.6;
+}
+
+.voice-name {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.example-item {
+  padding: 16rpx 20rpx;
+  border-radius: 12rpx;
+  background: #f7f8fa;
+  margin-bottom: 12rpx;
+}
+
+.example-content {
+  font-size: 26rpx;
+  line-height: 1.7;
+  color: #333333;
+}
+
+.example-copy {
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: var(--primary);
+}
+
+.voice-time {
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: #8a8f99;
+}
+
+.voice-fail {
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: #e5484d;
+}
+
+.voice-actions {
+  margin-top: 16rpx;
+}
+
+.voice-action {
+  width: 160rpx;
+  height: 64rpx;
+  font-size: 26rpx;
+}
+
+.fab {
+  position: fixed;
+  left: 48rpx;
+  right: 48rpx;
+  bottom: 48rpx;
+  height: 92rpx;
+  line-height: 92rpx;
+  text-align: center;
+  border-radius: 46rpx;
+  background: var(--primary);
+  color: #ffffff;
+  font-size: 30rpx;
+  box-shadow: 0 12rpx 28rpx rgba(51, 112, 255, 0.35);
+}
+
+.fab.disabled {
+  opacity: 0.6;
+}

@@ -1,0 +1,161 @@
+.tab-scroll {
+  white-space: nowrap;
+}
+
+.tab-scroll .pills {
+  padding: 20rpx 24rpx 4rpx;
+}
+
+.category-scroll {
+  white-space: nowrap;
+}
+
+.category-scroll .pills {
+  padding: 8rpx 24rpx 16rpx;
+}
+
+.item {
+  display: flex;
+}
+
+.item-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.item-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.line2 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.post-head {
+  display: flex;
+  align-items: center;
+}
+
+.avatar-sm {
+  width: 64rpx;
+  height: 64rpx;
+  margin-right: 16rpx;
+  border-radius: 50%;
+  background: #f0f1f5;
+}
+
+.post-author {
+  font-size: 26rpx;
+}
+
+.post-title {
+  margin-top: 16rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.post-content {
+  margin-top: 8rpx;
+  color: #3a3f47;
+  font-size: 28rpx;
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+}
+
+.post-images {
+  display: flex;
+  margin-top: 12rpx;
+}
+
+.post-image {
+  width: 200rpx;
+  height: 200rpx;
+  margin-right: 12rpx;
+  border-radius: 12rpx;
+  background: #f0f1f5;
+}
+
+.post-tags {
+  margin-top: 12rpx;
+}
+
+.post-foot {
+  display: flex;
+  margin-top: 12rpx;
+}
+
+.foot-gap {
+  margin-left: 24rpx;
+}
+
+.question-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12rpx;
+}
+
+.publish-button {
+  padding: 0 40rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+  font-size: 28rpx;
+}
+
+.list-tip {
+  padding: 24rpx;
+  text-align: center;
+  color: #8a8f99;
+  font-size: 24rpx;
+}
+
+.mask {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 20;
+  background: rgba(31, 35, 41, 0.45);
+}
+
+.sheet {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  max-height: 82vh;
+  padding: 32rpx 24rpx calc(32rpx + env(safe-area-inset-bottom));
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 24rpx 24rpx 0 0;
+  box-sizing: border-box;
+}
+
+.sheet-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  text-align: center;
+}
+
+.sheet-actions {
+  display: flex;
+  margin-top: 32rpx;
+}
+
+.sheet-button {
+  flex: 1;
+  margin-left: 12rpx;
+}
+
+.sheet-button:first-child {
+  margin-left: 0;
+}

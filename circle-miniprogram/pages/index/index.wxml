@@ -1,0 +1,42 @@
+<view class="container">
+  <view class="card" wx:if="{{community}}">
+    <view class="between">
+      <view class="row">
+        <image class="avatar" src="{{community.logo}}" mode="aspectFill" />
+        <view class="name">{{community.name}}</view>
+      </view>
+      <view class="btn ghost" bindtap="search">搜索</view>
+    </view>
+    <view class="muted" wx:if="{{community.slogan}}">{{community.slogan}}</view>
+    <view class="muted" wx:if="{{community.notice}}">公告：{{community.notice}}</view>
+  </view>
+
+  <view class="tabs">
+    <view class="tab {{tab === 'recommend' ? 'active' : ''}}" data-tab="recommend" bindtap="switchTab">推荐</view>
+    <view class="tab {{tab === 'latest' ? 'active' : ''}}" data-tab="latest" bindtap="switchTab">最新</view>
+    <view class="tab {{tab === 'following' ? 'active' : ''}}" data-tab="following" bindtap="switchTab">关注</view>
+  </view>
+
+  <view class="card" wx:for="{{posts}}" wx:key="id" data-id="{{item.id}}" bindtap="openPost">
+    <view class="row">
+      <image class="avatar" src="{{item.author.avatar}}" mode="aspectFill" />
+      <view class="name">{{item.author.nickname}}</view>
+      <view class="muted" style="margin-left:auto">{{item.timeText}}</view>
+    </view>
+    <view class="muted" style="margin-top:8rpx" data-id="{{item.groupId}}" catchtap="openGroup">圈子：{{item.groupName}}</view>
+    <view class="content">{{item.content}}</view>
+    <view class="images" wx:if="{{item.images.length}}">
+      <image class="image" wx:for="{{item.images}}" wx:for-item="pic" wx:key="*this" src="{{pic}}" mode="aspectFill" />
+    </view>
+    <view class="actions">
+      <view class="action {{item.isLiked ? 'active' : ''}}">赞 {{item.likeCount}}</view>
+      <view class="action">评论 {{item.commentCount}}</view>
+      <view class="action {{item.isFavorited ? 'active' : ''}}">收藏 {{item.favoriteCount}}</view>
+    </view>
+  </view>
+
+  <view class="empty" wx:if="{{!loading && !posts.length}}">{{error || '还没有帖子，来发第一条吧'}}</view>
+  <view class="empty" wx:if="{{loading}}">正在加载…</view>
+</view>
+
+<view class="floating" bindtap="createPost">+</view>

@@ -1,0 +1,52 @@
+<view class="page" style="{{themeStyle}}">
+  <view class="card">
+    <view class="card-title">想写什么</view>
+    <textarea
+      class="textarea"
+      value="{{prompt}}"
+      maxlength="1000"
+      placeholder="例如：给一款保湿面霜写一条 30 秒口播，卖点是不油腻、适合秋冬"
+      bindinput="onPrompt"
+    />
+
+    <view wx:if="{{topics.length}}" class="topics">
+      <view class="label">写作模板</view>
+      <view class="chips">
+        <view
+          wx:for="{{topics}}"
+          wx:key="id"
+          class="chip {{topicId === item.id ? 'on' : ''}}"
+          data-id="{{item.id}}"
+          data-name="{{item.title}}"
+          bindtap="pickTopic"
+        >{{item.title}}</view>
+      </view>
+    </view>
+
+    <view class="line">
+      <text>目标字数 {{words}}</text>
+      <slider
+        class="slider"
+        min="100"
+        max="1000"
+        step="50"
+        value="{{words}}"
+        activeColor="#3370ff"
+        bindchange="onWords"
+      />
+    </view>
+
+    <view class="generate {{generating ? 'disabled' : ''}}" bindtap="generate">
+      {{generating ? '生成中…' : '生成文案'}}
+    </view>
+  </view>
+
+  <view wx:if="{{content}}" class="card">
+    <view class="row between">
+      <view class="card-title">生成结果（{{wordCount}} 字）</view>
+      <view class="primary" bindtap="copyContent">复制</view>
+    </view>
+    <view class="result">{{content}}</view>
+    <view class="use" bindtap="useForCreate">用这段文案去创作</view>
+  </view>
+</view>

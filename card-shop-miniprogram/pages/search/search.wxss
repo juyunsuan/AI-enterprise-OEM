@@ -1,0 +1,65 @@
+.search-row {
+  gap: 16rpx;
+  margin-bottom: 24rpx;
+}
+
+.search-btn {
+  padding: 0 32rpx;
+  height: 80rpx;
+  border-radius: 12rpx;
+  background: var(--primary);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  font-size: 28rpx;
+}
+
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  margin-top: 8rpx;
+}
+
+.history-tag {
+  padding: 8rpx 20rpx;
+}
+
+.goods-row {
+  display: flex;
+  background: var(--card);
+  border-radius: 16rpx;
+  padding: 20rpx;
+  margin-bottom: 20rpx;
+  align-items: flex-start;
+}
+
+.goods-thumb {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 12rpx;
+  background: #f2f3f5;
+  margin-right: 20rpx;
+  flex-shrink: 0;
+}
+
+.goods-name {
+  font-size: 28rpx;
+  font-weight: 500;
+  line-height: 40rpx;
+}
+
+.goods-sub {
+  margin-top: 4rpx;
+  color: var(--muted);
+  font-size: 22rpx;
+}
+
+.goods-foot {
+  margin-top: 12rpx;
+}
+
+.loading-text {
+  text-align: center;
+  padding: 24rpx 0;
+}

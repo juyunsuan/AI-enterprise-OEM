@@ -1,0 +1,45 @@
+<view class="page safe-bottom">
+  <view class="tabs">
+    <view class="tab {{tab === 'mine' ? 'tab-active' : ''}}" data-tab="mine" bindtap="pickTab">我的券</view>
+    <view class="tab {{tab === 'shop' ? 'tab-active' : ''}}" data-tab="shop" bindtap="pickTab">可领取</view>
+  </view>
+
+  <view wx:if="{{loading}}" class="empty">正在加载优惠券...</view>
+
+  <view wx:elif="{{error}}" class="card error-card">
+    <view class="muted">{{error}}</view>
+    <view class="btn btn-primary retry" bindtap="load">重试</view>
+  </view>
+
+  <block wx:else>
+    <block wx:if="{{tab === 'mine'}}">
+      <view wx:if="{{!mine.length}}" class="empty">
+        <view>还没有优惠券</view>
+        <view class="muted text-12">去「可领取」看看门店活动</view>
+      </view>
+      <view wx:for="{{mine}}" wx:key="ticketId" class="coupon {{item.usable ? '' : 'coupon-off'}}">
+        <view class="coupon-value">{{item.valueText}}</view>
+        <view class="coupon-body">
+          <view class="coupon-name">{{item.name}}</view>
+          <view class="coupon-meta">{{item.thresholdText}} · {{item.scopeText}}</view>
+          <view class="coupon-meta">有效期至 {{item.expireText}}</view>
+        </view>
+        <view class="coupon-state">{{item.ticketStatusText}}</view>
+      </view>
+      <view wx:if="{{mine.length}}" class="btn btn-ghost bottom-btn" bindtap="goMenu">去点餐使用</view>
+    </block>
+
+    <block wx:else>
+      <view wx:if="{{!shop.length}}" class="empty">门店暂未发券</view>
+      <view wx:for="{{shop}}" wx:key="id" class="coupon">
+        <view class="coupon-value">{{item.valueText}}</view>
+        <view class="coupon-body">
+          <view class="coupon-name">{{item.name}}</view>
+          <view class="coupon-meta">{{item.thresholdText}} · {{item.scopeText}}</view>
+          <view class="coupon-meta">{{item.validText}}</view>
+        </view>
+        <view class="coupon-btn" data-id="{{item.id}}" bindtap="receive">领取</view>
+      </view>
+    </block>
+  </block>
+</view>

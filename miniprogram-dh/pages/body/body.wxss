@@ -1,0 +1,74 @@
+.tip {
+  margin: 20rpx 24rpx;
+  padding: 20rpx 24rpx;
+  border-radius: 16rpx;
+  background: #eef2ff;
+  color: #3b5bdb;
+  font-size: 24rpx;
+  line-height: 1.6;
+}
+
+.body-row {
+  display: flex;
+}
+
+.body-cover {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 16rpx;
+  background: #e8eaee;
+  flex: none;
+}
+
+.body-cover-empty {
+  line-height: 160rpx;
+  text-align: center;
+  color: #b6bbc4;
+  font-size: 26rpx;
+}
+
+.body-info {
+  flex: 1;
+  margin-left: 24rpx;
+  min-width: 0;
+}
+
+.body-name {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.body-meta {
+  margin-top: 10rpx;
+}
+
+.body-fail {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: #e5484d;
+}
+
+.body-time {
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: #8a8f99;
+}
+
+.fab {
+  position: fixed;
+  left: 48rpx;
+  right: 48rpx;
+  bottom: 48rpx;
+  height: 92rpx;
+  line-height: 92rpx;
+  text-align: center;
+  border-radius: 46rpx;
+  background: var(--primary);
+  color: #ffffff;
+  font-size: 30rpx;
+  box-shadow: 0 12rpx 28rpx rgba(51, 112, 255, 0.35);
+}
+
+.fab.disabled {
+  opacity: 0.6;
+}

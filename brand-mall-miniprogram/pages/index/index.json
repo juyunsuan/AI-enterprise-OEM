@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "商城",
+  "enablePullDownRefresh": true,
+  "backgroundColor": "#f5f6f8",
+  "usingComponents": {
+    "diy-block": "/components/diy/block/index"
+  }
+}

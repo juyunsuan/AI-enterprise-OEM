@@ -1,0 +1,51 @@
+.addr-contact {
+  margin-top: 12rpx;
+}
+
+.addr-name {
+  font-size: 30rpx;
+  font-weight: 600;
+  margin-right: 16rpx;
+}
+
+.signature {
+  width: 100%;
+  height: 280rpx;
+  margin-top: 16rpx;
+  background: #f7f8fa;
+  border-radius: 12rpx;
+}
+
+.copy {
+  margin-left: 16rpx;
+}
+
+.timeline-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 12rpx 0;
+}
+
+.timeline-dot {
+  width: 14rpx;
+  height: 14rpx;
+  margin: 12rpx 16rpx 0 0;
+  border-radius: 50%;
+  background: #3370ff;
+}
+
+.timeline-main {
+  flex: 1;
+}
+
+.timeline-label {
+  font-size: 28rpx;
+}
+
+.track-image {
+  width: 180rpx;
+  height: 180rpx;
+  margin-top: 12rpx;
+  border-radius: 12rpx;
+  background: #f0f1f5;
+}

@@ -1,0 +1,139 @@
+<view class="page">
+  <scroll-view class="tab-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+    <view class="pills">
+      <view
+        class="pill {{tab === item.key ? 'pill-active' : ''}}"
+        wx:for="{{tabs}}"
+        wx:key="key"
+        data-tab="{{item.key}}"
+        bindtap="onTab"
+      >{{item.label}}</view>
+    </view>
+  </scroll-view>
+
+  <block wx:if="{{tab === 'member'}}">
+    <view class="card member-card" wx:if="{{member}}">
+      <view class="member-level">{{member.levelText}}</view>
+      <view class="member-discount">会员折扣：{{member.discountText}}</view>
+      <view class="member-stats">
+        <view class="member-stat">
+          <view class="member-stat-value">{{member.walletText}}</view>
+          <view class="member-stat-label">余额</view>
+        </view>
+        <view class="member-stat">
+          <view class="member-stat-value">{{member.points}}</view>
+          <view class="member-stat-label">积分</view>
+        </view>
+        <view class="member-stat">
+          <view class="member-stat-value">{{member.coupons}}</view>
+          <view class="member-stat-label">可用券</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="card" wx:if="{{grants.length}}">
+      <view class="block-title">会员权益核销码</view>
+      <view
+        class="code-row"
+        wx:for="{{grants}}"
+        wx:key="id"
+        data-code="{{item.verifyCode}}"
+        bindtap="onCopy"
+      >
+        <view>
+          <view class="code-text">{{item.verifyCode}}</view>
+          <view class="item-meta">有效期至 {{item.expireText}}，点击复制</view>
+        </view>
+        <text class="tag tag-blue">{{item.status === 'BINDING' ? '生效中' : item.status}}</text>
+      </view>
+    </view>
+
+    <view class="card" wx:if="{{verifyCodes.length}}">
+      <view class="block-title">服务核销码</view>
+      <view
+        class="code-row"
+        wx:for="{{verifyCodes}}"
+        wx:key="orderId"
+        data-code="{{item.code}}"
+        bindtap="onCopy"
+      >
+        <view>
+          <view class="code-text">{{item.code}}</view>
+          <view class="item-meta">{{item.tagLabel}} · 订单 {{item.orderNo}}</view>
+        </view>
+        <text class="link">复制</text>
+      </view>
+    </view>
+
+    <view class="notice" wx:if="{{member}}">到店出示核销码即可使用对应权益；余额、积分与优惠券仅在本店有效。</view>
+  </block>
+
+  <block wx:elif="{{tab === 'coupon'}}">
+    <view class="card" wx:if="{{coupons.length}}">
+      <view class="coupon" wx:for="{{coupons}}" wx:key="id">
+        <view class="coupon-value">
+          <view class="coupon-amount">{{item.valueText}}</view>
+          <view class="coupon-kind">{{item.kindLabel}}</view>
+        </view>
+        <view class="coupon-body">
+          <view class="coupon-name">{{item.name}}</view>
+          <view class="item-meta">{{item.conditionText}}</view>
+          <view class="item-meta">{{item.timeText}}</view>
+        </view>
+        <text class="tag {{item.usable ? 'tag-green' : 'tag'}}">{{item.statusLabel}}</text>
+      </view>
+    </view>
+    <view class="empty" wx:elif="{{!loading}}">暂无优惠券，关注店铺活动可领取</view>
+    <view class="notice tip" wx:if="{{coupons.length}}" bindtap="onCouponHelp">优惠券使用说明</view>
+  </block>
+
+  <block wx:elif="{{tab === 'point'}}">
+    <view class="card balance-card" wx:if="{{points}}">
+      <view class="balance-label">当前积分</view>
+      <view class="balance-value">{{points.balance}}</view>
+    </view>
+
+    <view class="card" wx:if="{{points.rules.length}}">
+      <view class="block-title">获取规则</view>
+      <view class="kv" wx:for="{{points.rules}}" wx:key="scene">
+        <text class="kv-label">{{item.sceneLabel}}</text>
+        <text class="kv-value">
+          {{item.valueText}} 积分<text wx:if="{{item.percent}}"> · {{item.percent}}%</text>
+        </text>
+      </view>
+    </view>
+
+    <view class="card" wx:if="{{points.logs.length}}">
+      <view class="block-title">积分明细</view>
+      <view class="log-row" wx:for="{{points.logs}}" wx:key="id">
+        <view>
+          <view>{{item.sceneLabel}}</view>
+          <view class="item-meta">{{item.timeText}}<text wx:if="{{item.note}}"> · {{item.note}}</text></view>
+        </view>
+        <view class="log-value {{item.value > 0 ? 'log-in' : ''}}">{{item.valueText}}</view>
+      </view>
+    </view>
+    <view class="empty" wx:elif="{{!loading}}">暂无积分记录</view>
+  </block>
+
+  <block wx:else>
+    <view class="card balance-card" wx:if="{{wallet}}">
+      <view class="balance-label">账户余额</view>
+      <view class="balance-value">{{wallet.balanceText}}</view>
+    </view>
+
+    <view class="card" wx:if="{{wallet.logs.length}}">
+      <view class="block-title">余额明细</view>
+      <view class="log-row" wx:for="{{wallet.logs}}" wx:key="id">
+        <view>
+          <view>{{item.kindLabel}}</view>
+          <view class="item-meta">{{item.timeText}}<text wx:if="{{item.note}}"> · {{item.note}}</text></view>
+        </view>
+        <view class="log-value {{item.amountCents > 0 ? 'log-in' : ''}}">{{item.amountText}}</view>
+      </view>
+    </view>
+    <view class="empty" wx:elif="{{!loading}}">暂无余额变动记录</view>
+  </block>
+
+  <view class="empty" wx:if="{{loading}}">正在加载…</view>
+</view>

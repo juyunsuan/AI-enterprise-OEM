@@ -1,0 +1,49 @@
+<view class="card head" wx:if="{{!loading && staffName}}">
+  <view class="row">
+    <view>
+      <text class="title">{{staffName}}</text>
+      <text class="muted" wx:if="{{levelName}}"> · {{levelName}}</text>
+    </view>
+    <text class="muted">{{monthLabel}}</text>
+  </view>
+  <view class="notice">佣金口径：下单预生成、支付才生效、退款按比例冲销；车费与物料费不参与抽佣。</view>
+</view>
+
+<view class="error" wx:if="{{errorText}}">{{errorText}}</view>
+
+<view class="cards" wx:if="{{cards.length}}">
+  <view class="stat" wx:for="{{cards}}" wx:key="key">
+    <text class="stat-value">{{item.value}}</text>
+    <text class="muted">{{item.label}}</text>
+    <text class="stat-hint" wx:if="{{item.hint}}">{{item.hint}}</text>
+  </view>
+</view>
+
+<scroll-view class="tabs" scroll-x="true" enable-flex="true">
+  <view
+    class="pill {{activeKey === item.key ? 'pill-active' : ''}}"
+    wx:for="{{tabs}}"
+    wx:key="key"
+    data-key="{{item.key}}"
+    bindtap="switchTab"
+  >{{item.label}}</view>
+</scroll-view>
+
+<view class="list" wx:if="{{list.length}}">
+  <view class="card item" wx:for="{{list}}" wx:key="id">
+    <view class="row">
+      <text class="item-title">{{item.title}}</text>
+      <text class="tag {{item.tone}}">{{item.statusText}}</text>
+    </view>
+    <view class="row bottom">
+      <text class="muted">{{item.meta}}</text>
+      <text class="amount">{{item.amountText}}</text>
+    </view>
+    <view class="muted hint" wx:if="{{item.hint}}">{{item.hint}}</view>
+  </view>
+  <view class="muted footer" wx:if="{{finished}}">共 {{total}} 条，已全部加载</view>
+  <view class="muted footer" wx:else>上拉加载更多</view>
+</view>
+
+<view class="empty" wx:elif="{{loading}}">正在加载…</view>
+<view class="empty" wx:else>当前类别还没有记录。佣金在订单支付后生效，结算单由店主按周期生成。</view>

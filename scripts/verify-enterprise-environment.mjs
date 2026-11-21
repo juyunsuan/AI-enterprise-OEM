@@ -45,7 +45,10 @@ test('environment identity, permissions, auto login and key placeholders fail cl
   for (const values of [productionValues.replace('ENTERPRISE_ENV=production', 'ENTERPRISE_ENV=development'), productionValues.replace('DEV_AUTO_LOGIN=false', 'DEV_AUTO_LOGIN=true'), productionValues.replace('NODE_ENV=production', 'NODE_ENV=development'), productionValues.replace('synthetic-signing-key', 'REPLACE_WITH_JWT'), productionValues.replace('EXTERNAL_CRED_KEY=synthetic-credential-key', '')]) {
     writeFileSync(file, values); assert.throws(load);
   }
-  writeFileSync(file, productionValues); chmodSync(file, 0o644); assert.throws(load, /600/);
+  // Windows 没有 POSIX 权限位，600 约束只在 POSIX 上成立。
+  if (process.platform !== 'win32') {
+    writeFileSync(file, productionValues); chmodSync(file, 0o644); assert.throws(load, /600/);
+  }
 });
 
 test('production rejects inherited database or key overrides', t => {
@@ -92,10 +95,14 @@ test('backup manifests are bound to target, age, file permissions and content', 
   save({ ...manifest, target: { ...target, database: 'ae_test' } }); assert.throws(() => verifyBackup(file, target), /目标/);
   save({ ...manifest, createdAt: '2000-01-01T00:00:00Z' }); assert.throws(() => verifyBackup(file, target), /24/);
   save({ ...manifest, sha256: 'incorrect' }); assert.throws(() => verifyBackup(file, target), /SHA-256/);
-  save(manifest); chmodSync(archive, 0o644); assert.throws(() => verifyBackup(file, target), /600/);
+  save(manifest);
+  if (process.platform !== 'win32') {
+    chmodSync(archive, 0o644); assert.throws(() => verifyBackup(file, target), /600/);
+  }
 });
 
-test('backup and migration pass the verified production environment to tools without URL arguments', t => {
+// Windows 不能直接执行带 shebang 的无扩展名脚本，这段编排由 Linux CI 覆盖。
+test('backup and migration pass the verified production environment to tools without URL arguments', { skip: process.platform === 'win32' && 'POSIX 进程编排测试，Windows 本地跳过' }, t => {
   const { root, file } = fixture(t);
   t.mock.method(console, 'log', () => {});
   const tools = join(root, 'tools'); mkdirSync(tools);

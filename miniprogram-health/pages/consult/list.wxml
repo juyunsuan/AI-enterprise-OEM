@@ -1,0 +1,83 @@
+<view class="page consult-list">
+  <view class="notice notice-warn consult-warn">
+    急危重症请直接拨打 120 或就近急诊；线上问诊不提供急救指导。
+  </view>
+
+  <view class="card ways-card">
+    <view
+      class="way {{way === item.key ? 'way-active' : ''}}"
+      wx:for="{{ways}}"
+      wx:key="key"
+      data-way="{{item.key}}"
+      bindtap="onWay"
+    >
+      <view class="way-label">{{item.label}}</view>
+      <view class="way-desc">{{item.desc}}</view>
+    </view>
+  </view>
+
+  <view class="section" wx:if="{{loggedIn}}">
+    <view class="section-head">
+      <view class="title">我的问诊</view>
+    </view>
+    <view class="card" wx:if="{{consults.length}}">
+      <view
+        class="list-item"
+        wx:for="{{consults}}"
+        wx:key="id"
+        data-id="{{item.id}}"
+        bindtap="onConsult"
+      >
+        <view class="item-head">
+          <view class="item-title">{{item.title || item.wayLabel}}</view>
+          <text class="tag tag-blue">{{item.statusLabel}}</text>
+        </view>
+        <view class="item-meta">
+          {{item.consultNo}}
+          <text wx:if="{{item.practitionerName}}"> · {{item.practitionerName}}</text>
+          <text wx:if="{{item.timeText}}"> · {{item.timeText}}</text>
+        </view>
+      </view>
+    </view>
+    <view class="empty" wx:else>还没有问诊记录，选一位医护开始吧</view>
+  </view>
+
+  <view class="card login-card" wx:else>
+    <view class="login-title">登录后查看问诊记录</view>
+    <button class="button-primary" bindtap="onLogin">微信登录</button>
+  </view>
+
+  <view class="section">
+    <view class="section-head">
+      <view class="title">选择医护</view>
+      <view class="link" bindtap="loadDoctors">刷新</view>
+    </view>
+    <view class="card" wx:if="{{doctors.length}}">
+      <view
+        class="doctor"
+        wx:for="{{doctors}}"
+        wx:key="id"
+        data-id="{{item.id}}"
+        bindtap="onDoctor"
+      >
+        <image wx:if="{{item.avatar}}" class="avatar" src="{{item.avatar}}" mode="aspectFill" />
+        <view wx:else class="avatar"></view>
+        <view class="doctor-body">
+          <view class="doctor-line">
+            <text class="doctor-name">{{item.name}}</text>
+            <text class="tag tag-blue">{{item.roleLabel}}</text>
+            <text class="tag tag-orange" wx:if="{{item.scoreText}}">{{item.scoreText}} 分</text>
+          </view>
+          <view class="item-meta">{{item.title || '认证医护'}}<text wx:if="{{item.city}}"> · {{item.city}}</text></view>
+          <view class="item-meta" wx:if="{{item.goodAt.length}}">擅长：{{item.goodAt[0]}}{{item.goodAt[1] ? '、' + item.goodAt[1] : ''}}</view>
+        </view>
+        <view class="arrow">›</view>
+      </view>
+    </view>
+    <view class="empty" wx:else>暂无可接诊医护</view>
+  </view>
+
+  <view class="footer-tip" bindtap="onCall">
+    问诊遇到问题？点击联系店铺客服
+  </view>
+</view>

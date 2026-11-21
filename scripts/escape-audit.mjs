@@ -21,6 +21,9 @@ const EXTS = new Set(['.ts', '.tsx', '.vue', '.js', '.mjs', '.cjs', '.jsx']);
 // 依赖、构建产物、Prisma 生成代码都在此一处判定（generated 同时覆盖 backend/generated 与 prisma/generated）。
 const EXCLUDE_SEG = new Set([
   'node_modules', 'dist', '.next', 'coverage', '.nuxt', 'build', 'out', '.turbo', 'generated',
+  // 随 APK 收录的 dsh-go 上游源码快照（AGPL 对应源码，见 awbot-app/PROVENANCE.md）：
+  // 自带 TypeScript/vitest/wrangler 工具链与独立 CI，不适用本仓的逃逸预算口径。
+  'awbot-app',
 ]);
 
 /** 与 wc -l 同口径：末尾换行不产生额外一行。掩码与计数共用，避免行号错位。 */

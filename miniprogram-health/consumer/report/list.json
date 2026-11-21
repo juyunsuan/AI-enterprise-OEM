@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "体检报告",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark",
+  "usingComponents": {}
+}

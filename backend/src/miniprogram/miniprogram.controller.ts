@@ -1,9 +1,4 @@
-import type {
-  MiniprogramCodeUploadInput,
-  MiniprogramReleaseSave,
-  MiniprogramReleaseUpdate,
-  MiniprogramSettingsInput,
-} from '@enterprise/contracts';
+import type { MiniprogramSettingsInput } from '@enterprise/contracts';
 import type { CurrentUser } from '../auth/current-user';
 import type { IdentityService } from '../identity/identity.service';
 import type { MiniProgramClient } from './miniprogram.client';
@@ -66,51 +61,16 @@ export class MiniProgramController {
     }
   }
 
-  async releases(user: CurrentUser, query: Record<string, unknown>) {
-    this.identity.requireAdmin(user);
-    return this.service.listReleases(query);
-  }
-
-  async saveRelease(user: CurrentUser, body: MiniprogramReleaseSave) {
-    this.identity.requireAdmin(user);
-    return this.service.saveRelease(user.userId, body);
-  }
-
-  async updateRelease(
-    user: CurrentUser,
-    id: string,
-    body: MiniprogramReleaseUpdate,
-  ) {
-    this.identity.requireAdmin(user);
-    return this.service.updateRelease(user.userId, id, body);
-  }
-
-  async removeRelease(user: CurrentUser, id: string) {
-    this.identity.requireAdmin(user);
-    return this.service.removeRelease(user.userId, id);
-  }
-
-  async downloadRelease(user: CurrentUser, id: string) {
-    this.identity.requireAdmin(user);
-    return this.service.downloadRelease(id);
-  }
-
   async qrcode(
     user: CurrentUser,
     body: {
       mode: 'GENERATE' | 'UPLOAD';
       fileName?: string;
       ossKey?: string;
-      releaseId?: number;
     },
   ) {
     this.identity.requireAdmin(user);
     return this.service.qrcode(user.userId, body);
-  }
-
-  async uploadCode(user: CurrentUser, body: MiniprogramCodeUploadInput) {
-    this.identity.requireAdmin(user);
-    return this.service.uploadCode(user.userId, body);
   }
 
   async builtin(user: CurrentUser) {

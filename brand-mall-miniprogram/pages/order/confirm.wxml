@@ -1,0 +1,126 @@
+<view class="confirm-page">
+  <view class="card address" bindtap="openAddress">
+    <block wx:if="{{address}}">
+      <view class="addr-main">
+        <view class="addr-line">
+          <text class="addr-name">{{address.realName}}</text>
+          <text class="addr-phone">{{address.phone}}</text>
+          <text class="addr-tag" wx:if="{{address.isDefault}}">默认</text>
+        </view>
+        <view class="addr-detail">{{address.province}}{{address.city}}{{address.district}}{{address.detail}}</view>
+      </view>
+    </block>
+    <block wx:else>
+      <view class="addr-empty">+ 添加收货地址</view>
+    </block>
+    <text class="arrow">›</text>
+  </view>
+
+  <view class="card">
+    <view class="goods" wx:for="{{lines}}" wx:key="index">
+      <image class="pic" src="{{item.image}}" mode="aspectFill" />
+      <view class="goods-info">
+        <view class="name ellipsis-2">{{item.title}}</view>
+        <view class="sku muted" wx:if="{{item.skuName}}">{{item.skuName}}</view>
+        <view class="sku muted" wx:elif="{{!item.valid}}">{{item.invalidReason}}</view>
+        <view class="goods-foot">
+          <text class="price">¥{{item.priceText}}</text>
+          <text class="qty">×{{item.quantity}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="cell" bindtap="openCoupon">
+      <text class="cell-label">优惠券</text>
+      <view class="cell-value {{couponText ? '' : 'muted'}}">{{couponText}}</view>
+      <text class="arrow">›</text>
+    </view>
+    <view class="cell" wx:if="{{pointsEnabled && maxUsablePoints > 0}}">
+      <text class="cell-label">积分抵扣</text>
+      <input
+        class="points-input"
+        type="number"
+        value="{{usePoints}}"
+        placeholder="最多 {{maxUsablePoints}}"
+        bindblur="onPoints"
+      />
+    </view>
+    <view class="cell" wx:if="{{remarkEnabled}}">
+      <text class="cell-label">买家留言</text>
+      <input class="remark-input" value="{{buyerRemark}}" maxlength="200" placeholder="选填" bindblur="onRemark" />
+    </view>
+  </view>
+
+  <view class="card amounts">
+    <view class="amount-row">
+      <text>商品金额</text>
+      <text>¥{{goodsAmountText}}</text>
+    </view>
+    <view class="amount-row">
+      <text>运费</text>
+      <text>¥{{freightText}}</text>
+    </view>
+    <view class="amount-row" wx:if="{{discountText !== '0.00'}}">
+      <text>优惠</text>
+      <text class="minus">-¥{{discountText}}</text>
+    </view>
+    <view class="amount-row" wx:if="{{usePoints > 0}}">
+      <text>积分抵扣（{{usePoints}} 分）</text>
+      <text class="minus">-¥{{pointsAmountText}}</text>
+    </view>
+    <view class="amount-row total">
+      <text>应付</text>
+      <text class="price">¥{{payAmountText}}</text>
+    </view>
+  </view>
+
+  <view class="block-tip" wx:if="{{blockReason}}">{{blockReason}}</view>
+
+  <view class="footer-gap"></view>
+
+  <view class="bar">
+    <view class="bar-total">
+      <text class="muted">应付</text>
+      <text class="bar-price">¥{{payAmountText}}</text>
+    </view>
+    <view class="bar-btn {{blockReason || submitting ? 'dis' : ''}}" bindtap="submit">
+      {{submitting ? '提交中…' : '提交订单'}}
+    </view>
+  </view>
+
+  <view class="mask" wx:if="{{showAddress}}" bindtap="closeAddress">
+    <view class="sheet" catchtap="noop">
+      <view class="sheet-title">选择收货地址</view>
+      <view
+        class="sheet-item"
+        wx:for="{{addresses}}"
+        wx:key="id"
+        data-index="{{index}}"
+        bindtap="selectAddress"
+      >
+        <view class="sheet-name">{{item.realName}} {{item.phone}}</view>
+        <view class="muted">{{item.province}}{{item.city}}{{item.district}}{{item.detail}}</view>
+      </view>
+      <view class="sheet-add" bindtap="addAddress">新增收货地址 ›</view>
+    </view>
+  </view>
+
+  <view class="mask" wx:if="{{showCoupon}}" bindtap="closeCoupon">
+    <view class="sheet" catchtap="noop">
+      <view class="sheet-title">选择优惠券</view>
+      <view class="sheet-item" data-ticket="0" bindtap="pickCoupon">不使用优惠券</view>
+      <view
+        class="sheet-item {{item.usable ? '' : 'dis'}}"
+        wx:for="{{coupons}}"
+        wx:key="ticketId"
+        data-ticket="{{item.ticketId}}"
+        bindtap="pickCoupon"
+      >
+        <view class="sheet-name">{{item.name}} · {{item.valueText}}</view>
+        <view class="muted">{{item.usable ? '满 ' + item.thresholdText + ' 可用' : item.reason}}</view>
+      </view>
+    </view>
+  </view>
+</view>

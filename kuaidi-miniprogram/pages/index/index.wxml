@@ -1,0 +1,99 @@
+<view class="wrap">
+  <view wx:if="{{needPick}}" class="card">
+    <view class="section-title">选择寄件点</view>
+    <view class="muted" style="margin-bottom:16rpx">选一个离你最近的寄件点，之后的下单与取件都按这个点走。</view>
+    <view
+      wx:for="{{sites}}"
+      wx:key="siteCode"
+      class="pick-row"
+      data-code="{{item.siteCode}}"
+      bindtap="pickSite"
+    >
+      <view class="pick-name">{{item.name}}</view>
+      <view class="muted">{{item.province}}{{item.city}}{{item.district}}{{item.addressLine}}</view>
+      <view class="muted">
+        营业 {{item.businessHours || "以店内公告为准"}}<text wx:if="{{item.phone}}"> · {{item.phone}}</text>
+      </view>
+    </view>
+    <view wx:if="{{!sites.length && !error}}" class="empty">账号下还没有营业中的寄件点，请联系店方开通后再试。</view>
+    <view wx:if="{{error}}" class="muted" style="margin-top:12rpx">{{error}}</view>
+    <view wx:if="{{error && !sites.length}}" class="btn btn-primary" style="margin-top:20rpx" bindtap="retry">重新加载</view>
+  </view>
+
+  <view wx:elif="{{!loading && error}}" class="card">
+    <view class="error-box">{{error}}</view>
+    <view wx:if="{{sites.length}}" class="btn btn-primary" style="margin-top:20rpx" bindtap="showPicker">重新选择寄件点</view>
+    <view class="btn {{sites.length ? 'btn-ghost' : 'btn-primary'}}" style="margin-top:20rpx" bindtap="retry">重新加载</view>
+  </view>
+
+  <view wx:elif="{{loading}}" class="empty">正在加载寄件点信息…</view>
+
+  <block wx:else>
+    <view class="hero" style="background:{{themeColor}}">
+      <image wx:if="{{site.logo}}" class="hero-logo" src="{{site.logo}}" mode="aspectFit" />
+      <view class="hero-name">{{site.name}}</view>
+      <view wx:if="{{site.slogan}}" class="hero-slogan">{{site.slogan}}</view>
+    </view>
+
+    <view wx:if="{{sites.length > 1}}" class="switch-bar" bindtap="showPicker">
+      <text class="muted">寄件点：{{site.province}}{{site.city}}{{site.district}}{{site.addressLine || site.name}}</text>
+      <text class="switch-link">切换 ›</text>
+    </view>
+
+    <view wx:if="{{notice}}" class="notice" style="margin-bottom:20rpx">{{notice}}</view>
+
+    <view class="grid">
+      <view class="grid-item primary" bindtap="goCreate">
+        <view class="grid-title">寄快递</view>
+        <view class="grid-sub">多家比价 · 上门取件</view>
+      </view>
+      <view class="grid-item" bindtap="goQuery">
+        <view class="grid-title">查订单</view>
+        <view class="grid-sub">单号 + 手机号</view>
+      </view>
+      <view wx:if="{{myOrders}}" class="grid-item" bindtap="goOrders">
+        <view class="grid-title">我的订单</view>
+        <view class="grid-sub">物流与进度</view>
+      </view>
+      <view wx:if="{{addressBook}}" class="grid-item" bindtap="goAddress">
+        <view class="grid-title">地址簿</view>
+        <view class="grid-sub">常用寄收地址</view>
+      </view>
+    </view>
+
+    <view wx:if="{{companies.length}}" class="card">
+      <view class="section-title">可寄快递</view>
+      <view class="company-row" wx:for="{{companies}}" wx:key="companyId">
+        <text class="company-name">{{item.name}}</text>
+        <text class="muted">{{item.deliveryDays || "时效以实际为准"}}</text>
+      </view>
+      <view class="muted" style="margin-top:12rpx">实际运费以填写重量与收件地区后的报价为准。</view>
+    </view>
+
+    <view wx:if="{{desk}}" class="card service-card" bindtap="goService">
+      <view class="grow">
+        <view class="section-title" style="margin-bottom:4rpx">在线客服</view>
+        <view class="muted">有疑问？直接和店方沟通</view>
+      </view>
+      <text class="service-arrow">›</text>
+    </view>
+
+    <view wx:if="{{showContact}}" class="card">
+      <view class="section-title">联系店方</view>
+      <view wx:if="{{contact.phone}}" class="contact-row" data-phone="{{contact.phone}}" bindtap="callPhone">
+        <text class="muted">电话</text>
+        <text class="contact-value">{{contact.phone}}</text>
+      </view>
+      <view wx:if="{{contact.wechat}}" class="contact-row">
+        <text class="muted">微信</text>
+        <text class="contact-value">{{contact.wechat}}</text>
+      </view>
+      <view wx:if="{{contact.email}}" class="contact-row">
+        <text class="muted">邮箱</text>
+        <text class="contact-value">{{contact.email}}</text>
+      </view>
+    </view>
+
+    <view class="muted footer">本小程序由商家独立运营，运费与收款均归商家所有。</view>
+  </block>
+</view>

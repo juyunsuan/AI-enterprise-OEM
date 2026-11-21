@@ -1,0 +1,44 @@
+<view class="card">
+  <view class="title">用途说明</view>
+  <view class="muted tip">上报的位置供顾客在服务过程中查看你到哪里了；出发、到达、完成这三个动作也会顺带记录当时的位置与时间。不上报时不会持续采集位置。</view>
+  <view class="notice" wx:if="{{!locationEnabled}}">店主尚未开启技师定位上报，开启前提交会被拒绝，请联系店主在店铺后台打开。</view>
+</view>
+
+<view class="card">
+  <view class="field">
+    <text class="label">当前位置说明</text>
+    <input
+      class="input"
+      maxlength="200"
+      value="{{address}}"
+      bindinput="onAddressInput"
+      placeholder="选填，例如 已到小区门口"
+    />
+  </view>
+  <view class="muted tip">说明随本次上报一起提交，方便顾客与店主理解你在哪里。</view>
+  <view class="error" wx:if="{{errorText}}">{{errorText}}</view>
+  <button
+    class="button-primary submit"
+    bindtap="report"
+    loading="{{reporting}}"
+    disabled="{{reporting || !locationEnabled}}"
+  >上报当前位置</button>
+  <button class="button-ghost" bindtap="openSetting">打开定位权限设置</button>
+</view>
+
+<view class="card" wx:if="{{lastReportedAt}}">
+  <view class="title">本次上报结果</view>
+  <view class="line">
+    <text class="label">上报时间</text>
+    <text class="value">{{lastReportedAt}}</text>
+  </view>
+  <view class="line">
+    <text class="label">坐标</text>
+    <text class="value">{{lastPointText}}</text>
+  </view>
+  <view class="muted tip">本次上报的时间与坐标来自服务器返回；历史上报记录端上暂不展示。</view>
+</view>
+
+<view class="card" wx:else>
+  <view class="muted">本次进入还没有上报过位置。接口不返回历史上报时间，历史记录请在店主后台查看。</view>
+</view>

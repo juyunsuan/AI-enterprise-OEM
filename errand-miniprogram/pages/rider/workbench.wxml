@@ -1,0 +1,131 @@
+<view class="wrap">
+  <block wx:if="{{!hasToken}}">
+    <view class="card">
+      <view class="section-title">骑手工作台</view>
+      <view class="muted">先在小程序里报名，店主审核通过后就能接单。第一次进入请先登录。</view>
+      <view class="btn btn-primary" style="margin-top: 20rpx;" bindtap="goRegister">去报名</view>
+      <view class="btn" style="margin-top: 16rpx;" bindtap="login">已有报名，登录工作台</view>
+    </view>
+  </block>
+
+  <block wx:else>
+    <view class="card">
+      <view class="row">
+        <view>
+          <view class="section-title">{{profile.name || '骑手'}} · {{profile.riderNo}}</view>
+          <view class="muted">{{profile.cityName || '未设城市'}}</view>
+          <view class="muted">评分 {{profile.rating}} · 累计 {{profile.orderCount}} 单</view>
+        </view>
+        <switch checked="{{profile.online}}" color="#1f6feb" bindchange="toggleOnline" />
+      </view>
+      <view class="stats">
+        <view class="stat"><text class="muted">余额</text><strong>¥{{profile.balance}}</strong></view>
+        <view class="stat"><text class="muted">今日完成</text><strong>{{completedToday}}</strong></view>
+        <view class="stat"><text class="muted">今日收入</text><strong>¥{{incomeToday}}</strong></view>
+      </view>
+      <view class="withdraw">
+        <input class="field short" type="digit" placeholder="提现金额" value="{{withdrawAmount}}" data-field="withdrawAmount" bindinput="bind" />
+        <picker wx:if="{{cards.length}}" range="{{cards}}" range-key="cardNoMasked" value="{{cardIndex}}" bindchange="pickCard">
+          <view class="picker">{{cards[cardIndex].bankName}} {{cards[cardIndex].cardNoMasked}}</view>
+        </picker>
+        <input wx:else class="field grow" placeholder="收款信息（微信/支付宝/银行卡）" value="{{bankInfo}}" data-field="bankInfo" bindinput="bind" />
+        <view class="btn btn-ghost" bindtap="withdraw">申请提现</view>
+      </view>
+      <view class="cards">
+        <view class="row">
+          <text class="muted">收款银行卡</text>
+          <text class="link" bindtap="toggleCardForm">{{showCardForm ? '收起' : '添加银行卡'}}</text>
+        </view>
+        <view wx:if="{{showCardForm}}" class="card-form">
+          <input class="field" placeholder="持卡人姓名" value="{{cardHolder}}" data-field="cardHolder" bindinput="bindCard" />
+          <input class="field" placeholder="开户行" value="{{cardBank}}" data-field="cardBank" bindinput="bindCard" />
+          <input class="field" type="number" placeholder="银行卡号" value="{{cardNo}}" data-field="cardNo" bindinput="bindCard" maxlength="30" />
+          <checkbox-group bindchange="toggleCardDefault">
+            <label class="muted"><checkbox value="1" checked="{{cardDefault}}" />设为默认</label>
+          </checkbox-group>
+          <view class="btn btn-primary small" style="margin-top: 12rpx;" bindtap="saveCard">保存银行卡</view>
+        </view>
+        <view wx:for="{{cards}}" wx:key="id" class="bank-row">
+          <view class="grow">
+            <view>{{item.bankName}} {{item.cardNoMasked}}</view>
+            <view class="muted">{{item.holder}}{{item.isDefault ? ' · 默认' : ''}}</view>
+          </view>
+          <text class="danger" data-id="{{item.id}}" bindtap="removeCard">删除</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="row">
+        <text class="section-title">我的位置</text>
+        <text class="link" bindtap="startLocation">重新定位</text>
+      </view>
+      <map
+        wx:if="{{location}}"
+        class="map"
+        longitude="{{location.lng}}"
+        latitude="{{location.lat}}"
+        scale="14"
+        markers="{{markers}}"
+        show-location
+      />
+      <view wx:else class="muted">尚未授权定位；授权后才能按抢单半径看到附近订单。</view>
+    </view>
+
+    <view class="card">
+      <view class="section-title">待接单</view>
+      <view wx:if="{{!pending.length}}" class="muted">{{profile.online ? '暂无待接订单' : '切换到「接单中」后才会看到订单'}}</view>
+      <view wx:for="{{pending}}" wx:key="id" class="order">
+        <view class="row">
+          <text>{{item.typeText}} · {{item.timeText}}</text>
+          <text class="amount">¥{{item.totalAmount}}</text>
+        </view>
+        <view class="line">{{item.fromParty.address}} → {{item.toParty.address}}</view>
+        <view class="muted">{{item.distanceKm}} 公里 / {{item.weightKg}} 公斤 · 小费 ¥{{item.tip}}</view>
+        <view class="btn btn-primary" style="margin-top: 16rpx;" data-id="{{item.id}}" bindtap="accept">接单</view>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="section-title">进行中</view>
+      <view wx:if="{{!active.length}}" class="muted">暂无进行中的订单</view>
+      <view wx:for="{{active}}" wx:key="id" class="order">
+        <view class="row">
+          <text>{{item.statusText}} · {{item.orderNo}}</text>
+          <text class="amount">¥{{item.totalAmount}}</text>
+        </view>
+        <view class="line">{{item.fromParty.address}} → {{item.toParty.address}}</view>
+        <view class="row" style="margin-top: 12rpx;">
+          <text class="link" data-no="{{item.orderNo}}" bindtap="openOrder">查看详情</text>
+          <view wx:if="{{item.next}}" class="btn btn-primary small" data-id="{{item.id}}" data-action="{{item.next.action}}" bindtap="act">
+            {{item.next.label}}
+          </view>
+          <view wx:if="{{item.status === 'ACCEPTED'}}" class="btn small" data-id="{{item.id}}" data-action="ABANDON" bindtap="act">
+            放弃接单
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="section-title">收入明细</view>
+      <view wx:if="{{!incomes.length}}" class="muted">还没有收入记录</view>
+      <view wx:for="{{incomes}}" wx:key="id" class="wd">
+        <text>{{item.type === 'INCOME' ? '订单收入' : item.type === 'WITHDRAW' ? '提现冻结' : item.type === 'WITHDRAW_REJECT' ? '提现驳回' : '退款回冲'}} {{item.orderNo || ''}}</text>
+        <text class="{{item.amount < 0 ? 'danger' : 'income'}}">¥{{item.amount}}</text>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="row">
+        <text class="section-title">提现记录</text>
+        <text class="link" bindtap="logout">退出骑手登录</text>
+      </view>
+      <view wx:if="{{!withdrawals.length}}" class="muted">还没有提现申请</view>
+      <view wx:for="{{withdrawals}}" wx:key="id" class="wd">
+        <text>¥{{item.amount}}</text>
+        <text class="muted">{{item.status === 'PAID' ? '已打款' : item.status === 'REJECTED' ? '已驳回' : '待打款'}}</text>
+      </view>
+    </view>
+  </block>
+</view>

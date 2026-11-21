@@ -1,0 +1,27 @@
+<view class="page" style="{{themeStyle}}">
+  <view wx:if="{{error}}" class="empty">{{error}}</view>
+
+  <block wx:if="{{article}}">
+    <view class="head">
+      <view class="title">{{article.title}}</view>
+      <view class="time">{{createdAt}}</view>
+    </view>
+
+    <image wx:if="{{article.cover}}" class="cover" src="{{article.cover}}" mode="widthFix" />
+
+    <view wx:if="{{article.contentType === 'video'}}" class="body">
+      <video class="video" src="{{article.body}}" controls></video>
+    </view>
+
+    <view wx:elif="{{article.contentType === 'link'}}" class="card">
+      <view wx:if="{{article.summary}}" class="summary">{{article.summary}}</view>
+      <view class="open-link" bindtap="openLink">打开链接</view>
+    </view>
+
+    <view wx:else class="body">
+      <rich-text nodes="{{article.body}}"></rich-text>
+    </view>
+  </block>
+
+  <view wx:if="{{loading}}" class="empty">加载中…</view>
+</view>

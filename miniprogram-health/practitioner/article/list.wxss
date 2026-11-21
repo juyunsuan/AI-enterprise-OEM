@@ -1,0 +1,49 @@
+.head-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx 24rpx;
+  background: #fff;
+}
+
+.mini {
+  margin: 0;
+  padding: 0 28rpx;
+  height: 64rpx;
+  line-height: 64rpx;
+  border-radius: 32rpx;
+  font-size: 26rpx;
+}
+
+.mini.primary {
+  background: #1a73e8;
+  color: #fff;
+}
+
+.tag {
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+  background: #eef3ff;
+  color: #2b5bd7;
+  font-size: 22rpx;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12rpx;
+}
+
+.link {
+  margin-left: 32rpx;
+  color: #1a73e8;
+  font-size: 26rpx;
+}
+
+.link.danger {
+  color: #f5413d;
+}
+
+.reject {
+  color: #f5413d;
+}

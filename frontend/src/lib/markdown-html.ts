@@ -16,6 +16,32 @@ export function markdownToHtml(markdown: string) {
   let list: { type: "ul" | "ol"; items: string[] } | null = null;
   let para: string[] = [];
   let code: string[] | null = null;
+  let table: string[] | null = null;
+
+  const tableCells = (row: string) =>
+    row.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((cell) => cell.trim());
+  const flushTable = () => {
+    if (!table) return;
+    const rows = table;
+    table = null;
+    if (rows.length < 2) {
+      out.push(`<p>${inline(rows.join(" "))}</p>`);
+      return;
+    }
+    const head = tableCells(rows[0]);
+    const body = rows.slice(2).map(tableCells);
+    const cellStyle = "border:1px solid #e5e6eb;padding:4px 8px;text-align:left;vertical-align:top";
+    out.push(
+      `<table style="border-collapse:collapse;width:100%;margin:8px 0"><thead><tr>${head
+        .map((cell) => `<th style="${cellStyle}">${inline(cell)}</th>`)
+        .join("")}</tr></thead><tbody>${body
+        .map(
+          (cells) =>
+            `<tr>${cells.map((cell) => `<td style="${cellStyle}">${inline(cell)}</td>`).join("")}</tr>`,
+        )
+        .join("")}</tbody></table>`,
+    );
+  };
 
   const flushPara = () => {
     if (para.length) {
@@ -32,6 +58,7 @@ export function markdownToHtml(markdown: string) {
   const flushAll = () => {
     flushPara();
     flushList();
+    flushTable();
   };
 
   for (const raw of lines) {
@@ -48,6 +75,14 @@ export function markdownToHtml(markdown: string) {
     if (/^```/.test(line.trim())) {
       flushAll();
       code = [];
+      continue;
+    }
+    if (table && !line.trim().startsWith("|")) flushTable();
+    if (line.trim().startsWith("|") && line.includes("|")) {
+      flushPara();
+      flushList();
+      if (!table) table = [];
+      table.push(line);
       continue;
     }
     if (!line.trim()) {

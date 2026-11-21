@@ -1,0 +1,14 @@
+.fallback {
+  padding: 160rpx 60rpx;
+  text-align: center;
+}
+
+.title {
+  font-size: 36rpx;
+  font-weight: 700;
+  margin-bottom: 16rpx;
+}
+
+.call {
+  margin-top: 50rpx;
+}

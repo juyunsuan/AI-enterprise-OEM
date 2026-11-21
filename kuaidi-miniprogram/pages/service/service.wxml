@@ -1,0 +1,21 @@
+<web-view wx:if="{{url}}" src="{{url}}"></web-view>
+
+<view wx:else class="wrap">
+  <view class="card">
+    <view class="section-title">联系店方</view>
+    <view class="muted">店方暂未开通在线客服，可通过以下方式联系。</view>
+    <view wx:if="{{contact.phone}}" class="row contact" bindtap="callPhone">
+      <text class="muted">电话</text>
+      <text class="link">{{contact.phone}}</text>
+    </view>
+    <view wx:if="{{contact.wechat}}" class="row contact" bindtap="copyWechat">
+      <text class="muted">微信</text>
+      <text class="link">{{contact.wechat}}（点击复制）</text>
+    </view>
+    <view wx:if="{{contact.email}}" class="row contact">
+      <text class="muted">邮箱</text>
+      <text>{{contact.email}}</text>
+    </view>
+  </view>
+  <view class="btn btn-ghost" bindtap="goBack">返回</view>
+</view>

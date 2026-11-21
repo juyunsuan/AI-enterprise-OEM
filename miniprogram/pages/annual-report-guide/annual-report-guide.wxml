@@ -1,0 +1,35 @@
+<view class="page">
+  <view class="hero-card">
+    <view class="hero-title">{{title}}</view>
+    <view class="hero-sub">依法按时报送，避免因经营异常影响企业信用。</view>
+  </view>
+
+  <view class="notice-box">
+    以下为通用政策与办理思路，具体口径以当地市场监督管理部门及国家企业信用信息公示系统为准。
+  </view>
+
+  <view class="card" wx:for="{{sections}}" wx:key="title">
+    <view class="section-label">{{item.title}}</view>
+    <view
+      class="muted"
+      style="font-size: 26rpx; line-height: 1.8; margin-top: 8rpx"
+      wx:for="{{item.paragraphs}}"
+      wx:for-item="paragraph"
+      wx:key="*this"
+    >{{paragraph}}</view>
+  </view>
+
+  <view class="card">
+    <view class="section-label">政策依据与官方入口</view>
+    <view class="muted" style="font-size: 26rpx; line-height: 1.8">
+      《个体工商户年度报告暂行办法》《企业信息公示暂行条例》
+    </view>
+    <view class="link-row" bindtap="copyOfficial">
+      <view>国家企业信用信息公示系统</view>
+      <view class="link-action">复制网址</view>
+    </view>
+  </view>
+
+  <view class="btn btn-block" style="height: 88rpx; font-size: 30rpx" bindtap="goForm">去填报工商年报</view>
+  <view class="footer-gap"></view>
+</view>

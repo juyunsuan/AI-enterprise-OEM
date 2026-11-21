@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:;" />
-  <title>BotBuddy</title>
+  <title>AWBotDSH</title>
   <link rel="stylesheet" href="app.css" />
 </head>
 <body>
@@ -12,7 +12,7 @@
       <div class="brand">
         <span class="brand-logo">BB</span>
         <span>
-          <span class="brand-name">BotBuddy</span><br />
+          <span class="brand-name">AWBotDSH</span><br />
           <span class="brand-sub">本机 Agent 主机</span>
         </span>
       </div>
@@ -164,6 +164,25 @@
                 </span>
               </div>
               <div class="kv-row"><span class="k">当前状态</span><span id="bindStatus" class="v">未绑定</span></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <span class="card-title">手机扫码配对</span>
+              <span class="card-hint">用 AWBot 手机扫码，同时绑定平台账号与这台电脑</span>
+            </div>
+            <div class="field-row">
+              <button id="pairQrCreate" class="btn primary">生成扫码配对二维码</button>
+            </div>
+            <div id="pairQrBox" class="hidden" style="margin-top: 12px; display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap;">
+              <img id="pairQrImage" alt="AWBot 扫码配对二维码" style="width: 220px; height: 220px; border-radius: 8px; background: #fff;" />
+              <div style="flex: 1; min-width: 200px; font-size: 12px; line-height: 1.7;">
+                <div>用 AWBot 手机 →「连接平台」→「扫码配对」扫描。</div>
+                <div style="margin-top: 8px;">扫不了码时可手动输入配对码：</div>
+                <div id="pairQrCode" class="mono" style="font-size: 15px; letter-spacing: 1px; margin-top: 4px;"></div>
+                <div id="pairQrHint" class="card-note" style="margin-top: 8px;"></div>
+              </div>
             </div>
           </div>
 
@@ -535,6 +554,14 @@
                 </span>
               </div>
               <div id="fpList" class="list"><div class="empty">还没有指纹窗口：点右上「新增窗口」</div></div>
+              <div class="kv spaced">
+                <div class="kv-row"><span class="k">导航</span>
+                  <span class="field-row fill">
+                    <input id="fpUrl" type="text" spellcheck="false" placeholder="输入网址，在 Agent 指纹窗口打开" />
+                    <button id="fpGo" class="btn small">打开</button>
+                  </span>
+                </div>
+              </div>
               <p id="fpHint" class="card-note"></p>
             </div>
 
@@ -661,7 +688,7 @@
                 </span>
               </div>
               <p class="card-note">
-                在平台「RPA → RPA 任务」里把目标设备选成 <b>BotBuddy 浏览器</b>、绑好这台主机与指纹窗口，
+                在平台「RPA → RPA 任务」里把目标设备选成 <b>AWBotDSH 浏览器</b>、绑好这台主机与指纹窗口，
                 任务就会在这里排队：到点由本机打开对应窗口，交给内置 Automa 插件跑这份流程，跑完把结果回传平台。
                 任务用的正文就是平台「RPA 脚本」里的 JSON（Automa 脚本），账号口令不经过这里。
               </p>

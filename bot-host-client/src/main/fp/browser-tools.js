@@ -27,14 +27,18 @@ function toolDefs() {
         properties: { url: { type: 'string', description: 'http(s) 完整地址' } },
         required: ['url']
       },
-      call: (args) => launch().navigateAgent(args && args.url)
+      call: (args, ctx) => launch().navigateAgent(args && args.url, ctx && ctx.sessionId)
     },
     {
       name: 'chrome_read',
       description: '读取 Agent 默认指纹窗口当前页面的正文文本。',
       parameters: { type: 'object', properties: {} },
-      call: async () => {
-        const text = await launch().evaluateAgent('document.body ? document.body.innerText : ""');
+      call: async (args, ctx) => {
+        const text = await launch().evaluateAgent(
+          'document.body ? document.body.innerText : ""',
+          undefined,
+          ctx && ctx.sessionId
+        );
         return { text: String(text || '').slice(0, 20000) };
       }
     },
@@ -46,11 +50,13 @@ function toolDefs() {
         properties: { selector: { type: 'string', description: 'CSS 选择器' } },
         required: ['selector']
       },
-      call: (args) => {
+      call: (args, ctx) => {
         const selector = JSON.stringify(String((args && args.selector) || ''));
         return launch()
           .evaluateAgent(
-            `(() => { const el = document.querySelector(${selector}); if (!el) return false; el.click(); return true; })()`
+            `(() => { const el = document.querySelector(${selector}); if (!el) return false; el.click(); return true; })()`,
+            undefined,
+            ctx && ctx.sessionId
           )
           .then((clicked) => ({ clicked: !!clicked }));
       }
@@ -66,7 +72,7 @@ function toolDefs() {
         },
         required: ['selector', 'value']
       },
-      call: (args) => {
+      call: (args, ctx) => {
         const selector = JSON.stringify(String((args && args.selector) || ''));
         const value = JSON.stringify(String(args && args.value != null ? args.value : ''));
         return launch()
@@ -79,7 +85,9 @@ function toolDefs() {
               el.dispatchEvent(new Event('input', { bubbles: true }));
               el.dispatchEvent(new Event('change', { bubbles: true }));
               return true;
-            })()`
+            })()`,
+            undefined,
+            ctx && ctx.sessionId
           )
           .then((filled) => ({ filled: !!filled }));
       }

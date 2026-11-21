@@ -141,12 +141,64 @@ export class InsightController {
     return this.service.trendsOverview(user);
   }
 
+  async trendAnalysis(user: CurrentUser, query: Record<string, unknown>) {
+    return this.service.trendAnalysis(user, query);
+  }
+
+  async generateDeck(user: CurrentUser, body: Record<string, unknown>) {
+    return this.service.generateDeck(user, body);
+  }
+
+  async deriveStyle(user: CurrentUser, body: Record<string, unknown>) {
+    return this.service.deriveStyle(user, body);
+  }
+
+  async trendExport(user: CurrentUser, body: Record<string, unknown>) {
+    return this.service.trendExport(user, body);
+  }
+
   async generateReport(user: CurrentUser, body: Record<string, unknown>) {
     return this.service.generateReport(user, body);
   }
 
   async listReports(user: CurrentUser, query: Record<string, unknown>) {
     return this.service.listReports(user, strOr(query.kind));
+  }
+
+  // ---------- AI-FDE 实施分析 ----------
+
+  async fdeAnalyze(user: CurrentUser, body: Record<string, unknown>) {
+    return this.service.fdeAnalyze(user, body);
+  }
+
+  async listFdeAnalyses(user: CurrentUser) {
+    return this.service.listFdeAnalyses(user);
+  }
+
+  async fdeAnalysisDetail(user: CurrentUser, id: string) {
+    return this.service.fdeAnalysisDetail(user, parseId(id, '分析 ID'));
+  }
+
+  async removeFdeAnalysis(user: CurrentUser, id: string) {
+    return this.service.removeFdeAnalysis(user, parseId(id, '分析 ID'));
+  }
+
+  // ---------- 企业咨询（多模型战略分析）----------
+
+  async consultingAnalyze(user: CurrentUser, body: Record<string, unknown>) {
+    return this.service.consultingAnalyze(user, body);
+  }
+
+  async listConsultingAnalyses(user: CurrentUser) {
+    return this.service.listConsultingAnalyses(user);
+  }
+
+  async consultingAnalysisDetail(user: CurrentUser, id: string) {
+    return this.service.consultingAnalysisDetail(user, parseId(id, '分析 ID'));
+  }
+
+  async removeConsultingAnalysis(user: CurrentUser, id: string) {
+    return this.service.removeConsultingAnalysis(user, parseId(id, '分析 ID'));
   }
 
   async tagAssets(user: CurrentUser, body: Record<string, unknown>) {

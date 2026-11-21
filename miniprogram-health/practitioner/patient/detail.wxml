@@ -1,0 +1,102 @@
+<view class="page" wx:if="{{patient}}">
+  <view class="card">
+    <view class="head">
+      <view class="title">{{patient.name}}</view>
+      <button class="mini" bindtap="onMetrics">录入指标</button>
+    </view>
+    <view class="item-meta">
+      {{patient.sexLabel}} · {{patient.age || '—'}} 岁 · {{patient.relation}}
+    </view>
+    <view class="kv">
+      <text class="kv-label">手机</text>
+      <text class="kv-value">{{patient.phoneMasked || '未留'}}</text>
+    </view>
+    <view class="kv">
+      <text class="kv-label">身高 / 体重</text>
+      <text class="kv-value">{{patient.heightCm || '—'}} cm / {{patient.weightKg || '—'}} kg</text>
+    </view>
+    <view class="kv" wx:if="{{patient.bloodType}}">
+      <text class="kv-label">血型</text>
+      <text class="kv-value">{{patient.bloodType}}</text>
+    </view>
+    <view class="kv" wx:if="{{patient.idCardTail}}">
+      <text class="kv-label">证件</text>
+      <text class="kv-value">尾号 {{patient.idCardTail}}</text>
+    </view>
+    <view class="kv" wx:if="{{patient.remark}}">
+      <text class="kv-label">备注</text>
+      <text class="kv-value">{{patient.remark}}</text>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="title">健康档案</view>
+    <view class="muted" wx:if="{{!basicsRows.length && !recordItems.length}}">顾客尚未填写档案</view>
+    <view class="kv" wx:for="{{basicsRows}}" wx:key="key">
+      <text class="kv-label">{{item.label}}</text>
+      <text class="kv-value">{{item.value}}</text>
+    </view>
+    <view class="item-line" wx:for="{{recordItems}}" wx:key="id">
+      <text class="tag">{{item.typeLabel}}</text>
+      <text class="item-text">{{item.label ? item.label + '：' : ''}}{{item.value}}</text>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{events.length}}">
+    <view class="title">就诊记录</view>
+    <view class="list-item" wx:for="{{events}}" wx:key="id">
+      <view class="item-head">
+        <view class="item-title">{{item.title}}</view>
+        <text class="muted">{{item.timeText}}</text>
+      </view>
+      <view class="item-meta">{{item.kindLabel}} · {{item.hospitalName || '本店'}}{{item.departmentName ? ' · ' + item.departmentName : ''}}</view>
+      <view class="item-meta" wx:if="{{item.diagnosis}}">诊断：{{item.diagnosis}}</view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="title">指标概览</view>
+    <view class="metric" wx:for="{{metrics}}" wx:key="id">
+      <view class="metric-main">
+        <view class="item-title">{{item.name}}</view>
+        <view class="item-meta" wx:if="{{item.rangeText}}">参考 {{item.rangeText}}</view>
+      </view>
+      <view class="metric-value {{item.abnormal ? 'abnormal' : ''}}">
+        <view>{{item.valueText}}</view>
+        <view class="muted" wx:if="{{item.timeText}}">{{item.timeText}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="title">随访任务</view>
+    <view class="muted" wx:if="{{!followups.length}}">暂无随访任务</view>
+    <view
+      class="list-item"
+      wx:for="{{followups}}"
+      wx:key="id"
+      data-id="{{item.id}}"
+      bindtap="onFollowup"
+    >
+      <view class="item-head">
+        <view class="item-title">{{item.title}}</view>
+        <text class="tag">{{item.statusLabel}}</text>
+      </view>
+      <view class="item-meta">截止 {{item.dueText}}</view>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{prescriptions.length}}">
+    <view class="title">处方记录</view>
+    <view class="list-item" wx:for="{{prescriptions}}" wx:key="id">
+      <view class="item-head">
+        <view class="item-title">{{item.rxNo}}</view>
+        <text class="tag">{{item.statusLabel}}</text>
+      </view>
+      <view class="item-meta">{{item.diagnosis || '未填诊断'}} · {{item.amountText}} · {{item.timeText}}</view>
+    </view>
+  </view>
+</view>
+
+<view class="empty" wx:elif="{{!loading}}">就诊人不存在或不在你的管理范围</view>
+<view class="empty" wx:else>正在加载…</view>

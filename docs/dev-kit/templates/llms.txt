@@ -1,0 +1,5 @@
+# aiworkin-enterprise
+- docs/dev-kit/AGENTS.md
+- docs/dev-kit/project.json
+- docs/dev-kit/README.md
+Always read the project rules before changing code.

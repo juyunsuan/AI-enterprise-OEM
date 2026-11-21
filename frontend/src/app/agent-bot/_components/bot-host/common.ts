@@ -17,7 +17,7 @@ import {
 import { endpoint } from "@/api/endpoint";
 
 /**
- * Bot 主机界面层：一台主机＝本人机器上跑着的 BotBuddy 客户端，与本站配对后
+ * Bot 主机界面层：一台主机＝本人机器上跑着的 AWBotDSH 客户端，与本站配对后
  * 按心跳领取指令并在本机执行。平台只下发「做什么」与「落到哪个工作区」，
  * 客户端里怎么配模型、有哪些技能与数字分身都归它自己，平台不展示也不修改。
  * 后端 /enterprise/bot-hosts/*（登录态）；设备侧走 /api/public/bot-host/**（只认主机令牌）。
@@ -62,6 +62,7 @@ export const commandStatusColor = commandColor;
 const api = {
   list: endpoint(endpoints.BotHost_list),
   pair: endpoint(endpoints.BotHost_pair),
+  createPairQr: endpoint(endpoints.BotHost_createPairQr),
   setStatus: endpoint(endpoints.BotHost_setStatus),
   remove: endpoint(endpoints.BotHost_remove),
   rotateToken: endpoint(endpoints.BotHost_rotateToken),
@@ -113,6 +114,11 @@ export const botHostApi = {
     code?: string;
     clientKind?: BotClientKind;
   }) => mutate<{ host: BotHostView; token: string }>(api.pair({ body })),
+  /** 扫码配对：站内生成一次性二维码，手机扫码后免登录取走设备令牌。 */
+  createPairQr: (body: { name?: string; siteUrl?: string; hostId?: number }) =>
+    mutate<{ code: string; expiresAt: string; payload: string; image: string }>(
+      api.createPairQr({ body }),
+    ),
   setStatus: (hostId: number, enabled: boolean) =>
     mutate<{ host: BotHostView }>(
       api.setStatus({ params: { hostId: String(hostId) }, body: { enabled } }),
@@ -190,11 +196,11 @@ export const botHostApi = {
 export function hostHint(row: BotHostView) {
   const parts = [platformLabel(row.platform)];
   if (row.clientVersion) parts.push(`客户端 ${row.clientVersion}`);
-  if (row.mobot) {
-    if (row.mobot.battery) {
-      parts.push(`电量 ${row.mobot.battery}%${row.mobot.charging ? " · 充电中" : ""}`);
+  if (row.awbot) {
+    if (row.awbot.battery) {
+      parts.push(`电量 ${row.awbot.battery}%${row.awbot.charging ? " · 充电中" : ""}`);
     }
-    if (row.mobot.engine) parts.push(`引擎 ${row.mobot.engine}`);
+    if (row.awbot.engine) parts.push(`引擎 ${row.awbot.engine}`);
   }
   return parts.join(" · ");
 }

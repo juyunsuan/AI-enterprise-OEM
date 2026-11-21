@@ -66,9 +66,16 @@ export class InsightScheduler {
         await this.insight.recomputeHotspots(
           new CurrentUser(userId, userId, 'enterprise'),
         );
+        await this.insight.recomputeTrendMetrics(
+          new CurrentUser(userId, userId, 'enterprise'),
+        );
+        // 采集后置自动打标：仅当账号开了 autoTagEnabled 才实际调模型
+        await this.insight.autoTagForUser(
+          new CurrentUser(userId, userId, 'enterprise'),
+        );
       } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
-        this.logger.error(`账号 ${userId} 热点重算失败：${reason}`);
+        this.logger.error(`账号 ${userId} 热点/趋势重算失败：${reason}`);
       }
     }
   }

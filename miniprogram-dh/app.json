@@ -1,0 +1,57 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/feed/feed",
+    "pages/create/create",
+    "pages/my/my",
+    "pages/play/play",
+    "pages/body/body",
+    "pages/voice/voice",
+    "pages/works/works",
+    "pages/member/member",
+    "pages/orders/orders",
+    "pages/promoter/promoter",
+    "pages/withdraw/withdraw",
+    "pages/poster/poster",
+    "pages/feedback/feedback",
+    "pages/write/write",
+    "pages/articles/articles",
+    "pages/article/article",
+    "pages/webview/webview"
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#3370ff",
+    "navigationBarTitleText": "AI 数字人分身",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#f5f6f8",
+    "backgroundTextStyle": "dark",
+    "enablePullDownRefresh": false
+  },
+  "tabBar": {
+    "color": "#8a8f99",
+    "selectedColor": "#3370ff",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/feed/feed",
+        "text": "广场"
+      },
+      {
+        "pagePath": "pages/create/create",
+        "text": "创作"
+      },
+      {
+        "pagePath": "pages/my/my",
+        "text": "我的"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

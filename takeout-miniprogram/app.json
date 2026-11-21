@@ -1,0 +1,50 @@
+{
+  "pages": [
+    "pages/home/home",
+    "pages/menu/menu",
+    "pages/order/list",
+    "pages/me/me",
+    "pages/order/confirm",
+    "pages/order/detail",
+    "pages/address/list",
+    "pages/address/edit",
+    "pages/coupon/list",
+    "pages/service/service",
+    "pages/login/login"
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#e64340",
+    "navigationBarTitleText": "外卖点餐",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#f6f4f1",
+    "backgroundTextStyle": "dark",
+    "enablePullDownRefresh": false
+  },
+  "tabBar": {
+    "color": "#8a8f99",
+    "selectedColor": "#e64340",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/home/home",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/menu/menu",
+        "text": "点餐"
+      },
+      {
+        "pagePath": "pages/order/list",
+        "text": "订单"
+      },
+      {
+        "pagePath": "pages/me/me",
+        "text": "我的"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

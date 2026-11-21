@@ -1,0 +1,49 @@
+<view class="page">
+  <view class="card">
+    <view class="row">
+      <view>
+        <view class="title">{{staff.name || '员工'}} · {{staff.roleLabel || ''}}</view>
+        <view class="muted" style="margin-top: 8rpx;">{{staff.shopName || ''}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="empty" wx:if="{{loading}}">正在读取工作台…</view>
+  <view class="empty" wx:elif="{{error}}">{{error}}</view>
+
+  <block wx:elif="{{summary}}">
+    <view class="stat-grid">
+      <view class="stat" data-status="PAID" bindtap="openOrders">
+        <view class="stat-value">{{summary.pendingPickup}}</view>
+        <view class="muted">待取车</view>
+      </view>
+      <view class="stat" data-status="PICKED_UP" bindtap="openOrders">
+        <view class="stat-value">{{summary.inUse}}</view>
+        <view class="muted">租用中</view>
+      </view>
+      <view class="stat" data-status="RETURNED" bindtap="openOrders">
+        <view class="stat-value">{{summary.pendingReturn}}</view>
+        <view class="muted">待结算</view>
+      </view>
+      <view class="stat" data-status="all" bindtap="openOrders">
+        <view class="stat-value">{{summary.todayOrders}}</view>
+        <view class="muted">今日新单</view>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="list-item" data-status="all" bindtap="openOrders">
+        <view class="row"><text>全部租单</text><text class="muted">›</text></view>
+      </view>
+      <view class="list-item" bindtap="openCustomers">
+        <view class="row"><text>门店顾客</text><text class="muted">›</text></view>
+      </view>
+      <view class="list-item" bindtap="openCustomerSide">
+        <view class="row"><text>顾客端首页</text><text class="muted">›</text></view>
+      </view>
+      <view class="list-item" bindtap="unbind">
+        <view class="row"><text>解绑员工身份</text><text class="muted">›</text></view>
+      </view>
+    </view>
+  </block>
+</view>

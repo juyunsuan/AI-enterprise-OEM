@@ -14,7 +14,7 @@ const HTML = `<!doctype html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<title>BotBuddy 指纹窗口</title>
+<title>AWBotDSH 指纹窗口</title>
 <style>
   html, body { height: 100%; margin: 0; }
   body {
@@ -30,7 +30,7 @@ const HTML = `<!doctype html>
 </head>
 <body>
   <div class="box">
-    <h1><span class="dot">●</span> BotBuddy 指纹窗口已就绪</h1>
+    <h1><span class="dot">●</span> AWBotDSH 指纹窗口已就绪</h1>
     <p>在地址栏输入网址开始，或让 Agent 在当前窗口里操作页面。</p>
   </div>
 </body>

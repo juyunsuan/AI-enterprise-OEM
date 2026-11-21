@@ -1,0 +1,30 @@
+<view class="notice list-tip">只展示本店在岗/休息中的服务人员，用于核对订单是谁做的；电话与证件不在代理侧展示。</view>
+
+<view class="error" wx:if="{{errorText}}">{{errorText}}</view>
+
+<view class="list" wx:if="{{list.length}}">
+  <view class="card item" wx:for="{{list}}" wx:key="id">
+    <view class="row">
+      <view class="who">
+        <image class="avatar" wx:if="{{item.avatar}}" src="{{item.avatar}}" mode="aspectFill" />
+        <view class="avatar avatar-empty" wx:else>{{item.name}}</view>
+        <view class="who-text">
+          <view class="row">
+            <text class="item-title">{{item.name}}</text>
+            <text class="tag {{item.statusTone}}">{{item.statusLabel}}</text>
+          </view>
+          <view class="muted">{{item.ratingText}}</view>
+        </view>
+      </view>
+    </view>
+    <view class="row bottom">
+      <text class="muted">{{item.orderText}}</text>
+      <text class="muted">{{item.cityText}}</text>
+    </view>
+  </view>
+  <view class="muted footer" wx:if="{{finished}}">共 {{total}} 人，已全部加载</view>
+  <view class="muted footer" wx:else>上拉加载更多</view>
+</view>
+
+<view class="empty" wx:elif="{{loading}}">正在加载…</view>
+<view class="empty" wx:else>本店暂无在岗服务人员。</view>

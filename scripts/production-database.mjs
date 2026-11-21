@@ -10,8 +10,11 @@ export function verifyBackup(file, target, now = Date.now()) {
   const age = now - Date.parse(manifest.createdAt);
   if (!Number.isFinite(age) || age < 0 || age > 24 * 3600_000) throw new Error('迁移前必须提供最近 24 小时的生产备份');
   if (Object.keys(target).some(key => manifest.target?.[key] !== target[key])) throw new Error('备份目标与当前生产库不一致');
-  if (!isAbsolute(manifest.archive || '') || (statSync(file).mode & 0o777) !== 0o600
-    || (statSync(manifest.archive).mode & 0o777) !== 0o600) throw new Error('备份及清单必须为绝对路径且权限为 600');
+  // Windows 无 POSIX 权限位，只校验路径；POSIX 上仍强制 600。
+  const modeOk = (path) => process.platform === 'win32' || (statSync(path).mode & 0o777) === 0o600;
+  if (!isAbsolute(manifest.archive || '') || !modeOk(file) || !modeOk(manifest.archive)) {
+    throw new Error('备份及清单必须为绝对路径且权限为 600');
+  }
   const data = readFileSync(manifest.archive);
   if (!data.length || data.length !== manifest.bytes || createHash('sha256').update(data).digest('hex') !== manifest.sha256) throw new Error('生产备份大小或 SHA-256 校验失败');
   return manifest;

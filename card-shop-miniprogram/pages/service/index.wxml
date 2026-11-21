@@ -1,0 +1,51 @@
+<web-view wx:if="{{chatUrl}}" src="{{chatUrl}}"></web-view>
+
+<view class="page" style="{{themeStyle}}" wx:else>
+  <view class="card" wx:if="{{orderNo}}">
+    <view class="row between">
+      <text class="muted">咨询订单</text>
+      <text class="copy-link" bindtap="copyOrderNo">复制订单号</text>
+    </view>
+    <view class="order-no">{{orderNo}}</view>
+    <view class="muted small">联系店主时附上订单号，能更快定位问题。</view>
+  </view>
+
+  <view class="card">
+    <view class="section-title">联系店主</view>
+    <view class="muted hint" wx:if="{{!contactEnabled}}">店主未开启在线客服与联系方式，可在店铺公告里查看说明。</view>
+    <view class="muted hint" wx:elif="{{!hasContact}}">店主还没有留下联系方式，可在店铺公告里查看说明。</view>
+
+    <block wx:if="{{contactEnabled && hasContact}}">
+      <view class="contact-row" wx:if="{{contact.phone}}" bindtap="copy" data-value="{{contact.phone}}">
+        <text class="muted">电话</text>
+        <view class="row">
+          <text class="contact-value">{{contact.phone}}</text>
+          <text class="copy-link">复制</text>
+        </view>
+      </view>
+      <view class="contact-row" wx:if="{{contact.wechat}}" bindtap="copy" data-value="{{contact.wechat}}">
+        <text class="muted">微信</text>
+        <view class="row">
+          <text class="contact-value">{{contact.wechat}}</text>
+          <text class="copy-link">复制</text>
+        </view>
+      </view>
+      <view class="contact-row" wx:if="{{contact.qq}}" bindtap="copy" data-value="{{contact.qq}}">
+        <text class="muted">QQ</text>
+        <view class="row">
+          <text class="contact-value">{{contact.qq}}</text>
+          <text class="copy-link">复制</text>
+        </view>
+      </view>
+      <view class="contact-row" wx:if="{{contact.email}}" bindtap="copy" data-value="{{contact.email}}">
+        <text class="muted">邮箱</text>
+        <view class="row">
+          <text class="contact-value">{{contact.email}}</text>
+          <text class="copy-link">复制</text>
+        </view>
+      </view>
+    </block>
+
+    <view class="btn btn-ghost query-btn" bindtap="goQuery">自助查单取卡</view>
+  </view>
+</view>

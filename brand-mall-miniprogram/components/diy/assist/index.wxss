@@ -1,0 +1,44 @@
+.diy-assist {
+  padding: 16rpx 24rpx;
+  box-sizing: border-box;
+}
+
+.button {
+  height: 80rpx;
+  border-radius: 40rpx;
+  border: 1rpx solid #eeeeee;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26rpx;
+  color: #333;
+}
+
+.qr-wrap {
+  text-align: center;
+}
+
+.qr {
+  width: 200rpx;
+  height: 200rpx;
+  margin: 0 auto;
+  border-radius: 12rpx;
+  background: #fafafa;
+  display: block;
+}
+
+.qr-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1rpx dashed #dcdfe6;
+  color: #adb2bb;
+  font-size: 22rpx;
+}
+
+.qr-label {
+  font-size: 24rpx;
+  color: #666;
+  margin-top: 10rpx;
+}

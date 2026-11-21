@@ -6,6 +6,7 @@ import {
   type UpgradeBackup,
   type UpgradeCheckResult,
   type UpgradeJob,
+  type UpgradeMaintenance,
   type UpgradeOverview,
   type UpgradePackage,
 } from "@enterprise/contracts";
@@ -22,6 +23,7 @@ export type {
   UpgradeBackup,
   UpgradeCheckResult,
   UpgradeJob,
+  UpgradeMaintenance,
   UpgradeOverview,
   UpgradePackage,
 };
@@ -40,6 +42,8 @@ export const upgradeApi = {
   backups: endpoint(endpoints.AdminUpgrade_backups),
   restore: endpoint(endpoints.AdminUpgrade_restore),
   removeBackup: endpoint(endpoints.AdminUpgrade_removeBackup),
+  maintenance: endpoint(endpoints.AdminUpgrade_maintenance),
+  setMaintenance: endpoint(endpoints.AdminUpgrade_setMaintenance),
 };
 
 /** 手动上传升级包（zip + 可选版本号）；打包与校验完成后立即解压。 */

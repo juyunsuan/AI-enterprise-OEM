@@ -1,0 +1,151 @@
+.tip {
+  margin-top: 12rpx;
+  line-height: 1.6;
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #eef0f3;
+}
+
+.field.column {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.label {
+  width: 200rpx;
+  color: #4e5969;
+  font-size: 27rpx;
+  flex-shrink: 0;
+}
+
+.field.column .label {
+  width: auto;
+  margin-bottom: 12rpx;
+}
+
+.input {
+  flex: 1;
+  font-size: 27rpx;
+}
+
+.textarea {
+  width: 100%;
+  min-height: 160rpx;
+  font-size: 27rpx;
+  box-sizing: border-box;
+}
+
+.picker-value {
+  color: #3370ff;
+  font-size: 27rpx;
+}
+
+.images {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 12rpx;
+}
+
+.image-item {
+  position: relative;
+  margin: 0 16rpx 16rpx 0;
+}
+
+.image {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 12rpx;
+  background: #f7f8fa;
+  margin-right: 16rpx;
+  margin-bottom: 12rpx;
+}
+
+.image-item .image {
+  margin: 0;
+}
+
+.image-remove {
+  position: absolute;
+  right: 8rpx;
+  bottom: 8rpx;
+  padding: 2rpx 10rpx;
+  border-radius: 10rpx;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-size: 20rpx;
+}
+
+.image-add {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 12rpx;
+  border: 1rpx dashed #c9cdd4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8a8f99;
+  font-size: 24rpx;
+}
+
+.error {
+  margin-top: 18rpx;
+  color: #f53f3f;
+  font-size: 25rpx;
+  line-height: 1.6;
+}
+
+.submit {
+  margin-top: 26rpx;
+}
+
+.record {
+  margin-top: 18rpx;
+  padding: 16rpx;
+  border-radius: 12rpx;
+  background: #f7f9ff;
+}
+
+.order-no {
+  font-size: 26rpx;
+  color: #4e5969;
+}
+
+.badge {
+  padding: 4rpx 14rpx;
+  border-radius: 16rpx;
+  font-size: 22rpx;
+  background: #eef3ff;
+  color: #3370ff;
+}
+
+.badge-ACCEPTED {
+  background: #e9f7ef;
+  color: #1f9d55;
+}
+
+.badge-REJECTED {
+  background: #fdecec;
+  color: #c62828;
+}
+
+.reason {
+  margin: 10rpx 0 8rpx;
+  font-size: 27rpx;
+  line-height: 1.6;
+}
+
+.reply {
+  margin-top: 10rpx;
+  font-size: 26rpx;
+  color: #1f2329;
+  line-height: 1.6;
+}
+
+.footer {
+  text-align: center;
+  padding: 20rpx 0;
+}

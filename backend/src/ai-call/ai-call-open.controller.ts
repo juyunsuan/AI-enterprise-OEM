@@ -9,8 +9,8 @@ import {
 /**
  * AI 调用账号机器通道（x-api-key）。
  *
- * BotBuddy 主机 / MoBot 手机 / WorkBuddy 云端 Agent 凭本系统 API Key（ek_）调用，
- * 每次都要声明自己是谁：`kind`＝DESKTOP / MOBOT / WORKBUDDY，`agentId`＝该设备的主体 ID。
+ * AWBotDSH 主机 / AWBot 手机 / WorkBuddy 云端 Agent 凭本系统 API Key（ek_）调用，
+ * 每次都要声明自己是谁：`kind`＝DESKTOP / AWBOT / WORKBUDDY，`agentId`＝该设备的主体 ID。
  * 严格按「Agent 绑定账号」放行：只有绑定给该设备的 AI 调用账号才列得出来、才取得到明文凭据。
  *
  * 列表不含任何明文；明文只在 `GET /:id/credentials` 解密一次并记审计。

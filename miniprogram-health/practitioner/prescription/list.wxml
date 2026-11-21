@@ -1,0 +1,33 @@
+<view class="page">
+  <view class="tabs">
+    <view
+      class="tab {{status === item.key ? 'active' : ''}}"
+      wx:for="{{tabs}}"
+      wx:key="key"
+      data-key="{{item.key}}"
+      bindtap="onTab"
+    >{{item.label}}</view>
+  </view>
+
+  <view class="card" wx:if="{{list.length}}">
+    <view class="list-item" wx:for="{{list}}" wx:key="id">
+      <view class="item-head">
+        <view class="item-title">{{item.patientName}} · {{item.rxNo}}</view>
+        <text class="tag {{item.status}}">{{item.statusLabel}}</text>
+      </view>
+      <view class="item-meta">{{item.doctorName}} · {{item.timeText}} · {{item.amountText}}</view>
+      <view class="item-meta" wx:if="{{item.diagnosis}}">诊断：{{item.diagnosis}}</view>
+      <view class="item-meta" wx:if="{{item.itemsText}}">药品：{{item.itemsText}}</view>
+      <view class="item-meta" wx:if="{{item.note}}">医嘱：{{item.note}}</view>
+      <view class="item-meta" wx:if="{{item.reviewReason}}">复核意见：{{item.reviewReason}}</view>
+      <view class="item-meta" wx:if="{{item.status === 'SUBMITTED' && !canReview}}">仅药师或店长可复核</view>
+      <view class="actions" wx:if="{{item.status === 'SUBMITTED' && canReview}}">
+        <button class="mini approve" data-id="{{item.id}}" bindtap="onApprove">通过</button>
+        <button class="mini reject" data-id="{{item.id}}" bindtap="onReject">驳回</button>
+      </view>
+    </view>
+  </view>
+
+  <view class="empty" wx:elif="{{!loading}}">暂无处方</view>
+  <view class="empty" wx:else>正在加载…</view>
+</view>

@@ -9,7 +9,7 @@
  *   → 若有工具调用则逐个执行，结果回灌
  *   → 直到模型给出最终正文或轮次用尽
  *
- * 与平台侧 Agent 完全独立：模型渠道、技能、数字分身、记忆都在本机 ~/.botbuddy 下。
+ * 与平台侧 Agent 完全独立：模型渠道、技能、数字分身、记忆都在本机 ~/.awbotdsh 下。
  * 平台只把一句自然语言指令投进来，拿回过程与结果。
  */
 
@@ -21,6 +21,8 @@ const modelClient = require('./model-client');
 const tools = require('./tools');
 const plugins = require('../plugins');
 const fpBrowser = require('../fp/browser-tools');
+const chromeBridge = require('../chrome-bridge');
+const skillSecurity = require('../skill-security');
 
 const MAX_TOOL_ROUNDS = 8;
 const PROGRESS_CHUNK = 400;
@@ -47,6 +49,15 @@ function extraTools(pluginIds) {
     }));
   // 浏览器工具默认驱动客户端自带浏览器：不依赖外部 Chrome / Edge，也不需要桥接扩展在线。
   for (const def of fpBrowser.toolDefs()) {
+    list.push({
+      name: def.name,
+      description: def.description,
+      parameters: def.parameters,
+      run: (args, ctx) => def.call(args || {}, ctx || {})
+    });
+  }
+  // 用户真实浏览器：桥接扩展在线时才注入，工具名 user_chrome_* 与自带窗口互不覆盖。
+  for (const def of chromeBridge.toolDefs(chromeBridge.shared)) {
     list.push({
       name: def.name,
       description: def.description,
@@ -82,7 +93,7 @@ function state({ busy, lastError } = {}) {
 
 function buildSystemPrompt(ctx) {
   const parts = [
-    '你是 BotBuddy 客户端里的本地 Agent，运行在用户自己的电脑上。',
+    '你是 AWBotDSH 客户端里的本地 Agent，运行在用户自己的电脑上。',
     '你通过工具直接读写本机工作区、必要时执行命令，然后把结论讲清楚。',
     '工作区：' + ctx.root,
     '',
@@ -127,7 +138,7 @@ function buildSystemPrompt(ctx) {
     parts.push('', '长期记忆（你之前记下的结论）：', ctx.memory);
   }
 
-  parts.push('', '本机信息：' + ctx.platform + ' · ' + os.hostname() + ' · BotBuddy ' + CLIENT_VERSION);
+  parts.push('', '本机信息：' + ctx.platform + ' · ' + os.hostname() + ' · AWBotDSH ' + CLIENT_VERSION);
   return parts.join('\n');
 }
 
@@ -287,7 +298,7 @@ async function run(input) {
     return {
       status: 'error',
       text: '',
-      errorMessage: '客户端还没配置文本模型：请到 BotBuddy 的「Agent」页填写渠道与模型',
+      errorMessage: '客户端还没配置文本模型：请到 AWBotDSH 的「Agent」页填写渠道与模型',
       failReason: 'NO_MODEL'
     };
   }
@@ -331,10 +342,20 @@ async function run(input) {
   const toolCtx = {
     root,
     policy,
+    // 会话维度：浏览器窗口按会话固定，A/B 会话互不串台。
+    sessionId: String(input.sessionId || input.conversationId || '').trim(),
     extraTools: extras,
     memory: { append: (text) => agentConfig.appendMemory(text) },
     skills: {
-      readSkill: (id) => (allowedSkillIds.has(String(id || '').trim()) ? agentConfig.readSkill(id) : null)
+      readSkill: (id) => {
+        if (!allowedSkillIds.has(String(id || '').trim())) return null;
+        const skill = agentConfig.readSkill(id);
+        if (!skill) return null;
+        // 运行时复扫：安装时通过、事后被改写的内容也要拦下来。
+        const scan = skillSecurity.scanRuntimeContent(skill.body);
+        if (!scan.ok) throw new Error(scan.failure);
+        return skill;
+      }
     }
   };
 

@@ -1,0 +1,179 @@
+page {
+  background: #f5f6f8;
+  color: #1f2329;
+  font-size: 28rpx;
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang SC", sans-serif;
+}
+
+.container {
+  padding: 24rpx;
+  box-sizing: border-box;
+}
+
+.card {
+  background: #ffffff;
+  border-radius: 20rpx;
+  padding: 24rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 4rpx 16rpx rgba(15, 23, 42, 0.04);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+}
+
+.between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.avatar {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  background: #e5e7eb;
+  flex-shrink: 0;
+}
+
+.avatar-sm {
+  width: 52rpx;
+  height: 52rpx;
+  border-radius: 50%;
+  background: #e5e7eb;
+  flex-shrink: 0;
+}
+
+.name {
+  font-weight: 600;
+  margin-left: 16rpx;
+}
+
+.muted {
+  color: #8a8f99;
+  font-size: 24rpx;
+}
+
+.content {
+  margin-top: 16rpx;
+  line-height: 1.6;
+  word-break: break-all;
+}
+
+.images {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 16rpx;
+}
+
+.image {
+  width: 210rpx;
+  height: 210rpx;
+  margin: 0 10rpx 10rpx 0;
+  border-radius: 12rpx;
+  background: #eef0f3;
+}
+
+.actions {
+  display: flex;
+  margin-top: 20rpx;
+  color: #6b7280;
+  font-size: 26rpx;
+}
+
+.action {
+  margin-right: 40rpx;
+}
+
+.action.active {
+  color: #1677ff;
+}
+
+.btn {
+  background: #1677ff;
+  color: #ffffff;
+  border-radius: 999rpx;
+  padding: 16rpx 32rpx;
+  font-size: 28rpx;
+  line-height: 1.2;
+}
+
+.btn.ghost {
+  background: #ffffff;
+  color: #1677ff;
+  border: 1rpx solid #1677ff;
+}
+
+.btn.danger {
+  background: #de350b;
+}
+
+.input {
+  background: #f3f4f6;
+  border-radius: 12rpx;
+  padding: 16rpx 20rpx;
+  min-height: 44rpx;
+}
+
+.textarea {
+  background: #f3f4f6;
+  border-radius: 12rpx;
+  padding: 20rpx;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 220rpx;
+}
+
+.empty {
+  text-align: center;
+  color: #8a8f99;
+  padding: 80rpx 0;
+}
+
+.tag {
+  display: inline-block;
+  background: #eef4ff;
+  color: #1677ff;
+  border-radius: 8rpx;
+  padding: 4rpx 12rpx;
+  font-size: 22rpx;
+  margin-right: 10rpx;
+}
+
+.floating {
+  position: fixed;
+  right: 36rpx;
+  bottom: 140rpx;
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 50%;
+  background: #1677ff;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48rpx;
+  box-shadow: 0 8rpx 24rpx rgba(22, 119, 255, 0.35);
+  z-index: 20;
+}
+
+.tabs {
+  display: flex;
+  background: #ffffff;
+  margin-bottom: 20rpx;
+  border-radius: 16rpx;
+  overflow: hidden;
+}
+
+.tab {
+  flex: 1;
+  text-align: center;
+  padding: 20rpx 0;
+  color: #6b7280;
+}
+
+.tab.active {
+  color: #1677ff;
+  font-weight: 600;
+}

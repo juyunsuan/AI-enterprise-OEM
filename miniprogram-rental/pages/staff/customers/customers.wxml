@@ -1,0 +1,21 @@
+<view class="page">
+  <view class="card">
+    <input class="form-input" value="{{keyword}}" placeholder="按昵称或手机号搜索" bindinput="onKeyword" bindconfirm="load" />
+    <button class="button-ghost" style="margin-top: 16rpx;" bindtap="load">搜索</button>
+  </view>
+
+  <view class="empty" wx:if="{{loading}}">正在加载顾客…</view>
+  <view class="empty" wx:elif="{{error}}">{{error}}</view>
+  <view class="empty" wx:elif="{{!rows.length}}">暂无顾客记录</view>
+
+  <view class="card" wx:for="{{rows}}" wx:key="id">
+    <view class="row">
+      <text class="item-title">{{item.nickname || '微信顾客'}}</text>
+      <text class="status">{{item.statusLabel}}</text>
+    </view>
+    <view class="muted" style="margin-top: 8rpx;" data-phone="{{item.phone}}" bindtap="callCustomer" wx:if="{{item.phone}}">
+      电话 {{item.phone}}（点击拨打）
+    </view>
+    <view class="muted" style="margin-top: 6rpx;">最近登录 {{item.lastLoginText}}</view>
+  </view>
+</view>

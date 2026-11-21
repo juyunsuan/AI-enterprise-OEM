@@ -1,0 +1,121 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/service/service",
+    "pages/order/order",
+    "pages/me/me",
+    "pages/login/login"
+  ],
+  "subPackages": [
+    {
+      "root": "consumer/",
+      "pages": [
+        "service-detail/service-detail",
+        "staff-list/staff-list",
+        "staff-detail/staff-detail",
+        "choose-time/choose-time",
+        "confirm-order/confirm-order",
+        "pay-result/pay-result",
+        "order-detail/order-detail",
+        "order-sign/order-sign",
+        "review-submit/review-submit",
+        "refund-apply/refund-apply",
+        "refund-list/refund-list",
+        "refund-detail/refund-detail",
+        "address-list/address-list",
+        "address-edit/address-edit",
+        "article/article",
+        "form-submit/form-submit",
+        "feedback/feedback",
+        "settings/settings",
+        "webview/webview"
+      ]
+    },
+    {
+      "root": "technician/",
+      "pages": [
+        "bind/bind",
+        "workbench/workbench",
+        "order-list/order-list",
+        "order-detail/order-detail",
+        "profile/profile",
+        "profile-edit/profile-edit",
+        "schedule/schedule",
+        "rest-set/rest-set",
+        "location/location",
+        "income/income",
+        "appeal/appeal",
+        "feedback/feedback",
+        "alert-help/alert-help"
+      ]
+    },
+    {
+      "root": "agent/",
+      "pages": [
+        "bind/bind",
+        "index/index",
+        "commission/commission",
+        "order-list/order-list",
+        "refund-list/refund-list",
+        "technician-list/technician-list",
+        "change-staff/change-staff",
+        "technician-apply/technician-apply",
+        "poster/poster"
+      ]
+    }
+  ],
+  "preloadRule": {
+    "pages/index/index": {
+      "network": "all",
+      "packages": ["consumer"]
+    },
+    "pages/me/me": {
+      "network": "all",
+      "packages": ["consumer", "technician"]
+    }
+  },
+  "window": {
+    "navigationBarBackgroundColor": "#3370ff",
+    "navigationBarTitleText": "上门服务",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#f5f6f8",
+    "backgroundTextStyle": "dark",
+    "enablePullDownRefresh": false
+  },
+  "tabBar": {
+    "color": "#8a8f99",
+    "selectedColor": "#3370ff",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/service/service",
+        "text": "服务"
+      },
+      {
+        "pagePath": "pages/order/order",
+        "text": "订单"
+      },
+      {
+        "pagePath": "pages/me/me",
+        "text": "我的"
+      }
+    ]
+  },
+  "permission": {
+    "scope.userLocation": {
+      "desc": "用于计算上门距离与车费，以及服务人员到场打卡定位"
+    }
+  },
+  "requiredPrivateInfos": [
+    "getLocation",
+    "chooseLocation"
+  ],
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

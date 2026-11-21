@@ -1,0 +1,56 @@
+.closed {
+  text-align: center;
+}
+
+.note {
+  margin-top: 8rpx;
+  line-height: 1.6;
+}
+
+.tabs {
+  background: #fff;
+  white-space: nowrap;
+}
+
+.tab-row {
+  display: flex;
+  padding: 16rpx 24rpx;
+}
+
+.tab {
+  flex: none;
+  margin-right: 24rpx;
+  padding: 8rpx 24rpx;
+  border-radius: 24rpx;
+  font-size: 26rpx;
+  color: #5c6068;
+  background: #f2f3f5;
+}
+
+.tab.on {
+  background: #3370ff;
+  color: #fff;
+}
+
+.filter-note {
+  padding: 12rpx 24rpx 0;
+}
+
+.status {
+  font-size: 26rpx;
+  color: #3370ff;
+}
+
+.row-line {
+  margin-top: 8rpx;
+}
+
+.amount-row {
+  margin-top: 12rpx;
+}
+
+.amount {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1f2329;
+}

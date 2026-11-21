@@ -1,0 +1,251 @@
+<view class="page detail-page" style="{{themeStyle}}">
+  <view class="empty" wx:if="{{loading}}">加载中…</view>
+  <view class="empty" wx:elif="{{error}}">{{error}}</view>
+
+  <block wx:else>
+    <view class="cover-box cover">
+      <image wx:if="{{info.cover}}" class="cover-img" src="{{info.cover}}" mode="aspectFill" />
+      <view wx:else class="cover-ph">{{info.mediaLabel}}</view>
+    </view>
+
+    <view class="card main-card">
+      <view class="title">{{info.title}}</view>
+      <view class="meta">
+        <text class="{{info.accessClass}}">{{info.accessLabel}}</text>
+        <text class="muted meta-item">{{info.mediaLabel}}</text>
+        <text class="muted meta-item" wx:if="{{lessonCount}}">{{lessonCount}} 讲</text>
+        <text class="muted meta-item">浏览 {{info.viewText || 0}}</text>
+        <text class="muted meta-item" wx:if="{{info.unlocked}}">已获取</text>
+      </view>
+
+      <!-- 无课时目录的课程在详情页直接播放；有目录的进学习页 -->
+      <block wx:if="{{canPlay}}">
+        <video
+          wx:if="{{player === 'video'}}"
+          class="player"
+          src="{{info.url}}"
+          poster="{{info.cover}}"
+          show-center-play-btn="{{true}}"
+          object-fit="contain"
+        />
+        <view class="tip-line" wx:if="{{info.mediaType === 'live'}}">
+          直播内容已解锁；若无法播放，请前往本站视频号直播间。
+        </view>
+        <view wx:elif="{{player === 'audio'}}" class="audio-box">
+          <view class="audio-btn {{audio.playing ? 'audio-on' : ''}}" bindtap="onAudioPlay">
+            {{audio.playing ? '暂停' : '播放'}}
+          </view>
+          <view class="audio-main">
+            <view class="audio-title ellipsis">{{info.title}}</view>
+            <progress percent="{{audio.progress}}" active-color="{{themeColor}}" stroke-width="3" />
+            <view class="muted">{{audio.timeText}}</view>
+          </view>
+        </view>
+        <image
+          wx:elif="{{player === 'image'}}"
+          class="image-full"
+          src="{{info.url}}"
+          mode="widthFix"
+        />
+        <view wx:elif="{{player === 'rich'}}" class="tip-line">内容已解锁，可阅读全文。</view>
+      </block>
+      <view class="tip-line" wx:elif="{{info.mediaType === 'live' && !lessonCount}}">
+        直播内容请获取后在此观看，或前往本站视频号直播间。
+      </view>
+
+      <view class="divider"></view>
+
+      <view class="section-title small">课程简介</view>
+      <!-- 未解锁时正文只露一段，配合遮罩提示「获取后查看全部」 -->
+      <view class="intro {{lockedIntro ? 'intro-locked' : ''}}">
+        <rich-text wx:if="{{intro}}" nodes="{{intro}}"></rich-text>
+        <view class="muted" wx:else>暂无简介</view>
+        <view class="intro-mask" wx:if="{{lockedIntro}}">
+          <view class="intro-mask-text">{{actionText || '获取后查看全部'}}</view>
+        </view>
+      </view>
+
+      <view class="cash-row" wx:if="{{!info.unlocked && payReady && cashPriceText}}">
+        <view class="muted">不想用积分？可以直接微信支付</view>
+        <view class="cash-btn" bindtap="onCashPay">
+          {{paying ? '支付中…' : '微信支付 ' + cashPriceText}}
+        </view>
+      </view>
+    </view>
+
+    <view class="card teacher-card" wx:if="{{teacher.name}}" bindtap="openTeacher">
+      <image wx:if="{{teacher.avatar}}" class="teacher-avatar" src="{{teacher.avatar}}" mode="aspectFill" />
+      <view wx:else class="teacher-avatar teacher-ph">{{teacherInitial}}</view>
+      <view class="teacher-main">
+        <view class="teacher-name">
+          {{teacher.name}}
+          <text class="teacher-title" wx:if="{{teacher.title}}">{{teacher.title}}</text>
+        </view>
+        <view class="muted teacher-intro" wx:if="{{teacher.intro}}">{{teacher.intro}}</view>
+      </view>
+      <text class="arrow" wx:if="{{teacher.id}}">›</text>
+    </view>
+
+    <view class="card" wx:if="{{lessons.length}}">
+      <view class="section-head-row">
+        <view class="section-title small">课程目录</view>
+        <view class="continue-btn" wx:if="{{info.unlocked}}" bindtap="continueLearning">
+          {{progress.lastLessonId ? '继续学习' : '开始学习'}}
+        </view>
+      </view>
+      <view class="progress-line" wx:if="{{info.unlocked && progress.lessonCount}}">
+        <progress percent="{{progress.percent}}" active-color="{{themeColor}}" stroke-width="3" />
+        <view class="muted">已学 {{progress.completedCount}}/{{progress.lessonCount}} 讲 · {{progress.percent}}%</view>
+      </view>
+
+      <block wx:for="{{chapters}}" wx:key="id" wx:for-item="chapter">
+        <view class="chapter-title">{{chapter.title}}</view>
+        <view
+          class="lesson-item"
+          wx:for="{{chapter.lessons}}"
+          wx:key="id"
+          wx:for-item="lesson"
+          bindtap="openLesson"
+          data-id="{{lesson.id}}"
+        >
+          <view class="lesson-index {{lesson.completed ? 'lesson-done' : ''}}">{{index + 1}}</view>
+          <view class="lesson-main">
+            <view class="lesson-title ellipsis">{{lesson.title}}</view>
+            <view class="muted lesson-meta">
+              <text>{{lesson.mediaLabel}}</text>
+              <text wx:if="{{lesson.durationText}}"> · {{lesson.durationText}}</text>
+              <text wx:if="{{lesson.freeTrial}}" class="mini-tag trial">试看</text>
+              <text wx:if="{{lesson.completed}}" class="mini-tag done">已学</text>
+            </view>
+          </view>
+          <view class="lesson-state">{{lesson.unlocked ? '播放' : '未解锁'}}</view>
+        </view>
+      </block>
+
+      <block wx:if="{{ungrouped.length}}">
+        <view class="chapter-title" wx:if="{{chapters.length}}">更多课时</view>
+        <view
+          class="lesson-item"
+          wx:for="{{ungrouped}}"
+          wx:key="id"
+          wx:for-item="lesson"
+          bindtap="openLesson"
+          data-id="{{lesson.id}}"
+        >
+          <view class="lesson-index {{lesson.completed ? 'lesson-done' : ''}}">{{index + 1}}</view>
+          <view class="lesson-main">
+            <view class="lesson-title ellipsis">{{lesson.title}}</view>
+            <view class="muted lesson-meta">
+              <text>{{lesson.mediaLabel}}</text>
+              <text wx:if="{{lesson.durationText}}"> · {{lesson.durationText}}</text>
+              <text wx:if="{{lesson.freeTrial}}" class="mini-tag trial">试看</text>
+              <text wx:if="{{lesson.completed}}" class="mini-tag done">已学</text>
+            </view>
+          </view>
+          <view class="lesson-state">{{lesson.unlocked ? '播放' : '未解锁'}}</view>
+        </view>
+      </block>
+    </view>
+
+    <view class="card">
+      <view class="section-head-row">
+        <view class="section-title small">课程评价</view>
+        <view class="review-write" bindtap="openReview">{{myReview ? '修改评价' : '写评价'}} ›</view>
+      </view>
+      <view class="rating-summary">
+        <view class="rating-score">{{rating.avg || '—'}}</view>
+        <view class="rating-main">
+          <view class="stars">
+            <text wx:for="{{[1,2,3,4,5]}}" wx:key="*this" class="star {{item <= rating.avg ? 'star-on' : 'star-off'}}">★</text>
+          </view>
+          <view class="muted">{{rating.count || 0}} 条评价</view>
+        </view>
+      </view>
+      <view class="review-item" wx:for="{{reviews}}" wx:key="id">
+        <view class="review-head">
+          <image wx:if="{{item.avatar}}" class="review-avatar" src="{{item.avatar}}" mode="aspectFill" />
+          <view class="review-name">{{item.nickname}}</view>
+          <view class="stars small">
+            <text wx:for="{{[1,2,3,4,5]}}" wx:for-item="star" wx:key="*this" class="star {{star <= item.rating ? 'star-on' : 'star-off'}}">★</text>
+          </view>
+        </view>
+        <view class="review-content">{{item.content || '该用户只打了分'}}</view>
+        <view class="review-reply" wx:if="{{item.reply}}">站点回复：{{item.reply}}</view>
+      </view>
+      <view class="muted review-empty" wx:if="{{!reviews.length}}">还没有评价，解锁学习后来打第一分吧。</view>
+    </view>
+
+    <block wx:if="{{related.length}}">
+      <view class="section-head-row related-head">
+        <view class="section-title small">相关课程</view>
+      </view>
+      <resource-card
+        wx:for="{{related}}"
+        wx:key="id"
+        item="{{item}}"
+        bindtap="openRelated"
+        data-id="{{item.id}}"
+      />
+    </block>
+
+    <view class="card" wx:if="{{showAd && adUnit}}">
+      <view class="muted ad-label">推广</view>
+      <ad unit-id="{{adUnit}}"></ad>
+    </view>
+
+    <view class="footer-gap"></view>
+
+    <view class="action-bar">
+      <view class="action-side" bindtap="onFavorite">
+        <view class="action-icon {{favorited ? 'action-active' : ''}}">{{favorited ? '★' : '☆'}}</view>
+        <view class="action-text">{{favorited ? '已收藏' : '收藏'}}</view>
+      </view>
+      <view class="action-side" wx:if="{{showPraise && showContact}}">
+        <button class="action-btn" open-type="contact">
+          <view class="action-icon">支持</view>
+          <view class="action-text">赞赏</view>
+        </button>
+      </view>
+      <view class="action-side">
+        <button class="action-btn" open-type="share">
+          <view class="action-icon">分享</view>
+          <view class="action-text">分享</view>
+        </button>
+      </view>
+      <view class="action-main">
+        <view class="btn action-button" wx:if="{{action !== 'none'}}" bindtap="onAction">
+          {{submitting ? '处理中…' : actionText}}
+        </view>
+        <view class="btn action-button" wx:elif="{{lessons.length}}" bindtap="continueLearning">
+          {{progress.lastLessonId ? '继续学习' : '开始学习'}}
+        </view>
+        <view class="btn btn-plain action-button" wx:else>已获取，可直接观看</view>
+      </view>
+    </view>
+  </block>
+
+  <view class="mask" wx:if="{{reviewPopup.visible}}" bindtap="closeReview">
+    <view class="review-popup" catchtap="noop">
+      <view class="review-popup-title">评价课程</view>
+      <view class="stars big">
+        <text
+          wx:for="{{[1,2,3,4,5]}}"
+          wx:key="*this"
+          data-value="{{item}}"
+          bindtap="setRating"
+          class="star {{item <= reviewPopup.rating ? 'star-on' : 'star-off'}}"
+        >★</text>
+      </view>
+      <textarea
+        class="review-input"
+        value="{{reviewPopup.content}}"
+        maxlength="2000"
+        bindinput="onReviewInput"
+        placeholder="说说这门课对你的帮助（选填）"
+      />
+      <view class="btn review-submit" bindtap="submitReview">
+        {{reviewPopup.submitting ? '提交中…' : '提交评价'}}
+      </view>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,47 @@
+<view class="page">
+  <view class="empty" wx:if="{{loading}}">正在读取租品…</view>
+  <view class="empty" wx:elif="{{error}}">{{error}}</view>
+
+  <block wx:elif="{{item}}">
+    <image class="cover-large" src="{{item.cover}}" mode="aspectFill" wx:if="{{item.cover}}"></image>
+    <view class="card">
+      <view class="title">{{item.name}}</view>
+      <view class="muted" wx:if="{{item.category}}" style="margin-top: 8rpx;">{{item.category}}</view>
+      <view class="row" style="margin-top: 16rpx;">
+        <text class="price">¥{{dailyRateText}} / 天</text>
+        <text class="muted">押金 ¥{{depositText}}</text>
+      </view>
+      <view class="tags" wx:if="{{attributes.length}}" style="margin-top: 16rpx;">
+        <text class="tag" wx:for="{{attributes}}" wx:key="key">{{item.key}}：{{item.value}}</text>
+      </view>
+      <view class="muted" style="margin-top: 16rpx; line-height: 1.7;" wx:if="{{item.description}}">{{item.description}}</view>
+    </view>
+
+    <view class="card">
+      <view class="title">选择租期</view>
+      <view class="form-row">
+        <view class="form-label">开始日期</view>
+        <picker mode="date" value="{{startAt}}" start="{{today}}" bindchange="changeStart">
+          <view class="form-input">{{startAt}}</view>
+        </picker>
+      </view>
+      <view class="form-row">
+        <view class="form-label">结束日期</view>
+        <picker mode="date" value="{{endAt}}" start="{{startAt}}" bindchange="changeEnd">
+          <view class="form-input">{{endAt}}</view>
+        </picker>
+      </view>
+      <view class="row" style="margin-top: 16rpx;">
+        <text class="muted">共 {{days}} 天</text>
+        <text class="price">合计 ¥{{totalText}}</text>
+      </view>
+      <view class="muted" style="margin-top: 8rpx;">租金 ¥{{rentText}} + 押金 ¥{{depositText}}</view>
+    </view>
+
+    <view class="footer-bar">
+      <button class="button-primary" bindtap="goConfirm" disabled="{{item.stock <= 0}}">
+        {{item.stock > 0 ? '立即下单' : '暂无可租库存'}}
+      </button>
+    </view>
+  </block>
+</view>

@@ -1,0 +1,31 @@
+<view class="container">
+  <view class="card" wx:if="{{checkUser}}">
+    <view class="between">
+      <view>
+        <view class="subtitle">审核状态</view>
+        <view class="muted">审核通过后才能开始练习或考试；通过后资料不可修改。</view>
+      </view>
+      <view class="tag {{approved ? 'green' : (statusText === '已驳回' ? 'red' : '')}}">{{statusText || '未提交'}}</view>
+    </view>
+    <view wx:if="{{note}}" class="analysis" style="margin-top:14rpx;">审核备注：{{note}}</view>
+  </view>
+
+  <view class="card">
+    <view class="subtitle">参赛资料</view>
+    <view class="muted" style="margin-bottom:20rpx;">
+      昵称会显示在排行榜与答卷记录里；单位/部门用于内部统计。
+    </view>
+    <view class="label">昵称{{required ? '（必填）' : '（可选）'}}</view>
+    <input class="profile-input" value="{{nickname}}" data-field="nickname" bindinput="onInput" maxlength="60" placeholder="怎么称呼你" disabled="{{checkUser && approved}}" />
+    <view class="label">单位</view>
+    <input class="profile-input" value="{{company}}" data-field="company" bindinput="onInput" maxlength="120" placeholder="如：某某公司" disabled="{{checkUser && approved}}" />
+    <view class="label">部门</view>
+    <input class="profile-input" value="{{department}}" data-field="department" bindinput="onInput" maxlength="120" placeholder="如：安全部" disabled="{{checkUser && approved}}" />
+    <button class="primary-btn" bindtap="save" loading="{{saving}}" disabled="{{checkUser && approved}}">
+      {{checkUser && approved ? '资料已锁定' : (checkUser ? '提交审核' : '保存资料')}}
+    </button>
+  </view>
+  <view class="muted" style="text-align:center;">
+    参赛标识由本机生成，用于跨次记录你的答卷与错题。
+  </view>
+</view>

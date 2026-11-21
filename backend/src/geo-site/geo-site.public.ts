@@ -11,6 +11,7 @@ import {
   seoViewOf,
 } from './geo-site.render.service';
 import { escapeHtml, type GeoSiteElement } from './geo-site.shared';
+import { toolOpen } from '../tool-launch/tool-launch.holder';
 
 /**
  * GEO 独立站公开访问通道（免登录）。
@@ -155,6 +156,7 @@ function notice(title: string, desc: string, status: number) {
 const SITE_SELECT = {
   id: true,
   slug: true,
+  ownerUserId: true,
   title: true,
   status: true,
   publishedContent: true,
@@ -168,6 +170,7 @@ const SITE_SELECT = {
 type PublicSite = {
   id: number;
   slug: string;
+  ownerUserId: string;
   title: string;
   status: string;
   publishedContent: unknown;
@@ -290,6 +293,14 @@ export function registerGeoSitePublic(
         503,
       );
     }
+    // 启动闸门：工具未启动/欠费/平台停用，正文投递沿用同一状态码提示页
+    if (!(await toolOpen('global-site', site.ownerUserId))) {
+      return notice(
+        '站点暂时停止访问',
+        '该站点尚未启动（或已停服），请到「建站管理 → 启动设置」启动后重试。',
+        503,
+      );
+    }
     if (site.status !== 'PUBLISHED' || !elementsOf(site).length) {
       return notice(
         '站点尚未发布',
@@ -356,15 +367,21 @@ export function registerGeoSitePublic(
     elements: GeoSiteElement[];
   };
 
-  const metaOf = (site: PublicSite | null, canonical: string): Meta | null =>
-    !site || site.status !== 'PUBLISHED' || !elementsOf(site).length
-      ? null
-      : {
-          site,
-          canonical,
-          seo: seoViewOf(site.publishedSeo ?? site.seo),
-          elements: elementsOf(site),
-        };
+  const metaOf = async (
+    site: PublicSite | null,
+    canonical: string,
+  ): Promise<Meta | null> => {
+    if (!site || site.status !== 'PUBLISHED' || !elementsOf(site).length)
+      return null;
+    // 启动闸门：未启动/停服时爬虫三件套一并下线（视同站点不可用）
+    if (!(await toolOpen('global-site', site.ownerUserId))) return null;
+    return {
+      site,
+      canonical,
+      seo: seoViewOf(site.publishedSeo ?? site.seo),
+      elements: elementsOf(site),
+    };
+  };
 
   const robots = (meta: Meta | null) =>
     meta

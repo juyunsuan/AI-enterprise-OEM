@@ -1,0 +1,135 @@
+<view class="container">
+  <view class="card" wx:if="{{needSetup || showSetup}}">
+    <view class="between">
+      <view class="subtitle">连接设置</view>
+      <view class="mini-btn" bindtap="toggleSetup">{{showSetup ? '收起' : '展开'}}</view>
+    </view>
+    <block wx:if="{{showSetup}}">
+      <view class="label">服务器地址（apiBase）</view>
+      <input class="setup-input" value="{{setupApiBase}}" data-field="setupApiBase" bindinput="onSetupInput" placeholder="https://你的站点地址" />
+      <view class="label">站点码（siteCode）</view>
+      <input class="setup-input" value="{{setupSiteCode}}" data-field="setupSiteCode" bindinput="onSetupInput" placeholder="后台答题站点设置里的站点码" />
+      <button class="primary-btn" bindtap="saveSetup">保存并连接</button>
+      <view class="muted" style="margin-top:12rpx;">正式发布时请把这两项写进 config.js，用户就不用自己填。</view>
+    </block>
+  </view>
+
+  <view class="hero" wx:if="{{site.name}}">
+    <image wx:if="{{site.coverUrl}}" class="hero-cover" src="{{site.coverUrl}}" mode="aspectFill" />
+    <view class="hero-body">
+      <view class="hero-title">{{site.name}}</view>
+      <view class="hero-desc">{{site.slogan || '练习、考试、错题与排行，一部小程序搞定'}}</view>
+      <view class="row" style="margin-top:20rpx;" wx:if="{{profile.nickname}}">
+        <view class="tag" style="background:rgba(255,255,255,0.24);color:#fff;">{{profile.nickname}}</view>
+        <view class="tag" style="background:rgba(255,255,255,0.18);color:#fff;margin-left:12rpx;" wx:if="{{profile.company}}">{{profile.company}}</view>
+        <view class="tag" style="background:rgba(255,255,255,0.18);color:#fff;margin-left:12rpx;" wx:if="{{site.settings.checkUser}}">{{viewerStatus}}</view>
+      </view>
+      <view class="row" style="margin-top:20rpx;" wx:else>
+        <button class="mini-btn" style="background:#fff;color:#0f9b80;" bindtap="goProfile">填写参赛资料</button>
+      </view>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{site.name && site.settings.checkUser && (!viewer || viewer.status !== 'APPROVED')}}">
+    <view class="between">
+      <view>
+        <view class="subtitle">{{viewer ? (viewer.status === 'REJECTED' ? '资料已驳回' : '资料待审核') : '尚未提交参赛资料'}}</view>
+        <view class="muted">
+          {{viewer ? (viewer.status === 'REJECTED' ? (viewer.note || '请修改资料后重新提交') : '管理员审核通过后才能开始练习或考试') : '本站开启审核制，请先提交昵称与单位'}}
+        </view>
+      </view>
+      <button class="mini-btn dark" bindtap="goProfile">{{viewer ? '查看/修改' : '去提交'}}</button>
+    </view>
+  </view>
+
+  <view class="grid" wx:if="{{site.name}}">
+    <view class="grid-item" bindtap="scrollToBanks">
+      <view class="grid-card">
+        <view class="grid-icon">练</view>
+        <view>练习</view>
+      </view>
+    </view>
+    <view class="grid-item" bindtap="scrollToBanks">
+      <view class="grid-card">
+        <view class="grid-icon">考</view>
+        <view>考试</view>
+      </view>
+    </view>
+    <view class="grid-item" bindtap="goWrong">
+      <view class="grid-card">
+        <view class="grid-icon">错</view>
+        <view>错题本</view>
+      </view>
+    </view>
+    <view class="grid-item" bindtap="goRank">
+      <view class="grid-card">
+        <view class="grid-icon">榜</view>
+        <view>排行榜</view>
+      </view>
+    </view>
+    <view class="grid-item" bindtap="goRecord">
+      <view class="grid-card">
+        <view class="grid-icon">记</view>
+        <view>答题记录</view>
+      </view>
+    </view>
+    <view class="grid-item" bindtap="goMaterials">
+      <view class="grid-card">
+        <view class="grid-icon">资</view>
+        <view>学习资料</view>
+      </view>
+    </view>
+  </view>
+
+  <view id="bank-list">
+    <view class="between" style="margin:8rpx 0 16rpx;">
+      <view class="subtitle">题库</view>
+      <view class="muted">{{banks.length}} 个</view>
+    </view>
+
+    <view wx:if="{{loading}}" class="empty">正在加载题库…</view>
+    <view wx:elif="{{error}}" class="empty">{{error}}</view>
+    <view wx:elif="{{!banks.length}}" class="empty">
+      还没有已发布的题库，请管理员先在后台发布。
+    </view>
+
+    <view class="bank-card" wx:for="{{banks}}" wx:key="code">
+      <image wx:if="{{item.coverUrl}}" class="bank-cover" src="{{item.coverUrl}}" mode="aspectFill" />
+      <view class="between">
+        <view class="strong" style="font-size:32rpx;">{{item.title}}</view>
+        <view class="tag green">{{item.questionCount}} 题</view>
+      </view>
+      <view class="muted" style="margin-top:10rpx;">{{item.description || '练习不限时，考试按题库设置的时长倒计时。'}}</view>
+      <view class="muted" style="margin-top:8rpx;">
+        考试 {{item.examCount}} 题 · 时长 {{item.durationSec / 60}} 分钟
+      </view>
+      <view class="bank-actions" wx:if="{{!site.settings.checkUser || (viewer && viewer.status === 'APPROVED')}}">
+        <view
+          wx:if="{{site.settings.allowPractice !== false}}"
+          class="mini-btn dark"
+          data-code="{{item.code}}"
+          data-title="{{item.title}}"
+          bindtap="goPractice"
+        >练习</view>
+        <view
+          wx:if="{{site.settings.allowExam !== false}}"
+          class="mini-btn"
+          data-code="{{item.code}}"
+          data-title="{{item.title}}"
+          bindtap="goExam"
+        >考试</view>
+      </view>
+      <view class="muted" wx:else style="margin-top:16rpx;">审核通过后可答题</view>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{site.deskSiteKey}}">
+    <view class="between">
+      <view>
+        <view class="subtitle">AI 客服</view>
+        <view class="muted">答题遇到问题，直接问客服；支持 AI 与转人工。</view>
+      </view>
+      <button class="mini-btn dark" bindtap="goService">去咨询</button>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,393 @@
+page {
+  background: #f5f6f8;
+  font-size: 28rpx;
+  color: #1f2329;
+}
+
+.card {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin: 24rpx;
+  box-shadow: 0 2rpx 12rpx rgba(31, 35, 41, 0.04);
+}
+
+.title {
+  font-size: 34rpx;
+  font-weight: 600;
+}
+
+.muted {
+  color: #8a8f99;
+  font-size: 24rpx;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.button-primary {
+  background: #1a73e8;
+  color: #fff;
+  border-radius: 12rpx;
+  font-size: 30rpx;
+}
+
+.empty {
+  padding: 80rpx 24rpx;
+  text-align: center;
+  color: #8a8f99;
+}
+
+.page {
+  padding-bottom: 40rpx;
+}
+
+/* 公共排版：列表行、键值对、提示条、页脚操作区 */
+.list-item {
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #f0f1f5;
+}
+
+.list-item:last-child {
+  border-bottom: none;
+}
+
+.item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.item-title {
+  flex: 1;
+  margin-right: 16rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.item-meta {
+  margin-top: 8rpx;
+  color: #8a8f99;
+  font-size: 24rpx;
+  line-height: 1.6;
+}
+
+.kv {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 10rpx 0;
+}
+
+.kv-label {
+  color: #5c6068;
+  font-size: 26rpx;
+}
+
+.kv-value {
+  max-width: 62%;
+  text-align: right;
+  font-size: 26rpx;
+  line-height: 1.6;
+  word-break: break-all;
+}
+
+.amount {
+  color: #f5413d;
+  font-size: 32rpx;
+  font-weight: 600;
+}
+
+.link {
+  color: #1a73e8;
+  font-size: 26rpx;
+}
+
+.notice {
+  margin-top: 16rpx;
+  padding: 16rpx;
+  border-radius: 12rpx;
+  font-size: 24rpx;
+  line-height: 1.6;
+  background: #eef3ff;
+  color: #2b5bd7;
+}
+
+.notice-warn {
+  background: #fff7e8;
+  color: #a86b00;
+}
+
+.notice-error {
+  background: #fdecec;
+  color: #d93026;
+}
+
+.tag {
+  display: inline-block;
+  padding: 2rpx 12rpx;
+  margin-right: 8rpx;
+  border-radius: 8rpx;
+  font-size: 22rpx;
+  background: #f0f1f5;
+  color: #5c6068;
+}
+
+.tag-blue {
+  background: #eef3ff;
+  color: #1a73e8;
+}
+
+.tag-green {
+  background: #e8f8ef;
+  color: #12a150;
+}
+
+.tag-orange {
+  background: #fff3e0;
+  color: #c56a00;
+}
+
+.tag-red {
+  background: #fdecec;
+  color: #d93026;
+}
+
+.field {
+  margin-top: 20rpx;
+}
+
+.field-label {
+  margin-bottom: 8rpx;
+  color: #5c6068;
+  font-size: 26rpx;
+}
+
+.field-required {
+  color: #f5413d;
+}
+
+.input,
+.textarea,
+.picker-field {
+  width: 100%;
+  padding: 16rpx;
+  box-sizing: border-box;
+  background: #f7f8fa;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+}
+
+.textarea {
+  height: 180rpx;
+}
+
+.picker-field {
+  color: #1f2329;
+}
+
+.picker-placeholder {
+  color: #8a8f99;
+}
+
+.footer {
+  padding: 0 24rpx 48rpx;
+}
+
+.footer .button-primary {
+  margin-top: 16rpx;
+}
+
+.button-ghost {
+  margin-top: 16rpx;
+  background: #fff;
+  color: #1a73e8;
+  border: 1rpx solid #1a73e8;
+  border-radius: 12rpx;
+  font-size: 30rpx;
+}
+
+.button-danger {
+  margin-top: 16rpx;
+  background: #f5413d;
+  color: #fff;
+  border-radius: 12rpx;
+  font-size: 30rpx;
+}
+
+.button-sm {
+  display: inline-block;
+  padding: 8rpx 24rpx;
+  margin-left: 12rpx;
+  background: #fff;
+  color: #5c6068;
+  border: 1rpx solid #dcdfe6;
+  border-radius: 32rpx;
+  font-size: 24rpx;
+}
+
+.button-sm.primary {
+  color: #1a73e8;
+  border-color: #1a73e8;
+}
+
+.button-sm.danger {
+  color: #f5413d;
+  border-color: #f5413d;
+}
+
+.pills {
+  display: flex;
+  white-space: nowrap;
+}
+
+.pill {
+  display: inline-block;
+  padding: 10rpx 26rpx;
+  margin-right: 16rpx;
+  background: #fff;
+  border: 1rpx solid #dcdfe6;
+  border-radius: 32rpx;
+  font-size: 26rpx;
+  color: #5c6068;
+}
+
+.pill-active {
+  background: #1a73e8;
+  border-color: #1a73e8;
+  color: #fff;
+}
+
+.thumb {
+  width: 140rpx;
+  height: 140rpx;
+  margin-right: 20rpx;
+  border-radius: 12rpx;
+  background: #f0f1f5;
+}
+
+.thumb-round {
+  border-radius: 50%;
+}
+
+.avatar {
+  width: 88rpx;
+  height: 88rpx;
+  margin-right: 20rpx;
+  border-radius: 50%;
+  background: #f0f1f5;
+}
+
+.detail-text {
+  margin-top: 8rpx;
+  font-size: 26rpx;
+  color: #5c6068;
+  line-height: 1.7;
+}
+
+.rich {
+  font-size: 28rpx;
+  line-height: 1.8;
+  word-break: break-all;
+}
+
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.grid-item {
+  width: 25%;
+  padding: 20rpx 8rpx;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.grid-text {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: #5c6068;
+}
+
+.step-dots {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx 0;
+}
+
+.step-dot {
+  flex: 1;
+  text-align: center;
+  font-size: 22rpx;
+  color: #8a8f99;
+}
+
+.step-dot.active {
+  color: #1a73e8;
+  font-weight: 600;
+}
+
+/* 健康管理的通用补充：搜索条、指标值、核销码、底部操作条 */
+.search-bar {
+  display: flex;
+  align-items: center;
+  padding: 12rpx 24rpx;
+}
+
+.search-input {
+  flex: 1;
+  padding: 16rpx 24rpx;
+  background: #f0f1f5;
+  border-radius: 32rpx;
+  font-size: 26rpx;
+}
+
+.metric-value {
+  font-size: 40rpx;
+  font-weight: 600;
+  color: #1a73e8;
+}
+
+.metric-unit {
+  margin-left: 6rpx;
+  font-size: 24rpx;
+  color: #8a8f99;
+}
+
+.verify-code {
+  padding: 40rpx 24rpx;
+  text-align: center;
+  font-size: 64rpx;
+  letter-spacing: 12rpx;
+  font-weight: 600;
+  color: #1a73e8;
+}
+
+.action-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  padding: 16rpx 24rpx;
+  padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
+  background: #fff;
+  box-shadow: 0 -2rpx 12rpx rgba(31, 35, 41, 0.06);
+}
+
+.action-bar-spacer {
+  flex: 1;
+}
+
+.page-with-bar {
+  padding-bottom: 180rpx;
+}

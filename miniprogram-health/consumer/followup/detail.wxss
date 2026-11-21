@@ -1,0 +1,58 @@
+.task-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.block-title {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12rpx;
+}
+
+.textarea {
+  width: 100%;
+  height: 200rpx;
+  margin-top: 12rpx;
+  padding: 16rpx;
+  box-sizing: border-box;
+  background: #f7f8fa;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+}
+
+.metric-row {
+  display: flex;
+  align-items: center;
+  margin-top: 12rpx;
+}
+
+.metric-picker {
+  flex: 1;
+  margin-right: 12rpx;
+}
+
+.metric-input {
+  width: 180rpx;
+  margin-right: 12rpx;
+}
+
+.remove {
+  color: #f5413d;
+  font-size: 24rpx;
+}
+
+.footer {
+  padding: 8rpx 24rpx 48rpx;
+}
+
+.button-primary {
+  height: 88rpx;
+  line-height: 88rpx;
+}

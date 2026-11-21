@@ -1,0 +1,45 @@
+<view class="page">
+  <view class="head card">
+    <image class="avatar" src="{{customer.avatar}}" wx:if="{{customer.avatar}}" />
+    <view class="who">
+      <view class="name">{{logged ? customer.nickname : '未登录'}}</view>
+      <view class="muted">{{logged ? (customer.phone || '未绑定手机号') : '登录后即可查看积分与订单'}}</view>
+    </view>
+  </view>
+
+  <view class="stat card">
+    <view class="stat-item">
+      <view class="stat-value">{{customer.points || 0}}</view>
+      <view class="muted">积分</view>
+    </view>
+    <view class="stat-item">
+      <view class="stat-value">{{customer.balanceText || '¥0.00'}}</view>
+      <view class="muted">余额（储值即将开放）</view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="row between title">
+      <text>积分流水</text>
+      <text class="muted" bindtap="goCoupons">我的券包 ›</text>
+    </view>
+    <view class="bill" wx:for="{{bills}}" wx:key="id">
+      <view class="grow">
+        <view>{{item.label}}</view>
+        <view class="muted">{{item.remark}} · {{item.timeText}}</view>
+      </view>
+      <view class="right">
+        <view class="{{item.points > 0 ? 'plus' : ''}}">{{item.pointsText}}</view>
+        <view class="muted">{{item.afterText}}</view>
+      </view>
+    </view>
+    <view class="empty" wx:if="{{loading}}">加载中…</view>
+    <view class="empty" wx:elif="{{error}}">{{error}}</view>
+    <view class="empty" wx:elif="{{!bills.length}}">还没有积分记录，下单可累积</view>
+  </view>
+
+  <view class="cell" bindtap="goAddresses">收货地址<text class="arrow">›</text></view>
+  <view class="cell" bindtap="goOrders">我的订单<text class="arrow">›</text></view>
+  <view class="cell danger" wx:if="{{logged}}" bindtap="logout">退出登录</view>
+  <view class="footer-gap"></view>
+</view>

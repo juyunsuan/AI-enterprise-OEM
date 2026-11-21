@@ -36,7 +36,8 @@ const GUARD = 'backend/src/http/outbound-guard.ts';
 const MCP_CLIENT = 'backend/src/content/agent-mcp.client.ts';
 const CONNECTORS = 'backend/src/content/agent-connectors.service.ts';
 const SKILLS = 'backend/src/content/agent-skills.service.ts';
-const PLUGINS = 'backend/src/content/agent-plugins.service.ts';
+// 插件页签已由「Agent 群控」替代，agent-plugins.service 随之下线；
+// 若将来恢复插件能力，需同时恢复本脚本里针对 PLUGINS 的配额 / 快照 / 审计断言。
 const REVISIONS = 'backend/src/content/agent-revisions.ts';
 const SCHEDULE = 'backend/src/content/agent-schedule.service.ts';
 const MCP_SERVICE = 'backend/src/mcp/mcp.service.ts';
@@ -128,17 +129,16 @@ test('放开权限的写入要二次验密，验密本身也被限流', () => {
   has(SESSION, /ErrorCode\.RATE_LIMITED\.code, throttled\), 429/, '超限要回 429，而不是继续比对');
 });
 
-test('技能/插件/连接器有配额与按账号限流，进提示词的摘要有条数与字符预算', () => {
+test('技能/连接器有配额与按账号限流，进提示词的摘要有条数与字符预算', () => {
   for (const [file, name] of [
     [SKILLS, 'MAX_SKILLS'],
-    [PLUGINS, 'MAX_PLUGINS'],
     [CONNECTORS, 'MAX_CONNECTORS'],
     [CONNECTORS, 'MAX_TOTAL_TOOLS'],
   ]) {
     has(file, new RegExp(`const ${name} = \\d+`), `${name} 必须是个具体数字`);
     has(file, new RegExp(`${name}\\)`), `${name} 要真的用于判定超限`);
   }
-  for (const file of [SKILLS, PLUGINS]) {
+  for (const file of [SKILLS]) {
     has(file, /new RateWindow\(/, `${file} 上传/安装要限流`);
     has(file, /SUMMARY_MAX/, `${file} 摘要要有条数上限`);
     has(file, /SUMMARY_BUDGET/, `${file} 摘要要有字符预算`);
@@ -153,18 +153,15 @@ test('同名覆盖前留版本快照，可查可回滚，且两种方言都建�
   has(REVISIONS, /export (async )?function saveAgentRevision/, '快照写入入口');
   has(REVISIONS, /export (async )?function readAgentRevision/, '快照读取入口');
   has(REVISIONS, /export (async )?function listAgentRevisions/, '快照清单入口');
-  for (const file of [SKILLS, PLUGINS]) {
+  for (const file of [SKILLS]) {
     assert.ok(count(file, /saveAgentRevision\(/) >= 1, `${file} 覆盖前必须留快照`);
     // 回滚入口叫 restore（界面上的「回到这一版」），不能只存不取
     assert.ok(count(file, /async restore\(/) >= 1, `${file} 缺回滚入口 restore`);
     assert.ok(count(file, /async revisions\(/) >= 1, `${file} 缺快照清单入口 revisions`);
   }
   has(CONTROLLER, /restoreSkill\(/, '控制器要暴露技能回滚');
-  has(CONTROLLER, /restorePlugin\(/, '控制器要暴露插件回滚');
   has(CONTRACT, /Content_restoreSkill:/, '技能回滚要在契约层登记端点');
-  has(CONTRACT, /Content_restorePlugin:/, '插件回滚要在契约层登记端点');
   has(HANDLERS, /Content_restoreSkill:/, '技能回滚要接到控制器 handler');
-  has(HANDLERS, /Content_restorePlugin:/, '插件回滚要接到控制器 handler');
   for (const file of SCHEMA_TARGETS) {
     has(file, /model ContentAgentRevision/, `${file} 缺 ContentAgentRevision`);
     has(file, /allowWrite\s+Boolean\s+@default\(false\)/, `${file} 的 allowWrite 默认必须是 false`);
@@ -175,7 +172,6 @@ test('同名覆盖前留版本快照，可查可回滚，且两种方言都建�
 
 test('能力底座的增删改启用都留痕', () => {
   assert.ok(count(SKILLS, /identity\.audit\(/) >= 5, `${SKILLS} 技能增删改/回滚要有审计`);
-  assert.ok(count(PLUGINS, /identity\.audit\(/) >= 7, `${PLUGINS} 插件增删改/安装/回滚要有审计`);
   assert.ok(count(CONNECTORS, /identity\.audit\(/) >= 3, `${CONNECTORS} 连接器增删改/启用要有审计`);
 });
 

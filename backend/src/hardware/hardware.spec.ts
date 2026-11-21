@@ -1,7 +1,7 @@
 import { HW_OFFLINE_AFTER_SECONDS } from '@enterprise/contracts';
 import { runWithAgentScope } from '../content/agent-scope';
 import { BusinessException } from '../common/business.exception';
-import type { OssService } from '../oss/oss.service';
+import type { SystemAssetService } from '../system-asset/system-asset.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import {
   asObject,
@@ -28,7 +28,10 @@ import { stub } from '../../test/doubles';
 const fn = () => jest.fn();
 
 function makeService(prisma: unknown) {
-  return new HardwareService(prisma as PrismaService, stub<OssService>({}));
+  return new HardwareService(
+    prisma as PrismaService,
+    stub<SystemAssetService>({}),
+  );
 }
 
 const principal: DevicePrincipal = {

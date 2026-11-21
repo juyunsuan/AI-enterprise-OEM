@@ -1,0 +1,54 @@
+.slot-grid {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 16rpx;
+}
+
+.slot {
+  width: calc(33.33% - 12rpx);
+  margin: 0 12rpx 12rpx 0;
+  padding: 12rpx 8rpx;
+  border-radius: 10rpx;
+  background: #eef3ff;
+  text-align: center;
+}
+
+.slot:nth-child(3n) {
+  margin-right: 0;
+}
+
+.slot-time {
+  font-size: 24rpx;
+  color: #2b5bd7;
+}
+
+.slot-state {
+  margin-top: 4rpx;
+  font-size: 20rpx;
+  color: #6b8fd8;
+}
+
+.slot.BOOKED,
+.slot.LOCKED {
+  background: #f0f1f5;
+}
+
+.slot.BOOKED .slot-time,
+.slot.LOCKED .slot-time {
+  color: #8a8f99;
+}
+
+.slot.BLOCKED {
+  background: #fdecec;
+}
+
+.slot.BLOCKED .slot-time,
+.slot.BLOCKED .slot-state {
+  color: #f5413d;
+}
+
+.notice {
+  color: #5c6068;
+  font-size: 24rpx;
+  line-height: 1.7;
+}

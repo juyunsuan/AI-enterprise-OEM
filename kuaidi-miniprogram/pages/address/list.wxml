@@ -1,0 +1,39 @@
+<view class="wrap">
+  <view wx:if="{{loading}}" class="empty">正在读取地址…</view>
+
+  <view wx:if="{{needSite}}" class="card">
+    <view class="error-box">请先在首页选择一个寄件点</view>
+    <view class="btn btn-primary" style="margin-top:20rpx" bindtap="goPickSite">去选寄件点</view>
+  </view>
+
+  <view wx:elif="{{loginError}}" class="card">
+    <view class="error-box">{{loginError}}</view>
+    <view class="btn btn-primary" style="margin-top:20rpx" bindtap="retry">重新登录</view>
+  </view>
+
+  <view wx:elif="{{!list.length}}" class="empty">
+    <view>还没有{{type === 'RECEIVER' ? '收件' : (type === 'SENDER' ? '寄件' : '')}}地址</view>
+    <view class="btn btn-primary" style="width:280rpx;margin:24rpx auto 0" bindtap="add">新增地址</view>
+  </view>
+
+  <block wx:else>
+    <view wx:for="{{list}}" wx:key="id" class="card address">
+      <view class="address-main" data-index="{{index}}" bindtap="pick">
+        <view class="row">
+          <text class="address-name">{{item.name}}</text>
+          <text class="muted">{{item.mobile}}</text>
+        </view>
+        <view class="address-region">{{item.regionText}}{{item.address}}</view>
+        <view class="row" style="margin-top:8rpx">
+          <text class="tag">{{item.typeLabel}}</text>
+          <text wx:if="{{item.isDefault}}" class="tag default">默认</text>
+        </view>
+      </view>
+      <view class="address-ops">
+        <text class="op" data-id="{{item.id}}" data-type="{{item.type}}" bindtap="edit">编辑</text>
+        <text class="op danger" data-id="{{item.id}}" bindtap="remove">删除</text>
+      </view>
+    </view>
+    <view class="btn btn-primary" bindtap="add">新增地址</view>
+  </block>
+</view>

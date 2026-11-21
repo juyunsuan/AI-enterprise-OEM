@@ -1,0 +1,484 @@
+.detail-page {
+  padding: 0 0 24rpx;
+}
+
+.cover-box {
+  position: relative;
+  width: 100%;
+  height: 420rpx;
+}
+
+.cover-img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.cover-ph {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e7e9ee;
+  color: #b6bac2;
+  font-size: 26rpx;
+}
+
+/* 内容卡片向上盖住封面底边，视觉上和旧版一样是一张圆角纸片 */
+.main-card {
+  margin: -40rpx 24rpx 24rpx;
+  position: relative;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 16rpx;
+}
+
+.meta-item {
+  margin-left: 20rpx;
+}
+
+.player {
+  width: 100%;
+  height: 420rpx;
+  margin-top: 24rpx;
+  border-radius: 12rpx;
+}
+
+.audio-box {
+  display: flex;
+  align-items: center;
+  margin-top: 24rpx;
+  padding: 20rpx;
+  border-radius: 12rpx;
+  background: #f7f8fa;
+}
+
+.audio-btn {
+  width: 110rpx;
+  height: 110rpx;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26rpx;
+  flex-shrink: 0;
+}
+
+.audio-on {
+  opacity: 0.85;
+}
+
+.audio-main {
+  flex: 1;
+  margin-left: 20rpx;
+}
+
+.audio-title {
+  font-size: 26rpx;
+  margin-bottom: 10rpx;
+}
+
+.image-full {
+  width: 100%;
+  display: block;
+  margin-top: 24rpx;
+  border-radius: 12rpx;
+}
+
+.tip-line {
+  margin-top: 20rpx;
+  font-size: 26rpx;
+  color: #8a8f99;
+}
+
+.section-title.small {
+  font-size: 28rpx;
+  margin-bottom: 12rpx;
+}
+
+.intro {
+  position: relative;
+  font-size: 28rpx;
+  line-height: 46rpx;
+  word-break: break-all;
+}
+
+.intro-locked {
+  max-height: 420rpx;
+  overflow: hidden;
+}
+
+.intro-mask {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 220rpx;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 24rpx;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0), #fff 70%);
+}
+
+.intro-mask-text {
+  font-size: 26rpx;
+  color: var(--primary);
+}
+
+.ad-label {
+  margin-bottom: 12rpx;
+}
+
+.action-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  padding: 12rpx 24rpx calc(12rpx + env(safe-area-inset-bottom));
+  background: #fff;
+  border-top: 1rpx solid #eaecef;
+  box-sizing: border-box;
+}
+
+.action-side {
+  width: 110rpx;
+  text-align: center;
+}
+
+.action-btn {
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  line-height: 1.2;
+  font-size: 22rpx;
+  border: none;
+  border-radius: 0;
+}
+
+.action-btn::after {
+  border: none;
+}
+
+.action-icon {
+  font-size: 26rpx;
+  color: #8a8f99;
+}
+
+.action-active {
+  color: var(--vip);
+}
+
+.action-text {
+  font-size: 20rpx;
+  color: #8a8f99;
+  margin-top: 4rpx;
+}
+
+.action-main {
+  flex: 1;
+  margin-left: 16rpx;
+}
+
+.action-button {
+  width: 100%;
+}
+
+/* ---------- 讲师 / 课程目录 / 评价 ---------- */
+.teacher-card {
+  display: flex;
+  align-items: flex-start;
+}
+
+.teacher-avatar {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: #e7e9ee;
+}
+
+.teacher-ph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: var(--primary);
+  font-size: 34rpx;
+}
+
+.teacher-main {
+  flex: 1;
+  margin-left: 20rpx;
+  min-width: 0;
+}
+
+.teacher-name {
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.teacher-title {
+  margin-left: 12rpx;
+  font-size: 22rpx;
+  color: var(--muted);
+  font-weight: normal;
+}
+
+.teacher-intro {
+  margin-top: 8rpx;
+  line-height: 38rpx;
+}
+
+.section-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12rpx;
+}
+
+.continue-btn,
+.review-write {
+  font-size: 24rpx;
+  color: var(--primary);
+}
+
+.progress-line {
+  padding: 12rpx 0 8rpx;
+}
+
+.lesson-item {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 0;
+  border-top: 1rpx solid var(--line);
+}
+
+.lesson-index {
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 50%;
+  background: #f2f3f5;
+  color: var(--muted);
+  font-size: 22rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.lesson-done {
+  background: var(--primary);
+  color: #fff;
+}
+
+.lesson-main {
+  flex: 1;
+  min-width: 0;
+  margin: 0 16rpx;
+}
+
+.lesson-title {
+  font-size: 26rpx;
+}
+
+.lesson-meta {
+  margin-top: 4rpx;
+}
+
+.mini-tag {
+  margin-left: 10rpx;
+  padding: 0 10rpx;
+  border-radius: 999rpx;
+  font-size: 20rpx;
+  line-height: 30rpx;
+}
+
+.mini-tag.trial {
+  color: #0f9d58;
+  background: #e8f7ef;
+}
+
+.mini-tag.done {
+  color: var(--primary);
+  background: #eef3ff;
+}
+
+.lesson-state {
+  font-size: 22rpx;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.rating-summary {
+  display: flex;
+  align-items: center;
+  padding: 8rpx 0 16rpx;
+}
+
+.rating-score {
+  font-size: 64rpx;
+  font-weight: 600;
+  color: var(--vip);
+  line-height: 1;
+  margin-right: 20rpx;
+}
+
+.rating-main {
+  display: flex;
+  flex-direction: column;
+}
+
+.stars {
+  display: flex;
+}
+
+.star {
+  font-size: 30rpx;
+  margin-right: 4rpx;
+}
+
+.stars.small .star {
+  font-size: 22rpx;
+}
+
+.stars.big {
+  justify-content: center;
+  margin: 24rpx 0;
+}
+
+.stars.big .star {
+  font-size: 56rpx;
+  margin: 0 12rpx;
+}
+
+.star-on {
+  color: var(--vip);
+}
+
+.star-off {
+  color: #dcdfe6;
+}
+
+.review-item {
+  padding: 18rpx 0;
+  border-top: 1rpx solid var(--line);
+}
+
+.review-head {
+  display: flex;
+  align-items: center;
+}
+
+.review-avatar {
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 50%;
+  margin-right: 12rpx;
+}
+
+.review-name {
+  font-size: 24rpx;
+  margin-right: 12rpx;
+}
+
+.review-content {
+  margin-top: 10rpx;
+  font-size: 26rpx;
+  line-height: 40rpx;
+  word-break: break-all;
+}
+
+.review-reply {
+  margin-top: 10rpx;
+  padding: 12rpx 16rpx;
+  border-radius: 10rpx;
+  background: #f7f8fa;
+  font-size: 24rpx;
+  color: var(--muted);
+}
+
+.review-empty {
+  padding: 12rpx 0 8rpx;
+}
+
+.mask {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99;
+}
+
+.review-popup {
+  width: 620rpx;
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 32rpx;
+  box-sizing: border-box;
+}
+
+.review-popup-title {
+  text-align: center;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.review-input {
+  width: 100%;
+  height: 200rpx;
+  padding: 16rpx;
+  box-sizing: border-box;
+  border-radius: 12rpx;
+  background: #f7f8fa;
+  font-size: 26rpx;
+  margin: 8rpx 0 24rpx;
+}
+
+.review-submit {
+  width: 100%;
+}
+
+.cash-row {
+  margin-top: 20rpx;
+  padding-top: 20rpx;
+  border-top: 1rpx solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cash-btn {
+  padding: 10rpx 28rpx;
+  border-radius: 999rpx;
+  background: #e8f7ef;
+  color: #0f9d58;
+  font-size: 26rpx;
+}
+
+.chapter-title {
+  margin: 14rpx 0 4rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.arrow {
+  color: #c4c8cf;
+  font-size: 32rpx;
+  margin-left: 8rpx;
+}

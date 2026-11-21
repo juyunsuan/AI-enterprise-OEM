@@ -1,0 +1,44 @@
+<view class="page">
+  <view class="card" wx:if="{{patient}}">
+    <view class="title">{{patient.name}} · 指标记录</view>
+    <view class="muted">代录读数与顾客自测一样进入预警判定，异常会通知店主。</view>
+
+    <view class="field">
+      <view class="field-label">指标</view>
+      <picker
+        mode="selector"
+        range="{{metricNames}}"
+        value="{{metricIndex}}"
+        bindchange="onPickMetric"
+      >
+        <view class="picker-field">{{metricNames[metricIndex] || '请选择指标'}}</view>
+      </picker>
+    </view>
+    <view class="field">
+      <view class="field-label">读数</view>
+      <input class="input" type="digit" placeholder="例如 128" value="{{value}}" bindinput="onValue" />
+    </view>
+    <view class="field">
+      <view class="field-label">备注</view>
+      <input class="input" maxlength="200" placeholder="选填：测量场景、服药情况" value="{{note}}" bindinput="onNote" />
+    </view>
+    <button class="button-primary" disabled="{{submitting}}" bindtap="onSubmit">
+      {{submitting ? '保存中…' : '记录读数'}}
+    </button>
+  </view>
+
+  <view class="card">
+    <view class="title">最近记录</view>
+    <view class="list-item" wx:for="{{logs}}" wx:key="id">
+      <view class="item-head">
+        <view class="item-title">{{item.name}}</view>
+        <text class="value {{item.abnormal ? 'abnormal' : ''}}">{{item.valueText}}</text>
+      </view>
+      <view class="item-meta">{{item.timeText}}</view>
+    </view>
+    <view class="muted" wx:if="{{!logs.length}}">暂无记录</view>
+  </view>
+</view>
+
+<view class="empty" wx:elif="{{!loading}}">指标数据不可用</view>
+<view class="empty" wx:else>正在加载…</view>

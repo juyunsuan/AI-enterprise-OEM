@@ -1,0 +1,39 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/item/item",
+    "pages/order-confirm/order-confirm",
+    "pages/order-list/order-list",
+    "pages/order-detail/order-detail",
+    "pages/me/me",
+    "pages/webview/webview",
+    "pages/staff/bind/bind",
+    "pages/staff/workbench/workbench",
+    "pages/staff/orders/orders",
+    "pages/staff/order-detail/order-detail",
+    "pages/staff/inspection/inspection",
+    "pages/staff/customers/customers"
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#3370ff",
+    "navigationBarTitleText": "租赁管理",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#f5f6f8",
+    "backgroundTextStyle": "dark",
+    "enablePullDownRefresh": false
+  },
+  "tabBar": {
+    "color": "#8a8f99",
+    "selectedColor": "#3370ff",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      { "pagePath": "pages/index/index", "text": "首页" },
+      { "pagePath": "pages/order-list/order-list", "text": "租单" },
+      { "pagePath": "pages/me/me", "text": "我的" }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

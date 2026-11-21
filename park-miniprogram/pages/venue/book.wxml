@@ -1,0 +1,71 @@
+<view class="wrap" wx:if="{{resource}}">
+  <view class="card">
+    <view class="row">
+      <view class="section-title">{{resource.name}}</view>
+      <text class="tag">{{resource.kindLabel}}</text>
+    </view>
+    <view class="muted">容量 {{resource.capacity}} 人 · {{resource.location || resource.buildingName}}</view>
+    <view class="muted">{{resource.description}}</view>
+  </view>
+
+  <view class="card" wx:if="{{isEquipment}}">
+    <view class="section-title">租赁信息</view>
+    <view class="muted">日租 ¥{{resource.feeAmount}} · 押金 ¥{{resource.deposit}}/件 · 可租 {{resource.stock}} 件</view>
+    <view class="field">
+      <view class="field-label">开始日期</view>
+      <picker class="field-value" mode="date" value="{{startDate}}" data-field="startDate" bindchange="onPicker">
+        <view>{{startDate}}</view>
+      </picker>
+    </view>
+    <view class="field">
+      <view class="field-label">开始时间</view>
+      <picker class="field-value" mode="time" value="{{startTime}}" data-field="startTime" bindchange="onPicker">
+        <view>{{startTime}}</view>
+      </picker>
+    </view>
+    <view class="field">
+      <view class="field-label">结束日期</view>
+      <picker class="field-value" mode="date" value="{{endDate}}" data-field="endDate" bindchange="onPicker">
+        <view>{{endDate}}</view>
+      </picker>
+    </view>
+    <view class="field">
+      <view class="field-label">结束时间</view>
+      <picker class="field-value" mode="time" value="{{endTime}}" data-field="endTime" bindchange="onPicker">
+        <view>{{endTime}}</view>
+      </picker>
+    </view>
+    <view class="field">
+      <view class="field-label">数量</view>
+      <input class="input grow" type="number" data-field="quantity" bindinput="onInput" value="{{quantity}}" />
+    </view>
+  </view>
+
+  <view class="card" wx:else>
+    <view class="section-title">选择时段</view>
+    <view wx:if="{{!slots.length}}" class="muted">暂无可约时段，请联系园区管理员生成时段。</view>
+    <view class="quick-grid">
+      <view
+        wx:for="{{slots}}"
+        wx:key="id"
+        class="quick {{slotId === item.id ? 'active' : ''}}"
+        data-id="{{item.id}}"
+        bindtap="pickSlot"
+      >
+        {{item.label}}
+      </view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="field">
+      <view class="field-label">使用事由</view>
+      <input class="input grow" data-field="purpose" bindinput="onInput" placeholder="选填" />
+    </view>
+    <view class="section-title" style="margin-top: 12rpx;">备注</view>
+    <textarea class="textarea" data-field="note" bindinput="onInput" placeholder="参会人数、设备需求等"></textarea>
+  </view>
+
+  <view class="btn" bindtap="submit">{{submitting ? "提交中…" : "提交预约"}}</view>
+</view>
+<view wx:else class="empty">加载中…</view>

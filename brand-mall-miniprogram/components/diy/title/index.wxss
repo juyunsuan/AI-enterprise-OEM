@@ -1,0 +1,32 @@
+.diy-title {
+  padding: 28rpx 24rpx 8rpx;
+  box-sizing: border-box;
+}
+
+.main {
+  font-size: 34rpx;
+  color: #1f1f1f;
+  line-height: 48rpx;
+}
+
+.bold {
+  font-weight: 700;
+}
+
+.sub {
+  font-size: 24rpx;
+  color: #9aa0aa;
+  margin-top: 4rpx;
+}
+
+.left {
+  text-align: left;
+}
+
+.center {
+  text-align: center;
+}
+
+.right {
+  text-align: right;
+}

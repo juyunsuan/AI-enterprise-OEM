@@ -2,7 +2,7 @@ import { z } from "zod";
 
 /**
  * Agent-Bot · Bot 主机（docs/Agent-Bot方案.md）：
- * BotBuddy 客户端与平台配对后按心跳领取指令并在本机执行 → 流式回传。
+ * AWBotDSH 客户端与平台配对后按心跳领取指令并在本机执行 → 流式回传。
  * 客户端里怎么配模型、有哪些技能与数字分身都归它自己管，平台一概不过问、
  * 不展示、不校验；平台只认「主机在线 / 离线」与它上报的工作区候选。
  * 设备通道免登录、只认主机令牌。
@@ -13,15 +13,15 @@ import { z } from "zod";
 
 /** 主机令牌前缀：明文只在配对成功响应里出现一次，库内只存 sha256。 */
 export const BOT_HOST_TOKEN_PREFIX = "bot_";
-/** Mobot 手机令牌前缀（与桌面主机分命名空间，仍走同一张设备表与令牌头）。 */
-export const MOBOT_HOST_TOKEN_PREFIX = "mb_";
+/** AWBot 手机令牌前缀（与桌面主机分命名空间，仍走同一张设备表与令牌头）。 */
+export const AWBOT_HOST_TOKEN_PREFIX = "awb_";
 
-/** 设备类型：桌面 BotBuddy / Mobot 手机。 */
-export const BOT_CLIENT_KINDS = ["DESKTOP", "MOBOT"] as const;
+/** 设备类型：桌面 AWBotDSH / AWBot 手机。 */
+export const BOT_CLIENT_KINDS = ["DESKTOP", "AWBOT"] as const;
 export type BotClientKind = (typeof BOT_CLIENT_KINDS)[number];
 export const BOT_CLIENT_KIND_LABELS: Record<string, string> = {
   DESKTOP: "Bot 主机",
-  MOBOT: "Mobot 手机",
+  AWBOT: "AWBot 手机",
 };
 /** 客户端调用主机通道时携带令牌的请求头。 */
 export const BOT_HOST_TOKEN_HEADER = "x-bot-token";
@@ -98,7 +98,7 @@ export type BotWorkspaceDetail = z.infer<typeof botWorkspaceDetailSchema>;
 /* ---------------------------------------------------------------- 指纹窗口 */
 
 /**
- * BotBuddy 客户端自带的内核级指纹窗口（RPA「BotBuddy 浏览器」设备的执行位）。
+ * AWBotDSH 客户端自带的内核级指纹窗口（RPA「AWBotDSH 浏览器」设备的执行位）。
  *
  * 与工作区同一口径：平台只认客户端心跳上报的窗口候选，任务落在哪个窗口由用户在这张表里选，
  * 平台不替用户建窗口、也不下发任何窗口配置；窗口本体、内核与内置 Automa 插件都只在客户端本机。
@@ -275,8 +275,8 @@ export const botHostViewSchema = z.object({
   pendingCount: z.number(),
   channelCount: z.number(),
   clientKind: z.enum(BOT_CLIENT_KINDS),
-  /** Mobot 手机自报状态（桌面主机为 null）；只展示，不参与调度。 */
-  mobot: z
+  /** AWBot 手机自报状态（桌面主机为 null）；只展示，不参与调度。 */
+  awbot: z
     .object({
       battery: z.number(),
       charging: z.boolean(),
@@ -286,7 +286,7 @@ export const botHostViewSchema = z.object({
     })
     .nullable(),
   workspace: botWorkspaceSummarySchema,
-  /** 指纹窗口候选数量（RPA「BotBuddy 浏览器」设备的执行位）；明细走单主机接口。 */
+  /** 指纹窗口候选数量（RPA「AWBotDSH 浏览器」设备的执行位）；明细走单主机接口。 */
   fingerprint: botFingerprintSummarySchema,
   /** 平台模型授权摘要（未授权为 null）：只给平台界面看，不下发客户端。 */
   modelGrant: z
@@ -415,7 +415,7 @@ export const botHostEndpoints = {
     path: "/enterprise/bot-hosts",
     params: z.object({}),
     query: z.object({
-      /** 不传＝Bot 主机（桌面）；Mobot 手机页显式传 MOBOT。 */
+      /** 不传＝Bot 主机（桌面）；AWBot 手机页显式传 AWBOT。 */
       kind: z.enum(BOT_CLIENT_KINDS).optional(),
     }),
     body: z.undefined(),
@@ -429,6 +429,31 @@ export const botHostEndpoints = {
     body: passthroughBody,
     // token 明文只在此响应出现一次，用户粘贴进客户端；库内只存 sha256。
     response: envelope(z.object({ host: botHostViewSchema, token: z.string() })),
+  },
+  /** AWBot 扫码配对：站内登录后生成一次性二维码，手机扫码免登录兑换设备令牌。 */
+  BotHost_createPairQr: {
+    method: "post" as const,
+    path: "/enterprise/bot-hosts/pair-qr",
+    params: z.object({}),
+    query: emptyQuery,
+    body: z.object({
+      /** 设备名；留空＝用手机自报的机型。 */
+      name: z.string().max(80).optional(),
+      /** 平台站点地址；写进二维码，手机据此连回本站。 */
+      siteUrl: z.string().max(300).optional(),
+      /** AWBotDSH 桌面主机：带上它才是「平台 + 主机」组合码。 */
+      hostId: z.number().int().positive().optional(),
+    }),
+    response: envelope(
+      z.object({
+        code: z.string(),
+        expiresAt: z.string(),
+        /** 二维码里的原文，便于客户端自行渲染。 */
+        payload: z.string(),
+        /** 二维码 PNG 的 data URL。 */
+        image: z.string(),
+      }),
+    ),
   },
   BotHost_setStatus: {
     method: "post" as const,
@@ -471,7 +496,7 @@ export const botHostEndpoints = {
     body: z.undefined(),
     response: envelope(botWorkspaceDetailSchema),
   },
-  /** 单主机指纹窗口详情：供 RPA「BotBuddy 浏览器」任务选执行落在哪个窗口。 */
+  /** 单主机指纹窗口详情：供 RPA「AWBotDSH 浏览器」任务选执行落在哪个窗口。 */
   BotHost_fingerprints: {
     method: "get" as const,
     path: "/enterprise/bot-hosts/:hostId/fingerprints",

@@ -1,0 +1,92 @@
+.date-row {
+  margin-top: 16rpx;
+}
+
+.picker-inline {
+  color: #1a73e8;
+  font-size: 28rpx;
+}
+
+.progress {
+  margin-top: 16rpx;
+  padding: 16rpx;
+  border-radius: 12rpx;
+  background: #e8f8ef;
+  color: #12a150;
+  font-size: 26rpx;
+  text-align: center;
+}
+
+.med {
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid #f0f1f5;
+}
+
+.med:last-child {
+  border-bottom: none;
+}
+
+.med-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.med-name {
+  flex: 1;
+  margin-right: 16rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.time-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 16rpx;
+}
+
+.time {
+  min-width: 160rpx;
+  margin: 0 16rpx 16rpx 0;
+  padding: 12rpx 20rpx;
+  box-sizing: border-box;
+  border: 1rpx solid #dcdfe6;
+  border-radius: 12rpx;
+  text-align: center;
+}
+
+.time-text {
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.time-status {
+  margin-top: 4rpx;
+  color: #8a8f99;
+  font-size: 22rpx;
+}
+
+.time-done {
+  border-color: #12a150;
+  background: #e8f8ef;
+}
+
+.time-done .time-text,
+.time-done .time-status {
+  color: #12a150;
+}
+
+.time-skip {
+  border-color: #c56a00;
+  background: #fff3e0;
+}
+
+.time-skip .time-text,
+.time-skip .time-status {
+  color: #c56a00;
+}
+
+.button-primary {
+  margin-top: 16rpx;
+}

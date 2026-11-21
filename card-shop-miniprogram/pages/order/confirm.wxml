@@ -1,0 +1,115 @@
+<view class="page" style="{{themeStyle}}">
+  <view class="empty" wx:if="{{error}}">{{error}}</view>
+  <view class="empty" wx:elif="{{loading}}">正在加载…</view>
+
+  <block wx:elif="{{goods}}">
+    <view class="card row goods-row">
+      <image class="goods-thumb" src="{{goods.coverImage}}" mode="aspectFill" />
+      <view class="flex1 col">
+        <text class="goods-name ellipsis-2">{{goods.name}}</text>
+        <text class="muted" wx:if="{{goods.subtitle}}">{{goods.subtitle}}</text>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="row between">
+        <text class="title">购买数量</text>
+        <view class="stepper">
+          <view class="step-btn" bindtap="changeQuantity" data-delta="-1">−</view>
+          <text class="step-value">{{quantity}}</text>
+          <view class="step-btn" bindtap="changeQuantity" data-delta="1">+</view>
+        </view>
+      </view>
+      <view class="muted qty-hint">
+        起购 {{goods.limitQuantity > 0 ? goods.limitQuantity : 1}} 张
+        <text wx:if="{{goods.maxQuantity > 0}}"> · 单笔最多 {{goods.maxQuantity}} 张</text>
+      </view>
+    </view>
+
+    <view class="card" wx:if="{{goods.contactMode !== 'NONE'}}">
+      <view class="field-label">{{contactLabel}}</view>
+      <input
+        class="input"
+        maxlength="120"
+        placeholder="下单后凭它查单，请填常用联系方式"
+        value="{{contact}}"
+        bindinput="onContactInput"
+      />
+    </view>
+
+    <view class="card" wx:if="{{goods.notifyFlags.buyerEmail}}">
+      <view class="field-label">通知邮箱（可选）</view>
+      <input
+        class="input"
+        maxlength="120"
+        placeholder="支付后把卡密发到这个邮箱"
+        value="{{email}}"
+        bindinput="onEmailInput"
+      />
+    </view>
+
+    <view class="card" wx:if="{{goods.takeCardMode !== 'OFF'}}">
+      <view class="field-label">
+        取卡密码{{goods.takeCardMode === 'REQUIRED' ? '（必填）' : '（选填）'}}
+      </view>
+      <input
+        class="input"
+        password
+        maxlength="32"
+        placeholder="用于自助查单时验证身份，请牢记"
+        value="{{takeCardPassword}}"
+        bindinput="onPasswordInput"
+      />
+    </view>
+
+    <view class="card" wx:if="{{goods.couponEnabled}}">
+      <view class="field-label">优惠券码（可选）</view>
+      <view class="row coupon-row">
+        <input
+          class="input flex1"
+          maxlength="40"
+          placeholder="输入券码试算"
+          value="{{couponCode}}"
+          bindinput="onCouponInput"
+        />
+        <view class="coupon-btn" bindtap="applyCoupon">试算</view>
+      </view>
+      <text class="muted" wx:if="{{quote && quote.message}}">{{quote.message}}</text>
+    </view>
+
+    <view class="card">
+      <view class="row between money-row">
+        <text class="muted">商品金额</text>
+        <text>¥{{quote ? quote.productAmount : goods.price}}</text>
+      </view>
+      <view class="row between money-row" wx:if="{{quote && quote.discountAmount > 0}}">
+        <text class="muted">券码抵扣</text>
+        <text class="price">−¥{{quote.discountAmount}}</text>
+      </view>
+      <view class="divider"></view>
+      <view class="row between">
+        <text class="title">应付</text>
+        <text class="price price-lg">¥{{quote ? quote.totalAmount : goods.price}}</text>
+      </view>
+    </view>
+
+    <view class="card protocol" wx:if="{{needProtocol}}">
+      <view class="row" bindtap="toggleAgree">
+        <view class="checkbox {{agreed ? 'checkbox-on' : ''}}">{{agreed ? '✓' : ''}}</view>
+        <text class="muted">我已阅读并同意</text>
+        <text class="protocol-link" catchtap="showProtocol">《购卡协议》</text>
+      </view>
+    </view>
+
+    <view class="bottom-space"></view>
+    <view class="fixed-bottom">
+      <view class="flex1">
+        <text class="muted">合计 </text>
+        <text class="price price-lg">¥{{quote ? quote.totalAmount : goods.price}}</text>
+      </view>
+      <view class="btn submit-btn {{submitting ? 'btn-disabled' : ''}}" bindtap="submit">
+        {{submitting ? '提交中…' : '提交订单'}}
+      </view>
+    </view>
+  </block>
+</view>

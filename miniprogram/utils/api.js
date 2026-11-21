@@ -118,6 +118,22 @@ module.exports = {
     });
   },
 
+  // ---------- 工商年报 ----------
+  /** 工商年报与网页端「财税工具 → 填报记录」共用 taxRecord 台账（kind=INSPECT）。 */
+  annualReportRecords() {
+    return request({
+      path: "/enterprise/tax/records",
+      query: { kind: "INSPECT" },
+    });
+  },
+  saveAnnualReport(title, snapshot) {
+    return request({
+      path: "/enterprise/tax/trial/save",
+      method: "POST",
+      data: { kind: "INSPECT", title: title, snapshot: snapshot },
+    });
+  },
+
   // ---------- 身份 ----------
   me() {
     return request({ path: "/enterprise/me" });

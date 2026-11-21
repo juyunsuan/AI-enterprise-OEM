@@ -1,0 +1,48 @@
+.page {
+  padding: 24rpx;
+}
+
+.form {
+  padding: 8rpx 26rpx;
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  min-height: 104rpx;
+  border-bottom: 1rpx solid #f3eeea;
+}
+
+.field:last-child {
+  border-bottom: none;
+}
+
+.label {
+  width: 170rpx;
+  font-size: 27rpx;
+  color: #4a403a;
+}
+
+.input {
+  flex: 1;
+  height: 104rpx;
+  font-size: 27rpx;
+  color: #2c2622;
+}
+
+.picker-value {
+  display: flex;
+  align-items: center;
+}
+
+.placeholder {
+  color: #b0a69f;
+}
+
+.switch-row {
+  justify-content: space-between;
+}
+
+.save-btn {
+  margin-top: 34rpx;
+}

@@ -1,0 +1,42 @@
+.profile {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+}
+
+.avatar {
+  width: 112rpx;
+  height: 112rpx;
+  border-radius: 56rpx;
+  flex: none;
+  background: #f2f3f5;
+}
+
+.avatar-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8a8f99;
+  font-size: 36rpx;
+}
+
+.nickname {
+  font-size: 32rpx;
+  font-weight: 600;
+}
+
+.entries {
+  display: flex;
+  justify-content: space-between;
+}
+
+.entry {
+  flex: 1;
+  text-align: center;
+  padding: 12rpx 0;
+}
+
+.entry-label {
+  font-size: 26rpx;
+  color: #646a73;
+}

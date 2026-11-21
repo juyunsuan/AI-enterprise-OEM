@@ -23,6 +23,8 @@ const DEFAULT_PORT = 35911;
 const LONG_POLL_MS = 25000;
 const ACTION_TIMEOUT_MS = 30000;
 const MAX_QUEUE = 20;
+/** 桥接扩展的固定 ID（manifest.key 派生）：只有它能用 /bootstrap 自助取令牌。 */
+const BRIDGE_EXTENSION_ID = 'hadiefimeiaaaheoffhkalggnkmlnlbg';
 
 function json(res, status, body) {
   const text = JSON.stringify(body == null ? {} : body);
@@ -136,6 +138,21 @@ class ChromeBridge {
   async handle(req, res) {
     const url = new URL(req.url || '/', 'http://127.0.0.1');
     if (req.method === 'OPTIONS') return json(res, 204, {});
+
+    // 预装扩展自助取令牌：只认固定扩展 ID 的 Origin，用户无需手填 token。
+    if (req.method === 'GET' && url.pathname === '/bootstrap') {
+      const origin = String(req.headers.origin || '');
+      if (origin !== 'chrome-extension://' + BRIDGE_EXTENSION_ID) {
+        return json(res, 403, { ok: false, error: '来源不受信任' });
+      }
+      if (!this.token) return json(res, 503, { ok: false, error: '桥接令牌未就绪' });
+      return json(res, 200, {
+        ok: true,
+        bridgeUrl: 'http://127.0.0.1:' + this.port,
+        token: this.token
+      });
+    }
+
     if (!this.authorized(req, url)) return json(res, 401, { ok: false, error: '桥接令牌无效' });
 
     if (req.method === 'POST' && url.pathname === '/hello') {
@@ -220,18 +237,19 @@ class ChromeBridge {
   }
 }
 
-/** 给模型看的浏览器工具：只有桥接在线时才注入，离线时模型不会假装能操作浏览器。 */
+/** 给模型看的「用户真实浏览器」工具：只有桥接在线时才注入，离线时模型不会假装能操作浏览器。
+ * 名字带 user_chrome_ 前缀，与客户端自带指纹窗口的 chrome_* 工具区分，互不覆盖。 */
 function toolDefs(bridge) {
   if (!bridge || !bridge.status().connected) return [];
   return [
     {
-      name: 'chrome_tabs',
+      name: 'user_chrome_tabs',
       description: '列出当前浏览器窗口里的标签页（标题、地址、是否当前激活）。',
       parameters: { type: 'object', properties: {} },
       call: () => bridge.call('tabs.list', {})
     },
     {
-      name: 'chrome_open',
+      name: 'user_chrome_open',
       description: '在浏览器里打开一个网址（新标签页），用于查看网页、继续人工操作。',
       parameters: {
         type: 'object',
@@ -241,7 +259,7 @@ function toolDefs(bridge) {
       call: (args) => bridge.call('tab.open', { url: String(args.url || '') })
     },
     {
-      name: 'chrome_read',
+      name: 'user_chrome_read',
       description: '读取某个标签页的正文文本（默认当前激活标签）；读不到时先 chrome_tabs 拿 id。',
       parameters: {
         type: 'object',
@@ -250,7 +268,7 @@ function toolDefs(bridge) {
       call: (args) => bridge.call('page.text', { tabId: args.tabId })
     },
     {
-      name: 'chrome_click',
+      name: 'user_chrome_click',
       description: '在当前标签页里按 CSS 选择器点击一个元素。',
       parameters: {
         type: 'object',
@@ -260,7 +278,7 @@ function toolDefs(bridge) {
       call: (args) => bridge.call('page.click', { selector: String(args.selector || '') })
     },
     {
-      name: 'chrome_fill',
+      name: 'user_chrome_fill',
       description: '在当前标签页里往一个输入框填值（触发 input/change 事件）。',
       parameters: {
         type: 'object',

@@ -11,8 +11,8 @@
 
 const assert = require('node:assert/strict');
 
-const HOME = process.env.BOTBUDDY_HOME;
-if (HOME) process.env.BOTBUDDY_HOME = HOME;
+const HOME = process.env.AWBOTDSH_HOME;
+if (HOME) process.env.AWBOTDSH_HOME = HOME;
 
 const rpa = require('../src/main/rpa-runner');
 

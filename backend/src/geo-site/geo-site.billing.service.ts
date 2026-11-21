@@ -188,14 +188,24 @@ export class GeoSiteBillingService {
 
   /** 出某个月的账（默认当月）：可被手工触发与测试直接调用，已出账的站点自动跳过。 */
   async chargeMonth(periodMonth = monthKeyOf(new Date()), now = new Date()) {
-    const [pricing, sites] = await Promise.all([
+    const [pricing, sites, stoppedOwners] = await Promise.all([
       this.pricing(),
       this.prisma.geoSite.findMany({
         where: { status: { not: 'SUSPENDED' } },
         select: { id: true, ownerUserId: true, billingFrom: true },
       }),
+      // 启动闸门：运营方主动停掉「国际独立站」的账号本月不再产生新账
+      // （缺行＝没参与启动设置，照常出账，不能让老账号白停一个月）
+      this.prisma.toolSubscription.findMany({
+        where: { toolCode: 'global-site', status: 'STOPPED' },
+        select: { userId: true },
+      }),
     ]);
-    const plan = planMonthlyCharges(sites, { ...pricing, periodMonth });
+    const stopped = new Set(stoppedOwners.map((row) => row.userId));
+    const plan = planMonthlyCharges(
+      sites.filter((site) => !stopped.has(site.ownerUserId)),
+      { ...pricing, periodMonth },
+    );
     let billed = 0;
     let charged = 0;
     let arrears = 0;

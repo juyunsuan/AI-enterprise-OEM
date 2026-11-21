@@ -20,10 +20,10 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 
 const HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'bb-db-test-'));
-process.env.BOTBUDDY_HOME = HOME;
+process.env.AWBOTDSH_HOME = HOME;
 
 function reexecUnderElectron(err) {
-  if (process.env.BOTBUDDY_DB_REEXEC) return false;
+  if (process.env.AWBOTDSH_DB_REEXEC) return false;
   if (!/NODE_MODULE_VERSION|compiled against a different Node|was compiled against/.test(err.message)) {
     return false;
   }
@@ -33,8 +33,8 @@ function reexecUnderElectron(err) {
     stdio: 'inherit',
     env: Object.assign({}, process.env, {
       ELECTRON_RUN_AS_NODE: '1',
-      BOTBUDDY_DB_REEXEC: '1',
-      BOTBUDDY_HOME: HOME
+      AWBOTDSH_DB_REEXEC: '1',
+      AWBOTDSH_HOME: HOME
     })
   });
   process.exit(res.status === null ? 1 : res.status);
@@ -84,7 +84,7 @@ console.log('库文件');
 // 先按 v3 的老结构铺一个库：验证 v4 是补列，而不是把用户已有会话刷掉。
 check('v3 老库预置：对话两张表没有会话能力列', () => {
   const Legacy = require('better-sqlite3');
-  const legacy = new Legacy(path.join(HOME, 'botbuddy.db'));
+  const legacy = new Legacy(path.join(HOME, 'awbotdsh.db'));
   legacy.exec(
     `CREATE TABLE chat_conversations (
        id         TEXT PRIMARY KEY,
@@ -112,8 +112,8 @@ check('v3 老库预置：对话两张表没有会话能力列', () => {
   legacy.close();
 });
 
-check('库落在 BOTBUDDY_HOME/botbuddy.db', () => {
-  assert.strictEqual(db.DB_FILE, path.join(HOME, 'botbuddy.db'));
+check('库落在 AWBOTDSH_HOME/awbotdsh.db', () => {
+  assert.strictEqual(db.DB_FILE, path.join(HOME, 'awbotdsh.db'));
   db.open();
   assert.ok(fs.existsSync(db.DB_FILE), '库文件应当已创建');
 });

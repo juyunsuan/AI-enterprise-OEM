@@ -1,0 +1,47 @@
+.shop-head {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+}
+
+.shop-head-logo {
+  width: 108rpx;
+  height: 108rpx;
+  border-radius: 24rpx;
+  background: #eef0f3;
+  flex: none;
+}
+
+.shop-head-name {
+  font-size: 34rpx;
+  font-weight: 600;
+}
+
+.shop-head-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+  flex: none;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border-radius: 44rpx;
+  padding: 8rpx 12rpx 8rpx 28rpx;
+  margin-bottom: 20rpx;
+}
+
+.search-input {
+  flex: 1;
+  min-width: 0;
+  height: 64rpx;
+  font-size: 26rpx;
+}
+
+.search-btn {
+  flex: none;
+  padding: 0 24rpx;
+  font-size: 26rpx;
+}

@@ -1,0 +1,63 @@
+<view class="page page-with-bar" wx:if="{{items.length}}">
+  <view class="card">
+    <view class="field-head">
+      <text class="block-title">收货地址</text>
+      <text class="link" bindtap="onAddAddress">+ 新增</text>
+    </view>
+    <picker
+      wx:if="{{addresses.length}}"
+      mode="selector"
+      range="{{addresses}}"
+      range-key="receiver"
+      value="{{addressIndex}}"
+      bindchange="onAddress"
+    >
+      <view class="address">{{addressText}}</view>
+    </picker>
+    <view class="notice notice-warn" wx:else>
+      还没有收货地址，请先新增。<text class="link" bindtap="onAddAddress">去新增</text>
+    </view>
+    <view class="link manage" wx:if="{{addresses.length}}" bindtap="onManageAddress">管理地址</view>
+  </view>
+
+  <view class="card">
+    <view class="block-title">商品清单</view>
+    <view class="line" wx:for="{{items}}" wx:key="index">
+      <image wx:if="{{item.coverImage}}" class="thumb" src="{{item.coverImage}}" mode="aspectFill" />
+      <view class="line-body">
+        <view class="line-name">{{item.name}}</view>
+        <view class="item-meta" wx:if="{{item.skuText}}">{{item.skuText}}</view>
+        <view class="line-bottom">
+          <text class="amount">{{item.priceText}}</text>
+          <text class="item-meta">× {{item.quantity}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="field">
+      <view class="field-label">订单备注</view>
+      <input class="input" placeholder="选填，例如配送要求" value="{{remark}}" bindinput="onRemark" />
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{quote}}">
+    <view class="block-title">费用明细</view>
+    <view class="flow" wx:for="{{flowTexts}}" wx:key="index">
+      <text>{{item.label}}</text>
+      <text>{{item.amount}}</text>
+    </view>
+    <view class="notice" wx:if="{{quote.payCents <= 0}}">本单无需在线支付，提交后按订单状态履约。</view>
+  </view>
+
+  <view class="action-bar">
+    <view class="bar-price">
+      <text class="bar-label">应付</text>
+      <text class="amount">{{payText}}</text>
+    </view>
+    <button class="button-primary bar-button" loading="{{submitting}}" bindtap="onSubmit">提交订单</button>
+  </view>
+</view>
+
+<view class="empty" wx:else>正在加载结算信息…</view>

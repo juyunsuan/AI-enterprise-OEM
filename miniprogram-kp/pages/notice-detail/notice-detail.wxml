@@ -1,0 +1,12 @@
+<view class="page" style="{{themeStyle}}">
+  <view class="empty" wx:if="{{loading}}">加载中…</view>
+  <view class="empty" wx:elif="{{error}}">{{error}}</view>
+
+  <view class="card" wx:else>
+    <view class="title">{{detail.title}}</view>
+    <view class="muted" style="margin-top: 12rpx">{{detail.dateText}}</view>
+    <view class="divider"></view>
+    <rich-text wx:if="{{detail.content}}" class="content" nodes="{{detail.content}}"></rich-text>
+    <view class="muted" wx:else>公告正文为空</view>
+  </view>
+</view>

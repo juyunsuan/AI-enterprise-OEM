@@ -58,8 +58,14 @@ export default function NotificationsPage() {
     } catch {
       // 忽略
     }
-    if (row.link) router.push(row.link);
-    else void load();
+    if (/^https?:\/\//i.test(row.link)) {
+      window.open(row.link, "_blank", "noopener,noreferrer");
+      void load();
+    } else if (row.link) {
+      router.push(row.link);
+    } else {
+      void load();
+    }
   };
 
   return (

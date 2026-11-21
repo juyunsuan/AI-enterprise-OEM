@@ -1,0 +1,27 @@
+<view class="page" style="{{themeStyle}}">
+  <view class="card">
+    <view class="card-title">意见反馈</view>
+    <textarea
+      class="textarea"
+      value="{{content}}"
+      maxlength="2000"
+      placeholder="遇到问题或有好建议，都可以告诉我们"
+      bindinput="onContent"
+    />
+    <input class="input contact" value="{{contact}}" placeholder="联系方式（选填，便于回复你）" bindinput="onContact" />
+
+    <view class="images">
+      <view wx:for="{{images}}" wx:key="*this" class="image-box">
+        <image class="image" src="{{item}}" mode="aspectFill" />
+        <view class="remove" data-index="{{index}}" bindtap="removeImage">×</view>
+      </view>
+      <view wx:if="{{images.length < 3}}" class="image-box add" bindtap="addImage">
+        {{uploading ? '…' : '+'}}
+      </view>
+    </view>
+
+    <view class="submit {{submitting ? 'disabled' : ''}}" bindtap="submit">
+      {{submitting ? '提交中…' : '提交反馈'}}
+    </view>
+  </view>
+</view>

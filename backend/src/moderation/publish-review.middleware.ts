@@ -54,37 +54,6 @@ const updatePattern = (base: string) =>
   new RegExp(`^${base.replace(/[/-]/g, '\\$&')}/[^/]+$`);
 
 const RULES: Rule[] = [
-  {
-    scene: 'community_post',
-    method: 'POST',
-    pattern: /^\/enterprise\/social\/posts$/,
-    fields: ['body'],
-  },
-  {
-    scene: 'community_post',
-    method: 'POST',
-    pattern: /^\/enterprise\/social\/groups\/[^/]+\/topics$/,
-    fields: ['title', 'body', 'tag'],
-  },
-  {
-    scene: 'resume',
-    method: 'PUT',
-    pattern: /^\/enterprise\/social\/resume$/,
-    fields: [
-      'headline',
-      'summary',
-      'objectiveRole',
-      'objectiveCity',
-      'objectiveType',
-      'additional',
-    ],
-  },
-  {
-    scene: 'resume',
-    method: 'POST',
-    pattern: /^\/enterprise\/social\/resume\/items$/,
-    fields: ['title', 'subtitle', 'description'],
-  },
   ...DEMAND_POSTS.flatMap<Rule>((base) => [
     {
       scene: 'demand',

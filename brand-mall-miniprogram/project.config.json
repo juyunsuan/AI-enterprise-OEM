@@ -1,0 +1,26 @@
+{
+  "description": "电商小程序顾客端（多租户共用模板，出包时按店铺注入 config.js 与 AppID）",
+  "packOptions": {
+    "ignore": [
+      { "type": "file", "value": "project.private.config.json" },
+      { "type": "folder", "value": ".DS_Store" }
+    ]
+  },
+  "setting": {
+    "urlCheck": true,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true,
+    "bigPackageSizeSupport": false,
+    "coverView": false,
+    "packNpmManually": false,
+    "packNpmRelationList": []
+  },
+  "compileType": "miniprogram",
+  "libVersion": "3.5.5",
+  "appid": "touristappid",
+  "projectname": "brand-mall-miniprogram",
+  "srcMiniprogramRoot": "./",
+  "miniprogramRoot": "./"
+}

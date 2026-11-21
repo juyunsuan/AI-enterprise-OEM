@@ -1,0 +1,75 @@
+.work-head {
+  align-items: flex-start;
+}
+
+.work-cover {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 16rpx;
+  background: #e8eaee;
+  flex: none;
+}
+
+.work-cover-empty {
+  line-height: 160rpx;
+  text-align: center;
+  color: #b6bbc4;
+  font-size: 26rpx;
+}
+
+.work-info {
+  flex: 1;
+  margin-left: 24rpx;
+  min-width: 0;
+}
+
+.work-title {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.work-status {
+  margin-top: 12rpx;
+}
+
+.refund {
+  margin-left: 16rpx;
+  font-size: 22rpx;
+  color: #e5484d;
+}
+
+.work-time {
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  color: #8a8f99;
+}
+
+.work-actions {
+  display: flex;
+  margin-top: 20rpx;
+}
+
+.work-action {
+  flex: 1;
+  margin-right: 16rpx;
+}
+
+.work-action:last-child {
+  margin-right: 0;
+}
+
+.work-action.danger {
+  border-color: #e5484d;
+  color: #e5484d;
+}
+
+.empty-btn {
+  width: 220rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+  margin: 24rpx auto 0;
+  border-radius: 36rpx;
+  background: var(--primary);
+  color: #ffffff;
+  font-size: 28rpx;
+}

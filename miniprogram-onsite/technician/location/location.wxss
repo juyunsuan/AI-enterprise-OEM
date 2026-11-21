@@ -1,0 +1,66 @@
+.tip {
+  margin-top: 14rpx;
+  line-height: 1.6;
+}
+
+.notice {
+  margin-top: 16rpx;
+  padding: 16rpx;
+  border-radius: 12rpx;
+  background: #fff7e8;
+  color: #b26a00;
+  font-size: 24rpx;
+  line-height: 1.6;
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #eef0f3;
+}
+
+.label {
+  width: 200rpx;
+  color: #4e5969;
+  font-size: 27rpx;
+  flex-shrink: 0;
+}
+
+.input {
+  flex: 1;
+  font-size: 27rpx;
+}
+
+.error {
+  margin-top: 18rpx;
+  color: #f53f3f;
+  font-size: 25rpx;
+  line-height: 1.6;
+}
+
+.submit {
+  margin-top: 26rpx;
+}
+
+.button-ghost {
+  margin-top: 16rpx;
+  background: #f2f5ff;
+  color: #3370ff;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+}
+
+.line {
+  display: flex;
+  margin-top: 16rpx;
+  font-size: 27rpx;
+}
+
+.line .label {
+  width: 160rpx;
+}
+
+.value {
+  flex: 1;
+}

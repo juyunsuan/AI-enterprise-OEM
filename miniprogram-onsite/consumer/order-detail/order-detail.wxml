@@ -1,0 +1,169 @@
+<view class="empty" wx:if="{{loading}}">正在加载订单…</view>
+
+<view class="empty" wx:elif="{{error}}">
+  <view>{{error}}</view>
+  <view class="link" bindtap="onRetry">重新加载</view>
+</view>
+
+<view class="card" wx:elif="{{notReady}}">
+  <view class="title">店铺暂未开通</view>
+  <view class="muted detail-text">{{readyReason}}</view>
+</view>
+
+<block wx:elif="{{order}}">
+  <view class="card">
+    <view class="row">
+      <text class="title">{{order.statusText}}</text>
+      <text class="tag tag-blue" wx:if="{{order.isAddon}}">含加钟 {{order.addonCount}} 次</text>
+    </view>
+    <view class="muted detail-text" wx:if="{{order.statusHint}}">{{order.statusHint}}</view>
+    <view class="notice notice-warn" wx:if="{{order.expireText}}">请于 {{order.expireText}} 前完成支付</view>
+    <view class="kv">
+      <text class="kv-label">预约时间</text>
+      <text class="kv-value">{{order.startText}} 至 {{order.endText}}</text>
+    </view>
+    <view class="kv">
+      <text class="kv-label">预计时长</text>
+      <text class="kv-value">{{order.durationText}}</text>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="row">
+      <text class="title">上门地址</text>
+      <text class="link" wx:if="{{address}}" bindtap="copyAddress">复制</text>
+    </view>
+    <block wx:if="{{address}}">
+      <view class="addr-contact">
+        <text class="addr-name">{{address.contactName}}</text>
+        <text class="muted" wx:if="{{address.phone}}">{{address.phone}}</text>
+      </view>
+      <view class="detail-text">{{address.text}}</view>
+      <view class="link" wx:if="{{address.hasGeo}}" bindtap="openMap">在地图中查看</view>
+    </block>
+    <view class="muted" wx:else>订单未保存地址</view>
+  </view>
+
+  <view class="card">
+    <view class="row">
+      <text class="title">服务人员</text>
+      <text class="link" wx:if="{{order.staffPhone}}" bindtap="callStaff">拨打</text>
+    </view>
+    <view class="detail-text">{{order.staffName}}</view>
+  </view>
+
+  <view class="card">
+    <view class="title">服务明细</view>
+    <view class="list-item" wx:for="{{items}}" wx:key="id">
+      <view class="item-head">
+        <text class="item-title">{{item.title}} {{item.quantityText}}</text>
+        <text class="kv-value">{{item.priceText}}</text>
+      </view>
+      <view class="item-meta">
+        <text>{{item.durationText}}</text>
+        <text wx:if="{{item.materialText}}"> · {{item.materialText}}</text>
+        <text wx:if="{{item.refundedText}}"> · {{item.refundedText}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{addons.length}}">
+    <view class="title">加钟记录</view>
+    <view class="list-item" wx:for="{{addons}}" wx:key="id">
+      <view class="item-head">
+        <text class="item-title">{{item.detailText}}</text>
+        <text class="kv-value">{{item.amountText}}</text>
+      </view>
+      <view class="item-meta">
+        <text>{{item.statusText}}</text>
+        <text> · {{item.timeText}}</text>
+        <text
+          class="link"
+          wx:if="{{item.payable}}"
+          data-id="{{item.id}}"
+          bindtap="retryAddonPay"
+        >去支付</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="title">费用</view>
+    <view class="kv" wx:for="{{amountRows}}" wx:key="label">
+      <text class="kv-label">{{item.label}}</text>
+      <text class="kv-value">{{item.value}}</text>
+    </view>
+    <view class="kv" wx:if="{{order.distanceText}}">
+      <text class="kv-label">上门距离</text>
+      <text class="kv-value">{{order.distanceText}}</text>
+    </view>
+    <view class="kv">
+      <text class="kv-label">应付金额</text>
+      <text class="amount">{{order.payText}}</text>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{order.remark}}">
+    <view class="title">订单备注</view>
+    <view class="detail-text">{{order.remark}}</view>
+  </view>
+
+  <view class="card" wx:if="{{signature}}">
+    <view class="title">签字确认</view>
+    <image class="signature" src="{{signature}}" mode="aspectFit" bindtap="previewSignature"></image>
+  </view>
+
+  <view class="card" wx:if="{{timeline.length}}">
+    <view class="title">进度</view>
+    <view class="timeline-item" wx:for="{{timeline}}" wx:key="label">
+      <view class="timeline-dot"></view>
+      <view class="timeline-main">
+        <view class="timeline-label">{{item.label}}</view>
+        <view class="muted">{{item.timeText}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{tracks.length}}">
+    <view class="title">履约轨迹</view>
+    <view class="timeline-item" wx:for="{{tracks}}" wx:key="stage">
+      <view class="timeline-dot"></view>
+      <view class="timeline-main">
+        <view class="timeline-label">{{item.label}} · {{item.timeText}}</view>
+        <view class="muted" wx:if="{{item.address}}">{{item.address}}</view>
+        <image
+          class="track-image"
+          wx:if="{{item.image}}"
+          src="{{item.image}}"
+          mode="aspectFill"
+          data-src="{{item.image}}"
+          bindtap="previewTrack"
+        ></image>
+        <view class="link" wx:if="{{item.hasGeo}}" data-index="{{index}}" bindtap="openTrackMap">查看位置</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="row">
+      <text class="muted">订单号</text>
+      <view>
+        <text class="kv-value">{{order.orderNo}}</text>
+        <text class="link copy" bindtap="copyOrderNo">复制</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="footer">
+    <button class="button-primary" bindtap="payNow" wx:if="{{actions.pay}}" disabled="{{paying}}">
+      {{paying ? '正在唤起支付…' : '去支付'}}
+    </button>
+    <button class="button-primary" bindtap="goSign" wx:if="{{actions.sign}}">签字确认</button>
+    <button class="button-primary" bindtap="goReview" wx:if="{{actions.review}}">去评价</button>
+    <button class="button-ghost" bindtap="addon" wx:if="{{actions.addon}}">加钟</button>
+    <button class="button-ghost" bindtap="goRefund" wx:if="{{actions.refund}}">申请退款</button>
+    <button class="button-ghost" bindtap="goRefundList" wx:if="{{actions.refundDetail}}">查看退款进度</button>
+    <button class="button-ghost" bindtap="cancelOrder" wx:if="{{actions.cancel}}">取消订单</button>
+    <button class="button-ghost" bindtap="goHome">返回首页</button>
+  </view>
+</block>

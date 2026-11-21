@@ -1,0 +1,46 @@
+<view class="page">
+  <view class="card">
+    <view class="row between">
+      <view>
+        <view class="section-label" style="margin-bottom: 6rpx">填报记录</view>
+        <view class="muted">与网页端「填报记录」共用同一台账</view>
+      </view>
+      <view class="btn" bindtap="goForm">去填报</view>
+    </view>
+  </view>
+
+  <view
+    class="record-card"
+    wx:for="{{list}}"
+    wx:key="id"
+    bindtap="toggleDetail"
+    data-id="{{item.id}}"
+  >
+    <view class="record-head">
+      <view class="record-title">{{item.title}}</view>
+      <view class="tag {{item.sourceLabel === '小程序填报' ? '' : 'tag-plain'}}">{{item.sourceLabel}}</view>
+    </view>
+    <view class="record-meta">
+      <text>{{item.createdAtText}}</text>
+      <text>{{item.summary}}</text>
+      <text class="link-action">{{expandedId === item.id ? '收起' : '展开'}}</text>
+    </view>
+    <view class="record-fields" wx:if="{{expandedId === item.id}}">
+      <view class="kv-row" wx:for="{{item.fields}}" wx:for-item="field" wx:key="label">
+        <view class="kv-k">{{field.label}}</view>
+        <view class="kv-v">{{field.value}}</view>
+      </view>
+      <view class="muted" wx:if="{{!item.fields.length}}">该记录暂无明细字段</view>
+    </view>
+  </view>
+
+  <view class="empty" wx:if="{{loading}}">正在加载填报记录…</view>
+  <view class="empty" wx:elif="{{!list.length}}">
+    暂无工商年报记录
+    <view class="btn" style="margin-top: 28rpx" bindtap="goForm">立即填报</view>
+  </view>
+
+  <view class="muted" style="text-align: center; padding: 12rpx 0 40rpx" wx:if="{{list.length}}">
+    下拉可刷新；记录不可在小程序内删除，如需删除请到网页端台账操作。
+  </view>
+</view>

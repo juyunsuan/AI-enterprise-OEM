@@ -1,0 +1,32 @@
+.status-card {
+  border-radius: 20rpx;
+  padding: 32rpx 28rpx;
+  color: #ffffff;
+  margin-bottom: 20rpx;
+}
+
+.status-text {
+  font-size: 38rpx;
+  font-weight: 600;
+}
+
+.status-sub {
+  margin-top: 6rpx;
+  font-size: 24rpx;
+  opacity: 0.85;
+}
+
+.order-line {
+  padding: 12rpx 0;
+}
+
+.thumb.small {
+  width: 120rpx;
+  height: 120rpx;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12rpx;
+}

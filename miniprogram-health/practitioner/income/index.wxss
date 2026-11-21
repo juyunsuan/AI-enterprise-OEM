@@ -1,0 +1,99 @@
+.summary {
+  margin: 24rpx;
+  padding: 32rpx;
+  border-radius: 20rpx;
+  background: linear-gradient(135deg, #1a73e8, #3f8efc);
+  color: #fff;
+}
+
+.summary-label {
+  font-size: 24rpx;
+  opacity: 0.9;
+}
+
+.summary-value {
+  margin-top: 8rpx;
+  font-size: 56rpx;
+  font-weight: 600;
+}
+
+.summary-row {
+  display: flex;
+  margin-top: 28rpx;
+}
+
+.summary-cell {
+  flex: 1;
+}
+
+.summary-num {
+  font-size: 26rpx;
+  font-weight: 600;
+}
+
+.summary-sub {
+  margin-top: 4rpx;
+  font-size: 20rpx;
+  opacity: 0.8;
+}
+
+.picker-field,
+.input {
+  height: 80rpx;
+  line-height: 80rpx;
+  margin-top: 16rpx;
+  padding: 0 20rpx;
+  border-radius: 12rpx;
+  background: #f5f6f8;
+  font-size: 28rpx;
+}
+
+.amount-row {
+  display: flex;
+  align-items: center;
+  margin-top: 16rpx;
+  padding: 0 20rpx;
+  border-radius: 12rpx;
+  background: #f5f6f8;
+}
+
+.unit {
+  font-size: 34rpx;
+  font-weight: 600;
+}
+
+.amount-input {
+  flex: 1;
+  height: 96rpx;
+  margin-left: 12rpx;
+  font-size: 40rpx;
+  font-weight: 600;
+}
+
+.button-primary {
+  margin-top: 24rpx;
+}
+
+.link-line {
+  margin-top: 20rpx;
+  color: #1a73e8;
+  font-size: 26rpx;
+}
+
+.card-form {
+  margin-top: 16rpx;
+}
+
+.tag {
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+  background: #eef3ff;
+  color: #2b5bd7;
+  font-size: 22rpx;
+}
+
+.amount {
+  color: #f5413d;
+  font-size: 30rpx;
+  font-weight: 600;
+}

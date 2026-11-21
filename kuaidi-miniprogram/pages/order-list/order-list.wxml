@@ -1,0 +1,48 @@
+<view class="wrap">
+  <view class="tabs">
+    <view wx:for="{{filters}}" wx:key="key" class="tab {{filter === item.key ? 'active' : ''}}" data-key="{{item.key}}" bindtap="switchFilter">
+      {{item.label}}
+    </view>
+  </view>
+
+  <view wx:if="{{needSite}}" class="card">
+    <view class="error-box">请先在首页选择一个寄件点</view>
+    <view class="btn btn-primary" style="margin-top:20rpx" bindtap="goPickSite">去选寄件点</view>
+  </view>
+
+  <view wx:elif="{{loginError}}" class="card">
+    <view class="error-box">{{loginError}}</view>
+    <view class="btn btn-primary" style="margin-top:20rpx" bindtap="retry">重新登录</view>
+  </view>
+
+  <view wx:elif="{{loading}}" class="empty">正在读取订单…</view>
+
+  <view wx:elif="{{error}}" class="card">
+    <view class="error-box">{{error}}</view>
+    <view class="btn btn-ghost" style="margin-top:20rpx" bindtap="retry">重试</view>
+  </view>
+
+  <view wx:elif="{{!list.length}}" class="empty">
+    <view>还没有{{filter === 'PENDING' ? '待支付的' : ''}}订单</view>
+    <view class="btn btn-primary" style="width:280rpx;margin:24rpx auto 0" bindtap="goCreate">去寄件</view>
+  </view>
+
+  <block wx:else>
+    <view wx:for="{{list}}" wx:key="orderNo" class="card order" data-order="{{item.orderNo}}" data-mobile="{{item.mobile}}" bindtap="openDetail">
+      <view class="row">
+        <text class="order-company">{{item.companyName}}</text>
+        <text style="color:{{item.stateColor}};font-weight:600">{{item.stateText}}</text>
+      </view>
+      <view class="order-route">{{item.routeText}} · 收件人 {{item.receiverName}}</view>
+      <view wx:if="{{item.trackingNo}}" class="muted">运单号 {{item.trackingNo}}</view>
+      <view class="divider"></view>
+      <view class="row">
+        <text class="muted">{{item.orderNo}} · {{item.timeText}}</text>
+        <text class="money">{{item.feeText}}</text>
+      </view>
+      <view wx:if="{{item.unpaid}}" class="muted" style="margin-top:6rpx">点击进入订单可继续支付或取消</view>
+    </view>
+    <view wx:if="{{loadingMore}}" class="muted center">加载中…</view>
+    <view wx:elif="{{!hasMore && list.length}}" class="muted center">没有更多了</view>
+  </block>
+</view>

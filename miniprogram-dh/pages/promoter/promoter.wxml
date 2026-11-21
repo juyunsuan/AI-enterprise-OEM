@@ -1,0 +1,73 @@
+<view class="page" style="{{themeStyle}}">
+  <view wx:if="{{error}}" class="status-banner">{{error}}</view>
+
+  <block wx:if="{{center}}">
+    <view wx:if="{{!center.enabled}}" class="empty">站点暂未开放推广分销</view>
+
+    <block wx:elif="{{!center.isPromoter}}">
+      <view class="card join">
+        <view class="join-title">成为推广员</view>
+        <view class="join-desc">
+          分享作品或小程序给好友，好友下单后按比例获得佣金。
+        </view>
+        <view class="join-rates">
+          <view class="rate-item">
+            <view class="rate-value">{{center.level1Rate}}%</view>
+            <view class="rate-label">一级佣金</view>
+          </view>
+          <view class="rate-item">
+            <view class="rate-value">{{center.level2Rate}}%</view>
+            <view class="rate-label">二级佣金</view>
+          </view>
+        </view>
+        <view wx:if="{{center.applyStatus === 0}}" class="join-status">申请审核中，请耐心等待</view>
+        <view wx:else class="join-btn {{joining ? 'disabled' : ''}}" bindtap="join">
+          {{joining ? '处理中…' : center.joinType === 'pay' ? '付费开通推广员' : center.joinType === 'manual' ? '申请开通推广员' : '立即开通推广员'}}
+        </view>
+      </view>
+    </block>
+
+    <block wx:else>
+      <view class="stats">
+        <view class="stat">
+          <view class="stat-value">{{balanceText}}</view>
+          <view class="stat-label">可提现</view>
+        </view>
+        <view class="stat">
+          <view class="stat-value">{{totalText}}</view>
+          <view class="stat-label">累计佣金</view>
+        </view>
+        <view class="stat">
+          <view class="stat-value">{{center.directCount}}</view>
+          <view class="stat-label">直推人数</view>
+        </view>
+        <view class="stat">
+          <view class="stat-value">{{center.indirectCount}}</view>
+          <view class="stat-label">间推人数</view>
+        </view>
+      </view>
+
+      <view class="actions">
+        <view class="action-btn" bindtap="goWithdraw">申请提现</view>
+        <view class="action-btn ghost" bindtap="goPoster">生成推广海报</view>
+        <view class="action-btn ghost" bindtap="onShareTap">分享小程序</view>
+      </view>
+
+      <view class="card">
+        <view class="card-title">佣金明细</view>
+        <view wx:if="{{!recent.length && !list.length}}" class="empty">还没有佣金记录</view>
+        <view wx:for="{{recent}}" wx:key="id" class="line">
+          <view>
+            <view>{{item.remark || (item.level === 1 ? '一级佣金' : '二级佣金')}}</view>
+            <view class="muted small">{{item.createdAt}}</view>
+          </view>
+          <view class="amount">+{{item.amountText}}</view>
+        </view>
+      </view>
+
+      <view class="tip">提现最低 {{minWithdrawText}}，提交后由站点管理员审核打款。</view>
+    </block>
+  </block>
+
+  <view wx:if="{{loading}}" class="empty">加载中…</view>
+</view>

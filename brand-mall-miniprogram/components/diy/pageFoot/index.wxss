@@ -1,0 +1,29 @@
+.diy-page-foot {
+  display: flex;
+  border-top: 1rpx solid #eeeeee;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.cell {
+  flex: 1;
+  padding: 12rpx 0 16rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.icon {
+  width: 44rpx;
+  height: 44rpx;
+}
+
+.dot {
+  border-radius: 12rpx;
+}
+
+.text {
+  margin-top: 4rpx;
+  font-size: 22rpx;
+  color: #8a8f99;
+}

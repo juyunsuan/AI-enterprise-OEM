@@ -351,7 +351,7 @@ async function probeExitIp(proxy, checkUrl) {
     const request =
       'GET ' + (url.pathname + url.search) + ' HTTP/1.1\r\n' +
       'Host: ' + url.host + '\r\n' +
-      'User-Agent: BotBuddy-ProxyCheck/1.0\r\n' +
+      'User-Agent: AWBotDSH-ProxyCheck/1.0\r\n' +
       'Accept: application/json,text/plain,*/*\r\n' +
       'Connection: close\r\n\r\n';
     const body = await new Promise((resolve, reject) => {

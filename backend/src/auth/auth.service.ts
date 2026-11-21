@@ -98,6 +98,37 @@ export class AuthService {
       user.userId,
       ssoSessionTokenVersion(token),
     );
-    return user;
+    const subId = user.subAccountId;
+    if (typeof subId !== 'number' || subId <= 0) return user;
+    // 子账号：每次请求回库取最新授权，停用/改权限/删除即时生效。
+    const sub = await this.prisma.subAccount.findUnique({
+      where: { id: subId },
+    });
+    if (
+      !sub ||
+      sub.status !== 'ACTIVE' ||
+      sub.ownerUserId !== user.userId ||
+      sub.accountId !== Number(user.actorUserId)
+    ) {
+      throw new BusinessException(
+        ErrorCode.UNAUTHORIZED,
+        '子账号已被停用或删除，请重新登录',
+      );
+    }
+    const scopes = Array.isArray(sub.scopesJson)
+      ? (sub.scopesJson as unknown[]).filter(
+          (item): item is string => typeof item === 'string',
+        )
+      : [];
+    return new CurrentUser(
+      user.userId,
+      user.username,
+      user.role,
+      user.actorUserId,
+      sub.id,
+      scopes,
+      sub.name,
+      user.tokenVersion,
+    );
   }
 }

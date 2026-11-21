@@ -8,6 +8,10 @@ import type {
   InsightHotspotRow,
   InsightHotspotContentRow,
   InsightMetricRow,
+  InsightFdeAnalysis,
+  InsightFdeAnalysisSummary,
+  InsightConsultingAnalysis,
+  InsightConsultingAnalysisSummary,
 } from "@enterprise/contracts";
 import { endpoint } from "./endpoint";
 
@@ -20,6 +24,10 @@ export type {
   InsightHotspotRow,
   InsightHotspotContentRow,
   InsightMetricRow,
+  InsightFdeAnalysis,
+  InsightFdeAnalysisSummary,
+  InsightConsultingAnalysis,
+  InsightConsultingAnalysisSummary,
 };
 
 /** 采集健康度：两侧总览同一组字段，各数自己那组采集目的下的源头与批次。 */
@@ -99,6 +107,103 @@ export type InsightHotspotPage = {
   pageSize: number;
 };
 
+export type InsightTrendPoint = { period: string; value: number; growthRate: number };
+export type InsightTrendSeries = {
+  dimension: string;
+  value: string;
+  label: string;
+  hex: string;
+  share: number;
+  growthRate: number;
+  points: InsightTrendPoint[];
+};
+export type InsightTrendAnalysis = InsightCollectionHealth & {
+  window: { from: string; to: string; days: number };
+  assetCount: number;
+  taggedCount: number;
+  commercialCount: number;
+  series: InsightTrendSeries[];
+  colorTrends: InsightTrendSeries[];
+  priceBands: {
+    key: string;
+    label: string;
+    count: number;
+    share: number;
+    avgPrice: number;
+    salesIndex: number;
+    growthRate: number;
+  }[];
+  quadrant: {
+    concept: string;
+    interaction: number;
+    commercial: number;
+    growth: number;
+    share: number;
+    hint: string;
+  }[];
+  competitors: {
+    shop: string;
+    count: number;
+    avgPrice: number;
+    salesIndex: number;
+    hotScore: number;
+  }[];
+  predictions: {
+    dimension: string;
+    value: string;
+    label: string;
+    trend: string;
+    nextShare: number;
+    confidence: number;
+    note: string;
+  }[];
+  linkageEnabled: boolean;
+};
+export type InsightDeckResult = {
+  id: number;
+  status: string;
+  format: string;
+  assetId: string;
+  downloadUrl: string;
+  slideCount: number;
+  error: string;
+  outline: { heading: string; body: string }[];
+  createdAt: string;
+};
+export type InsightDeriveResult = {
+  anchor: string;
+  category: string;
+  directions: {
+    key: string;
+    title: string;
+    angle: string;
+    commentary: string;
+    evidence: string[];
+  }[];
+  derivedImages: string[];
+  note: string;
+};
+export type InsightExportResult = {
+  format: string;
+  assetId: string;
+  downloadUrl: string;
+  sheets: string[];
+  rowCount: number;
+  error: string;
+};
+export type InsightSettings = {
+  linkageEnabled: boolean;
+  autoTagEnabled: boolean;
+  contentTableId: number;
+  ledgerTableId: number;
+  ecomTableId: number;
+  wearTableId: number;
+  reportWindowDays: number;
+  deckTemplate: string;
+  deckBrand: Record<string, unknown>;
+  scoreConfig: Record<string, unknown>;
+};
+
 export const insightApi = {
   overview: endpoint(endpoints.Insight_overview),
   subscriptions: endpoint(endpoints.Insight_listSubscriptions),
@@ -115,10 +220,28 @@ export const insightApi = {
   hotspotDetail: endpoint(endpoints.Insight_hotspotDetail),
   metrics: endpoint(endpoints.Insight_listMetrics),
   trendsOverview: endpoint(endpoints.Insight_trendsOverview),
+  trendAnalysis: endpoint(endpoints.Insight_trendAnalysis),
+  generateDeck: endpoint(endpoints.Insight_generateDeck, { timeoutMs: 180000 }),
+  deriveStyle: endpoint(endpoints.Insight_deriveStyle, { timeoutMs: 120000 }),
+  trendExport: endpoint(endpoints.Insight_trendExport, { timeoutMs: 60000 }),
   generateReport: endpoint(endpoints.Insight_generateReport, {
     timeoutMs: 120000,
   }),
   listReports: endpoint(endpoints.Insight_listReports),
+  // ---------- AI-FDE 实施分析 ----------
+  fdeAnalyze: endpoint(endpoints.Insight_fdeAnalyze, { timeoutMs: 240000 }),
+  listFdeAnalyses: endpoint(endpoints.Insight_listFdeAnalyses),
+  fdeAnalysisDetail: endpoint(endpoints.Insight_fdeAnalysisDetail),
+  removeFdeAnalysis: endpoint(endpoints.Insight_removeFdeAnalysis),
+  // ---------- 企业咨询（多模型战略分析）----------
+  consultingAnalyze: endpoint(endpoints.Insight_consultingAnalyze, {
+    timeoutMs: 300000,
+  }),
+  listConsultingAnalyses: endpoint(endpoints.Insight_listConsultingAnalyses),
+  consultingAnalysisDetail: endpoint(
+    endpoints.Insight_consultingAnalysisDetail,
+  ),
+  removeConsultingAnalysis: endpoint(endpoints.Insight_removeConsultingAnalysis),
   tagAssets: endpoint(endpoints.Insight_tagAssets, { timeoutMs: 180000 }),
   syncLedger: endpoint(endpoints.Insight_syncLedger, { timeoutMs: 60000 }),
   reviewHotspot: endpoint(endpoints.Insight_reviewHotspot),

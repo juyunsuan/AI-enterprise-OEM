@@ -1,0 +1,63 @@
+<view class="page page-with-bar" wx:if="{{service}}">
+  <swiper wx:if="{{service.images.length}}" class="gallery" indicator-dots circular>
+    <swiper-item wx:for="{{service.images}}" wx:key="*this">
+      <image class="gallery-image" src="{{item}}" mode="aspectFill" />
+    </swiper-item>
+  </swiper>
+  <image wx:elif="{{service.coverImage}}" class="cover" src="{{service.coverImage}}" mode="aspectFill" />
+
+  <view class="card">
+    <view class="price-row">
+      <text class="amount">{{priceText}}</text>
+      <text class="origin" wx:if="{{originText}}">{{originText}}</text>
+      <text class="tag tag-blue price-tag">{{bizLabel}}</text>
+    </view>
+    <view class="service-name">{{service.name}}</view>
+    <view class="service-meta">
+      <text class="tag" wx:if="{{service.durationMinutes}}">{{service.durationMinutes}} 分钟</text>
+      <text class="tag tag-orange" wx:if="{{service.needSlot}}">需选预约时间</text>
+      <text class="tag tag-green" wx:if="{{service.supportsInstant}}">支持即时接诊</text>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{practitioners.length}}">
+    <view class="block-title">选择医护</view>
+    <scroll-view class="practitioner-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+      <view
+        class="practitioner"
+        wx:for="{{practitioners}}"
+        wx:key="id"
+        data-id="{{item.id}}"
+        bindtap="onPickPractitioner"
+      >
+        <image wx:if="{{item.avatar}}" class="avatar" src="{{item.avatar}}" mode="aspectFill" />
+        <view wx:else class="avatar"></view>
+        <view class="practitioner-body">
+          <view class="practitioner-name">
+            {{item.name}}
+            <text class="tag tag-blue">{{item.roleLabel}}</text>
+          </view>
+          <view class="item-meta">{{item.title || '认证医护'}}</view>
+          <view class="practitioner-price">{{item.priceText}}</view>
+        </view>
+        <view class="radio {{practitionerId === item.id ? 'radio-on' : ''}}"></view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <view class="card">
+    <view class="block-title">服务说明</view>
+    <rich-text class="rich" nodes="{{service.desc || '暂无详细说明'}}"></rich-text>
+    <view class="disclaimer" wx:if="{{service.disclaimer}}">{{service.disclaimer}}</view>
+  </view>
+
+  <view class="action-bar">
+    <view class="bar-price">
+      <text class="amount">{{priceText}}</text>
+    </view>
+    <button class="button-primary bar-button" bindtap="onAction">{{actionText}}</button>
+  </view>
+</view>
+
+<view class="empty" wx:elif="{{!loading}}">服务不存在或已下架</view>
+<view class="empty" wx:else>正在加载…</view>

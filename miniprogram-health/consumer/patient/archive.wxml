@@ -1,0 +1,193 @@
+<view class="page">
+  <view class="card" wx:if="{{patient}}">
+    <view class="patient-head">
+      <view>
+        <view class="patient-name">
+          {{patient.name}}
+          <text class="tag tag-blue">{{patient.relationLabel}}</text>
+        </view>
+        <view class="item-meta">
+          {{patient.genderLabel}}<text wx:if="{{patient.age}}"> · {{patient.age}} 岁</text>
+          <text wx:if="{{patient.birthdayText}}"> · {{patient.birthdayText}}</text>
+        </view>
+        <view class="item-meta" wx:if="{{patient.idCardTail}}">证件 {{patient.idCardTail}}</view>
+      </view>
+      <text class="link" data-id="{{patientId}}" bindtap="onMetricTrend">指标记录</text>
+    </view>
+    <view class="quick">
+      <view class="quick-item" bindtap="onMedication">用药打卡</view>
+      <view
+        class="quick-item"
+        data-id="{{patientId}}"
+        bindtap="onMetricTrend"
+      >记录指标</view>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{basics.length}}">
+    <view class="block-title">基本信息</view>
+    <view class="kv" wx:for="{{basics}}" wx:key="key">
+      <text class="kv-label">{{item.label}}</text>
+      <text class="kv-value">{{item.value}}</text>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="head-row">
+      <view class="block-title">档案条目</view>
+      <text class="link" bindtap="onAddItem">＋ 添加</text>
+    </view>
+    <block wx:if="{{groups.length}}">
+      <view class="group" wx:for="{{groups}}" wx:key="type" wx:for-item="group">
+        <view class="group-title">{{group.label}}</view>
+        <view
+          class="record"
+          wx:for="{{group.items}}"
+          wx:key="id"
+          wx:for-item="item"
+        >
+          <view class="record-head">
+            <text class="record-label">{{item.label || group.label}}</text>
+            <text
+              class="link"
+              data-id="{{item.id}}"
+              data-type="{{group.type}}"
+              bindtap="onEditItem"
+            >编辑</text>
+          </view>
+          <view class="detail-text">{{item.value}}</view>
+          <view class="item-meta" wx:if="{{item.rangeText}}">{{item.rangeText}}</view>
+        </view>
+      </view>
+    </block>
+    <view class="empty small" wx:else>还没有档案条目，点「添加」补充既往史、过敏史等</view>
+  </view>
+
+  <view class="card" wx:if="{{metricLogs.length}}">
+    <view class="head-row">
+      <view class="block-title">最近指标</view>
+    </view>
+    <view
+      class="line"
+      wx:for="{{metricLogs}}"
+      wx:key="id"
+      data-metric="{{item.metricId}}"
+      bindtap="onMetricTrend"
+    >
+      <view class="line-body">
+        <view class="item-title">
+          {{item.metricName}}
+          <text class="tag tag-red" wx:if="{{item.abnormal}}">异常</text>
+        </view>
+        <view class="item-meta">{{item.timeText}}</view>
+      </view>
+      <text class="metric-inline">{{item.valueText}}<text class="metric-unit">{{item.unit}}</text></text>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{medications.length}}">
+    <view class="head-row">
+      <view class="block-title">用药方案</view>
+      <text class="link" bindtap="onMedication">打卡</text>
+    </view>
+    <view class="line" wx:for="{{medications}}" wx:key="id">
+      <view class="line-body">
+        <view class="item-title">{{item.name}}<text class="tag" wx:if="{{item.spec}}">{{item.spec}}</text></view>
+        <view class="item-meta">
+          {{item.doseText || ''}}
+          <text wx:if="{{item.frequency}}"> · {{item.frequency}}</text>
+          <text wx:if="{{item.timesText}}"> · {{item.timesText}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{followups.length}}">
+    <view class="block-title">待随访</view>
+    <view
+      class="line"
+      wx:for="{{followups}}"
+      wx:key="id"
+      data-id="{{item.id}}"
+      bindtap="onFollowup"
+    >
+      <view class="line-body">
+        <view class="item-title">{{item.title}}</view>
+        <view class="item-meta">截止 {{item.dueText}}</view>
+      </view>
+      <text class="link">去填写</text>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{reports.length}}">
+    <view class="block-title">体检报告</view>
+    <view
+      class="line"
+      wx:for="{{reports}}"
+      wx:key="id"
+      data-id="{{item.id}}"
+      bindtap="onReport"
+    >
+      <view class="line-body">
+        <view class="item-title">{{item.title}}</view>
+        <view class="item-meta">{{item.timeText}}</view>
+      </view>
+      <text class="tag tag-red" wx:if="{{item.abnormalCount}}">{{item.abnormalCount}} 项异常</text>
+    </view>
+  </view>
+</view>
+
+<view class="sheet-mask" wx:if="{{editorOpen}}" bindtap="onEditorClose"></view>
+<view class="sheet" wx:if="{{editorOpen}}">
+  <view class="sheet-head">
+    <text class="sheet-title">{{editor.id ? '编辑条目' : '添加条目'}}</text>
+    <text class="link" bindtap="onEditorClose">关闭</text>
+  </view>
+  <view class="field">
+    <view class="field-label">类型</view>
+    <picker mode="selector" range="{{typeLabels}}" value="{{typeIndex}}" bindchange="onEditorType">
+      <view class="picker-field">{{typeLabels[typeIndex]}}</view>
+    </picker>
+  </view>
+  <view class="field">
+    <view class="field-label">标签</view>
+    <input
+      class="input"
+      maxlength="60"
+      placeholder="如 高血压、青霉素"
+      value="{{editor.label}}"
+      data-field="label"
+      bindinput="onEditorInput"
+    />
+  </view>
+  <view class="field">
+    <view class="field-label">内容 <text class="field-required">*</text></view>
+    <textarea
+      class="textarea"
+      maxlength="500"
+      placeholder="填写具体情况"
+      value="{{editor.value}}"
+      data-field="value"
+      bindinput="onEditorInput"
+    ></textarea>
+  </view>
+  <view class="field-row">
+    <view class="field half">
+      <view class="field-label">开始时间</view>
+      <picker mode="date" value="{{editor.startAt}}" bindchange="onEditorStart">
+        <view class="picker-field {{editor.startAt ? '' : 'picker-placeholder'}}">
+          {{editor.startAt || '选填'}}
+        </view>
+      </picker>
+    </view>
+    <view class="field half">
+      <view class="field-label">结束时间</view>
+      <picker mode="date" value="{{editor.endAt}}" bindchange="onEditorEnd">
+        <view class="picker-field {{editor.endAt ? '' : 'picker-placeholder'}}">
+          {{editor.endAt || '选填'}}
+        </view>
+      </picker>
+    </view>
+  </view>
+  <button class="button-primary sheet-save" bindtap="onEditorSave">保存</button>
+</view>

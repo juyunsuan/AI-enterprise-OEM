@@ -1,0 +1,46 @@
+<view class="page" style="{{themeStyle}}">
+  <!-- tabBar 里的页签无法运行时隐藏，后台关掉本栏目时整页给一句话说明 -->
+  <view class="empty" wx:if="{{!enabled}}">该栏目已关闭</view>
+
+  <block wx:else>
+    <view class="search-box" bindtap="goSearch">
+      <text class="search-icon">搜索</text>
+      <text class="search-ph">搜标题找内容</text>
+    </view>
+
+    <view class="kind-row">
+      <view
+        class="kind-card"
+        wx:for="{{entries}}"
+        wx:key="kind"
+        bindtap="openKind"
+        data-index="{{index}}"
+      >
+        <view class="kind-name">{{item.title}}</view>
+        <view class="muted">查看全部 ›</view>
+      </view>
+    </view>
+
+    <view class="section-head">
+      <view class="section-title">内容分类</view>
+      <view class="muted" bindtap="goNoticeList">公告 ›</view>
+    </view>
+
+    <view class="grid" wx:if="{{categories.length}}">
+      <view
+        class="grid-item cover"
+        wx:for="{{categories}}"
+        wx:key="id"
+        bindtap="openCategory"
+        data-index="{{index}}"
+      >
+        <image wx:if="{{item.cover}}" class="grid-img" src="{{item.cover}}" mode="aspectFill" lazy-load="{{true}}" />
+        <view wx:else class="grid-ph"></view>
+        <view class="grid-title ellipsis">{{item.title}}</view>
+      </view>
+    </view>
+
+    <view class="empty" wx:elif="{{!loading}}">{{error || '暂无分类'}}</view>
+    <view class="footer-gap"></view>
+  </block>
+</view>

@@ -1,0 +1,83 @@
+<view class="page" wx:if="{{!loading && !blocked}}">
+  <view class="card">
+    <view class="block-title">售后类型</view>
+    <view class="pills">
+      <view
+        class="pill {{kind === item.key ? 'pill-active' : ''}}"
+        wx:for="{{kinds}}"
+        wx:key="key"
+        data-key="{{item.key}}"
+        bindtap="onKind"
+      >{{item.label}}</view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="block-title">选择商品</view>
+    <view
+      class="line"
+      wx:for="{{items}}"
+      wx:key="id"
+      data-id="{{item.id}}"
+      bindtap="onItem"
+    >
+      <image
+        wx:if="{{item.coverImage}}"
+        class="thumb line-thumb"
+        src="{{item.coverImage}}"
+        mode="aspectFill"
+      />
+      <view class="line-body">
+        <view class="item-title">{{item.name}}</view>
+        <view class="item-meta">
+          <text wx:if="{{item.specText}}">{{item.specText}} · </text>x{{item.quantity}}
+        </view>
+      </view>
+      <text class="line-price">{{item.amountText}}</text>
+      <view class="radio {{orderItemId === item.id ? 'radio-on' : ''}}"></view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="block-title">售后原因</view>
+    <view class="chip-wrap">
+      <view
+        class="pill chip {{reason === item ? 'chip-active' : ''}}"
+        wx:for="{{reasons}}"
+        wx:key="*this"
+        data-reason="{{item}}"
+        bindtap="onReason"
+      >{{item}}</view>
+    </view>
+    <input
+      class="input reason-input"
+      maxlength="200"
+      placeholder="请补充具体原因"
+      value="{{reason}}"
+      bindinput="onReasonInput"
+    />
+  </view>
+
+  <view class="card">
+    <view class="block-title">问题描述</view>
+    <textarea
+      class="textarea"
+      maxlength="1000"
+      placeholder="描述问题发生的情况，便于店铺快速处理（选填）"
+      value="{{description}}"
+      bindinput="onDescription"
+    ></textarea>
+  </view>
+
+  <view class="footer">
+    <view class="notice">提交后订单将进入售后处理中，处理结果以店铺审核为准。</view>
+    <button
+      class="button-primary"
+      disabled="{{submitting}}"
+      bindtap="onSubmit"
+    >{{submitting ? '提交中…' : '提交申请'}}</button>
+  </view>
+</view>
+
+<view class="empty" wx:elif="{{!loading}}">{{blocked || '订单不存在'}}</view>
+<view class="empty" wx:else>正在加载…</view>

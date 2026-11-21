@@ -315,7 +315,7 @@ export function HrmRecruitTab({ reloadKey }: { reloadKey: number }) {
 
       <Panel
         title="招聘职位"
-        titleExtra={<span className="muted text-12">JD 单一数据源；发布后同步到招聘专区渠道</span>}
+        titleExtra={<span className="muted text-12">JD 单一数据源；招聘岗位在本系统 HR 工作台内管理</span>}
         extra={
           <Space>
             <Button onClick={() => {
@@ -360,14 +360,6 @@ export function HrmRecruitTab({ reloadKey }: { reloadKey: number }) {
                       开放
                     </Button>
                   )}
-                  <Button
-                    type="link"
-                    size="small"
-                    disabled={Boolean(row.hiringPostId)}
-                    onClick={() => void run(() => hrmApi.publishJob({ body: { id: row.id } }), "已发布到招聘专区")}
-                  >
-                    {row.hiringPostId ? `已发布 #${row.hiringPostId}` : "发布"}
-                  </Button>
                 </Space>
               ),
             },

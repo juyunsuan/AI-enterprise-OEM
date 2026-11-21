@@ -1,0 +1,41 @@
+.player {
+  width: 100%;
+  height: 760rpx;
+  background: #000000;
+}
+
+.work-title {
+  font-size: 34rpx;
+  font-weight: 600;
+}
+
+.work-meta {
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: #8a8f99;
+}
+
+.actions {
+  display: flex;
+  margin-top: 24rpx;
+}
+
+.action {
+  flex: 1;
+  margin: 0 8rpx;
+  font-size: 28rpx;
+}
+
+.action::after {
+  border: none;
+}
+
+.cta {
+  margin-top: 24rpx;
+  height: 80rpx;
+  line-height: 80rpx;
+  text-align: center;
+  border-radius: 40rpx;
+  background: var(--primary);
+  color: #ffffff;
+}

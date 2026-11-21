@@ -693,7 +693,43 @@ export const scrmExportStatsBodySchema = z.object({
   days: z.number().int().min(7).max(180).default(30),
 });
 
+export const scrmTerminalSettingSchema = z.object({
+  scene: z.string(),
+  sourceId: z.number(),
+  sourceName: z.string(),
+  enabled: z.boolean(),
+  lastEventKind: z.string(),
+  lastTaggedAt: z.string(),
+  lastError: z.string(),
+});
+export type ScrmTerminalSetting = z.infer<typeof scrmTerminalSettingSchema>;
+
+export const scrmTerminalToggleBodySchema = z.object({
+  scene: z.string().trim().min(2).max(16),
+  sourceId: z.number().int().positive(),
+  enabled: z.boolean(),
+});
+export type ScrmTerminalToggleBody = z.infer<
+  typeof scrmTerminalToggleBodySchema
+>;
+
 export const scrmEndpoints = {
+  Scrm_terminalSettings: {
+    method: "get" as const,
+    path: "/enterprise/wecom-scrm/terminals",
+    params: z.object({}),
+    query: emptyQuery,
+    body: z.undefined(),
+    response: envelope(z.array(scrmTerminalSettingSchema)),
+  },
+  Scrm_terminalToggle: {
+    method: "post" as const,
+    path: "/enterprise/wecom-scrm/terminals/toggle",
+    params: z.object({}),
+    query: emptyQuery,
+    body: scrmTerminalToggleBodySchema,
+    response: envelope(z.object({ ok: z.boolean() })),
+  },
   // ---------- 接入与概览 ----------
   Scrm_settings: {
     method: "get" as const,

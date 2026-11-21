@@ -1,0 +1,9 @@
+{
+  "name": "dsh-go-ohos-node-build-tools",
+  "private": true,
+  "version": "1.0.0",
+  "license": "AGPL-3.0-only",
+  "dependencies": {
+    "esbuild": "0.27.3"
+  }
+}

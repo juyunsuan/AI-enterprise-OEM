@@ -52,7 +52,6 @@ export const hrmApi = {
   createJob: endpoint(endpoints.Hrm_createJob),
   updateJob: endpoint(endpoints.Hrm_updateJob),
   generateJd: endpoint(endpoints.Hrm_generateJd),
-  publishJob: endpoint(endpoints.Hrm_publishJob),
   // 招聘：候选人 / 投递
   listCandidates: endpoint(endpoints.Hrm_listCandidates),
   upsertCandidate: endpoint(endpoints.Hrm_upsertCandidate),

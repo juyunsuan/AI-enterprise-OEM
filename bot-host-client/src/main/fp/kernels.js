@@ -3,7 +3,7 @@
 /**
  * 指纹内核管理：fingerprint-chromium（或同协议内核）的安装、版本与校验。
  *
- * 目录：~/.botbuddy/kernels/<version>/
+ * 目录：~/.awbotdsh/kernels/<version>/
  *   chrome.exe
  *   manifest.json  { version, exe, source, zipSha256, installedAt }
  *

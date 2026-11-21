@@ -120,6 +120,7 @@ const ERROR_HINTS: Record<ErrorCodeName, string> = {
   AGENT_SECURITY_BLOCKED: "本次 Agent 运行触发运行时护栏（危险命令、密钥泄露、越权指令或调用次数超限）已被中止。",
   CONTENT_MODERATION_BLOCKED: "发布内容未通过平台配置的阿里云内容安全审核，按提示修改后再发布。",
   WORKSPACE_NOT_ALLOWED: "指令指定的工作区不在该主机客户端上报的白名单内：先在客户端对应执行体的卡片里把该目录加进白名单，再重新下发。",
+  TOOL_NOT_STARTED: "建站工具尚未启动：该工具的顾客端已停服、站内配置只读（源码包仍可随时下载）。到「建站管理 → 启动设置」查看计费口径并启动，未启动期间不扣积分。",
   NOT_IMPLEMENTED: "接口尚未实现（保留占位）。",
 };
 

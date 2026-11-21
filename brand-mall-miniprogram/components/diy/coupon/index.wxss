@@ -1,0 +1,91 @@
+.diy-coupon {
+  padding: 16rpx 24rpx;
+  box-sizing: border-box;
+}
+
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.ticket {
+  display: flex;
+  align-items: center;
+  background: #fff3f3;
+  border: 1rpx solid #ffd6d6;
+  border-radius: 12rpx;
+  padding: 16rpx;
+  margin-bottom: 16rpx;
+  box-sizing: border-box;
+}
+
+.two .ticket {
+  width: calc(50% - 8rpx);
+}
+
+.two .ticket:nth-child(odd) {
+  margin-right: 16rpx;
+}
+
+.one .ticket {
+  width: 100%;
+}
+
+.left {
+  min-width: 110rpx;
+  display: flex;
+  flex-direction: column;
+  color: #fa3534;
+}
+
+.value {
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.rule {
+  font-size: 20rpx;
+  color: #b78a86;
+  margin-top: 4rpx;
+  max-width: 130rpx;
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  margin-left: 16rpx;
+  display: flex;
+  flex-direction: column;
+}
+
+.name {
+  font-size: 26rpx;
+  color: #333;
+}
+
+.muted {
+  font-size: 20rpx;
+  color: #b78a86;
+  margin-top: 4rpx;
+}
+
+.btn {
+  flex-shrink: 0;
+  margin-left: 12rpx;
+  padding: 8rpx 18rpx;
+  border-radius: 999rpx;
+  background: #fa3534;
+  color: #fff;
+  font-size: 22rpx;
+}
+
+.done {
+  background: #d8d8d8;
+  color: #fff;
+}
+
+.more {
+  text-align: right;
+  font-size: 22rpx;
+  color: #9aa0aa;
+}

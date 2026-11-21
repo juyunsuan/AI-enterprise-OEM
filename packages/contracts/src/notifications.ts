@@ -36,6 +36,7 @@ export const NOTIFICATION_CATEGORY_LABELS: Record<string, string> = {
   oa: "OA审批",
   question: "专题大厅",
   sns: "AIworkin 社交",
+  onsite: "上门服务小程序",
   collab: "协作",
 };
 

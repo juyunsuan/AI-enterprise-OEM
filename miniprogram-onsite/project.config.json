@@ -1,0 +1,32 @@
+{
+  "description": "自营上门服务小程序（每个平台用户一部，AppID 由店铺凭据在出包时写入）",
+  "packOptions": {
+    "ignore": [
+      {
+        "type": "file",
+        "value": "project.private.config.json"
+      },
+      {
+        "type": "folder",
+        "value": ".DS_Store"
+      }
+    ]
+  },
+  "setting": {
+    "urlCheck": true,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true,
+    "bigPackageSizeSupport": false,
+    "coverView": false,
+    "packNpmManually": false,
+    "packNpmRelationList": []
+  },
+  "compileType": "miniprogram",
+  "libVersion": "3.5.5",
+  "appid": "touristappid",
+  "projectname": "onsite-miniprogram",
+  "srcMiniprogramRoot": "./",
+  "miniprogramRoot": "./"
+}

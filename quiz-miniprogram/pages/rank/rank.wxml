@@ -1,0 +1,27 @@
+<view class="container">
+  <view class="picker-row" wx:if="{{banks.length}}">
+    <picker class="picker" mode="selector" range="{{bankTitles}}" value="{{bankIndex}}" bindchange="onBankChange">
+      <view class="between">
+        <text>{{bankTitle || '选择题库'}}</text>
+        <text class="muted">切换</text>
+      </view>
+    </picker>
+  </view>
+
+  <view wx:if="{{loading}}" class="empty">正在加载排行…</view>
+  <view wx:elif="{{error}}" class="empty">{{error}}</view>
+  <view wx:elif="{{!list.length}}" class="empty">还没有人交卷，快去抢第一。</view>
+
+  <view wx:for="{{list}}" wx:key="rank" class="list-row">
+    <view class="between">
+      <view class="row">
+        <text class="tag {{item.rank <= 3 ? 'gold' : ''}}" style="min-width:52rpx;text-align:center;">{{item.rank}}</text>
+        <text class="strong" style="margin-left:14rpx;">{{item.nickname}}</text>
+      </view>
+      <view class="strong" style="color:#0f9b80;">{{item.bestScore}} 分</view>
+    </view>
+    <view class="muted" style="margin-top:8rpx;">
+      最短用时 {{item.duration}} · 共 {{item.attempts}} 次
+    </view>
+  </view>
+</view>

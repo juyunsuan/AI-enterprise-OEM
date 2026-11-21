@@ -1,0 +1,64 @@
+.warn-card {
+  border: 2rpx solid #ffe0b2;
+}
+
+.note {
+  margin-top: 8rpx;
+  line-height: 1.6;
+}
+
+.item {
+  margin-top: 16rpx;
+  align-items: flex-start;
+}
+
+.value {
+  margin-left: 24rpx;
+  text-align: right;
+  word-break: break-all;
+  color: #1f2329;
+}
+
+.text-input {
+  width: 100%;
+  margin-top: 16rpx;
+  padding: 16rpx;
+  box-sizing: border-box;
+  background: #f7f8fa;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+}
+
+.btn-row {
+  display: flex;
+  margin-top: 20rpx;
+}
+
+.half {
+  flex: 1;
+  margin-right: 16rpx;
+}
+
+.half:last-child {
+  margin-right: 0;
+}
+
+.button-plain {
+  background: #fff;
+  color: #5c6068;
+  border: 2rpx solid #dcdfe6;
+  border-radius: 12rpx;
+  font-size: 30rpx;
+}
+
+.link {
+  color: #3370ff;
+  font-size: 26rpx;
+}
+
+.privacy {
+  margin-top: 12rpx;
+  line-height: 1.7;
+  font-size: 26rpx;
+  color: #5c6068;
+}

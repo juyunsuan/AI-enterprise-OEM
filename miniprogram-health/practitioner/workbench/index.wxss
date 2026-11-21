@@ -1,0 +1,125 @@
+.hero {
+  margin: 24rpx;
+  padding: 32rpx;
+  border-radius: 20rpx;
+  background: linear-gradient(135deg, #1a73e8, #3f8efc);
+  color: #fff;
+}
+
+.hero-name {
+  font-size: 40rpx;
+  font-weight: 600;
+}
+
+.hero-meta {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  opacity: 0.9;
+}
+
+.hero-score {
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  opacity: 0.9;
+}
+
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 12rpx;
+}
+
+.stat {
+  width: 25%;
+  padding: 12rpx;
+  box-sizing: border-box;
+}
+
+.stat-value {
+  padding: 20rpx 0;
+  border-radius: 14rpx;
+  background: #fff;
+  text-align: center;
+  font-size: 34rpx;
+  font-weight: 600;
+}
+
+.stat-value.orange {
+  color: #f59a23;
+}
+
+.stat-value.red {
+  color: #f5413d;
+}
+
+.stat-value.blue {
+  color: #1a73e8;
+}
+
+.stat-label {
+  margin-top: 8rpx;
+  text-align: center;
+  color: #8a8f99;
+  font-size: 22rpx;
+}
+
+.slot-line {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 12rpx;
+}
+
+.slot {
+  margin: 6rpx 8rpx 0 0;
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+  background: #eef3ff;
+  color: #2b5bd7;
+  font-size: 22rpx;
+}
+
+.slot.BOOKED {
+  background: #f0f1f5;
+  color: #8a8f99;
+}
+
+.slot.BLOCKED {
+  background: #fdecec;
+  color: #f5413d;
+}
+
+.nav-card {
+  padding-top: 8rpx;
+  padding-bottom: 8rpx;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid #f0f1f5;
+}
+
+.nav:last-child {
+  border-bottom: none;
+}
+
+.nav-main {
+  flex: 1;
+}
+
+.nav-label {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.chevron {
+  color: #c0c4cc;
+  font-size: 36rpx;
+}
+
+.foot {
+  padding: 24rpx;
+  text-align: center;
+}

@@ -1,0 +1,88 @@
+<view class="container" wx:if="{{loading}}">
+  <view class="empty">正在加载题目…</view>
+</view>
+
+<view class="container" wx:elif="{{error}}">
+  <view class="empty">{{error}}</view>
+  <button class="ghost-btn" bindtap="load">重试</button>
+</view>
+
+<block wx:elif="{{question}}">
+  <view class="container">
+    <view class="card" style="padding:20rpx 24rpx;">
+      <view class="between">
+        <view class="row">
+          <view class="tag green">{{mode === 'exam' ? '考试' : '练习'}}</view>
+          <view class="muted" style="margin-left:12rpx;">第 {{index + 1}} / {{total}} 题</view>
+        </view>
+        <view class="strong" wx:if="{{mode === 'exam'}}">{{timeText}}</view>
+        <view class="row" wx:else>
+          <view class="muted" style="margin-right:12rpx;">已答 {{answeredCount}} 题</view>
+          <view class="mini-btn" bindtap="toggleRecite">{{recite ? '答题模式' : '背题模式'}}</view>
+        </view>
+      </view>
+      <view class="progress-line" style="margin-top:14rpx;">
+        <view class="progress-fill" style="width:{{progressPercent}}%;"></view>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="row">
+        <view class="tag">{{question.typeLabel}}</view>
+        <view class="tag" wx:if="{{question.category}}" style="margin-left:10rpx;">{{question.category}}</view>
+        <view class="muted" wx:if="{{multi}}" style="margin-left:auto;">多选题</view>
+      </view>
+      <view class="question-title">{{question.title}}</view>
+      <image wx:if="{{question.imageUrl}}" class="question-image" src="{{question.imageUrl}}" mode="widthFix" />
+
+      <view
+        wx:for="{{options}}"
+        wx:key="key"
+        class="option {{item.state}}"
+        data-key="{{item.key}}"
+        bindtap="onOption"
+      >
+        <view class="option-key">{{item.key}}</view>
+        <view class="option-label">{{item.label}}</view>
+      </view>
+
+      <view class="analysis" wx:if="{{checked}}">
+        <view class="between">
+          <view class="tag {{checkResult.recite ? '' : (checkResult.correct ? 'green' : 'red')}}">{{checkResult.recite ? '背题模式' : (checkResult.correct ? '答对了' : '答错了')}}</view>
+          <view class="muted">正确答案：{{checkResult.correctAnswer}}</view>
+        </view>
+        <view wx:if="{{checkResult.analysis}}" style="margin-top:12rpx;">{{checkResult.analysis}}</view>
+        <view wx:if="{{bank.settings.aiExplain !== false}}" style="margin-top:16rpx;">
+          <button class="mini-btn" bindtap="explain" loading="{{aiLoading}}">AI 解析</button>
+        </view>
+        <view wx:if="{{aiText}}" style="margin-top:14rpx;background:#ffffff;border-radius:10rpx;padding:16rpx;">
+          <view class="muted" style="margin-bottom:6rpx;">AI 助教</view>
+          <view>{{aiText}}</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="bottom-space"></view>
+  </view>
+
+  <view class="bottom-bar">
+    <button class="ghost-btn" bindtap="prev" disabled="{{!canPrev}}">上一题</button>
+    <button class="ghost-btn" bindtap="toggleSheet">答题卡</button>
+    <button class="primary-btn" bindtap="onPrimary" loading="{{submitting}}">{{primaryLabel}}</button>
+  </view>
+
+  <view class="sheet-mask" wx:if="{{showSheet}}" bindtap="toggleSheet">
+    <view class="sheet-panel" catchtap="noop">
+      <view class="between">
+        <view class="subtitle">答题卡</view>
+        <view class="muted">已答 {{answeredCount}} / {{total}}</view>
+      </view>
+      <view class="sheet-grid">
+        <view class="sheet-cell" wx:for="{{sheet}}" wx:key="index" data-index="{{item.index}}" bindtap="jumpTo">
+          <view class="sheet-no {{item.answered ? 'answered' : ''}} {{item.current ? 'current' : ''}}">{{item.no}}</view>
+        </view>
+      </view>
+      <button class="ghost-btn" style="margin-top:20rpx;" bindtap="toggleSheet">关闭</button>
+    </view>
+  </view>
+</block>

@@ -1,7 +1,7 @@
 "use client";
 
 import { CopyOutlined, LinkOutlined } from "@ant-design/icons";
-import { App, Button, Descriptions, Input, Space } from "antd";
+import { App, Button, Input, Space, Tag } from "antd";
 import { useCallback, useEffect, useState } from "react";
 import { aipddKeyApi, type AipddKeyStatus } from "@/api/aipdd-key";
 import { Notice, Panel } from "@/components/ui/panel";
@@ -9,7 +9,7 @@ import { fmtTime } from "@/lib/datetime";
 
 /** 面板说明（原独立页的页头描述，并入功能板块内） */
 const PANEL_NOTE =
-  "绑定 AIPDD 平台签发的 API Key（sk-），才能使用「同步发布到 AIworkin」「服务商数据同步」「查看建联资源」等上游能力；本地注册、社交与招聘发布不绑定也全可用。Key 经 AES-256-GCM 加密保存，界面与接口永不回显原文。所在省 / 市等基础数据由平台统一 Key 提供（平台管理后台 → 系统配置 → AIPDD 平台 Key），不绑定也能填表单。";
+  "绑定 AIPDD 平台签发的 API Key（sk-），才能使用「同步发布到 AIworkin」「AI社交」「服务商数据同步」等上游能力；本地注册不绑定也全可用。一个账号可绑多把 Key：模型/计费使用最早绑定的可用 Key，AI社交通知会按每把 Key 所属账号分别拉取并合并。Key 经 AES-256-GCM 加密保存，界面与接口永不回显原文。";
 
 /**
  * AIPDD API Key 绑定（原「模型服务 → AIPDD Key 绑定」独立页，已并入「API Key 管理」）：
@@ -62,7 +62,7 @@ export function AipddKeyPanel() {
     try {
       setStatus(await aipddKeyApi.bind(key));
       setKeyInput("");
-      message.success(status?.bound ? "换绑成功" : "绑定成功");
+      message.success("绑定成功");
     } catch (error) {
       if (error instanceof Error) message.error(error.message);
     } finally {
@@ -70,17 +70,16 @@ export function AipddKeyPanel() {
     }
   };
 
-  const unbind = () =>
+  const unbind = (keyId: number, masked: string) =>
     modal.confirm({
       title: "解绑 AIPDD API Key",
       okText: "确认解绑",
       cancelText: "取消",
       okButtonProps: { danger: true },
-      content:
-        "解绑后同步发布到 AIworkin、服务商数据同步等上游功能将不可用（本地功能不受影响）。确定解绑吗？",
+      content: `解绑 ${masked} 后，使用这把 Key 的上游同步与 AI社交通知将停止（本地功能不受影响）。确定解绑吗？`,
       onOk: async () => {
         try {
-          await aipddKeyApi.unbind();
+          await aipddKeyApi.unbind(keyId);
           message.success("已解绑");
           await reload();
         } catch (error) {
@@ -92,11 +91,12 @@ export function AipddKeyPanel() {
 
   const referralCode = status?.referralCode || "";
   const registerUrl = status?.registerUrl || "https://www.aipdd.work";
+  const keys = status?.keys || [];
 
   return (
     <Panel
       title="AIPDD API Key 绑定"
-      titleExtra={<span className="muted text-12">多个用户可绑同一把 Key（N:1）</span>}
+      titleExtra={<span className="muted text-12">一个账号可绑多把；同一把也可被多人绑（N:1）</span>}
     >
       <p className="muted" style={{ fontSize: 13, marginBottom: 12 }}>
         {PANEL_NOTE}
@@ -108,20 +108,42 @@ export function AipddKeyPanel() {
         </Notice>
       ) : loading ? (
         <span className="muted text-12">加载中…</span>
-      ) : status?.bound ? (
-        <Descriptions column={1} size="small" bordered style={{ marginBottom: 14 }}>
-          <Descriptions.Item label="当前 Key">{status.masked}</Descriptions.Item>
-          <Descriptions.Item label="AIPDD 账号">
-            {String(status.profile?.nickName || status.profile?.username || "") ||
-              status.aipddUserId ||
-              "—"}
-          </Descriptions.Item>
-          <Descriptions.Item label="绑定时间">{fmtTime(status.boundAt || "")}</Descriptions.Item>
-          <Descriptions.Item label="最近验真">
-            {status.lastVerifiedAt ? fmtTime(status.lastVerifiedAt) : "—"}
-          </Descriptions.Item>
-          <Descriptions.Item label="同 Key 绑定用户">{status.sharedWith ?? 1} 人</Descriptions.Item>
-        </Descriptions>
+      ) : keys.length ? (
+        <div style={{ display: "grid", gap: 8, marginBottom: 14 }}>
+          {keys.map((item) => (
+            <div
+              key={item.keyId}
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 8,
+                alignItems: "center",
+                border: "1px solid var(--line, #f0f0f0)",
+                borderRadius: 8,
+                padding: "8px 12px",
+              }}
+            >
+              <span style={{ fontFamily: "monospace" }}>{item.masked}</span>
+              {item.primary ? <Tag color="blue">主 Key</Tag> : null}
+              {item.status !== "ACTIVE" ? <Tag color="red">已失效</Tag> : null}
+              <span className="muted text-12">
+                {String(item.profile?.nickName || item.profile?.username || "") ||
+                  item.aipddUserId ||
+                  "—"}
+              </span>
+              <span className="muted text-12">绑定于 {fmtTime(item.boundAt)}</span>
+              <span className="muted text-12">同 Key {item.sharedWith} 人</span>
+              <Button
+                size="small"
+                danger
+                type="link"
+                onClick={() => unbind(item.keyId, item.masked)}
+              >
+                解绑
+              </Button>
+            </div>
+          ))}
+        </div>
       ) : (
         <Notice variant="info">当前尚未绑定 AIPDD API Key，按下方步骤注册并粘贴 Key 绑定。</Notice>
       )}
@@ -131,8 +153,8 @@ export function AipddKeyPanel() {
           value={keyInput}
           onChange={(event) => setKeyInput(event.target.value)}
           placeholder={
-            status?.bound
-              ? "粘贴新的 AIPDD API Key 换绑"
+            keys.length
+              ? "再粘贴一把 AIPDD API Key 追加绑定"
               : "粘贴 AIPDD API Key（sk- 开头 51 位）"
           }
           maxLength={200}
@@ -140,14 +162,9 @@ export function AipddKeyPanel() {
           onPressEnter={() => void bind()}
         />
         <Button type="primary" loading={busy} disabled={loading} onClick={() => void bind()}>
-          {status?.bound ? "换绑" : "绑定"}
+          {keys.length ? "添加 Key" : "绑定"}
         </Button>
       </Space.Compact>
-      {status?.bound ? (
-        <div style={{ marginTop: 12 }}>
-          <Button danger onClick={unbind}>解绑</Button>
-        </div>
-      ) : null}
 
       <div style={{ marginTop: 18 }}>
         <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>

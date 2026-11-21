@@ -1,0 +1,5 @@
+<web-view wx:if="{{url}}" src="{{url}}"></web-view>
+
+<view class="empty" wx:elif="{{error}}">{{error}}</view>
+
+<view class="empty" wx:else>正在打开…</view>

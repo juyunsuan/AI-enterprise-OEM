@@ -1,0 +1,14 @@
+<!-- 自动生成，请勿手改。源：packages/contracts/src；命令：pnpm api:index -->
+
+# 业务域：mini-guide（`mini-guide`）
+
+> 自动派生摘要。完整 schema 在 `docs/api/openapi.json` 按 path 查找；不要整份加载。
+
+| 操作 ID | 方法 | 路径 | 动作 | 读写 | 通道 | 路径参数 | 查询 | 请求体 | 响应 |
+|---|---|---|---|---|---|---|---|---|---|
+| `MiniGuide_view` | GET | `/enterprise/mini-guide/detail` | 查看 | 读 | session(会话) |  | tool |  | data |
+| `MiniGuide_downloadPackage` | POST | `/enterprise/mini-guide/package` | DOWNLOADPACKAGE | 写 | session(会话) |  |  | tool | data |
+| `MiniGuide_shared` | GET | `/enterprise/mini-guide/shared` | 共享 | 读 | session(会话) |  |  |  | data |
+
+返回 `INDEX.md`。
+

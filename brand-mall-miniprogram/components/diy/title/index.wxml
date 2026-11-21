@@ -1,0 +1,4 @@
+<view class="diy-title">
+  <view class="main {{alignClass}} {{bold ? 'bold' : ''}}">{{main}}</view>
+  <view class="sub {{alignClass}}" wx:if="{{sub}}">{{sub}}</view>
+</view>

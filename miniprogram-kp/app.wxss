@@ -1,0 +1,166 @@
+/**
+ * 全局样式：只放各页复用的卡片/标签/按钮/空态。
+ * 主色不在这里写死——站点主题色由运行时 config.themeColor 决定，
+ * 页面通过 style 内联（class 只负责形状），保证同一套包能换皮。
+ */
+page {
+  --primary: #3370ff;
+  --bg: #f5f6f8;
+  --card: #ffffff;
+  --text: #1f2329;
+  --muted: #8a8f99;
+  --line: #eaecef;
+  --vip: #f19e38;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 28rpx;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC",
+    "Helvetica Neue", sans-serif;
+}
+
+.page {
+  min-height: 100vh;
+  padding: 24rpx;
+  box-sizing: border-box;
+}
+
+.card {
+  background: var(--card);
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 24rpx;
+  box-shadow: 0 2rpx 12rpx rgba(31, 35, 41, 0.04);
+  box-sizing: border-box;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+}
+
+.between {
+  justify-content: space-between;
+}
+
+.section-title {
+  font-size: 32rpx;
+  font-weight: 600;
+}
+
+.title {
+  font-size: 30rpx;
+  font-weight: 600;
+  line-height: 44rpx;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 24rpx;
+}
+
+.ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ellipsis-2 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.tag {
+  display: inline-block;
+  padding: 2rpx 14rpx;
+  border-radius: 999rpx;
+  font-size: 22rpx;
+  line-height: 34rpx;
+  background: #f2f3f5;
+  color: var(--muted);
+}
+
+.tag-vip {
+  background: rgba(241, 158, 56, 0.14);
+  color: var(--vip);
+}
+
+.tag-points {
+  background: rgba(245, 63, 63, 0.1);
+  color: #f53f3f;
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 76rpx;
+  padding: 0 32rpx;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  background: var(--primary);
+  color: #fff;
+}
+
+.btn-plain {
+  background: #f2f3f5;
+  color: var(--text);
+}
+
+.btn[disabled] {
+  opacity: 0.5;
+}
+
+.arrow {
+  color: var(--muted);
+  font-size: 32rpx;
+  margin-left: 8rpx;
+}
+
+.empty {
+  padding: 120rpx 24rpx;
+  text-align: center;
+  color: var(--muted);
+  font-size: 26rpx;
+  line-height: 40rpx;
+}
+
+.divider {
+  height: 1rpx;
+  background: var(--line);
+  margin: 20rpx 0;
+}
+
+.input {
+  height: 80rpx;
+  padding: 0 20rpx;
+  border: 1rpx solid var(--line);
+  border-radius: 12rpx;
+  background: #fbfbfc;
+  font-size: 28rpx;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.cell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 26rpx 0;
+  border-bottom: 1rpx solid var(--line);
+}
+
+.cell:last-child {
+  border-bottom: none;
+}
+
+.footer-gap {
+  height: 140rpx;
+}
+
+/* 封面缺图时不留空白洞：用灰底占位，避免整页看起来像坏了 */
+.cover {
+  background: #eef0f3;
+  overflow: hidden;
+}

@@ -1,0 +1,3 @@
+.material-row {
+  border-bottom: none;
+}

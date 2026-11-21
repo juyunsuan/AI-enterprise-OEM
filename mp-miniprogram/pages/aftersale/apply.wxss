@@ -1,0 +1,18 @@
+.order-line {
+  padding: 16rpx 0;
+}
+
+.thumb.small {
+  width: 120rpx;
+  height: 120rpx;
+}
+
+.desc-input {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 160rpx;
+  background: #f7f8fa;
+  border-radius: 12rpx;
+  padding: 20rpx;
+  font-size: 26rpx;
+}

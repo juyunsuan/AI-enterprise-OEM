@@ -1,0 +1,16 @@
+<view class="page" style="{{themeStyle}}">
+  <view class="muted count" wx:if="{{!loading && list.length}}">共获取 {{total}} 门课程</view>
+
+  <resource-card
+    wx:for="{{list}}"
+    wx:key="id"
+    item="{{item}}"
+    bindtap="openResource"
+    data-resourceid="{{item.resourceId}}"
+  />
+
+  <view class="empty" wx:if="{{!loading && !list.length}}">{{error || '还没有获取过课程，去首页挑一门吧'}}</view>
+  <view class="load-tip" wx:if="{{loadingMore}}">加载中…</view>
+  <view class="load-tip" wx:elif="{{!hasMore && list.length}}">没有更多了</view>
+  <view class="footer-gap"></view>
+</view>

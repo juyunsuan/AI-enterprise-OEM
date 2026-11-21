@@ -105,11 +105,15 @@ async function doOpen(id) {
   }
   const chromeExtensions = require('../chrome-extensions');
   const extensionDirs = [];
-  // 内置插件（如 Automa）每个窗口都默认加载；用户勾选的插件按档案生效。
+  const disabled = new Set(
+    require('../config-store').get().disabledChromeExtIds || []
+  );
+  // 内置插件（Automa / AIPDD / 桥接）每个窗口都默认加载；被禁用的跳过。
   for (const item of chromeExtensions.builtins()) {
-    extensionDirs.push(item.path);
+    if (!disabled.has(item.id)) extensionDirs.push(item.path);
   }
   for (const extensionId of profile.extensionIds) {
+    if (disabled.has(extensionId)) continue;
     const dir = chromeExtensions.resolveDir(extensionId);
     if (dir && !extensionDirs.includes(dir)) extensionDirs.push(dir);
   }
@@ -327,12 +331,28 @@ async function ensureSession(state) {
   return state.cdp;
 }
 
-/** Agent 默认窗口：显式设置优先；没设置就取最近使用档案；没有任何档案时自动建一个。 */
-async function agentWindow() {
-  let profile = profiles.agentProfile();
+/**
+ * Agent 默认窗口：会话绑定优先 → 显式设置 → 最近使用档案；都没有就自动建一个。
+ * 会话首次使用浏览器时把当时解析到的窗口记进会话，之后固定，A/B 会话互不串台。
+ */
+async function agentWindow(sessionId) {
+  const chatStore = require('../chat-store');
+  const sessionKey = String(sessionId || '').trim();
+  let boundId = '';
+  if (sessionKey) {
+    const conversation = chatStore.getConversation(sessionKey);
+    boundId = conversation && conversation.fpProfileId ? conversation.fpProfileId : '';
+  }
+  let profile = boundId ? profiles.get(boundId) : null;
   if (!profile) {
-    profile = profiles.create({ name: '默认窗口', platform: 'win' });
-    profiles.setAgentProfile(profile.id);
+    profile = profiles.agentProfile();
+    if (!profile) {
+      profile = profiles.create({ name: '默认窗口', platform: 'win' });
+      profiles.setAgentProfile(profile.id);
+    }
+    if (sessionKey) {
+      chatStore.updateConversation(sessionKey, { fpProfileId: profile.id });
+    }
   }
   if (!windows.has(profile.id)) {
     await open(profile.id);
@@ -340,8 +360,8 @@ async function agentWindow() {
   return windows.get(profile.id);
 }
 
-async function navigateAgent(rawUrl) {
-  const state = await agentWindow();
+async function navigateAgent(rawUrl, sessionId) {
+  const state = await agentWindow(sessionId);
   const target = fingerprintUrl(rawUrl);
   const session = await ensureSession(state);
   await session.call('Page.navigate', { url: target }, 20000);
@@ -349,8 +369,8 @@ async function navigateAgent(rawUrl) {
   return { profileId: state.profileId, url: target };
 }
 
-async function evaluateAgent(expression, timeoutMs) {
-  const state = await agentWindow();
+async function evaluateAgent(expression, timeoutMs, sessionId) {
+  const state = await agentWindow(sessionId);
   const session = await ensureSession(state);
   const result = await session.call(
     'Runtime.evaluate',

@@ -1,0 +1,41 @@
+.address {
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #f0f1f5;
+}
+
+.address:last-child {
+  border-bottom: none;
+}
+
+.address-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.address-name {
+  flex: 1;
+  margin-right: 16rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.address-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12rpx;
+}
+
+.action {
+  margin-left: 32rpx;
+}
+
+.danger {
+  color: #f5413d;
+}
+
+.bar-button {
+  width: 100%;
+  height: 80rpx;
+  line-height: 80rpx;
+}

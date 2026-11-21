@@ -1,0 +1,65 @@
+.service-list {
+  padding-bottom: 24rpx;
+}
+
+.filter-scroll {
+  white-space: nowrap;
+}
+
+.filter-pills {
+  padding: 8rpx 24rpx 16rpx;
+}
+
+.list-card {
+  padding: 0 24rpx;
+}
+
+.service {
+  display: flex;
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid #f0f1f5;
+}
+
+.service:last-child {
+  border-bottom: none;
+}
+
+.service-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.service-name {
+  font-size: 30rpx;
+  font-weight: 600;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.service-meta {
+  margin-top: 8rpx;
+}
+
+.service-price {
+  margin-top: 10rpx;
+}
+
+.origin {
+  margin-left: 12rpx;
+  color: #a6abb3;
+  font-size: 22rpx;
+  text-decoration: line-through;
+}
+
+.list-tip {
+  padding: 24rpx;
+  text-align: center;
+  color: #8a8f99;
+  font-size: 24rpx;
+}

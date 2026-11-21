@@ -1,0 +1,103 @@
+{
+  "awbotTitle": "AWBot 手机",
+  "awbotSubtitle": "平台派发指令到这台手机，由本机 Agent 执行。",
+  "awbotSectionLink": "平台连接",
+  "awbotSectionDevice": "这台手机",
+  "awbotSectionCommands": "最近指令",
+  "awbotStatusUnpaired": "未连接平台",
+  "awbotStatusStarting": "正在连接平台…",
+  "awbotStatusOnline": "已连接平台",
+  "awbotStatusRetrying": "正在重连平台…",
+  "awbotStatusStopped": "已暂停",
+  "awbotStatusOnlineHint": "平台派发的指令会交给本机 Agent 执行。",
+  "awbotStatusUnpairedHint": "在平台点「扫码配对」，用手机扫二维码即可，不需要登录。",
+  "awbotSiteAddress": "站点地址",
+  "awbotSiteHint": "更换站点会重新开始配对。",
+  "awbotSiteDialogTitle": "平台站点地址",
+  "awbotSiteDialogHint": "https://awbot.example.com",
+  "awbotAccount": "平台账号",
+  "awbotNotSignedIn": "未登录",
+  "awbotPoints": "积分",
+  "awbotPairAction": "去配对",
+  "awbotAllowWake": "允许平台唤起本机 Agent",
+  "awbotAllowWakeHint": "关闭后，只有引擎已经在运行时才执行平台指令。",
+  "awbotModelSync": "平台模型",
+  "awbotModelSynced": "已同步到本机模型配置",
+  "awbotModelNotSynced": "尚未同步",
+  "awbotModelSyncError": "同步失败：{message}",
+  "@awbotModelSyncError": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "awbotRunning": "正在执行：{title}",
+  "@awbotRunning": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "awbotQueued": "{count} 条在排队",
+  "@awbotQueued": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "awbotUnbind": "断开连接",
+  "awbotUnbindTitle": "断开与平台的连接？",
+  "awbotUnbindBody": "手机不再接收平台指令，平台同步过来的模型也会从本机模型配置里移除。",
+  "awbotUnbound": "已断开连接",
+  "awbotCommandsEmpty": "还没有执行过平台指令。",
+  "awbotCodeTitle": "连接码",
+  "awbotCodeRequest": "生成连接码",
+  "awbotCodeHint": "在平台的「工作台 → Agent-Bot → AWBot 手机」里输入下面的连接码。",
+  "awbotCodeExpires": "10 分钟内有效",
+  "awbotCodeNew": "换一个连接码",
+  "awbotCodeWaiting": "等待平台确认…",
+  "awbotSignInFirst": "先登录平台账号，再生成连接码。",
+  "awbotUsername": "用户名",
+  "awbotPassword": "密码",
+  "awbotSignedInNotice": "已登录平台账号",
+  "awbotSignedOut": "已退出登录",
+  "awbotPaired": "这台手机已连接到平台",
+  "awbotEngineNotRunning": "本机引擎还没运行",
+  "awbotEngineLost": "本机引擎断开了，这一轮没有跑完。",
+  "awbotTurnFailed": "这一轮执行失败",
+  "awbotNoticeTool": "调用工具 {name}",
+  "@awbotNoticeTool": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "awbotNoticeApproval": "等待在手机上的确认：{name}",
+  "@awbotNoticeApproval": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "awbotSessionTitle": "AWBot 平台",
+  "awbotProviderName": "AWBot 平台（自动同步）",
+  "awbotSiteMissing": "请先填写站点地址",
+  "awbotScanPair": "扫码配对",
+  "awbotScanPairHint": "用手机扫描平台或 AWBotDSH 上的二维码：平台码只连接平台；AWBotDSH 码会同时连接平台和这台电脑。",
+  "awbotManualPair": "手动输入配对码",
+  "awbotPairCode": "配对码",
+  "awbotPairSubmit": "配对",
+  "awbotScanTitle": "扫码配对",
+  "awbotScanHint": "对准平台「AWBot 手机」页或 AWBotDSH「设备绑定」里显示的二维码。",
+  "awbotScanInvalid": "不是有效的 AWBot 配对二维码",
+  "awbotScanUnavailable": "相机不可用，可改用相册里的二维码截图",
+  "awbotScanPermission": "没有相机权限，请在系统设置里允许后重试",
+  "awbotScanPairing": "正在配对…",
+  "awbotScanGallery": "从相册选择二维码",
+  "awbotDesktopHost": "同时连接的 AWBotDSH 主机"
+}

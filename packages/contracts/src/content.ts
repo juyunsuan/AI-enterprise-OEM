@@ -1492,7 +1492,7 @@ export const contentAgentScheduleSchema = z.object({
   connectorIds: z.array(z.number()),
   /** 本任务只处理哪些邮箱账号 id；空数组＝不限定 */
   mailboxIds: z.array(z.number()),
-  /** 到点这一轮允许 Agent 指挥的目标类型（Bot 主机 / Mobot 手机 / WorkBuddy 企业云）；空数组＝不开群控 */
+  /** 到点这一轮允许 Agent 指挥的目标类型（Bot 主机 / AWBot 手机 / WorkBuddy 企业云）；空数组＝不开群控 */
   dispatchScope: z.array(z.enum(BOT_DISPATCH_TARGET_KINDS)),
   /**
    * 无人值守是否允许执行写动作；默认 false＝定时任务只能读取与出草案，

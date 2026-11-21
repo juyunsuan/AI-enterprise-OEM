@@ -7,6 +7,7 @@ import { geoChatMulti } from '../geo/geo-llm.client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CrmScopeService, CrmContext } from './crm.scope';
 import { jsonObject, moneyStr } from './crm.helpers';
+import { meterChatCall } from '../ai/ai-gateway';
 
 const MAX_INPUT = 8000;
 
@@ -66,6 +67,12 @@ export class CrmAiService {
       timeoutMs: 90_000,
       userId: user.userId,
       purpose: 'chat',
+    });
+    // 直连模型也要留用量事实（只记录不扣费），否则成本报表永远看不到这条链路
+    await meterChatCall(user.userId, reply, {
+      module: 'crm',
+      operation: 'ai-assist',
+      model: target.model,
     });
     return reply.reply;
   }

@@ -1,0 +1,211 @@
+<!--
+  装修楼层渲染模板：市场首页与店铺首页共用。
+
+  数据由 utils/diy.js 归一化并补齐（block = { type, props, data }），
+  这里只做展示与事件绑定；所有点击统一走页面上的 diyXxx 方法，
+  再由 utils/navigate.js 落成真实页面。
+-->
+<template name="diy-block">
+  <view wx:if="{{block.type === 'spacer'}}" style="height:{{block.props.height}}rpx"></view>
+
+  <view wx:elif="{{block.type === 'searchBar'}}" class="diy-search">
+    <input
+      class="diy-search-input"
+      style="border-radius:{{block.props.radius}}rpx"
+      value="{{diyKeyword}}"
+      placeholder="{{block.props.placeholder}}"
+      placeholder-class="placeholder"
+      confirm-type="search"
+      bindinput="diyKeyword"
+      bindconfirm="diySearch"
+    />
+    <view class="diy-search-btn" style="color:{{themeColor}}" bindtap="diySearch">搜索</view>
+  </view>
+
+  <swiper
+    wx:elif="{{block.type === 'imageAds' && block.props.items.length}}"
+    class="diy-ads"
+    style="height:{{block.props.height}}rpx"
+    indicator-dots="{{block.props.items.length > 1}}"
+    autoplay="{{block.props.items.length > 1}}"
+    interval="{{block.props.interval * 1000}}"
+    circular
+  >
+    <swiper-item
+      wx:for="{{block.props.items}}"
+      data-link="{{item.link}}"
+      bindtap="diyLink"
+    >
+      <image
+        class="diy-ads-image"
+        style="border-radius:{{block.props.radius}}rpx"
+        src="{{item.image}}"
+        mode="aspectFill"
+      />
+    </swiper-item>
+  </swiper>
+
+  <view
+    wx:elif="{{block.type === 'imageCube' && block.props.items.length}}"
+    class="diy-cube"
+  >
+    <view
+      wx:for="{{block.props.items}}"
+      class="diy-cube-cell"
+      style="{{block.data.cellStyle}}"
+      data-link="{{item.link}}"
+      bindtap="diyLink"
+    >
+      <image
+        class="diy-cube-image"
+        style="border-radius:{{block.props.radius}}rpx"
+        src="{{item.image}}"
+        mode="aspectFill"
+      />
+    </view>
+  </view>
+
+  <view
+    wx:elif="{{block.type === 'nav' && block.props.items.length}}"
+    class="diy-nav card"
+  >
+    <view
+      wx:for="{{block.props.items}}"
+      class="diy-nav-cell"
+      style="{{block.data.cellStyle}}"
+      data-link="{{item.link}}"
+      bindtap="diyLink"
+    >
+      <image wx:if="{{item.image}}" class="diy-nav-icon" src="{{item.image}}" mode="aspectFill" />
+      <view class="diy-nav-text">{{item.text}}</view>
+    </view>
+  </view>
+
+  <view wx:elif="{{block.type === 'notice' && block.props.text}}" class="diy-notice">
+    <text wx:if="{{block.props.icon}}" style="margin-right:8rpx">{{block.props.icon}}</text>
+    <text class="diy-notice-text">{{block.props.text}}</text>
+  </view>
+
+  <view wx:elif="{{block.type === 'title'}}" class="diy-title" style="text-align:{{block.props.align}}">
+    <view class="diy-title-main" style="font-weight:{{block.props.bold ? 600 : 400}}">{{block.props.main}}</view>
+    <view wx:if="{{block.props.sub}}" class="diy-title-sub">{{block.props.sub}}</view>
+  </view>
+
+  <view wx:elif="{{block.type === 'richText' && block.props.html}}" class="card diy-rich">
+    <rich-text nodes="{{block.props.html}}"></rich-text>
+  </view>
+
+  <block wx:elif="{{block.type === 'goodsList' && block.data}}">
+    <view wx:if="{{block.props.showTitle}}" class="diy-floor-head">
+      <view class="section-title" style="margin-bottom:0">好物推荐</view>
+    </view>
+    <view wx:if="{{block.data.items.length}}" class="goods-grid">
+      <view
+        wx:for="{{block.data.items}}"
+        wx:key="id"
+        class="goods-card"
+        style="{{block.data.cardStyle}}"
+        data-id="{{item.id}}"
+        bindtap="diyGoods"
+      >
+        <image class="goods-cover" src="{{item.coverImage}}" mode="aspectFill" lazy-load />
+        <view class="goods-body">
+          <view wx:if="{{block.props.showTitle}}" class="goods-title">{{item.title}}</view>
+          <view wx:if="{{block.props.showSubtitle && item.subtitle}}" class="muted">{{item.subtitle}}</view>
+          <view class="goods-meta">
+            <text wx:if="{{block.props.showPrice}}" class="money">¥{{item.priceText}}</text>
+            <text wx:if="{{block.props.showSales}}" class="muted">已售 {{item.sales}}</text>
+          </view>
+          <view class="goods-shop">{{item.shopName}}</view>
+        </view>
+      </view>
+    </view>
+    <view wx:else class="card empty" style="padding:40rpx 0">该楼层暂无商品</view>
+  </block>
+
+  <scroll-view
+    wx:elif="{{block.type === 'categoryLine' && block.data && block.data.items.length}}"
+    class="diy-category"
+    scroll-x
+    enable-flex
+  >
+    <view
+      wx:for="{{block.data.items}}"
+      wx:key="id"
+      class="diy-category-item"
+      data-id="{{item.id}}"
+      data-name="{{item.name}}"
+      bindtap="diyCategory"
+    >
+      <image wx:if="{{item.icon}}" class="diy-category-icon" src="{{item.icon}}" mode="aspectFill" />
+      <view class="diy-category-text">{{item.name}}</view>
+    </view>
+  </scroll-view>
+
+  <view wx:elif="{{block.type === 'coupon' && block.data && block.data.items.length}}" class="diy-coupons">
+    <view
+      wx:for="{{block.data.items}}"
+      wx:key="id"
+      class="diy-coupon"
+      style="{{block.data.cardStyle}}"
+      bindtap="diyCoupon"
+    >
+      <view class="diy-coupon-value">{{item.couponText}}</view>
+      <view class="diy-coupon-name">{{item.name}}</view>
+      <view class="diy-coupon-threshold">{{item.thresholdText}}</view>
+      <view class="diy-coupon-btn {{item.claimable ? '' : 'off'}}">{{item.hintText}}</view>
+    </view>
+  </view>
+
+  <view
+    wx:elif="{{block.type === 'storeHead' && block.data}}"
+    class="card diy-store-head"
+    style="border-left:8rpx solid {{themeColor}}"
+  >
+    <image
+      wx:if="{{block.props.showLogo && block.data.info.logo}}"
+      class="diy-store-logo"
+      src="{{block.data.info.logo}}"
+      mode="aspectFill"
+    />
+    <view class="grow">
+      <view class="diy-store-name">{{block.data.info.name}}</view>
+      <view wx:if="{{block.props.showSlogan}}" class="muted">{{block.data.info.intro || '欢迎光临'}}</view>
+    </view>
+    <view
+      wx:if="{{block.props.showFollow && block.data.canFollow}}"
+      class="btn btn-small {{block.data.info.followed ? '' : 'btn-primary'}}"
+      bindtap="diyFollow"
+    >{{block.data.info.followed ? '已关注' : '关注'}}</view>
+    <view
+      wx:else
+      class="btn btn-small btn-ghost"
+      bindtap="diyAssist"
+    >客服</view>
+  </view>
+
+  <block wx:elif="{{block.type === 'shopList' && block.data}}">
+    <view class="diy-floor-head">
+      <view class="section-title" style="margin-bottom:0">入驻店铺</view>
+    </view>
+    <view wx:if="{{block.data.items.length}}" class="diy-shops">
+      <view
+        wx:for="{{block.data.items}}"
+        wx:key="id"
+        class="diy-shop"
+        style="{{block.data.cardStyle}}"
+        data-id="{{item.id}}"
+        bindtap="diyShop"
+      >
+        <image wx:if="{{item.logo}}" class="diy-shop-logo" src="{{item.logo}}" mode="aspectFill" />
+        <view class="diy-shop-name">{{item.name}}</view>
+        <view wx:if="{{block.props.showIntro}}" class="muted diy-shop-intro">{{item.intro || '进店逛逛'}}</view>
+      </view>
+    </view>
+    <view wx:else class="card empty" style="padding:40rpx 0">还没有入驻店铺</view>
+  </block>
+
+  <view wx:elif="{{block.type === 'assist'}}" class="diy-assist">
+    <view class="btn btn-ghost" bindtap="diyAssist">{{block.props.label || '联系客服'}}</view>
+  </view>
+</template>

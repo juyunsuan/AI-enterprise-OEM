@@ -1,0 +1,133 @@
+.picker-inline {
+  color: #1a73e8;
+  font-size: 28rpx;
+}
+
+.metric-scroll {
+  white-space: nowrap;
+  padding: 8rpx 24rpx 0;
+}
+
+.metric-pills {
+  padding: 8rpx 0 16rpx;
+}
+
+.block-title {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.chart {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  height: 280rpx;
+  margin-top: 24rpx;
+  padding-bottom: 8rpx;
+}
+
+.bar-item {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+}
+
+.bar {
+  width: 18rpx;
+  border-radius: 8rpx 8rpx 0 0;
+  background: #1a73e8;
+}
+
+.bar-abnormal-bg {
+  background: #f5413d;
+}
+
+.bar-value {
+  margin-bottom: 6rpx;
+  color: #5c6068;
+  font-size: 20rpx;
+}
+
+.bar-abnormal {
+  color: #f5413d;
+}
+
+.bar-time {
+  margin-top: 8rpx;
+  color: #a6abb3;
+  font-size: 18rpx;
+  transform: scale(0.9);
+}
+
+.empty.small {
+  padding: 32rpx 0;
+  font-size: 24rpx;
+}
+
+.record-row {
+  display: flex;
+  align-items: center;
+  margin-top: 12rpx;
+}
+
+.value-input {
+  flex: 1;
+}
+
+.unit-text {
+  margin-left: 12rpx;
+  color: #5c6068;
+  font-size: 26rpx;
+}
+
+.field-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 16rpx;
+}
+
+.field-row picker {
+  width: 48%;
+}
+
+.note-input {
+  margin-top: 16rpx;
+}
+
+.save-button {
+  margin-top: 20rpx;
+  height: 80rpx;
+  line-height: 80rpx;
+}
+
+.log {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #f0f1f5;
+}
+
+.log:last-child {
+  border-bottom: none;
+}
+
+.log-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.log-name {
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.log-value {
+  margin-left: 16rpx;
+  color: #1a73e8;
+  font-size: 30rpx;
+  font-weight: 600;
+}

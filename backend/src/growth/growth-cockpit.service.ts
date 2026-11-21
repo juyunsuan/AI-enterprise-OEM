@@ -1,6 +1,9 @@
 import type { CurrentUser } from '../auth/current-user';
 import type { HrmScopeService } from '../hrm/hrm.scope';
 import type { PrismaService } from '../prisma/prisma.service';
+import { withBridgeTimeout } from '../commerce-core/outbox-policy';
+import { unwiredErpPort } from '../erp/erp-port';
+import type { ErpPort } from '../erp/erp-port';
 
 type Row = Record<string, unknown>;
 
@@ -22,6 +25,8 @@ export class GrowthCockpitService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly scope: HrmScopeService,
+    /** ERP 读侧端口：未注入时空转；查询失败/超时只降级空态，不让驾驶舱整页报错。 */
+    private readonly erp: ErpPort = unwiredErpPort(),
   ) {}
 
   async cockpit(user: CurrentUser, query: Row) {
@@ -309,24 +314,13 @@ export class GrowthCockpitService {
           orderBy: { id: 'asc' },
         })
       : [];
-    const receivables = contractIds.length
-      ? await this.prisma.erpReceivable.findMany({
-          where: {
-            ...orgKey,
-            status: { not: 'CANCELED' },
-            OR: [
-              { contractId: { in: contractIds } },
-              { sourceType: 'CONTRACT', sourceId: { in: contractIds } },
-            ],
-          },
-          select: {
-            contractId: true,
-            sourceId: true,
-            amount: true,
-            receivedAmount: true,
-          },
-        })
-      : [];
+    // ERP 应收读数走读侧端口：失败/超时降级为空态（合同仍展示，结算态标记不可用）。
+    const receivableRead = contractIds.length
+      ? await withBridgeTimeout(() =>
+          this.erp.listReceivablesByContracts(orgKey, contractIds),
+        )
+      : undefined;
+    const receivables = receivableRead?.ok ? receivableRead.value : [];
     const customers = customerIds.length
       ? await this.prisma.crmCustomer.findMany({
           where: { ...orgKey, id: { in: customerIds } },
@@ -422,6 +416,8 @@ export class GrowthCockpitService {
         total: contracts.length,
         signedAmount: signedAmount.toFixed(2),
         receivedAmount: receivedAmount.toFixed(2),
+        // ERP 暂不可用时应收结算读数按空态渲染，页面其余口径不受影响。
+        erpAvailable: receivableRead ? receivableRead.ok : true,
       },
       list,
     };

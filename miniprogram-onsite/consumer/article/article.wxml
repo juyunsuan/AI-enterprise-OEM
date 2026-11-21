@@ -1,0 +1,35 @@
+<view class="empty" wx:if="{{loading}}">正在加载内容…</view>
+
+<view class="card closed" wx:elif="{{notReady}}">
+  <view class="title">店铺暂未开通</view>
+  <view class="muted note">{{readyReason}}</view>
+</view>
+
+<view class="empty" wx:elif="{{error}}">{{error}}</view>
+
+<block wx:else>
+  <view class="card">
+    <view class="title article-title">{{article.title}}</view>
+    <view class="meta" wx:if="{{pvText || timeText}}">
+      <text class="muted" wx:if="{{timeText}}">{{timeText}}</text>
+      <text class="muted meta-right" wx:if="{{pvText}}">{{pvText}}</text>
+    </view>
+    <image
+      class="cover"
+      wx:if="{{article.cover}}"
+      src="{{article.cover}}"
+      mode="aspectFill"
+      bindtap="previewCover"
+    ></image>
+    <view class="summary" wx:if="{{article.summary}}">{{article.summary}}</view>
+    <rich-text class="content" nodes="{{article.content}}" wx:if="{{article.content}}"></rich-text>
+    <view class="muted" wx:else>正文暂未填写</view>
+  </view>
+
+  <view class="card" wx:if="{{hasForm}}">
+    <view class="title">填写表单</view>
+    <view class="muted note" wx:if="{{article.formPurpose}}">{{article.formPurpose}}</view>
+    <view class="muted note" wx:else>按店铺要求留下联系方式与信息。</view>
+    <button class="button-primary form-btn" bindtap="openForm">填写表单</button>
+  </view>
+</block>

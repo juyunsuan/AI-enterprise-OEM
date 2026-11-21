@@ -1,0 +1,85 @@
+<view class="page safe-bottom">
+  <view class="profile-card">
+    <view class="avatar">
+      <image wx:if="{{profile.avatar}}" src="{{profile.avatar}}" mode="aspectFill" class="avatar-img" />
+      <view wx:else class="avatar-fallback">客</view>
+    </view>
+    <view class="flex-1">
+      <view class="nickname">{{profile.nickname || '微信顾客'}}</view>
+      <view class="phone">{{profile.phone || '未绑定手机号'}}</view>
+    </view>
+    <view wx:if="{{!logged}}" class="login-btn" bindtap="retryLogin">登录</view>
+  </view>
+
+  <view class="stats">
+    <view class="stat" bindtap="goCoupons">
+      <view class="stat-value">{{profile.points || 0}}</view>
+      <view class="stat-label">积分</view>
+    </view>
+    <view class="stat" bindtap="goCoupons">
+      <view class="stat-value">优惠券</view>
+      <view class="stat-label">我的券</view>
+    </view>
+    <view class="stat" bindtap="goOrders" data-tab="ALL">
+      <view class="stat-value">全部</view>
+      <view class="stat-label">订单</view>
+    </view>
+  </view>
+
+  <view class="card orders">
+    <view class="row-between orders-head">
+      <view class="orders-title">我的订单</view>
+      <view class="muted text-12" bindtap="goOrders" data-tab="ALL">查看全部 ›</view>
+    </view>
+    <view class="order-links">
+      <view class="order-link" bindtap="goOrders" data-tab="PENDING_PAYMENT">
+        <view class="order-icon">付</view>
+        <view>待支付</view>
+      </view>
+      <view class="order-link" bindtap="goOrders" data-tab="PAID">
+        <view class="order-icon">备</view>
+        <view>备餐中</view>
+      </view>
+      <view class="order-link" bindtap="goOrders" data-tab="SHIPPED">
+        <view class="order-icon">取</view>
+        <view>待取餐</view>
+      </view>
+      <view class="order-link" bindtap="goOrders" data-tab="COMPLETED">
+        <view class="order-icon">完</view>
+        <view>已完成</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="card menu-card">
+    <view class="menu-row" bindtap="goCoupons">
+      <view>优惠券</view>
+      <view class="muted">›</view>
+    </view>
+    <view class="menu-row" bindtap="goAddress">
+      <view>收货地址</view>
+      <view class="muted">›</view>
+    </view>
+    <view class="menu-row" bindtap="openService">
+      <view>联系门店</view>
+      <view class="muted">{{shop.servicePhone || '›'}}</view>
+    </view>
+    <view class="menu-row" bindtap="about">
+      <view>关于积分与 SCRM</view>
+      <view class="muted">›</view>
+    </view>
+  </view>
+
+  <view wx:if="{{points.length}}" class="card">
+    <view class="points-title">近期积分</view>
+    <view wx:for="{{points}}" wx:key="id" class="points-row">
+      <view class="flex-1">
+        <view class="points-remark">{{item.remark || item.type}}</view>
+        <view class="muted text-12">{{item.createdAt}}</view>
+      </view>
+      <view class="{{item.points >= 0 ? 'points-plus' : 'minus'}}">
+        {{item.points >= 0 ? '+' : ''}}{{item.points}}
+      </view>
+    </view>
+  </view>
+</view>

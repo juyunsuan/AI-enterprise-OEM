@@ -1,0 +1,20 @@
+<view class="page" style="{{themeStyle}}">
+  <view class="empty" wx:if="{{loading}}">加载中…</view>
+  <view class="empty" wx:elif="{{!list.length}}">{{error || '暂无公告'}}</view>
+
+  <view class="card" wx:else>
+    <view
+      class="notice-cell"
+      wx:for="{{list}}"
+      wx:key="id"
+      bindtap="openItem"
+      data-id="{{item.id}}"
+    >
+      <view class="notice-body">
+        <view class="notice-title ellipsis-2">{{item.title}}</view>
+        <view class="muted notice-date">{{item.dateText}}</view>
+      </view>
+      <text class="arrow">›</text>
+    </view>
+  </view>
+</view>

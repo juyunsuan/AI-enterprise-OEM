@@ -1,0 +1,119 @@
+<view class="page" wx:if="{{!loading}}">
+  <view class="notice-box">
+    填报内容会保存到平台记录，正式年报公示仍需到国家企业信用信息公示系统办理。
+  </view>
+
+  <view class="card">
+    <view class="section-label">主体信息</view>
+    <view class="form-note" wx:if="{{prefillHint}}">{{prefillHint}}</view>
+
+    <view class="field">
+      <view class="field-label">企业类型 *</view>
+      <picker mode="selector" range="{{types}}" value="{{typeIndex}}" bindchange="onTypeChange">
+        <view class="picker {{form.enterprise_type ? '' : 'picker-placeholder'}}">{{form.enterprise_type || '请选择企业类型'}}</view>
+      </picker>
+    </view>
+
+    <view class="field">
+      <view class="field-label">企业名称 *</view>
+      <input class="input" value="{{form.enterprise_name}}" placeholder="请输入营业执照上的名称" data-key="enterprise_name" bindinput="onInput" />
+    </view>
+
+    <view class="field">
+      <view class="field-label">统一社会信用代码</view>
+      <input class="input" value="{{form.uscc}}" placeholder="请输入统一社会信用代码" data-key="uscc" bindinput="onInput" />
+    </view>
+
+    <view class="field">
+      <view class="field-label">法定代表人 *</view>
+      <input class="input" value="{{form.legal_person}}" placeholder="请输入法定代表人姓名" data-key="legal_person" bindinput="onInput" />
+    </view>
+
+    <view class="field">
+      <view class="field-label">联系电话 *</view>
+      <input class="input" type="tel" maxlength="20" value="{{form.phone}}" placeholder="手机或座机号码（可含区号）" data-key="phone" bindinput="onInput" />
+    </view>
+
+    <view class="field-hint" wx:if="{{hasEnterprise}}">
+      身份证等敏感信息沿用企业认证资料，无需在此重复填写。
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="section-label">年报信息</view>
+
+    <view class="field">
+      <view class="field-label">报告年度 *</view>
+      <picker mode="selector" range="{{yearTexts}}" value="{{yearIndex}}" bindchange="onYearChange">
+        <view class="picker">{{yearTexts[yearIndex]}}</view>
+      </picker>
+    </view>
+
+    <view class="field">
+      <view class="field-label">经营状态 *</view>
+      <picker mode="selector" range="{{statuses}}" value="{{statusIndex}}" bindchange="onStatusChange">
+        <view class="picker">{{form.business_status}}</view>
+      </picker>
+    </view>
+
+    <view class="field">
+      <view class="field-label">企业通信地址 *</view>
+      <input class="input" value="{{form.address}}" placeholder="请输入企业通信地址" data-key="address" bindinput="onInput" />
+    </view>
+
+    <view class="field">
+      <view class="field-label">邮政编码</view>
+      <input class="input" type="number" maxlength="6" value="{{form.zip_code}}" placeholder="如 200000" data-key="zip_code" bindinput="onInput" />
+    </view>
+
+    <view class="field">
+      <view class="field-label">从业人数</view>
+      <input class="input" type="number" value="{{form.staff_count}}" placeholder="人" data-key="staff_count" bindinput="onInput" />
+    </view>
+
+    <view class="field">
+      <view class="field-label">社保参保人数</view>
+      <input class="input" type="number" value="{{form.social_insured}}" placeholder="人" data-key="social_insured" bindinput="onInput" />
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="section-label">经营数据（元，可选）</view>
+
+    <view class="field">
+      <view class="field-label">资产总额</view>
+      <input class="input" type="digit" value="{{form.total_assets}}" placeholder="元" data-key="total_assets" bindinput="onInput" />
+    </view>
+
+    <view class="field">
+      <view class="field-label">负债总额</view>
+      <input class="input" type="digit" value="{{form.total_liabilities}}" placeholder="元" data-key="total_liabilities" bindinput="onInput" />
+    </view>
+
+    <view class="field">
+      <view class="field-label">营业总收入</view>
+      <input class="input" type="digit" value="{{form.total_revenue}}" placeholder="元" data-key="total_revenue" bindinput="onInput" />
+    </view>
+
+    <view class="field">
+      <view class="field-label">纳税总额</view>
+      <input class="input" type="digit" value="{{form.total_tax}}" placeholder="元" data-key="total_tax" bindinput="onInput" />
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="section-label">备注</view>
+    <textarea class="textarea" value="{{form.remark}}" placeholder="可补充说明（选填）" data-key="remark" bindinput="onInput" maxlength="500"></textarea>
+  </view>
+
+  <view class="form-note">
+    提交后自动保存到平台台账，可在网页端「财税服务 → 财税工具 → 填报记录」查看同一条记录。
+  </view>
+
+  <view class="btn btn-block" style="height: 88rpx; font-size: 30rpx" bindtap="onSubmit">
+    {{saving ? '提交中…' : '提交年报记录'}}
+  </view>
+  <view class="footer-gap"></view>
+</view>
+
+<view class="empty" wx:if="{{loading}}">正在准备填报资料…</view>

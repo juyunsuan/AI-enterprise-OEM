@@ -1,0 +1,49 @@
+<view class="wrap" style="padding-bottom:200rpx">
+  <view wx:if="{{loading}}" class="empty">正在加载购物车…</view>
+
+  <view wx:elif="{{error}}" class="card">
+    <view class="error-box">{{error}}</view>
+    <view class="btn btn-primary" style="margin-top:20rpx" bindtap="load">重新加载</view>
+  </view>
+
+  <view wx:elif="{{!items.length}}" class="card">
+    <view class="empty" style="padding:80rpx 0">购物车还是空的</view>
+    <view class="btn btn-primary" bindtap="goShopping">去逛逛</view>
+  </view>
+
+  <block wx:else>
+    <view wx:for="{{items}}" wx:key="id" class="card cart-item">
+      <view class="check {{item.selected ? 'on' : ''}}" data-id="{{item.id}}" bindtap="toggle"></view>
+      <image class="thumb" src="{{item.image}}" mode="aspectFill" />
+      <view class="grow">
+        <view class="cart-title">{{item.title}}</view>
+        <view class="muted">{{item.skuName}} · {{item.shopName}}</view>
+        <view wx:if="{{item.invalidReason}}" class="muted" style="color:#b42318">{{item.invalidReason}}</view>
+        <view class="row" style="margin-top:12rpx">
+          <text class="money">¥{{item.priceText}}</text>
+          <view class="stepper">
+            <view class="stepper-btn" data-id="{{item.id}}" data-delta="-1" bindtap="changeQty">−</view>
+            <view class="stepper-value">{{item.quantity}}</view>
+            <view class="stepper-btn" data-id="{{item.id}}" data-delta="1" bindtap="changeQty">+</view>
+          </view>
+        </view>
+        <view class="row" style="margin-top:8rpx">
+          <text class="muted">小计 ¥{{item.lineText}}</text>
+          <text class="muted" data-id="{{item.id}}" bindtap="remove">删除</text>
+        </view>
+      </view>
+    </view>
+  </block>
+</view>
+
+<view wx:if="{{!loading && !error && items.length}}" class="bottom-bar">
+  <view class="row grow" bindtap="toggleAll">
+    <view class="check {{allSelected ? 'on' : ''}}"></view>
+    <text class="muted">全选</text>
+  </view>
+  <view class="grow" style="text-align:right">
+    <view class="muted">已选 {{selectedCount}} 件</view>
+    <view class="money">¥{{totalText}}</view>
+  </view>
+  <view class="btn btn-primary" bindtap="checkout">去结算</view>
+</view>

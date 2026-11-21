@@ -1,0 +1,44 @@
+<view class="diy-goods-list" wx:if="{{items.length}}">
+  <!-- 列表样式：左图右文 -->
+  <block wx:if="{{isList}}">
+    <view
+      class="row-item"
+      wx:for="{{items}}"
+      wx:key="id"
+      data-id="{{item.id}}"
+      bindtap="onTap"
+    >
+      <image class="row-pic" src="{{item.image}}" mode="aspectFill" lazy-load="{{true}}" />
+      <view class="row-main">
+        <view class="row-title ellipsis-2" wx:if="{{showTitle}}">{{item.title}}</view>
+        <view class="row-sub ellipsis" wx:if="{{showSubtitle && item.subtitle}}">{{item.subtitle}}</view>
+        <view class="row-foot" wx:if="{{showPrice || showSales}}">
+          <text class="price" wx:if="{{showPrice}}">¥{{item.priceText}}</text>
+          <text class="sales" wx:if="{{showSales}}">销量 {{item.sales}}</text>
+        </view>
+      </view>
+    </view>
+  </block>
+
+  <!-- 卡片样式：按列数均分 -->
+  <view class="grid" wx:else>
+    <view
+      class="card"
+      wx:for="{{items}}"
+      wx:key="id"
+      style="{{cellStyle}}"
+      data-id="{{item.id}}"
+      bindtap="onTap"
+    >
+      <image class="pic" src="{{item.image}}" mode="aspectFill" lazy-load="{{true}}" />
+      <view class="body">
+        <view class="card-title ellipsis-2" wx:if="{{showTitle}}">{{item.title}}</view>
+        <view class="card-sub ellipsis" wx:if="{{showSubtitle && item.subtitle}}">{{item.subtitle}}</view>
+        <view class="card-foot" wx:if="{{showPrice || showSales}}">
+          <text class="price" wx:if="{{showPrice}}">¥{{item.priceText}}</text>
+          <text class="sales" wx:if="{{showSales}}">{{item.sales}} 人买过</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

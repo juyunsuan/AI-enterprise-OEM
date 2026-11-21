@@ -1,0 +1,10 @@
+.count {
+  padding: 0 4rpx 16rpx;
+}
+
+.load-tip {
+  text-align: center;
+  color: #8a8f99;
+  font-size: 24rpx;
+  padding: 20rpx 0 40rpx;
+}

@@ -1,0 +1,43 @@
+<view class="list-page">
+  <view class="sort-bar">
+    <view
+      class="sort-item {{sort === item.key ? 'on' : ''}}"
+      wx:for="{{sorts}}"
+      wx:key="key"
+      data-key="{{item.key}}"
+      bindtap="setSort"
+    >
+      {{item.label}}
+    </view>
+    <view class="sort-item {{sort.indexOf('PRICE') === 0 ? 'on' : ''}}" data-key="PRICE" bindtap="setSort">
+      价格{{sort === 'PRICE_DESC' ? '↓' : '↑'}}
+    </view>
+    <view class="sort-total muted">共 {{total}} 件</view>
+  </view>
+
+  <view class="grid" wx:if="{{goods.length}}">
+    <view class="card" wx:for="{{goods}}" wx:key="id" data-id="{{item.id}}" bindtap="openGoods">
+      <image class="pic" src="{{item.image}}" mode="aspectFill" lazy-load="{{true}}" />
+      <view class="body">
+        <view class="title ellipsis-2">{{item.title}}</view>
+        <view class="subtitle ellipsis" wx:if="{{item.subtitle}}">{{item.subtitle}}</view>
+        <view class="tags" wx:if="{{item.tags.length}}">
+          <text class="tag" wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this">{{tag}}</text>
+        </view>
+        <view class="foot">
+          <text class="price">¥{{item.priceText}}</text>
+          <text class="origin" wx:if="{{item.originText}}">¥{{item.originText}}</text>
+        </view>
+        <view class="meta muted">销量 {{item.sales}} · {{item.stockText}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="empty" wx:elif="{{!loading}}">
+    <view>{{error || '没有找到相关商品'}}</view>
+    <view class="empty-sub" bindtap="goSearch">换个关键词试试 ›</view>
+  </view>
+  <view class="loading" wx:if="{{loading}}">加载中…</view>
+  <view class="loading" wx:elif="{{noMore && goods.length}}">没有更多了</view>
+  <view class="footer-gap"></view>
+</view>

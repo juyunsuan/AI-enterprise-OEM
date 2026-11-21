@@ -1,0 +1,86 @@
+<view class="page page-with-bar" wx:if="{{goods}}">
+  <swiper wx:if="{{images.length}}" class="gallery" indicator-dots circular>
+    <swiper-item wx:for="{{images}}" wx:key="*this">
+      <image class="gallery-image" src="{{item}}" mode="aspectFill" />
+    </swiper-item>
+  </swiper>
+  <view wx:else class="gallery"></view>
+
+  <view class="card">
+    <view class="price-row">
+      <text class="amount">{{priceText}}</text>
+      <text class="origin" wx:if="{{originText}}">{{originText}}</text>
+    </view>
+    <view class="goods-name">{{goods.name}}</view>
+    <view class="goods-sub" wx:if="{{goods.subtitle}}">{{goods.subtitle}}</view>
+    <view class="meta-row">
+      <text class="tag tag-red" wx:if="{{goods.isRx}}">处方药</text>
+      <text class="tag" wx:if="{{goods.kind}}">{{goods.kind}}</text>
+      <text class="tag tag-orange" wx:if="{{stock <= 0}}">缺货</text>
+      <text class="item-meta">库存 {{stock}} · 已售 {{goods.sales}}</text>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{goods.skuMode && goods.skus.length}}">
+    <view class="block-title">选择规格</view>
+    <view class="skus">
+      <view
+        class="sku {{skuIndex === index ? 'sku-on' : ''}} {{item.stock <= 0 ? 'sku-off' : ''}}"
+        wx:for="{{goods.skus}}"
+        wx:key="id"
+        data-index="{{index}}"
+        bindtap="onSku"
+      >{{item.specText || '默认规格'}}</view>
+    </view>
+    <view class="qty-row">
+      <text>数量</text>
+      <view class="stepper">
+        <view class="step" bindtap="onMinus">-</view>
+        <view class="step-value">{{quantity}}</view>
+        <view class="step" bindtap="onPlus">+</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="card qty-card" wx:else>
+    <text>数量</text>
+    <view class="stepper">
+      <view class="step" bindtap="onMinus">-</view>
+      <view class="step-value">{{quantity}}</view>
+      <view class="step" bindtap="onPlus">+</view>
+    </view>
+  </view>
+
+  <view class="notice notice-warn rx-notice" wx:if="{{goods.rxNotice}}">{{goods.rxNotice}}</view>
+
+  <view class="card" wx:if="{{goods.detailHtml}}">
+    <view class="block-title">商品详情</view>
+    <rich-text class="rich" nodes="{{goods.detailHtml}}"></rich-text>
+  </view>
+
+  <view class="section" wx:if="{{reviews.length}}">
+    <view class="section-head">
+      <view class="title">用户评价</view>
+    </view>
+    <view class="card">
+      <view class="review" wx:for="{{reviews}}" wx:key="index">
+        <view class="review-head">
+          <text class="review-stars">{{item.stars}}</text>
+          <text class="item-meta">{{item.timeText}}</text>
+        </view>
+        <view class="detail-text">{{item.content}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="footer-tip">处方药需先完成问诊并取得有效处方；页面信息不构成用药建议。</view>
+
+  <view class="action-bar">
+    <view class="bar-icon" bindtap="onCart">购物车</view>
+    <button class="button-ghost bar-ghost" bindtap="onAddCart">加入购物车</button>
+    <button class="button-primary bar-button" bindtap="onBuy">立即购买</button>
+  </view>
+</view>
+
+<view class="empty" wx:elif="{{!loading}}">商品不存在或已下架</view>
+<view class="empty" wx:else>正在加载…</view>

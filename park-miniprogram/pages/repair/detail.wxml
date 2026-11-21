@@ -1,0 +1,42 @@
+<view class="wrap" wx:if="{{detail}}">
+  <view class="card">
+    <view class="row">
+      <view class="section-title">{{detail.title}}</view>
+      <text class="tag">{{detail.statusLabel}}</text>
+    </view>
+    <view class="muted">{{detail.orderNo}} · {{detail.categoryLabel}} · {{detail.createdAt}}</view>
+    <view class="field" wx:if="{{detail.location}}">
+      <view class="field-label">位置</view>
+      <view class="field-value">{{detail.location}}</view>
+    </view>
+    <view class="field" wx:if="{{detail.assigneeName}}">
+      <view class="field-label">处理人</view>
+      <view class="field-value">{{detail.assigneeName}}</view>
+    </view>
+    <view class="section-title" style="margin-top: 16rpx;">问题描述</view>
+    <view class="muted">{{detail.description || "无"}}</view>
+    <view wx:if="{{detail.result}}" class="section-title" style="margin-top: 16rpx;">处理结果</view>
+    <view wx:if="{{detail.result}}" class="muted">{{detail.result}}</view>
+  </view>
+
+  <view class="card">
+    <view class="section-title">处理记录</view>
+    <view wx:for="{{detail.logs}}" wx:key="id" class="field">
+      <view class="grow">
+        <view>{{item.action}} · {{item.operatorName}}</view>
+        <view class="muted">{{item.note}}</view>
+      </view>
+      <view class="muted">{{item.createdAt}}</view>
+    </view>
+    <view wx:if="{{!detail.logs.length}}" class="muted">暂无处理记录</view>
+  </view>
+
+  <view class="card" wx:if="{{(detail.status === 'DONE' || detail.status === 'CLOSED') && !detail.rating}}">
+    <view class="section-title">服务评价</view>
+    <view class="row" style="justify-content: center; gap: 16rpx; padding: 12rpx 0;">
+      <view wx:for="{{stars}}" wx:key="*this" class="tag" data-rating="{{item}}" bindtap="rate">{{item}} 星</view>
+    </view>
+    <textarea class="textarea" bindinput="onComment" placeholder="可填写评价说明"></textarea>
+  </view>
+</view>
+<view wx:else class="empty">加载中…</view>

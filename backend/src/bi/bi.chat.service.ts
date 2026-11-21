@@ -9,6 +9,7 @@ import { toJsonInput } from '../common/json-input';
 import { BiScopeService, BiContext, hiddenColumnsOf } from './bi.scope';
 import { BiQueryService, DatasetRow } from './bi.query.service';
 import { internalDataset } from './bi.internal';
+import { meterChatCall } from '../ai/ai-gateway';
 
 type Emit = (
   event: string,
@@ -358,6 +359,12 @@ export class BiChatService {
         timeoutMs: 90_000,
         userId: user.userId,
         purpose: 'chat',
+      });
+      // 直连模型也要留用量事实（只记录不扣费），否则成本报表永远看不到这条链路
+      await meterChatCall(user.userId, reply, {
+        module: 'bi',
+        operation: 'chat-to-sql',
+        model: target.model,
       });
       const parsed = parseAi(reply.reply);
       const sql = text(parsed.sql).trim();

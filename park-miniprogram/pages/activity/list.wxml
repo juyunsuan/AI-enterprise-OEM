@@ -1,0 +1,13 @@
+<view class="wrap">
+  <view wx:if="{{!list.length && !loading}}" class="empty">园区暂无开放报名的活动。</view>
+  <view wx:for="{{list}}" wx:key="id" class="card" data-id="{{item.id}}" bindtap="detail">
+    <view class="row">
+      <view class="section-title">{{item.title}}</view>
+      <text class="tag">{{item.statusLabel}}</text>
+    </view>
+    <view class="muted">{{item.startAt}} → {{item.endAt}}</view>
+    <view class="muted" wx:if="{{item.location}}">地点：{{item.location}}</view>
+    <view class="muted">已报名 {{item.signupCount}} 人{{item.capacity > 0 ? ' / ' + item.capacity : ''}}</view>
+    <view wx:if="{{item.summary}}" class="muted">{{item.summary}}</view>
+  </view>
+</view>

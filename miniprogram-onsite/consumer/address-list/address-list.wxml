@@ -1,0 +1,45 @@
+<view class="empty" wx:if="{{loading}}">正在加载地址…</view>
+
+<view class="card closed" wx:elif="{{notReady}}">
+  <view class="title">店铺暂未开通</view>
+  <view class="muted note">{{readyReason}}</view>
+</view>
+
+<view class="empty" wx:elif="{{error}}">{{error}}</view>
+
+<block wx:else>
+  <view class="empty" wx:if="{{!list.length}}">还没有常用地址，先新增一条</view>
+
+  <view
+    class="card"
+    wx:for="{{list}}"
+    wx:key="id"
+    data-index="{{index}}"
+    data-id="{{item.id}}"
+    bindtap="cardTap"
+  >
+    <view class="row">
+      <view class="name-line">
+        <text class="title">{{item.contactName || '未填写联系人'}}</text>
+        <text class="tag" wx:if="{{item.tag}}">{{item.tag}}</text>
+        <text class="default-tag" wx:if="{{item.isDefault}}">默认</text>
+      </view>
+      <text class="muted">{{item.phone}}</text>
+    </view>
+    <view class="muted address">{{item.addressText}}</view>
+    <view class="actions">
+      <text
+        class="action"
+        wx:if="{{!item.isDefault}}"
+        data-index="{{index}}"
+        catchtap="setDefault"
+      >设为默认</text>
+      <text class="action" data-id="{{item.id}}" catchtap="openEdit">编辑</text>
+      <text class="action danger" data-index="{{index}}" catchtap="remove">删除</text>
+    </view>
+  </view>
+
+  <view class="footer">
+    <button class="button-primary" bindtap="addAddress">新增地址</button>
+  </view>
+</block>

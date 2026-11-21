@@ -1,0 +1,1 @@
+/* 内嵌网页由 web-view 铺满，错误态复用 app.wxss 的 .empty */

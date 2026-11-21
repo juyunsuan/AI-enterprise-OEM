@@ -1,0 +1,40 @@
+<view class="container">
+  <view class="card" wx:if="{{viewer}}">
+    <view class="row" bindtap="openUser">
+      <image class="avatar" src="{{viewer.avatar}}" mode="aspectFill" bindtap="pickAvatar" />
+      <view class="name">{{viewer.nickname}}</view>
+      <view class="muted" style="margin-left:auto" bindtap="editProfile">编辑</view>
+    </view>
+    <view class="muted" style="margin-top:8rpx" bindtap="pickAvatar">点击头像可更换</view>
+    <view class="muted" style="margin-top:8rpx">{{viewer.bio || '这个人很神秘，还没有写简介'}}</view>
+    <view class="images" wx:if="{{viewer.medals.length}}" style="margin-top:10rpx">
+      <view class="tag" wx:for="{{viewer.medals}}" wx:key="id">{{item.icon ? '🏅 ' : ''}}{{item.name}}</view>
+    </view>
+    <view class="row" style="margin-top:20rpx">
+      <view style="margin-right:40rpx">帖子 {{viewer.postCount}}</view>
+      <view style="margin-right:40rpx">粉丝 {{viewer.followerCount}}</view>
+      <view>关注 {{viewer.followingCount}}</view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="row between">
+      <view bindtap="openMyGroups">我的圈子</view>
+      <view bindtap="openMessages">消息</view>
+      <view bindtap="openService">在线客服</view>
+      <view bindtap="about">关于社区</view>
+    </view>
+  </view>
+
+  <view class="tabs">
+    <view class="tab {{tab === 'posts' ? 'active' : ''}}" data-tab="posts" bindtap="switchTab">我的帖子</view>
+    <view class="tab {{tab === 'favorites' ? 'active' : ''}}" data-tab="favorites" bindtap="switchTab">我的收藏</view>
+  </view>
+
+  <view class="card" wx:for="{{tab === 'posts' ? myPosts : favorites}}" wx:key="id" data-id="{{item.id}}" bindtap="openPost">
+    <view class="muted">{{item.groupName}} · {{item.timeText}}</view>
+    <view class="content">{{item.content}}</view>
+  </view>
+
+  <view class="empty" wx:if="{{!loading && ((tab === 'posts' && !myPosts.length) || (tab === 'favorites' && !favorites.length))}}">还没有内容</view>
+</view>

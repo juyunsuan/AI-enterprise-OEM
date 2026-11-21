@@ -1,0 +1,41 @@
+<view class="page">
+  <view class="card">
+    <view class="row">
+      <view>
+        <view class="title">{{profile.nickname || '微信顾客'}}</view>
+        <view class="muted" style="margin-top: 8rpx;">{{profile.phone || '尚未留手机号，下单时填写'}}</view>
+      </view>
+      <image class="thumb" src="{{profile.avatar}}" mode="aspectFill" wx:if="{{profile.avatar}}"></image>
+    </view>
+    <view class="actions">
+      <button class="button-ghost" bindtap="loginNow" wx:if="{{!profile}}">登录</button>
+      <button class="button-ghost" bindtap="logout" wx:if="{{profile}}">退出登录</button>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="list-item" bindtap="openOrders">
+      <view class="row"><text>我的租单</text><text class="muted">›</text></view>
+    </view>
+    <view class="list-item" bindtap="openDesk">
+      <view class="row"><text>在线客服</text><text class="muted">AI 客服</text></view>
+    </view>
+    <view class="list-item" bindtap="editApiBase">
+      <view class="row"><text>服务器地址</text><text class="muted">{{apiBase || '未配置'}}</text></view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="row">
+      <view>
+        <view class="title" style="font-size: 30rpx;">员工入口</view>
+        <view class="muted" style="margin-top: 6rpx;" wx:if="{{staff}}">{{staff.name}} · {{staff.shopName}}</view>
+        <view class="muted" style="margin-top: 6rpx;" wx:else>门店员工绑定手机号与工号后可验车与结算</view>
+      </view>
+    </view>
+    <view class="actions">
+      <button class="button-primary" bindtap="openStaff">{{staff ? '进入员工工作台' : '绑定员工身份'}}</button>
+      <button class="button-ghost" bindtap="unbindStaff" wx:if="{{staff}}">解绑</button>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,73 @@
+.search-action {
+  margin-left: 20rpx;
+  color: #1a73e8;
+  font-size: 28rpx;
+  white-space: nowrap;
+}
+
+.tab-scroll {
+  white-space: nowrap;
+}
+
+.tab-scroll .pills {
+  padding: 4rpx 24rpx 8rpx;
+}
+
+.block-title {
+  margin-bottom: 8rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.hot-list {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.hot {
+  margin: 8rpx 12rpx 8rpx 0;
+  padding: 8rpx 20rpx;
+  background: #f7f8fa;
+  border: 1rpx solid #f0f1f5;
+  border-radius: 24rpx;
+  font-size: 26rpx;
+  color: #5c6068;
+}
+
+.row-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #f0f1f5;
+}
+
+.row-item:last-child {
+  border-bottom: none;
+}
+
+.row-main {
+  flex: 1;
+  min-width: 0;
+  margin-right: 16rpx;
+}
+
+.row-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.arrow {
+  color: #a6abb3;
+  font-size: 32rpx;
+}
+
+.section-empty {
+  padding: 24rpx;
+  text-align: center;
+  color: #8a8f99;
+  font-size: 24rpx;
+}

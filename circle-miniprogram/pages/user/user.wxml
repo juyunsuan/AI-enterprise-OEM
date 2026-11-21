@@ -1,0 +1,27 @@
+<view class="container">
+  <view class="card" wx:if="{{user}}">
+    <view class="row">
+      <image class="avatar" src="{{user.avatar}}" mode="aspectFill" />
+      <view class="name">{{user.nickname}}</view>
+      <view class="btn ghost" style="margin-left:auto" wx:if="{{!user.isSelf}}" bindtap="follow">{{user.isFollowing ? '已关注' : '关注'}}</view>
+    </view>
+    <view class="muted" style="margin-top:8rpx">{{user.bio || '还没有写简介'}}</view>
+    <view class="images" wx:if="{{user.medals.length}}" style="margin-top:10rpx">
+      <view class="tag" wx:for="{{user.medals}}" wx:key="id">{{item.icon ? '🏅 ' : ''}}{{item.name}}</view>
+    </view>
+    <view class="row" style="margin-top:20rpx">
+      <view style="margin-right:40rpx">帖子 {{user.postCount}}</view>
+      <view style="margin-right:40rpx">粉丝 {{user.followerCount}}</view>
+      <view>关注 {{user.followingCount}}</view>
+    </view>
+    <view class="muted" style="margin-top:16rpx" wx:if="{{!user.isSelf}}" bindtap="report">举报该成员</view>
+  </view>
+
+  <view class="card" wx:for="{{posts}}" wx:key="id" data-id="{{item.id}}" bindtap="openPost">
+    <view class="muted">{{item.groupName}} · {{item.timeText}}</view>
+    <view class="content">{{item.content}}</view>
+  </view>
+
+  <view class="empty" wx:if="{{!loading && !posts.length}}">还没有发过帖子</view>
+  <view class="empty" wx:if="{{loading}}">正在加载…</view>
+</view>

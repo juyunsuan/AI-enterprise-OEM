@@ -1,0 +1,72 @@
+<view class="empty" wx:if="{{loading}}">正在加载…</view>
+
+<block wx:if="{{!loading}}">
+  <view class="card">
+    <view class="notice">修改后提交店主审核，通过后才对外生效；审核期间顾客看到的仍是修改前的资料。</view>
+
+    <view class="field">
+      <text class="label">头像</text>
+      <view class="avatar-wrap" bindtap="chooseAvatar">
+        <image class="avatar" wx:if="{{avatar}}" src="{{avatar}}" mode="aspectFill" catchtap="previewAvatar" />
+        <view class="avatar avatar-empty" wx:else>上传</view>
+      </view>
+    </view>
+
+    <view class="field">
+      <text class="label">姓名</text>
+      <input class="input" maxlength="60" value="{{name}}" bindinput="onNameInput" placeholder="必填" />
+    </view>
+
+    <view class="field column">
+      <text class="label">简介</text>
+      <textarea
+        class="textarea"
+        maxlength="2000"
+        value="{{intro}}"
+        bindinput="onIntroInput"
+        placeholder="介绍擅长的服务、工具与经验（留空表示不修改）"
+      />
+      <text class="muted">最多 2000 字；当前简介未下发到本机，留空表示不修改。</text>
+    </view>
+
+    <view class="field">
+      <text class="label">服务城市</text>
+      <input class="input" maxlength="60" value="{{serviceCity}}" bindinput="onCityInput" placeholder="留空表示不修改" />
+    </view>
+
+    <view class="field">
+      <text class="label">常驻地址</text>
+      <input class="input" maxlength="200" value="{{address}}" bindinput="onAddressInput" placeholder="留空表示不修改" />
+    </view>
+
+    <view class="field">
+      <text class="label">可服务开始</text>
+      <picker mode="time" value="{{serviceStartAt}}" bindchange="onStartChange">
+        <view class="picker-value">{{serviceStartAt || '请选择'}}</view>
+      </picker>
+    </view>
+
+    <view class="field">
+      <text class="label">可服务结束</text>
+      <picker mode="time" value="{{serviceEndAt}}" bindchange="onEndChange">
+        <view class="picker-value">{{serviceEndAt || '请选择'}}</view>
+      </picker>
+    </view>
+
+    <view class="field">
+      <text class="label">允许跨零点</text>
+      <switch checked="{{crossDay}}" bindchange="onCrossDayChange" />
+    </view>
+
+    <view class="muted tip">等级、分成、证件照片、工作年限等由店主在后台维护，端上不能改。时段规则（最小服务单位、缓冲、可约天数）也由店主配置。</view>
+
+    <view class="error" wx:if="{{errorText}}">{{errorText}}</view>
+
+    <button
+      class="button-primary submit"
+      bindtap="submit"
+      loading="{{submitting}}"
+      disabled="{{submitting || uploading}}"
+    >提交审核</button>
+  </view>
+</block>

@@ -1,0 +1,44 @@
+<view class="page" style="{{themeStyle}}">
+  <view class="tip">
+    上传一段正脸、光线均匀、时长 {{bodyMinSec}}-{{bodyMaxSec}} 秒的视频，训练完成后可用于视频合成。每次克隆消耗 1 个形象点。
+  </view>
+
+  <view wx:if="{{hints.length}}" class="card hint-card">
+    <view class="hint-card-title">拍摄要求</view>
+    <view class="hint-item" wx:for="{{hints}}" wx:key="id">
+      <view class="hint-name">{{item.title}}</view>
+      <view class="hint-body">{{item.content}}</view>
+    </view>
+  </view>
+
+  <view wx:if="{{error}}" class="status-banner">{{error}}</view>
+  <view wx:if="{{busy}}" class="status-banner">上传中 {{progress}}%</view>
+
+  <view wx:for="{{list}}" wx:key="id" class="card body-card">
+    <view class="body-row">
+      <image
+        wx:if="{{item.coverUrl}}"
+        class="body-cover"
+        src="{{item.coverUrl}}"
+        mode="aspectFill"
+        data-url="{{item.coverUrl}}"
+        bindtap="playSource"
+      />
+      <view wx:else class="body-cover body-cover-empty">形象</view>
+      <view class="body-info">
+        <view class="body-name">{{item.name}}</view>
+        <view class="body-meta">
+          <text class="tag {{item.status === 1 ? '' : 'gray'}}">{{item.statusText}}</text>
+        </view>
+        <view wx:if="{{item.failReason}}" class="body-fail">{{item.failReason}}</view>
+        <view class="body-time">{{item.createdAt}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{!loading && !list.length}}" class="empty">还没有形象，点下方按钮开始克隆</view>
+
+  <view class="fab {{busy ? 'disabled' : ''}}" bindtap="create">
+    {{busy ? '提交中…' : '新建形象克隆'}}
+  </view>
+</view>

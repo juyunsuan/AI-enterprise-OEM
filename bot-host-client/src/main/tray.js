@@ -14,7 +14,7 @@
 const path = require('path');
 const { Tray, Menu, nativeImage, app } = require('electron');
 
-const PRODUCT_NAME = 'BotBuddy';
+const PRODUCT_NAME = 'AWBotDSH';
 const TRAY_ICON = path.join(__dirname, '..', 'assets', 'tray.png');
 
 // 16x16 solid-ish PNG (base64) — a simple filled rounded square so the tray

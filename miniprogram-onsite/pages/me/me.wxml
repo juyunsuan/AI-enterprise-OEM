@@ -1,0 +1,51 @@
+<view class="page">
+  <view class="card head">
+    <image class="head-avatar" wx:if="{{avatar}}" src="{{avatar}}" mode="aspectFill"></image>
+    <view class="head-avatar head-avatar-empty" wx:else>我</view>
+    <view class="head-main">
+      <view class="title">{{nickname}}</view>
+      <view class="muted head-tip" wx:if="{{loggedIn && shopName}}">{{shopName}}</view>
+      <view class="muted head-tip" wx:elif="{{!loggedIn}}">登录后可查看订单与地址</view>
+    </view>
+    <button class="head-btn" bindtap="login" wx:if="{{!loggedIn}}">微信登录</button>
+  </view>
+
+  <view class="card">
+    <view class="row card-head">
+      <text class="title">我的订单</text>
+      <text class="muted link" data-key="ALL" bindtap="goOrders">全部订单</text>
+    </view>
+    <view class="grid">
+      <view class="grid-item" wx:for="{{orders}}" wx:key="key" data-key="{{item.key}}" bindtap="goOrders">
+        <view class="grid-label">{{item.label}}</view>
+      </view>
+    </view>
+    <view class="muted grid-tip" wx:if="{{!loggedIn}}">登录后可查看各状态订单</view>
+  </view>
+
+  <view class="card">
+    <view class="entry" wx:for="{{entries}}" wx:key="key" data-key="{{item.key}}" bindtap="openEntry">
+      <view class="entry-main">
+        <view class="entry-label">{{item.label}}</view>
+        <view class="muted entry-desc" wx:if="{{item.desc}}">{{item.desc}}</view>
+      </view>
+      <view class="entry-tail">
+        <text class="muted entry-lock" wx:if="{{item.locked}}">登录后可用</text>
+        <text class="entry-arrow">›</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{staffBound}}">
+    <view class="row">
+      <text class="muted">技师身份已绑定本机</text>
+      <text class="muted link" bindtap="logout" wx:if="{{loggedIn}}">退出登录</text>
+    </view>
+  </view>
+
+  <view class="card" wx:elif="{{loggedIn}}">
+    <button class="logout" bindtap="logout">退出登录</button>
+  </view>
+
+  <view class="muted debug" bindtap="editApiBase">服务器地址：{{apiBase || '未设置'}}</view>
+</view>

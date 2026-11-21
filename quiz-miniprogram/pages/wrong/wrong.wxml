@@ -1,0 +1,41 @@
+<view class="container">
+  <view class="picker-row" wx:if="{{banks.length}}">
+    <picker class="picker" mode="selector" range="{{bankTitles}}" value="{{bankIndex}}" bindchange="onBankChange">
+      <view class="between">
+        <text>{{bankTitle || '选择题库'}}</text>
+        <text class="muted">切换</text>
+      </view>
+    </picker>
+  </view>
+
+  <view wx:if="{{loading}}" class="empty">正在加载错题…</view>
+  <view wx:elif="{{error}}" class="empty">{{error}}</view>
+  <view wx:elif="{{!list.length}}" class="empty">
+    你答错的题目会自动记录到这里，先去练习或考试吧。
+    <view style="margin-top:24rpx;">
+      <button class="primary-btn" bindtap="goRetry">去练习</button>
+    </view>
+  </view>
+
+  <view wx:for="{{list}}" wx:key="id" class="card">
+    <view class="row">
+      <text class="tag">{{item.typeLabel}}</text>
+      <text class="tag" wx:if="{{item.category}}" style="margin-left:10rpx;">{{item.category}}</text>
+    </view>
+    <view class="question-title">{{item.title}}</view>
+    <view wx:for="{{item.options}}" wx:for-item="option" wx:key="key" class="option">
+      <view class="option-key">{{option.key}}</view>
+      <view class="option-label">{{option.label}}</view>
+    </view>
+    <view class="analysis">
+      <view class="strong">正确答案：{{item.answer}}</view>
+      <view wx:if="{{item.analysis}}" style="margin-top:8rpx;">{{item.analysis}}</view>
+    </view>
+  </view>
+
+  <view class="bottom-bar" wx:if="{{list.length}}">
+    <button class="ghost-btn" bindtap="goExam">去考试</button>
+    <button class="primary-btn" bindtap="goRetry">再练一次</button>
+  </view>
+  <view class="bottom-space" wx:if="{{list.length}}"></view>
+</view>

@@ -1,0 +1,74 @@
+<view class="page">
+  <view class="empty" wx:if="{{loading}}">正在加载…</view>
+
+  <block wx:else>
+    <view class="card">
+      <view class="row">
+        <view class="title">AI 医护</view>
+        <text class="tag {{enabled ? 'tag-green' : ''}}">{{enabled ? '已开启' : '未开启'}}</text>
+      </view>
+      <view class="item-meta" wx:if="{{agentName}}">当前接待的 AI 客服：{{agentName}}</view>
+      <view class="item-meta" wx:if="{{modeLabel}}">接待方式：{{modeLabel}}</view>
+      <view class="notice notice-warn" wx:if="{{notice}}">{{notice}}</view>
+      <view class="notice" wx:if="{{canAsk}}">AI 医护用的是店铺里已经配好的 AI 客服，回答范围跟着那边的资料走；涉及诊疗决策的内容请自己核对。</view>
+
+      <view class="manage" wx:if="{{canManage}}">
+        <view class="row switch-row">
+          <view class="switch-main">
+            <view class="switch-label">开启 AI 医护</view>
+            <view class="muted">关闭后本店铺医护端只保留人工问诊</view>
+          </view>
+          <switch checked="{{enabled}}" color="#1a73e8" disabled="{{saving}}" bindchange="onToggle" />
+        </view>
+
+        <view class="switch-label">医护绑定的 AI 客服</view>
+        <view class="muted" wx:if="{{!practitioners.length}}">本店还没有其他医护需要绑定</view>
+        <view
+          class="bind-row"
+          wx:for="{{practitioners}}"
+          wx:key="id"
+          data-id="{{item.id}}"
+          bindtap="onBind"
+        >
+          <view class="item-head">
+            <view class="bind-name">
+              <text>{{item.name}}</text>
+              <text class="tag">{{item.roleLabel}}</text>
+            </view>
+            <text class="link">{{item.bindText}} ›</text>
+          </view>
+          <view class="item-meta">点击从店铺已有的 AI 客服员工里换一位</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="card" wx:if="{{canAsk}}">
+      <view class="title">向 AI 医护提问</view>
+      <view class="muted">比如随访话术、疾病科普口径、报告指标含义，会把最近 {{maxRounds}} 轮对话一起带上。</view>
+
+      <view class="qa" wx:for="{{messages}}" wx:key="id">
+        <view class="q-bubble">{{item.question}}</view>
+        <view class="a-meta">{{item.agentName}} · {{item.timeText}}</view>
+        <view class="a-bubble">
+          <text user-select>{{item.answer}}</text>
+          <view class="a-ref" wx:if="{{item.refText}}">参考：{{item.refText}}</view>
+          <view class="notice notice-warn" wx:if="{{item.handoff}}">该问题建议转人工处理</view>
+        </view>
+      </view>
+
+      <view class="muted waiting" wx:if="{{sending}}">AI 正在整理回答…</view>
+
+      <textarea
+        class="textarea ask-input"
+        placeholder="例如：2 型糖尿病随访时要提醒患者注意什么？"
+        value="{{input}}"
+        maxlength="500"
+        disabled="{{sending}}"
+        bindinput="onInput"
+      />
+      <button class="button-primary send" disabled="{{sending}}" bindtap="onSend">
+        {{sending ? '回复中' : '发送提问'}}
+      </button>
+    </view>
+  </block>
+</view>

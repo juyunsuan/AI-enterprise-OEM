@@ -125,7 +125,7 @@ export default function InsightHotspotPage() {
     <ConfigProvider button={{ autoInsertSpace: false }}>
       <PageHero
         title="全域内容热点分析"
-        desc="先配「采集数据源」与采集 SKILL 包 → 定时 / 手动采集进「热点内容」表 → 再做大盘 / 榜单 / 台账 / 快报分析。采集优先走 BotBuddy 主机托管窗口，本机浏览器代理作备用。"
+        desc="先配「采集数据源」与采集 SKILL 包 → 定时 / 手动采集进「热点内容」表 → 再做大盘 / 榜单 / 台账 / 快报分析。采集优先走 AWBotDSH 主机托管窗口，本机浏览器代理作备用。"
         extra={
           <Button
             icon={<ArrowLeftOutlined aria-hidden />}
@@ -195,7 +195,7 @@ function BoardTab({
     <Space orientation="vertical" size={16} style={{ width: "100%" }}>
       {allOffline ? (
         <Notice variant="warn">
-          主备采集通道当前都离线：请到「Agent-Bot」打开 BotBuddy 主机托管窗口，或在本机「RPA」安装浏览器代理后再采集。
+          主备采集通道当前都离线：请到「Agent-Bot」打开 AWBotDSH 主机托管窗口，或在本机「RPA」安装浏览器代理后再采集。
         </Notice>
       ) : null}
 

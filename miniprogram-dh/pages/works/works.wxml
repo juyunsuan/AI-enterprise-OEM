@@ -1,0 +1,32 @@
+<view class="page" style="{{themeStyle}}">
+  <view wx:if="{{error}}" class="status-banner">{{error}}</view>
+
+  <view wx:for="{{list}}" wx:key="id" class="card work">
+    <view class="row work-head">
+      <image wx:if="{{item.coverUrl}}" class="work-cover" src="{{item.coverUrl}}" mode="aspectFill" />
+      <view wx:else class="work-cover work-cover-empty">作品</view>
+      <view class="work-info">
+        <view class="work-title">{{item.title}}</view>
+        <view class="work-status">
+          <text class="tag {{item.status === 1 ? '' : item.status === 2 ? 'red' : 'gray'}}">{{item.stageText}}</text>
+          <text wx:if="{{item.isRefund}}" class="refund">已退 {{item.pointCost}} 算力</text>
+        </view>
+        <view class="work-time">{{item.createdAt}}</view>
+      </view>
+    </view>
+    <view class="work-actions">
+      <view
+        class="btn-ghost work-action"
+        data-id="{{item.id}}"
+        data-status="{{item.status}}"
+        bindtap="openWork"
+      >{{item.status === 1 ? '播放/保存' : '查看进度'}}</view>
+      <view class="btn-ghost work-action danger" data-id="{{item.id}}" bindtap="removeWork">删除</view>
+    </view>
+  </view>
+
+  <view wx:if="{{!loading && !list.length}}" class="empty">
+    还没有作品
+    <view class="empty-btn" bindtap="goCreate">去创作</view>
+  </view>
+</view>

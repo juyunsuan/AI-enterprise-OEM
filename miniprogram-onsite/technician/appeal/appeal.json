@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "差评申诉",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark",
+  "onReachBottomDistance": 80,
+  "usingComponents": {}
+}

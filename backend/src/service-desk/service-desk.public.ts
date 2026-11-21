@@ -122,10 +122,14 @@ export function registerServiceDeskPublic(
     const path = `service-desk/${visitor.ownerUserId}/${Date.now()}-${randomBytes(
       4,
     ).toString('hex')}.${ext}`;
-    const uploaded = await services.oss.upload(
+    // 访客上传的附件挂在客服站点所属账号名下：访客没有账号，账单只能落在站主身上
+    const uploaded = await services.systemAsset.put({
+      ownerUserId: visitor.ownerUserId,
       path,
-      Buffer.from(await file.arrayBuffer()),
-    );
+      bytes: Buffer.from(await file.arrayBuffer()),
+      name,
+      bizRef: `service-desk:${visitor.ownerUserId}`,
+    });
     return json({ url: uploaded.url, name, size: uploaded.size });
   });
 

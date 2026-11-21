@@ -33,8 +33,8 @@ const SessionContext = createContext<SessionValue | null>(null);
 
 /** 无需已有会话的公开路径：这些页面拿到 401 时不能把人踢回登录页。 */
 const SESSION_FREE_PATHS = ['/', '/login'];
-/** 访客公开通道（官网客服 iframe）不参与登录态。 */
-const SESSION_FREE_PREFIXES = ['/embed/', '/survey/'];
+/** 访客公开通道（官网客服 iframe、商户后台）：不参与登录态。 */
+const SESSION_FREE_PREFIXES = ['/embed/', '/survey/', '/merchant'];
 const sessionFree = (path = window.location.pathname) =>
   SESSION_FREE_PATHS.includes(path) ||
   SESSION_FREE_PREFIXES.some((prefix) => path.startsWith(prefix));

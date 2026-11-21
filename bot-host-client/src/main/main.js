@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * main.js — BotBuddy 客户端主进程。
+ * main.js — AWBotDSH 客户端主进程。
  *
  * 职责：
  *   · 单实例锁；关窗不退出（托盘常驻）。
@@ -18,7 +18,7 @@
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
-const { app, BrowserWindow, ipcMain, shell, clipboard, nativeTheme, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, clipboard, nativeTheme, dialog, safeStorage } = require('electron');
 
 const db = require('./db');
 const configStore = require('./config-store');
@@ -35,17 +35,31 @@ const referenceStore = require('./references');
 const plugins = require('./plugins');
 const pluginPackage = require('./plugin-package');
 const skillPackage = require('./skill-package');
+const skillInstaller = require('./skill-installer');
+const skillSecurity = require('./skill-security');
 const chromeBridge = require('./chrome-bridge');
 const chromeExtensions = require('./chrome-extensions');
 const rpa = require('./rpa-runner');
 const fp = require('./fp');
 const crypto = require('crypto');
 
-const PRODUCT_NAME = 'BotBuddy';
+const PRODUCT_NAME = 'AWBotDSH';
 const LOG_LINES = [];
 const WINDOW_ICON = path.join(__dirname, '..', 'assets', 'icon.png');
 const RENDERER_DIR = path.join(__dirname, '..', 'renderer');
 const PRELOAD = path.join(__dirname, '..', 'preload', 'preload.js');
+
+/** 随包技能目录：开发态在仓库内，安装态走 extraResources。 */
+function builtinSkillsRoot() {
+  return app.isPackaged
+    ? path.join(process.resourcesPath, 'builtin-skills')
+    : path.join(__dirname, '..', '..', 'builtin-skills');
+}
+
+/** 本机技能落盘目录（DSH 接入后由 $DSH_HOME/skills 取代）。 */
+function skillsRoot() {
+  return path.join(db.DATA_DIR, 'skills');
+}
 
 /** 下载落盘的文件名：只保留文件名部分，别让路径分隔符/上级引用跑进磁盘。 */
 function safeFileName(raw) {
@@ -68,9 +82,6 @@ let stopping = false;
 
 /** 平台积分余额：登录/心跳/会话刷新时更新，只放内存（不每次心跳写库）。 */
 let userPoints = null;
-/** 本机改模型后的上报去抖：同步完再心跳，避免心跳把旧授权盖回来。 */
-let localSyncTimer = null;
-let localSyncSkipPlatform = true;
 
 /** 最近一次执行失败的机器码：READY 与 FAILED 之间的唯一区分，配置一改就清掉。 */
 let agentLastError = null;
@@ -208,7 +219,7 @@ function heartbeatCaps() {
       workspace: workspaces.defaultWorkspace(cfg),
       permissionPolicy: cfg.permissionPolicy,
       workspaces: workspaces.listWorkspaces(cfg).slice(0, 200),
-      // RPA「BotBuddy 浏览器」设备的执行位：平台按这张候选表让用户选窗口，
+      // RPA「AWBotDSH 浏览器」设备的执行位：平台按这张候选表让用户选窗口，
       // 不替用户建窗口（与上面的工作区候选同一口径）。
       fingerprint: {
         defaultId: fp.profiles.agentProfileId(),
@@ -295,7 +306,7 @@ function setupPairing() {
         'pair:update',
         Object.assign({}, pairing.snapshot(), { status: 'ok', message: '配对成功' })
       );
-      adoptToken(info.token, info.hostName);
+      adoptToken(info.token, info.hostName, info.hostId);
     },
     onLog: log
   });
@@ -305,8 +316,8 @@ function setupPairing() {
  * 拿到主机令牌后的统一动作（连接码认领 / 手动粘贴走同一条）：落盘、开机自启、
  * 起心跳，并把界面切到概览。
  */
-function adoptToken(token, hostName) {
-  configStore.save({ token: token || '', autoStart: true });
+function adoptToken(token, hostName, hostId) {
+  configStore.save({ token: token || '', autoStart: true, hostId: Number(hostId) || 0 });
   boundHostName = hostName || '';
   applyAutoStart(true);
   startHeartbeat();
@@ -464,47 +475,6 @@ function applyModelGrant(grant, unchanged) {
   }
 }
 
-/**
- * 本机模型设置改了之后同步到平台（双向同步的上行）：
- * 平台会把这份设置落成「BotBuddy · 主机名」渠道并覆盖授权，之后平台侧看到的以本机为准。
- * 只上报「当前生效」的本地渠道；平台渠道本身是下行结果，不往平台回写（除非用户直接改了它）。
- */
-function scheduleLocalModelSync(skipPlatform) {
-  localSyncSkipPlatform = skipPlatform !== false;
-  if (!configStore.isPaired()) return;
-  if (localSyncTimer) clearTimeout(localSyncTimer);
-  localSyncTimer = setTimeout(() => {
-    localSyncTimer = null;
-    void pushLocalModel().finally(() => {
-      doHeartbeat().catch((err) => log('error', 'heartbeat error: ' + err.message));
-    });
-  }, 400);
-}
-
-async function pushLocalModel() {
-  const cfg = configStore.get();
-  if (!cfg.token) return;
-  const active = agentConfig.activeChannel();
-  if (!active) return;
-  if (localSyncSkipPlatform && active.id === PLATFORM_CHANNEL_ID) return;
-  if (!active.baseUrl || !active.model || !active.apiKey) return;
-  const res = await platform.syncModel(cfg.baseUrl, cfg.token, {
-    baseUrl: active.baseUrl,
-    model: active.model,
-    apiKey: active.apiKey,
-    protocol: active.protocol
-  });
-  if (res.transportError) {
-    log('warn', 'model sync unreachable: ' + res.error);
-    return;
-  }
-  if (!res.ok) {
-    log('warn', 'model sync rejected: ' + ((res.data && res.data.message) || '平台返回异常'));
-    return;
-  }
-  log('info', 'local model synced to platform: ' + active.model);
-}
-
 async function doHeartbeat() {
   if (heartbeating || stopping) return;
   heartbeating = true;
@@ -517,6 +487,11 @@ async function doHeartbeat() {
       workingDir: cfg.workingDir,
       caps: {
         agent: heartbeatCaps().agent,
+        // 新旧桌面端共用 DESKTOP 设备类型，靠这里区分通道，供平台灰度/统计。
+        client: {
+          channel: 'awbotdsh',
+          version: platform.CLIENT_VERSION
+        },
         os: process.platform,
         hostname: os.hostname()
       }
@@ -600,7 +575,7 @@ function handleTokenRejected() {
   if (pairing) void pairing.refresh();
 }
 
-// --- RPA（BotBuddy 浏览器设备） ------------------------------------------------
+// --- RPA（AWBotDSH 浏览器设备） ------------------------------------------------
 
 /**
  * 心跳 5 秒一次，但问「有没有活」不必这么勤：每 N 轮领取一次，
@@ -653,6 +628,12 @@ async function finishRpaTask(claimed) {
   if (!res.transportError && !res.ok) {
     log('warn', 'rpa finish rejected: ' + rpaMessage(res));
   }
+  // 兜底：回传失败时把任务退回待执行，别让平台等满超时；成功时 release 是 no-op。
+  if (claimed.taskId) {
+    await platform
+      .rpaRelease(cfg.baseUrl, cfg.token, Number(claimed.taskId))
+      .catch(() => undefined);
+  }
   broadcast('rpa:update', { running: rpa.status(), last: rpaLast, state: stateSnapshot() });
   return rpaLast;
 }
@@ -671,7 +652,7 @@ async function claimAndRunRpa(taskId) {
     return null;
   }
   if (!res.ok) {
-    // 404＝「现在没有待执行的 BotBuddy 任务」：自动轮询里这是正常空闲，不记日志
+    // 404＝「现在没有待执行的 AWBotDSH 任务」：自动轮询里这是正常空闲，不记日志
     if (!taskId && res.httpStatus === 404) return null;
     throw new Error(rpaMessage(res));
   }
@@ -833,6 +814,7 @@ async function runChatTurn(conversationId, text, cfg, workspace, options) {
     timer = setInterval(flush, 120);
     result = await agentRuntime.run({
       instruction: text,
+      conversationId: conversation.id,
       cwd: workspace,
       channelId: conversation.channelId || '',
       policy: cfg.permissionPolicy,
@@ -931,8 +913,24 @@ function setupIpc() {
     }
     log('info', 'host token pasted manually');
     if (pairing) pairing.stop();
-    adoptToken(value, '');
+    adoptToken(value, '', 0);
     return { ok: true };
+  });
+
+  // 手机扫码配对：平台出一次性码，二维码里同时带上这台电脑的主机身份。
+  ipcMain.handle('pair:qr', async () => {
+    const cfg = configStore.get();
+    if (!cfg.userToken) return { ok: false, error: '请先登录平台账号' };
+    const res = await platform.createPairQr(cfg.baseUrl, cfg.userToken, {
+      siteUrl: cfg.baseUrl,
+      hostId: cfg.hostId || undefined,
+      name: cfg.deviceName || undefined
+    });
+    if (res.transportError) return { ok: false, error: '平台不可达：' + res.error };
+    if (!res.ok || !res.data || res.data.ok !== true || !res.data.data) {
+      return { ok: false, error: (res.data && res.data.message) || '生成二维码失败' };
+    }
+    return { ok: true, qr: res.data.data };
   });
 
   ipcMain.handle('config:savePermissionPolicy', (e, policy) => {
@@ -1012,10 +1010,8 @@ function setupIpc() {
     log('info', 'agent channel saved: ' + row.name + ' · ' + row.model);
     broadcast('state:update', stateSnapshot());
     refreshAgentSnapshot();
-    const active = agentConfig.activeChannel();
-    // 动的是当前生效的渠道：先把新设置推给平台，再心跳（避免心跳把旧授权盖回来）。
-    if (active && active.id === row.id) scheduleLocalModelSync(false);
-    else doHeartbeat().catch(() => {});
+    // 模型 Key 不再上行：平台只按授权下发，不在平台侧保存本机密钥。
+    doHeartbeat().catch(() => {});
     return { ok: true, channel: row };
   });
 
@@ -1026,9 +1022,7 @@ function setupIpc() {
       log('info', 'agent channel removed: ' + id);
       broadcast('state:update', stateSnapshot());
       refreshAgentSnapshot();
-      const active = agentConfig.activeChannel();
-      if (active && active.id !== PLATFORM_CHANNEL_ID) scheduleLocalModelSync(true);
-      else doHeartbeat().catch(() => {});
+      doHeartbeat().catch(() => {});
     }
     return res;
   });
@@ -1039,8 +1033,7 @@ function setupIpc() {
       agentLastError = null;
       broadcast('state:update', stateSnapshot());
       refreshAgentSnapshot();
-      if (String(id || '') === PLATFORM_CHANNEL_ID) doHeartbeat().catch(() => {});
-      else scheduleLocalModelSync(true);
+      doHeartbeat().catch(() => {});
     }
     return res;
   });
@@ -1067,7 +1060,10 @@ function setupIpc() {
 
   ipcMain.handle('agent:removeSkill', (e, id) => {
     const res = agentConfig.removeSkill(id);
-    if (res.ok) refreshAgentSnapshot();
+    if (res.ok) {
+      skillInstaller.removeSkill(id, skillsRoot());
+      refreshAgentSnapshot();
+    }
     return res;
   });
 
@@ -1093,8 +1089,22 @@ function setupIpc() {
         kind === 'folder'
           ? skillPackage.importFromDir(picked.filePaths[0])
           : skillPackage.importFromZip(picked.filePaths[0]);
+      const scan = skillSecurity.scanSkillPackage([
+        { path: 'SKILL.md', content: skill.raw }
+      ]);
+      if (!scan.ok) return { ok: false, error: scan.failure };
+      // 双写：文件系统给 DSH 发现，SQLite 给当前 Agent 用；任一侧失败即回滚。
+      const written = skillInstaller.writeSkill({
+        name: skill.id,
+        markdown: skill.raw,
+        targetRoot: skillsRoot()
+      });
+      if (!written.ok) return { ok: false, error: written.error };
       const saved = agentConfig.saveSkill(skill.id, skill);
-      if (!saved.ok) return saved;
+      if (!saved.ok) {
+        skillInstaller.removeSkill(skill.id, skillsRoot());
+        return saved;
+      }
       log('info', 'skill package imported: ' + skill.id + ' · ' + skill.name);
       refreshAgentSnapshot();
       return { ok: true, skill };
@@ -1160,12 +1170,25 @@ function setupIpc() {
     const res = await platform.skillDownload(gate.cfg.baseUrl, gate.cfg.token, slug);
     if (res.transportError) return { ok: false, error: '连接平台失败：' + res.error };
     if (!res.ok) return { ok: false, error: res.error || '技能下载失败' };
-    const tmp = path.join(os.tmpdir(), 'botbuddy-skill-' + Date.now() + '.zip');
+    const tmp = path.join(os.tmpdir(), 'awbotdsh-skill-' + Date.now() + '.zip');
     try {
       fs.writeFileSync(tmp, res.bytes);
       const skill = skillPackage.importFromZip(tmp);
+      const scan = skillSecurity.scanSkillPackage([
+        { path: 'SKILL.md', content: skill.raw }
+      ]);
+      if (!scan.ok) return { ok: false, error: scan.failure };
+      const written = skillInstaller.writeSkill({
+        name: skill.id,
+        markdown: skill.raw,
+        targetRoot: skillsRoot()
+      });
+      if (!written.ok) return { ok: false, error: written.error };
       const saved = agentConfig.saveSkill(skill.id, skill);
-      if (!saved.ok) return saved;
+      if (!saved.ok) {
+        skillInstaller.removeSkill(skill.id, skillsRoot());
+        return saved;
+      }
       log('info', 'skillhub install: ' + slug + ' -> ' + skill.id + ' · ' + skill.name);
       refreshAgentSnapshot();
       return { ok: true, skill };
@@ -1180,7 +1203,7 @@ function setupIpc() {
     }
   });
 
-  // RPA（BotBuddy 浏览器设备）：清单读平台，执行走本机指纹窗口。
+  // RPA（AWBotDSH 浏览器设备）：清单读平台，执行走本机指纹窗口。
   ipcMain.handle('rpa:tasks', async () => {
     const ready = rpaReady();
     if (!ready.ok) return ready;
@@ -1360,7 +1383,16 @@ function setupIpc() {
   ipcMain.handle('bridge:status', () => ({ ok: true, status: chromeBridge.shared.status() }));
 
   // --- Chrome 插件包管理（客户端内完成导入/删除/自动加载） ---
-  ipcMain.handle('chromeExt:list', () => ({ ok: true, list: chromeExtensions.list() }));
+  ipcMain.handle('chromeExt:list', () => {
+    const disabled = new Set(configStore.get().disabledChromeExtIds || []);
+    return {
+      ok: true,
+      list: chromeExtensions.list().map((item) => ({
+        ...item,
+        disabled: disabled.has(item.id)
+      }))
+    };
+  });
 
   ipcMain.handle('chromeExt:importPackage', async (e, mode) => {
     const kind = mode === 'folder' ? 'folder' : 'zip';
@@ -1391,6 +1423,17 @@ function setupIpc() {
 
   ipcMain.handle('chromeExt:remove', (e, id) => chromeExtensions.remove(id));
 
+  ipcMain.handle('chromeExt:setEnabled', (e, id, enabled) => {
+    const key = String(id || '').trim();
+    if (!key) return { ok: false, error: '插件 id 为空' };
+    const next = new Set(configStore.get().disabledChromeExtIds || []);
+    if (enabled) next.delete(key);
+    else next.add(key);
+    configStore.save({ disabledChromeExtIds: Array.from(next) });
+    log('info', 'chrome extension ' + (enabled ? 'enabled' : 'disabled') + ': ' + key);
+    return { ok: true, id: key, enabled: !!enabled };
+  });
+
   // --- 指纹窗口（内核路线）：档案 / 内核 / 窗口 / 代理检测 ---
   const fpGuard = (fn) => async (event, ...args) => {
     try {
@@ -1408,6 +1451,7 @@ function setupIpc() {
   ipcMain.handle('fp:close', fpGuard((id) => fp.close(id)));
   ipcMain.handle('fp:closeAll', fpGuard(() => fp.closeAll()));
   ipcMain.handle('fp:pages', fpGuard(() => fp.pages()));
+  ipcMain.handle('fp:navigate', fpGuard((url) => fp.navigateAgent(url)));
   ipcMain.handle('fp:checkProxy', fpGuard((body) => fp.checkProxy(body)));
   ipcMain.handle('fp:setAgent', fpGuard((id) => fp.setAgentProfile(id)));
   ipcMain.handle('fp:setMaxOpen', fpGuard((value) => fp.setMaxOpen(value)));
@@ -1624,11 +1668,70 @@ function startChromeBridge() {
   });
 }
 
+/** 主机令牌与会话令牌进系统密钥环；不可用时退回明文，只在日志里说明。 */
+function setupSecretStorage() {
+  try {
+    if (!safeStorage.isEncryptionAvailable()) {
+      log('warn', 'system keychain unavailable; tokens stored as plain text');
+      return;
+    }
+    configStore.setSecretCipher({
+      active: true,
+      encrypt: (value) => {
+        if (typeof value !== 'string' || !value) return '';
+        return 'enc:' + safeStorage.encryptString(value).toString('base64');
+      },
+      decrypt: (value) => {
+        if (typeof value !== 'string' || !value.startsWith('enc:')) return value;
+        try {
+          return safeStorage.decryptString(Buffer.from(value.slice(4), 'base64'));
+        } catch (err) {
+          log('warn', 'token decrypt failed: ' + err.message);
+          return '';
+        }
+      }
+    });
+  } catch (err) {
+    log('warn', 'secure storage init failed: ' + err.message);
+  }
+}
+
+/** 首启 seed 随包技能：磁盘落一份给 DSH 发现，SQLite 落一份给当前 Agent 用。 */
+function seedBuiltinSkills() {
+  try {
+    const root = builtinSkillsRoot();
+    const result = skillInstaller.seedBuiltins({
+      sourceRoot: root,
+      targetRoot: skillsRoot(),
+      version: app.getVersion()
+    });
+    if (result.unchanged) return;
+    for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
+      if (!entry.isDirectory() || entry.name.startsWith('.')) continue;
+      const file = path.join(root, entry.name, 'SKILL.md');
+      if (!fs.existsSync(file)) continue;
+      const parsed = skillPackage.parseSkillMarkdown(
+        fs.readFileSync(file, 'utf8'),
+        entry.name,
+        entry.name
+      );
+      if (!agentConfig.readSkill(parsed.id)) agentConfig.saveSkill(parsed.id, parsed);
+    }
+    log('info', 'builtin skills seeded: ' + result.seeded);
+  } catch (err) {
+    log('warn', 'builtin skills seed failed: ' + err.message);
+  }
+}
+
 function bootstrap() {
   db.open();
+  setupSecretStorage();
+  const bootCfg = configStore.get();
+  platform.setApiBase(bootCfg.apiBasePath);
   // 默认工作区开箱即用：目录不存在就当场建出来，后面心跳/对话/平台指令都直接用它。
-  const defaultWs = workspaces.ensureDefaultWorkspace(configStore.get());
+  const defaultWs = workspaces.ensureDefaultWorkspace(bootCfg);
   if (defaultWs) log('info', 'default workspace: ' + defaultWs);
+  seedBuiltinSkills();
   startChromeBridge();
   setupRunner();
   setupPairing();

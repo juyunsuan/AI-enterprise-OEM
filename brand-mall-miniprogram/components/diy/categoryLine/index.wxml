@@ -1,0 +1,16 @@
+<scroll-view class="diy-category-line" wx:if="{{items.length}}" scroll-x="{{true}}" enhanced="{{true}}" show-scrollbar="{{false}}">
+  <view class="list">
+    <view
+      class="item"
+      wx:for="{{items}}"
+      wx:key="id"
+      data-id="{{item.id}}"
+      data-name="{{item.name}}"
+      bindtap="onTap"
+    >
+      <image wx:if="{{item.image}}" class="pic" src="{{item.image}}" mode="aspectFill" />
+      <view wx:else class="pic ph">{{item.name}}</view>
+      <view class="name ellipsis">{{item.name}}</view>
+    </view>
+  </view>
+</scroll-view>

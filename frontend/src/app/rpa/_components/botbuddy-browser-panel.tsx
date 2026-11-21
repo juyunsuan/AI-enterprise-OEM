@@ -10,10 +10,10 @@ import { EmptyState, Notice, Panel } from "@/components/ui/panel";
 import { fmtTime } from "@/lib/datetime";
 
 /**
- * RPA ·「本地RPA状态」页签里的第三类执行端：BotBuddy 浏览器。
+ * RPA ·「本地RPA状态」页签里的第三类执行端：AWBotDSH 浏览器。
  *
- * 浏览器本体不在这台服务器上，而是跑在用户自己机器的 BotBuddy 客户端里（内核级指纹窗口，
- * 随客户端内置 Automa 插件），所以这里只做状态登记：列出已配对的 BotBuddy 主机与在线态，
+ * 浏览器本体不在这台服务器上，而是跑在用户自己机器的 AWBotDSH 客户端里（内核级指纹窗口，
+ * 随客户端内置 Automa 插件），所以这里只做状态登记：列出已配对的 AWBotDSH 主机与在线态，
  * 下载、配对与窗口操作都在「Agent-Bot → Bot 主机」页与客户端里完成。
  */
 
@@ -62,7 +62,7 @@ export function BotBuddyBrowserPanel() {
 
   return (
     <Panel
-      title="BotBuddy 浏览器"
+      title="AWBotDSH 浏览器"
       titleBadge={`${hosts.length} 台主机 · ${onlineCount} 台在线`}
       extra={
         <Space>
@@ -75,10 +75,10 @@ export function BotBuddyBrowserPanel() {
         </Space>
       }
     >
-      {error ? <Notice variant="error">{`BotBuddy 主机加载失败：${error}`}</Notice> : null}
+      {error ? <Notice variant="error">{`AWBotDSH 主机加载失败：${error}`}</Notice> : null}
 
       <Notice>
-        BotBuddy 浏览器跑在你自己机器的 BotBuddy 客户端里：随客户端内置 Automa
+        AWBotDSH 浏览器跑在你自己机器的 AWBotDSH 客户端里：随客户端内置 Automa
         插件（每个窗口默认加载、不可删除），打开窗口点 Automa 图标即可编排 / 运行工作流；
         平台「RPA 脚本」里的 JSON（Automa 工作流）正文可以直接粘进 Automa 导入。
         下载、配对与新建窗口都在客户端完成，这里只登记主机在线状态。
@@ -152,7 +152,7 @@ export function BotBuddyBrowserPanel() {
         />
       ) : (
         <EmptyState
-          text="还没有 BotBuddy 主机：到「Agent-Bot → Bot 主机」页下载客户端，填本系统地址并配对后，客户端「浏览器」页签里就是自带 Automa 的指纹浏览器"
+          text="还没有 AWBotDSH 主机：到「Agent-Bot → Bot 主机」页下载客户端，填本系统地址并配对后，客户端「浏览器」页签里就是自带 Automa 的指纹浏览器"
         />
       )}
     </Panel>

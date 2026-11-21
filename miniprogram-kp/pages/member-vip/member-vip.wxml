@@ -1,0 +1,53 @@
+<view class="page" style="{{themeStyle}}">
+  <view class="vip-card" style="background: {{themeColor}}">
+    <view class="vip-name ellipsis">{{member.nickname || '微信用户'}}</view>
+    <view class="vip-state">{{vipText}}</view>
+    <view class="vip-points">当前积分 {{pointsText}}</view>
+  </view>
+
+  <view class="card" wx:if="{{showBuy}}">
+    <view class="section-title">会员套餐</view>
+    <view class="muted plan-tip">开通会员可免费阅读会员专区内容；积分价与微信支付价以站点配置为准。</view>
+    <view class="plan-row">
+      <view
+        class="plan"
+        wx:for="{{plans}}"
+        wx:key="plan"
+        bindtap="onBuy"
+        data-plan="{{item.plan}}"
+        data-price="{{item.price}}"
+      >
+        <view class="plan-label">{{item.label}}</view>
+        <view class="plan-price">{{item.price}}</view>
+        <view class="muted">积分</view>
+        <view class="plan-buy">立即开通</view>
+        <view
+          class="plan-cash"
+          wx:if="{{payReady && item.cashText}}"
+          catchtap="onCashBuy"
+          data-plan="{{item.plan}}"
+        >
+          {{paying ? '支付中…' : '微信支付 ' + item.cashText}}
+        </view>
+      </view>
+    </view>
+    <view class="muted" wx:if="{{!plans.length}}">站点暂未配置会员套餐</view>
+  </view>
+
+  <view class="card" wx:if="{{showKami}}">
+    <view class="section-title">卡密兑换</view>
+    <view class="muted kami-tip">已有实体卡密可直接兑换会员或积分。</view>
+    <view class="kami-row">
+      <input
+        class="input kami-input"
+        type="text"
+        placeholder="请输入卡密"
+        value="{{cardCode}}"
+        bindinput="onCodeInput"
+      />
+      <view class="btn kami-btn {{submitting ? 'is-disabled' : ''}}" bindtap="onRedeem">兑换</view>
+    </view>
+  </view>
+
+  <view class="muted foot-note">开通与兑换均会记入「我的订单」，可在获取记录中查看。</view>
+</view>

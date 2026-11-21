@@ -1,0 +1,12 @@
+.status {
+  color: #1f6feb;
+  font-size: 26rpx;
+}
+.line {
+  margin: 16rpx 0;
+  color: #1f2329;
+}
+.amount {
+  font-size: 32rpx;
+  font-weight: 700;
+}

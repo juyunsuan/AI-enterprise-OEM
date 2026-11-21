@@ -1,10 +1,10 @@
 'use strict';
 
 /**
- * BotBuddy 浏览器桥接：后台脚本。
+ * AWBotDSH 浏览器桥接：后台脚本。
  *
  * 只做三件事：
- *   1. 长轮询本机 BotBuddy 客户端的桥接端点，领取 Agent 发来的浏览器动作；
+ *   1. 长轮询本机 AWBotDSH 客户端的桥接端点，领取 Agent 发来的浏览器动作；
  *   2. 用 chrome.tabs / chrome.scripting 执行动作（不读 Cookie、不改请求头）；
  *   3. 把结果回传。连接参数（地址 + 令牌）在插件弹窗里设置。
  */
@@ -118,14 +118,34 @@ async function report(bridgeUrl, token, id, payload) {
   }).catch(() => {});
 }
 
+/** 预装扩展自助取令牌：客户端只认本扩展的 Origin，无需用户手填。 */
+async function bootstrapToken(bridgeUrl) {
+  try {
+    const response = await fetch(bridgeUrl + '/bootstrap', { cache: 'no-store' });
+    if (!response.ok) return '';
+    const data = await response.json();
+    if (!data || !data.ok || !data.token) return '';
+    await chrome.storage.local.set({
+      bridgeUrl: String(data.bridgeUrl || bridgeUrl).replace(/\/+$/, ''),
+      token: String(data.token)
+    });
+    return String(data.token);
+  } catch (error) {
+    return '';
+  }
+}
+
 async function loop() {
   if (running) return;
   running = true;
   while (running) {
-    const { bridgeUrl, token } = await settings();
+    let { bridgeUrl, token } = await settings();
     if (!token) {
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-      continue;
+      token = await bootstrapToken(bridgeUrl);
+      if (!token) {
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        continue;
+      }
     }
     try {
       const response = await fetch(

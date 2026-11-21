@@ -41,7 +41,7 @@ import {
   type MpAdminModel,
   type MpAipddView,
   type MpBillingUnit,
-  type MpCategory,
+  type ModelPlazaCategory,
   type MpComponent,
   type MpDiscoveredModel,
   type MpPlatformCapability,
@@ -198,7 +198,7 @@ type CatalogDraft = {
   /** 与上游 aipdd.pricing.billing_unit 完全一致 */
   billingUnit: MpBillingUnit;
   /** 能力分类：文本 / 图片 / 视频 / 音频 / 向量 / 其他 */
-  category: MpCategory;
+  category: ModelPlazaCategory;
   /** 官方原价：token 按每百万 tokens，媒体类按每张/每秒/每次 */
   inputRmbPrice: number;
   outputRmbPrice: number;
@@ -296,7 +296,7 @@ export function ModelPlazaAdminTab() {
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [keyword, setKeyword] = useState("");
   const [provider, setProvider] = useState("ALL");
-  const [categoryFilter, setCategoryFilter] = useState<"ALL" | MpCategory>(
+  const [categoryFilter, setCategoryFilter] = useState<"ALL" | ModelPlazaCategory>(
     "ALL",
   );
   const [enabledFilter, setEnabledFilter] = useState<"ALL" | "ON" | "OFF">(

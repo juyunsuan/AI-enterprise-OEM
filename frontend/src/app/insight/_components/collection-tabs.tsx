@@ -177,7 +177,7 @@ export function SkillPackPanel({ scope }: { scope: InsightCollectionScope }) {
           <DownloadOutlined aria-hidden /> 采集 SKILL 包
         </>
       }
-      titleExtra="BotBuddy / WorkBuddy / Codex 这类能定时执行 SKILL 的通道装上包即可采集；包内是 SKILL.md + field-mapping.json"
+      titleExtra="AWBotDSH / WorkBuddy / Codex 这类能定时执行 SKILL 的通道装上包即可采集；包内是 SKILL.md + field-mapping.json"
       extra={
         <Button
           size="small"
@@ -219,7 +219,7 @@ export function SkillPackPanel({ scope }: { scope: InsightCollectionScope }) {
           </div>
         ))}
         <div className="muted text-12">
-          用法：解压后把整个目录放进 BotBuddy 客户端本机技能库（或让已配对主机在技能中心按
+          用法：解压后把整个目录放进 AWBotDSH 客户端本机技能库（或让已配对主机在技能中心按
           slug 同步）→ 回本页挂数据源 → 保存{SCOPE_TEXT[scope].scheduleTitle}后按频率定时执行；「立即采集」随时可补跑一轮。
         </div>
         <Button size="small" onClick={() => router.push("/agent-bot")}>

@@ -1,0 +1,82 @@
+.tip {
+  margin-top: 14rpx;
+  line-height: 1.6;
+}
+
+.notice {
+  margin-top: 16rpx;
+  padding: 16rpx;
+  border-radius: 12rpx;
+  background: #fff7e8;
+  color: #b26a00;
+  font-size: 24rpx;
+  line-height: 1.7;
+}
+
+.notice-ok {
+  background: #e9f7ef;
+  color: #1f7a45;
+}
+
+.error {
+  margin-top: 18rpx;
+  color: #f53f3f;
+  font-size: 25rpx;
+  line-height: 1.6;
+}
+
+.button-danger {
+  margin-top: 28rpx;
+  background: #c62828;
+  color: #fff;
+  border-radius: 12rpx;
+  font-size: 34rpx;
+  font-weight: 600;
+  padding: 8rpx 0;
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #eef0f3;
+}
+
+.label {
+  width: 180rpx;
+  color: #4e5969;
+  font-size: 27rpx;
+  flex-shrink: 0;
+}
+
+.input {
+  flex: 1;
+  font-size: 27rpx;
+}
+
+.picker-value {
+  color: #3370ff;
+  font-size: 27rpx;
+}
+
+.line {
+  display: flex;
+  margin-top: 18rpx;
+  font-size: 28rpx;
+}
+
+.value {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.action {
+  color: #3370ff;
+  font-size: 26rpx;
+}
+
+.action-danger {
+  color: #c62828;
+}

@@ -156,6 +156,25 @@ export class UpgradeController {
     return this.jobs.removeBackup(user, Number(id));
   }
 
+  /** 平台维护（停服）状态：升级/还原任务与管理员手动停服共用。 */
+  async maintenance(user: CurrentUser) {
+    this.admin(user);
+    return this.jobs.maintenance();
+  }
+
+  /** 管理员手动停服 / 恢复服务；停服必须给原因，会展示给全体用户。 */
+  async setMaintenance(
+    user: CurrentUser,
+    body: { on: boolean; reason?: string },
+  ) {
+    this.admin(user);
+    return this.jobs.setManualMaintenance(
+      user,
+      Boolean(body?.on),
+      String(body?.reason || ''),
+    );
+  }
+
   async upload(user: CurrentUser, file: UploadFile, versionHint: string) {
     this.admin(user);
     const result = await this.packageService.upload(file, versionHint);

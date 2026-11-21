@@ -1,0 +1,25 @@
+<view class="wrap">
+  <view wx:if="{{error}}" class="card">
+    <view class="section-title">AI 客服暂不可用</view>
+    <view class="muted">{{error}}</view>
+  </view>
+
+  <block wx:else>
+    <view class="card">
+      <view class="section-title">{{siteName}} · AI 客服</view>
+      <view class="muted">可咨询园区政策、办事指南、收费与报修流程；需要人工时系统会自动转接。</view>
+    </view>
+
+    <scroll-view scroll-y="true" style="height: 60vh;" scroll-into-view="{{scrollInto}}">
+      <view wx:for="{{messages}}" wx:key="id" id="msg-{{item.id}}" class="message {{item.senderType}}">
+        <view>{{item.content}}</view>
+      </view>
+      <view wx:if="{{loading}}" class="empty">正在接入客服…</view>
+    </scroll-view>
+
+    <view class="card" style="margin-top: 12rpx;">
+      <input class="input" value="{{input}}" bindinput="onInput" placeholder="输入问题…" confirm-type="send" bindconfirm="send" />
+      <view class="btn" bindtap="send">{{sending ? "发送中…" : "发送"}}</view>
+    </view>
+  </block>
+</view>

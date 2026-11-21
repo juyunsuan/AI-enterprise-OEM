@@ -1,0 +1,161 @@
+<view class="page">
+  <view wx:if="{{loading}}" class="empty">正在准备菜单...</view>
+
+  <view wx:elif="{{error}}" class="card error-card">
+    <view class="error-title">菜单加载失败</view>
+    <view class="muted text-12">{{error}}</view>
+    <view class="btn btn-primary retry" bindtap="loadAll">重试</view>
+  </view>
+
+  <block wx:else>
+    <view class="shop-bar">
+      <view class="shop-name ellipsis">{{shop.name}}</view>
+      <view class="shop-meta">
+        <text wx:if="{{shop.open}}" class="open-dot"></text>
+        <text>{{shop.open ? '营业中' : '休息中'}}</text>
+        <text class="dot">·</text>
+        <text>约 {{shop.estimatedMinutes}} 分钟</text>
+        <text class="dot">·</text>
+        <text>起送 ¥{{shop.minOrderAmount}}</text>
+      </view>
+    </view>
+
+    <view class="menu">
+      <scroll-view scroll-y class="cat-pane" enhanced show-scrollbar="{{false}}">
+        <view
+          wx:for="{{categories}}"
+          wx:key="id"
+          class="cat-item {{activeId === item.id ? 'cat-active' : ''}}"
+          data-id="{{item.id}}"
+          bindtap="pickCategory"
+        >
+          <view class="cat-name">{{item.name}}</view>
+          <view class="cat-count">{{item.count}} 款</view>
+        </view>
+      </scroll-view>
+
+      <scroll-view
+        scroll-y
+        class="dish-pane"
+        scroll-into-view="{{scrollIntoView}}"
+        scroll-with-animation
+        enhanced
+        show-scrollbar="{{false}}"
+      >
+        <view
+          wx:for="{{categories}}"
+          wx:key="id"
+          wx:for-item="cat"
+          id="cat-{{cat.id}}"
+          class="cat-section"
+        >
+          <view class="cat-section-title">{{cat.name}}</view>
+          <view
+            wx:for="{{products}}"
+            wx:key="id"
+            wx:for-item="dish"
+            wx:if="{{dish.categoryId === cat.id}}"
+            class="dish"
+            data-id="{{dish.id}}"
+            bindtap="tapProduct"
+          >
+            <view class="dish-media">
+              <image wx:if="{{dish.coverImage}}" src="{{dish.coverImage}}" mode="aspectFill" class="dish-img" />
+              <view wx:else class="dish-img dish-placeholder">菜</view>
+              <view wx:if="{{dish.soldOut}}" class="soldout">售罄</view>
+            </view>
+            <view class="dish-info">
+              <view class="dish-title ellipsis">{{dish.title}}</view>
+              <view wx:if="{{dish.subtitle}}" class="dish-sub ellipsis">{{dish.subtitle}}</view>
+              <view class="dish-tags">
+                <text wx:if="{{dish.isHot}}" class="tag">热销</text>
+                <text wx:if="{{dish.specText}}" class="tag tag-soft">{{dish.specText}}</text>
+              </view>
+              <view class="dish-foot">
+                <view class="price"><text class="price-symbol">¥</text>{{dish.priceText}}</view>
+                <view class="dish-sales">已售 {{dish.sales}}</view>
+                <view class="dish-add {{dish.soldOut ? 'dish-add-off' : ''}}">
+                  <text wx:if="{{dish.cartQty}}" class="dish-qty">{{dish.cartQty}}</text>
+                  <text>+</text>
+                </view>
+              </view>
+            </view>
+          </view>
+        </view>
+        <view class="dish-bottom-space"></view>
+      </scroll-view>
+    </view>
+
+    <view class="cart-bar" wx:if="{{cartCount}}">
+      <view class="cart-left" bindtap="toggleCart">
+        <view class="cart-icon">
+          <text>车</text>
+          <view class="cart-count">{{cartCount}}</view>
+        </view>
+        <view class="cart-total">
+          <view class="price"><text class="price-symbol">¥</text>{{cartAmountText}}</view>
+          <view class="cart-tip">已选 {{cartCount}} 件</view>
+        </view>
+      </view>
+      <view class="checkout-btn" bindtap="goConfirm">去结算</view>
+    </view>
+  </block>
+
+  <view wx:if="{{showCart}}" class="mask" bindtap="closeCart"></view>
+  <view wx:if="{{showCart}}" class="cart-panel safe-bottom" catchtap="noop">
+    <view class="cart-head">
+      <view class="cart-head-title">已选菜品</view>
+      <view class="cart-clear" bindtap="clearCart">清空</view>
+    </view>
+    <scroll-view scroll-y class="cart-list">
+      <view wx:for="{{cart.items}}" wx:key="id" class="cart-item">
+        <view class="flex-1">
+          <view class="cart-item-title ellipsis">{{item.title}}</view>
+          <view wx:if="{{item.skuName}}" class="muted text-12">{{item.skuName}}</view>
+          <view class="cart-item-price">¥{{item.priceText}}</view>
+        </view>
+        <view class="stepper">
+          <view class="step-btn" data-id="{{item.id}}" data-delta="-1" catchtap="changeCartQty">-</view>
+          <view class="step-value">{{item.quantity}}</view>
+          <view class="step-btn" data-id="{{item.id}}" data-delta="1" catchtap="changeCartQty">+</view>
+        </view>
+      </view>
+      <view wx:if="{{!cart.items.length}}" class="empty">购物车是空的</view>
+    </scroll-view>
+  </view>
+
+  <view wx:if="{{showSpec}}" class="mask" bindtap="closeSpec"></view>
+  <view wx:if="{{showSpec}}" class="spec-panel safe-bottom" catchtap="noop">
+    <view class="spec-head">
+      <view class="flex-1">
+        <view class="spec-title">{{spec.product.title}}</view>
+        <view class="spec-price"><text class="price-symbol">¥</text>{{spec.priceText}}</view>
+      </view>
+      <view class="spec-close" bindtap="closeSpec">关闭</view>
+    </view>
+    <view wx:for="{{spec.groups}}" wx:key="name" wx:for-item="group" class="spec-group">
+      <view class="spec-name">{{group.name}}</view>
+      <view class="spec-values">
+        <view
+          wx:for="{{group.values}}"
+          wx:key="value"
+          wx:for-item="option"
+          class="spec-value {{option.active ? 'spec-value-active' : ''}}"
+          data-name="{{group.name}}"
+          data-value="{{option.value}}"
+          bindtap="pickSpecValue"
+        >{{option.value}}</view>
+      </view>
+    </view>
+    <view class="spec-foot">
+      <view class="stepper">
+        <view class="step-btn" data-delta="-1" bindtap="changeSpecQty">-</view>
+        <view class="step-value">{{spec.qty}}</view>
+        <view class="step-btn" data-delta="1" bindtap="changeSpecQty">+</view>
+      </view>
+      <view class="btn btn-primary spec-add {{spec.soldOut ? 'spec-add-off' : ''}}" bindtap="confirmSpec">
+        {{spec.soldOut ? '已售罄' : '加入购物车'}}
+      </view>
+    </view>
+  </view>
+</view>

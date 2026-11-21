@@ -12,7 +12,8 @@ const EMPTY: SiteConfig = {
   footerLinks: [],
   hiddenMenuPaths: [],
   hiddenBoardTabs: [],
-  clientDownloadUrl: "",
+  mobileDownloadUrl: "",
+  pcDownloadUrl: "",
 };
 const SiteBrandContext = createContext<SiteConfig>(EMPTY);
 

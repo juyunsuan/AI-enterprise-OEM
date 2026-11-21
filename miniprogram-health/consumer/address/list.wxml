@@ -1,0 +1,34 @@
+<view class="page page-with-bar">
+  <view class="card" wx:if="{{addresses.length}}">
+    <view class="address" wx:for="{{addresses}}" wx:key="id">
+      <view class="address-head">
+        <view class="address-name">
+          {{item.receiver}}
+          <text class="tag tag-green" wx:if="{{item.isDefault}}">默认</text>
+          <text class="tag" wx:if="{{item.tag}}">{{item.tag}}</text>
+        </view>
+        <text class="item-meta">{{item.phone}}</text>
+      </view>
+      <view class="item-meta">{{item.regionText}} {{item.detail}}</view>
+      <view class="address-actions">
+        <text
+          class="link action"
+          data-id="{{item.id}}"
+          catchtap="onEdit"
+        >编辑</text>
+        <text
+          class="link danger action"
+          data-id="{{item.id}}"
+          catchtap="onRemove"
+        >删除</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="empty" wx:elif="{{!loading}}">还没有收货地址，添加后可在商城下单时直接选用</view>
+  <view class="empty" wx:else>正在加载…</view>
+
+  <view class="action-bar">
+    <button class="button-primary bar-button" bindtap="onAdd">新增收货地址</button>
+  </view>
+</view>

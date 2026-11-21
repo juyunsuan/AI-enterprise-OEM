@@ -376,7 +376,7 @@ export function CardSpecPane() {
               <InputNumber
                 min={1}
                 style={{ width: "100%" }}
-                addonAfter={selectedUnit ? UNIT_LABEL[selectedUnit] : "未选模型"}
+                suffix={selectedUnit ? UNIT_LABEL[selectedUnit] : "未选模型"}
                 placeholder="10000000"
               />
             </Form.Item>
@@ -429,7 +429,7 @@ export function CardSpecPane() {
                           style={{ width: 130 }}
                           rules={[{ required: true, message: "填倍率" }]}
                         >
-                          <InputNumber min={0.001} max={1000} step={0.5} addonBefore="×" />
+                          <InputNumber min={0.001} max={1000} step={0.5} prefix="×" />
                         </Form.Item>
                         <Button
                           size="small"

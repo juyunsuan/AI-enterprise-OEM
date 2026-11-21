@@ -1,0 +1,21 @@
+<view class="wrap">
+  <view class="card">
+    <view class="row">
+      <text class="section-title">{{type === 'TO' ? '送达地址簿' : '取货地址簿'}}</text>
+      <text class="link" bindtap="add">新增</text>
+    </view>
+    <view wx:if="{{loading}}" class="muted">正在加载…</view>
+    <view wx:elif="{{error}}" class="muted">{{error}}</view>
+    <view wx:elif="{{!rows.length}}" class="muted">还没有地址，点右上角新增</view>
+    <view wx:for="{{rows}}" wx:key="id" class="addr">
+      <view class="grow" data-id="{{item.id}}" bindtap="select">
+        <view>{{item.name}} {{item.mobile}}</view>
+        <view class="muted">{{item.province}}{{item.city}}{{item.district}}{{item.address}}</view>
+      </view>
+      <view class="ops">
+        <text data-id="{{item.id}}" bindtap="edit">编辑</text>
+        <text class="danger" data-id="{{item.id}}" bindtap="remove">删除</text>
+      </view>
+    </view>
+  </view>
+</view>

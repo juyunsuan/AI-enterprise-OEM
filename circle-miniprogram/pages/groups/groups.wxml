@@ -1,0 +1,21 @@
+<view class="container">
+  <view class="tabs">
+    <view class="tab {{activeCategory === 0 ? 'active' : ''}}" data-id="0" bindtap="pickCategory">全部</view>
+    <view class="tab {{activeCategory === item.id ? 'active' : ''}}" wx:for="{{categories}}" wx:key="id" data-id="{{item.id}}" bindtap="pickCategory">{{item.name}}</view>
+  </view>
+
+  <view class="card" wx:for="{{groups}}" wx:key="id" data-id="{{item.id}}" bindtap="openGroup">
+    <view class="row">
+      <image class="avatar" src="{{item.cover}}" mode="aspectFill" />
+      <view class="name">{{item.name}}</view>
+      <view class="muted" style="margin-left:auto">{{item.memberCount}} 人</view>
+    </view>
+    <view class="muted" style="margin-top:8rpx">{{item.categoryName}} · {{item.joinMode === 'FREE' ? '自由加入' : '申请加入'}}</view>
+    <view class="content">{{item.intro}}</view>
+  </view>
+
+  <view class="empty" wx:if="{{!loading && !groups.length}}">还没有圈子</view>
+  <view class="empty" wx:if="{{loading}}">正在加载…</view>
+</view>
+
+<view class="floating" bindtap="applyGroup">+</view>

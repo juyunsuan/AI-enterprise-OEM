@@ -1,0 +1,27 @@
+{
+  "description": "园区管理小程序（园区顾客与员工身份独立，不与其它小程序共用账号）",
+  "packOptions": {
+    "ignore": [
+      {
+        "type": "file",
+        "value": "project.private.config.json"
+      }
+    ]
+  },
+  "setting": {
+    "urlCheck": true,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true,
+    "bigPackageSizeSupport": false,
+    "packNpmManually": false,
+    "packNpmRelationList": []
+  },
+  "compileType": "miniprogram",
+  "libVersion": "3.5.5",
+  "appid": "touristappid",
+  "projectname": "park-miniprogram",
+  "srcMiniprogramRoot": "./",
+  "miniprogramRoot": "./"
+}

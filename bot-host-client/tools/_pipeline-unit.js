@@ -20,13 +20,13 @@ const os = require('os');
 const path = require('path');
 const { spawnSync } = require('child_process');
 
-// 必须最先指定数据目录：db.js 在 require 时就读 BOTBUDDY_HOME。
+// 必须最先指定数据目录：db.js 在 require 时就读 AWBOTDSH_HOME。
 const HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'bb-pipeline-'));
-process.env.BOTBUDDY_HOME = HOME;
+process.env.AWBOTDSH_HOME = HOME;
 
 /** better-sqlite3 是 Electron ABI：本机 Node 直跑报 ABORT 时用 electron 以 Node 模式重跑。 */
 function reexecUnderElectron(err) {
-  if (process.env.BOTBUDDY_PIPELINE_REEXEC) return false;
+  if (process.env.AWBOTDSH_PIPELINE_REEXEC) return false;
   if (!/NODE_MODULE_VERSION|compiled against a different Node|was compiled against/.test(err.message)) {
     return false;
   }
@@ -36,8 +36,8 @@ function reexecUnderElectron(err) {
     stdio: 'inherit',
     env: Object.assign({}, process.env, {
       ELECTRON_RUN_AS_NODE: '1',
-      BOTBUDDY_PIPELINE_REEXEC: '1',
-      BOTBUDDY_HOME: HOME
+      AWBOTDSH_PIPELINE_REEXEC: '1',
+      AWBOTDSH_HOME: HOME
     })
   });
   process.exit(res.status === null ? 1 : res.status);

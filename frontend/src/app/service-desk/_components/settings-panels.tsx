@@ -182,6 +182,9 @@ export function SettingsPanel() {
           <Radio value="BOT">自动回复：纯AI接待，不转人工</Radio>
         </Space>
       </Radio.Group>
+      <div className="muted text-12" style={{ marginTop: 8 }}>
+        这里是账号级的默认口径；「客服团队」里的 AI 客服员工自带人设、模型、知识库范围与转人工口径，员工配了就以员工的为准，没配的才回落到这里。
+      </div>
       <div className="sd-form-grid" style={{ marginTop: 12 }}>
         <label>
           转人工关键词（逗号分隔）

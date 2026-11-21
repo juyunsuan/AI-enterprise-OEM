@@ -1,0 +1,45 @@
+<view class="empty" wx:if="{{loading}}">正在加载…</view>
+
+<block wx:if="{{!loading && identity}}">
+<view class="card head">
+  <view class="row">
+    <view>
+      <view class="row">
+        <text class="title">{{identity.name}}</text>
+        <text class="tag tag-blue role">{{identity.roleName}}</text>
+      </view>
+      <view class="muted head-meta">
+        <text wx:if="{{identity.agentTypeName}}">{{identity.agentTypeName}} · </text>
+        <text wx:if="{{identity.regionName}}">{{identity.regionName}} · </text>
+        <text>{{identity.phone}}</text>
+      </view>
+      <view class="muted head-meta" wx:if="{{identity.parentName}}">上级：{{identity.parentName}}</view>
+      <view class="muted head-meta">佣金比例 {{identity.rate}}% · {{identity.shopName}}</view>
+    </view>
+    <text class="link" bindtap="unbind">解绑</text>
+  </view>
+</view>
+
+<view class="cards">
+  <view class="stat" wx:for="{{stats}}" wx:key="key">
+    <text class="stat-value">{{item.value}}</text>
+    <text class="muted">{{item.label}}</text>
+    <text class="stat-hint" wx:if="{{item.hint}}">{{item.hint}}</text>
+  </view>
+</view>
+
+<view class="card">
+  <view class="title">快捷入口</view>
+  <view class="entry" wx:for="{{shortcuts}}" wx:key="key" data-url="{{item.url}}" bindtap="openShortcut">
+    <view class="entry-main">
+      <view class="entry-label">{{item.label}}</view>
+      <view class="muted" wx:if="{{item.desc}}">{{item.desc}}</view>
+    </view>
+    <text class="entry-arrow">›</text>
+  </view>
+</view>
+
+<view class="card">
+  <view class="muted tip">佣金口径：下单预生成为「待生效」，订单支付后才计入累计；退款按比例冲销，历史单不追改已生效金额。车费与物料费不参与抽佣。打款由店主在后台登记，平台不经手资金。</view>
+</view>
+</block>

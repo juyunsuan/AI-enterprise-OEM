@@ -28,7 +28,8 @@ import { httpRequest } from '../http/transport';
 import { assertOutboundUrl } from '../http/outbound-guard';
 import { IdentityService } from '../identity/identity.service';
 import { UserLookupService } from '../directory/user-lookup.service';
-import { OssService } from '../oss/oss.service';
+import type { StorageService } from '../storage/storage.service';
+import type { SystemAssetService } from '../system-asset/system-asset.service';
 import { OSS_HOST } from '../oss/oss.config';
 import { PrismaService } from '../prisma/prisma.service';
 import { ComfyClient, MAX_DOWNLOAD_BYTES } from './comfy.client';
@@ -188,10 +189,11 @@ export class CommunityService {
     private readonly prisma: PrismaService,
     private readonly identity: IdentityService,
     private readonly users: UserLookupService,
-    private readonly oss: OssService,
+    private readonly storage: StorageService,
     private readonly comfy: ComfyClient,
     private readonly crypto: ComfyCrypto,
     private readonly awards: CommunityAwardService,
+    private readonly assets: SystemAssetService,
   ) {}
 
   // ---------- 通用 ----------
@@ -230,7 +232,7 @@ export class CommunityService {
   private coverUrls(row: WorkflowRow): string[] {
     return listOf(row.coverKeys)
       .slice(0, 8)
-      .map((key) => (key.startsWith('http') ? key : this.oss.keyUrlOf(key)))
+      .map((key) => (key.startsWith('http') ? key : this.storage.urlOf(key)))
       .filter((url) => !!url);
   }
 
@@ -752,7 +754,7 @@ export class CommunityService {
       this.assertImageSize(bytes);
       return { bytes, filename: `input${extOf(contentType)}`, contentType };
     }
-    const url = /^https?:/i.test(raw) ? raw : this.oss.keyUrlOf(raw);
+    const url = /^https?:/i.test(raw) ? raw : this.storage.urlOf(raw);
     let target: URL;
     try {
       target = new URL(url);
@@ -833,7 +835,15 @@ export class CommunityService {
     const objectPath = `enterprise/${user.userId}/community-inputs/${Date.now()}-${randomBytes(
       4,
     ).toString('hex')}-${safeName}`;
-    const uploaded = await this.oss.upload(objectPath, file.bytes);
+    // 运行表单的输入图落桶即入账：归属就是上传者，路径里的 enterprise/{userId} 与账一致
+    const uploaded = await this.assets.put({
+      ownerUserId: user.userId,
+      path: objectPath,
+      bytes: file.bytes,
+      name: safeName,
+      assetType: 'image',
+      bizRef: 'community-run-input',
+    });
     return { key: uploaded.key, url: uploaded.url, size: uploaded.size };
   }
 
@@ -950,7 +960,8 @@ export class CommunityService {
         kind: output.kind,
         name: output.name,
         url:
-          output.url || (output.ossKey ? this.oss.keyUrlOf(output.ossKey) : ''),
+          output.url ||
+          (output.ossKey ? this.storage.urlOf(output.ossKey) : ''),
         ossKey: output.ossKey,
         sizeBytes: Number(output.sizeBytes || 0),
         assetId: output.assetId,

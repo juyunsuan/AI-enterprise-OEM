@@ -1,0 +1,61 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/type/type",
+    "pages/list/list",
+    "pages/details/details",
+    "pages/notice/notice",
+    "pages/notice-detail/notice-detail",
+    "pages/more/more",
+    "pages/search/search",
+    "pages/user/user",
+    "pages/member-vip/member-vip",
+    "pages/my-content/my-content",
+    "pages/my-favorites/my-favorites",
+    "pages/my-learning/my-learning",
+    "pages/learn/learn",
+    "pages/discover/discover",
+    "pages/teacher/teacher",
+    "pages/page/page",
+    "pages/my-orders/my-orders",
+    "pages/webview/webview"
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#FFFFFF",
+    "navigationBarTitleText": "知识付费云课堂",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#f5f6f8",
+    "backgroundTextStyle": "dark",
+    "enablePullDownRefresh": false
+  },
+  "tabBar": {
+    "color": "#8a8f99",
+    "selectedColor": "#3370ff",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/type/type",
+        "text": "分类"
+      },
+      {
+        "pagePath": "pages/discover/discover",
+        "text": "发现"
+      },
+      {
+        "pagePath": "pages/user/user",
+        "text": "我的"
+      }
+    ]
+  },
+  "style": "v2",
+  "usingComponents": {
+    "resource-card": "/components/resource-card/index"
+  },
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

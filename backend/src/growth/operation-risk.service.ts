@@ -3,6 +3,10 @@ import type { HrmScopeService, HrmOrg } from '../hrm/hrm.scope';
 import type { MechanismService } from '../mechanisms/mechanism.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { TaskDraft } from '../task-center/task-source';
+import { withBridgeTimeout } from '../commerce-core/outbox-policy';
+import { unwiredErpPort } from '../erp/erp-port';
+import { failingErpWritePort, type ErpWritePort } from '../erp/erp-write-port';
+import type { ErpPort } from '../erp/erp-port';
 
 type Row = Record<string, unknown>;
 
@@ -62,45 +66,44 @@ export class OperationRiskService {
     private readonly scope: HrmScopeService,
     private readonly mechanisms: MechanismService,
     private readonly tasks: { assign(draft: TaskDraft): Promise<unknown> },
+    /** ERP 读侧端口：未注入时空转（返回空读数），单测可注入替身。 */
+    private readonly erp: ErpPort = unwiredErpPort(),
+    /** ERP 写侧端口：补货采购单从这里落，缺装配直接抛错（不许静默不建单）。 */
+    private readonly erpWrites: ErpWritePort = failingErpWritePort,
   ) {}
 
   /** 扫描当前组织五类异常；只读，不改任何业务单据。 */
   async scan(org: HrmOrg): Promise<RiskSignal[]> {
+    return (await this.collectSignals(org)).signals;
+  }
+
+  /**
+   * 扫描实现：ERP 侧读数全部经 `ErpPort`，普通页面口径下失败/超时降级为空值
+   * （增长雷达页仍能看项目/任务类异常，`erpAvailable` 标注「ERP 数据暂不可用」）；
+   * 结案复核（strictErp）按原语义直读，读失败即抛，绝不把「读不到」误判成「异常已消除」。
+   */
+  private async collectSignals(
+    org: HrmOrg,
+    options: { strictErp?: boolean } = {},
+  ): Promise<{ signals: RiskSignal[]; erpAvailable: boolean }> {
     const orgKey = { orgType: org.orgType, orgUserId: org.orgUserId };
     const todayStr = today();
+    let erpAvailable = true;
+    const erpRead = async <T>(
+      work: () => Promise<T>,
+      fallback: T,
+    ): Promise<T> => {
+      if (options.strictErp) return work();
+      const result = await withBridgeTimeout(work);
+      if (!result.ok) {
+        erpAvailable = false;
+        return fallback;
+      }
+      return result.value;
+    };
     const [receivables, payables, projects, stocks, tasks] = await Promise.all([
-      this.prisma.erpReceivable.findMany({
-        where: {
-          ...orgKey,
-          status: { in: ['OPEN', 'PARTIAL', 'OVERDUE'] },
-          dueDate: { lt: todayStr },
-        },
-        select: {
-          id: true,
-          code: true,
-          customerName: true,
-          amount: true,
-          receivedAmount: true,
-          dueDate: true,
-        },
-        take: 200,
-      }),
-      this.prisma.erpPayable.findMany({
-        where: {
-          ...orgKey,
-          status: { in: ['OPEN', 'PARTIAL', 'OVERDUE'] },
-          dueDate: { lt: todayStr },
-        },
-        select: {
-          id: true,
-          code: true,
-          vendorId: true,
-          amount: true,
-          paidAmount: true,
-          dueDate: true,
-        },
-        take: 200,
-      }),
+      erpRead(() => this.erp.listOverdueReceivables(orgKey, todayStr), []),
+      erpRead(() => this.erp.listOverduePayables(orgKey, todayStr), []),
       this.prisma.pjProject.findMany({
         where: {
           ...orgKey,
@@ -115,16 +118,14 @@ export class OperationRiskService {
         },
         take: 200,
       }),
-      this.prisma.erpStock.findMany({
-        where: { ...orgKey, reorderPoint: { gt: 0 } },
-        select: {
-          warehouseId: true,
-          variantId: true,
-          onHand: true,
-          reorderPoint: true,
-        },
-        take: 500,
-      }),
+      erpRead(
+        () =>
+          this.erp.listStock(orgKey, {
+            onlyWithReorderPoint: true,
+            limit: 500,
+          }),
+        [],
+      ),
       this.prisma.pjTask.findMany({
         where: {
           ...orgKey,
@@ -156,14 +157,7 @@ export class OperationRiskService {
     }
     const variantIds = [...new Set(stocks.map((row) => row.variantId))];
     const variants = variantIds.length
-      ? await this.prisma.erpVariant.findMany({
-          where: {
-            id: { in: variantIds },
-            orgType: org.orgType,
-            orgUserId: org.orgUserId,
-          },
-          select: { id: true, sku: true, name: true },
-        })
+      ? await erpRead(() => this.erp.listVariants(orgKey, variantIds), [])
       : [];
     const variantLabels = new Map(
       variants.map((row) => [row.id, row.name || row.sku || `#${row.id}`]),
@@ -173,10 +167,7 @@ export class OperationRiskService {
       (id) => id > 0,
     );
     const vendors = vendorIds.length
-      ? await this.prisma.erpVendor.findMany({
-          where: { id: { in: vendorIds } },
-          select: { id: true, name: true },
-        })
+      ? await erpRead(() => this.erp.listVendors(orgKey, vendorIds), [])
       : [];
     const vendorNames = new Map(vendors.map((row) => [row.id, row.name]));
     const fallbackOwner = org.orgUserId;
@@ -264,7 +255,7 @@ export class OperationRiskService {
         link: '/project',
       });
     }
-    return out;
+    return { signals: out, erpAvailable };
   }
 
   /**
@@ -275,8 +266,17 @@ export class OperationRiskService {
   async dispatchRisks(org: HrmOrg) {
     const signals = await this.scan(org);
     for (const signal of signals) {
+      // 建单失败不静默：任务照派（业务不能停），但把失败原因写进任务描述，
+      // 采购岗位接手时看得见「这张单没自动生成」，不会拿着任务去找不到单据。
+      let replenishFailure = '';
       const replenish = signal.stock
-        ? await this.ensureReplenishment(org, signal).catch(() => null)
+        ? await this.ensureReplenishment(org, signal).catch(
+            (error: unknown) => {
+              replenishFailure =
+                error instanceof Error ? error.message : String(error);
+              return null;
+            },
+          )
         : null;
       const sourceId =
         replenish && signal.stock
@@ -286,8 +286,10 @@ export class OperationRiskService {
         ? `补货申请：${signal.title.replace(/^.*：/, '')}`
         : signal.title;
       const description = replenish
-        ? `${signal.detail}；已生成采购申请 ${replenish.orderNo}（待审批）`
-        : signal.detail;
+        ? `${signal.detail}；${replenish.created ? '已生成' : '沿用既有'}采购申请 ${replenish.orderNo}（待审批）`
+        : replenishFailure
+          ? `${signal.detail}；自动建单失败：${replenishFailure}，请手工补采购单`
+          : signal.detail;
       const ownerUserId = replenish
         ? replenish.ownerUserId
         : signal.ownerUserId;
@@ -359,129 +361,68 @@ export class OperationRiskService {
 
   /**
    * 补货申请（幂等）：同一仓库 + 变体已有在途补货单（待审批/已批准/收货中）就复用，
-   * 否则按「补货点 − 现存」生成一张待审批采购单；供应商优先沿用唯一在用供应商。
+   * 否则按「补货点 − 现存」生成一张待审批采购单。
+   *
+   * 建单整体交给 ERP 写端口：同源未关闭单的复用判断、SKU/税率/默认供应商、当日单号流水
+   * 与 `erp.purchase.created` 事件都只在 ERP 域里实现一份。原先这里是「读端口读五遍 +
+   * 直写 erp_purchase_orders」，而且号源与经手人口径都和 ErpService 不一致
+   * （CG- 流水一个用当日计数一个用别的窗口、`createdBy` 这里写 orgUserId、ERP 写 actorId），
+   * 同一张表两套口径只会让采购台账对不上。
    */
   private async ensureReplenishment(
     org: HrmOrg,
     signal: RiskSignal,
-  ): Promise<{ orderId: number; orderNo: string; ownerUserId: string } | null> {
+  ): Promise<{
+    orderId: number;
+    orderNo: string;
+    ownerUserId: string;
+    created: boolean;
+  } | null> {
     const stock = signal.stock;
     if (!stock) return null;
-    const orgKey = { orgType: org.orgType, orgUserId: org.orgUserId };
     const ownerUserId = await this.purchaserOf(org);
-    const baseNo = `stock:${stock.warehouseId}:${stock.variantId}`;
-    const open = await this.prisma.erpPurchaseOrder.findFirst({
-      where: {
-        ...orgKey,
-        sourceType: 'STOCK_LOW',
-        sourceNo: baseNo,
-        status: { in: ['PENDING', 'APPROVED', 'RECEIVING'] },
-      },
-      orderBy: { id: 'desc' },
-      select: { id: true, orderNo: true },
+    const ensured = await this.erpWrites.ensureReplenishmentOrder(org, {
+      warehouseId: stock.warehouseId,
+      variantId: stock.variantId,
+      sourceNo: `stock:${stock.warehouseId}:${stock.variantId}`,
+      quantity: stock.quantity,
+      reason: signal.detail,
     });
-    if (open) {
-      return {
-        orderId: open.id,
-        orderNo: open.orderNo,
-        ownerUserId,
-      };
-    }
-    const variant = await this.prisma.erpVariant.findFirst({
-      where: { id: stock.variantId, ...orgKey },
-      select: {
-        id: true,
-        sku: true,
-        productId: true,
-        purchasePrice: true,
-      },
-    });
-    if (!variant) return null;
-    const product = await this.prisma.erpProduct.findUnique({
-      where: { id: variant.productId },
-      select: { taxRate: true },
-    });
-    const quantity = Math.max(1, Math.round(stock.quantity));
-    const price = num(variant.purchasePrice);
-    const amount = Number((quantity * price).toFixed(2));
-    const taxAmount = Number(
-      ((amount * num(product?.taxRate)) / 100).toFixed(2),
-    );
-    const vendor = await this.prisma.erpVendor.findFirst({
-      where: { ...orgKey, status: 'ACTIVE' },
-      orderBy: { id: 'desc' },
-      select: { id: true },
-    });
-    const stamp = today().replace(/-/g, '');
-    const count = await this.prisma.erpPurchaseOrder.count({
-      where: {
-        ...orgKey,
-        createdAt: { gte: new Date(`${today()}T00:00:00Z`) },
-      },
-    });
-    const orderNo = `CG-${stamp}-${String(count + 1).padStart(4, '0')}`;
-    const created = await this.prisma.erpPurchaseOrder.create({
-      data: {
-        ...orgKey,
-        orderNo,
-        vendorId: vendor?.id || 0,
-        projectId: 0,
-        sourceType: 'STOCK_LOW',
-        sourceNo: baseNo,
-        warehouseId: stock.warehouseId,
-        items: [
-          {
-            variantId: variant.id,
-            sku: variant.sku || stock.sku,
-            quantity,
-            price,
-          },
-        ],
-        amount,
-        taxAmount,
-        expectedAt: '',
-        note: `库存低于补货点自动生成：${signal.detail}`.slice(0, 500),
-        // 正式采购申请：仍需采购审批后才能收货（docs §8.4 完成依据）
-        status: 'PENDING',
-        createdBy: org.orgUserId,
-      },
-      select: { id: true, orderNo: true },
-    });
-    await this.mechanisms
-      .dispatch(org, 'erp.purchase.created', {
-        orderId: created.id,
-        orderNo: created.orderNo,
-        amount: amount.toFixed(2),
-        source: 'STOCK_LOW',
-      })
-      .catch(() => null);
-    return { orderId: created.id, orderNo: created.orderNo, ownerUserId };
+    if (!ensured) return null;
+    return {
+      orderId: ensured.orderId,
+      orderNo: ensured.orderNo,
+      ownerUserId,
+      // 复用已有单据（本轮没新建）也要让派单侧知道：任务文案区分「已生成」与「沿用既有」
+      created: ensured.created,
+    };
   }
 
   async list(user: CurrentUser, query: Row) {
     const org = await this.scope.resolve(user);
     const kind = typeof query.kind === 'string' ? query.kind : '';
-    const signals = (await this.scan(org)).filter(
-      (item) => !kind || item.kind === kind,
-    );
-    signals.sort(
+    const { signals, erpAvailable } = await this.collectSignals(org);
+    const filtered = signals.filter((item) => !kind || item.kind === kind);
+    filtered.sort(
       (a, b) =>
         (SEVERITY_ORDER[a.severity] ?? 9) - (SEVERITY_ORDER[b.severity] ?? 9),
     );
     const byKind = RISK_KINDS.map((key) => ({
       kind: key,
       kindLabel: RISK_KIND_LABELS[key],
-      count: signals.filter((item) => item.kind === key).length,
+      count: filtered.filter((item) => item.kind === key).length,
     }));
     const names = await this.scope.names(
-      signals.map((item) => item.ownerUserId),
+      filtered.map((item) => item.ownerUserId),
     );
     return {
       scannedAt: new Date().toISOString(),
-      total: signals.length,
-      high: signals.filter((item) => item.severity === 'HIGH').length,
+      total: filtered.length,
+      high: filtered.filter((item) => item.severity === 'HIGH').length,
+      // ERP 读数降级标注：页面据此提示「ERP 数据暂不可用」，其余异常照常展示。
+      erpAvailable,
       byKind,
-      list: signals.slice(0, 300).map((item) => ({
+      list: filtered.slice(0, 300).map((item) => ({
         ...item,
         ownerName: names.get(item.ownerUserId) || item.ownerUserId,
       })),
@@ -511,16 +452,14 @@ export class OperationRiskService {
     if (sourceId.startsWith('stock:')) {
       const [, warehouseId, variantId] = sourceId.split(':');
       if (warehouseId && variantId) {
-        const open = await this.prisma.erpPurchaseOrder.count({
-          where: {
+        const open = await this.erp.findReplenishmentOrder(
+          {
             orgType: orgKey.orgType || 'ENTERPRISE',
             orgUserId: orgKey.orgUserId,
-            sourceType: 'STOCK_LOW',
-            sourceNo: `stock:${warehouseId}:${variantId}`,
-            status: { in: ['PENDING', 'APPROVED', 'RECEIVING'] },
           },
-        });
-        if (open > 0) return { cleared: true, reason: '' };
+          `stock:${warehouseId}:${variantId}`,
+        );
+        if (open) return { cleared: true, reason: '' };
       }
     }
     const org: HrmOrg = {
@@ -533,7 +472,9 @@ export class OperationRiskService {
       positions: [],
       department: '',
     };
-    const signals = await this.scan(org);
+    // 结案复核按原语义直读 ERP：读失败即抛，不允许「读不到＝异常已消除」。
+    const signals = (await this.collectSignals(org, { strictErp: true }))
+      .signals;
     // 补货任务锚带采购单周期后缀（stock:仓库:变体:o单号），复核按信号本体匹配。
     const entityKey = sourceId.replace(/:o\d+$/, '');
     const hit = signals.find((item) => item.entityKey === entityKey);

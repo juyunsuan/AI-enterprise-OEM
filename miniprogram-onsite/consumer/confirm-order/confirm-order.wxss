@@ -1,0 +1,31 @@
+.addr-contact {
+  margin-top: 12rpx;
+}
+
+.addr-name {
+  font-size: 30rpx;
+  font-weight: 600;
+  margin-right: 16rpx;
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+}
+
+.stepper-btn {
+  width: 56rpx;
+  height: 56rpx;
+  line-height: 52rpx;
+  text-align: center;
+  border: 1rpx solid #dcdfe6;
+  border-radius: 50%;
+  font-size: 32rpx;
+  color: #5c6068;
+}
+
+.stepper-value {
+  min-width: 72rpx;
+  text-align: center;
+  font-size: 30rpx;
+}

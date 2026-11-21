@@ -1,0 +1,58 @@
+<view class="page">
+  <view class="tabs">
+    <view
+      class="tab {{item.activeClass}}"
+      wx:for="{{tabs}}"
+      wx:key="key"
+      data-key="{{item.key}}"
+      bindtap="onTabTap"
+    >{{item.label}}</view>
+  </view>
+
+  <view class="card login" wx:if="{{needLogin}}">
+    <view class="title">微信登录后可查看订单</view>
+    <view class="muted login-tip">登录仅用于识别你的订单与地址，不会读取其它信息。</view>
+    <button class="button-primary login-btn" bindtap="login">微信登录</button>
+    <view class="muted login-error" wx:if="{{error}}">{{error}}</view>
+  </view>
+
+  <block wx:else>
+    <view class="empty" wx:if="{{loading}}">正在加载订单…</view>
+
+    <view class="empty" wx:elif="{{error}}">
+      <view>{{error}}</view>
+      <view class="link" bindtap="onRetry">重新加载</view>
+    </view>
+
+    <view class="empty" wx:elif="{{!list.length}}">
+      <view>{{emptyText}}</view>
+      <view class="muted more-tip" wx:if="{{hasMore}}">继续上拉可加载更多订单</view>
+    </view>
+
+    <view class="card order" wx:for="{{list}}" wx:key="id" data-id="{{item.id}}" bindtap="onCardTap">
+      <view class="row order-head">
+        <text class="muted">{{item.orderNo}}</text>
+        <text class="status">{{item.statusText}}</text>
+      </view>
+      <view class="order-title">{{item.serviceTitle}}</view>
+      <view class="muted order-time">预约时间 {{item.timeText}}</view>
+      <view class="row order-foot">
+        <text class="amount">{{item.amountText}}</text>
+        <view class="actions">
+          <view
+            class="action {{action.className}}"
+            wx:for="{{item.buttons}}"
+            wx:for-item="action"
+            wx:key="key"
+            data-key="{{action.key}}"
+            data-id="{{item.id}}"
+            catchtap="onAction"
+          >{{action.text}}</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="muted more" wx:if="{{loadingMore}}">正在加载更多…</view>
+    <view class="muted more" wx:elif="{{list.length && !hasMore}}">没有更多订单了</view>
+  </block>
+</view>

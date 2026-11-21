@@ -58,10 +58,6 @@ describe('发布审核路径匹配', () => {
     ['PATCH', '/enterprise/market/hub/demands/7', 'demand'],
     ['POST', '/enterprise/market/hub/services', 'service'],
     ['PATCH', '/enterprise/market/hub/services/7', 'service'],
-    ['POST', '/enterprise/social/posts', 'community_post'],
-    ['POST', '/enterprise/social/groups/g1/topics', 'community_post'],
-    ['PUT', '/enterprise/social/resume', 'resume'],
-    ['POST', '/enterprise/social/resume/items', 'resume'],
   ])('%s %s 命中 %s 场景', (method, path, scene) => {
     expect(matchPublishRule(method, path)?.scene).toBe(scene);
   });
@@ -77,7 +73,7 @@ describe('发布审核路径匹配', () => {
     ['DELETE', '/enterprise/services/42'],
     ['POST', '/enterprise/services/42/publish'],
     ['PATCH', '/enterprise/services'],
-    ['POST', '/enterprise/social/posts/1/like'],
+    ['POST', '/enterprise/services/42/like'],
   ])('%s %s 不是发布动作', (method, path) => {
     expect(matchPublishRule(method, path)).toBeUndefined();
   });
@@ -109,28 +105,6 @@ describe('发布审核中间件', () => {
     expect(
       (await run('POST', '/enterprise/services', ['not-object'])).guard,
     ).not.toHaveBeenCalled();
-  });
-
-  it('社群发帖只审正文，群话题审标题、正文与标签', async () => {
-    const post = await run('POST', '/enterprise/social/posts', {
-      body: '今日分享',
-      title: '不应送审',
-    });
-    expect(post.guard).toHaveBeenCalledWith({
-      userId: 'user-1',
-      scene: 'community_post',
-      texts: ['今日分享'],
-    });
-    const topic = await run('POST', '/enterprise/social/groups/g1/topics', {
-      title: '话题',
-      body: '内容',
-      tag: '讨论',
-    });
-    expect(topic.guard).toHaveBeenCalledWith({
-      userId: 'user-1',
-      scene: 'community_post',
-      texts: ['话题', '内容', '讨论'],
-    });
   });
 });
 

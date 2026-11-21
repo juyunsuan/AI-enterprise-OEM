@@ -20,8 +20,8 @@ import { SchedulePanel } from "./bot-host/schedule-panel";
 const SUB_KEYS = ["devices", "chat", "schedules", "bindings"] as const;
 
 /**
- * BotBuddy 主机 / MoBot 手机共用的设备区：设备台账 / 对话 / 定时任务 / Agent 绑定账号。
- * 两者只差 clientKind（DESKTOP / MOBOT）与文案，指令、工作区与心跳链路同一套。
+ * AWBotDSH 主机 / AWBot 手机共用的设备区：设备台账 / 对话 / 定时任务 / Agent 绑定账号。
+ * 两者只差 clientKind（DESKTOP / AWBOT）与文案，指令、工作区与心跳链路同一套。
  */
 export function DeviceSection({
   kind,
@@ -32,7 +32,7 @@ export function DeviceSection({
   defaultSub: string;
   defaultHostId: number;
 }) {
-  const isMobile = kind === "MOBOT";
+  const isMobile = kind === "AWBOT";
   const [sub, setSub] = useState<string>(() =>
     (SUB_KEYS as readonly string[]).includes(defaultSub) ? defaultSub : "devices",
   );
@@ -126,7 +126,7 @@ export function DeviceSection({
       />
 
       {error ? (
-        <Notice variant="error">{`${isMobile ? "MoBot 手机" : "Bot 主机"}数据加载失败：${error}`}</Notice>
+        <Notice variant="error">{`${isMobile ? "AWBot 手机" : "Bot 主机"}数据加载失败：${error}`}</Notice>
       ) : null}
 
       {loading ? (
@@ -163,8 +163,8 @@ export function DeviceSection({
           }))}
           emptyDevices={
             isMobile
-              ? "还没有配对的 MoBot 手机：先在「设备」页签用 6 位连接码配对，再回来把 AI 调用账号授权给它"
-              : "还没有配对的 BotBuddy 主机：先在「主机」页签配对，再回来把 AI 调用账号授权给它"
+              ? "还没有配对的 AWBot 手机：先在「设备」页签用 6 位连接码配对，再回来把 AI 调用账号授权给它"
+              : "还没有配对的 AWBotDSH 主机：先在「主机」页签配对，再回来把 AI 调用账号授权给它"
           }
         />
       )}

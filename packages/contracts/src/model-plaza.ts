@@ -30,7 +30,7 @@ export const mpBillingUnitSchema = z.enum(["token", "image", "second", "call"]);
 export type MpBillingUnit = z.infer<typeof mpBillingUnitSchema>;
 
 /** 能力分类：文本 / 图片 / 视频 / 音频 / 向量 / 其他（按模型端点归类）。 */
-export const mpCategorySchema = z.enum([
+export const modelPlazaCategorySchema = z.enum([
   "text",
   "image",
   "video",
@@ -38,7 +38,7 @@ export const mpCategorySchema = z.enum([
   "embedding",
   "other",
 ]);
-export type MpCategory = z.infer<typeof mpCategorySchema>;
+export type ModelPlazaCategory = z.infer<typeof modelPlazaCategorySchema>;
 
 export const mpSourceSchema = z.enum(["IN_APP", "API"]);
 export type MpSource = z.infer<typeof mpSourceSchema>;
@@ -130,7 +130,7 @@ export const mpModelSchema = z.object({
   /** 与上游 aipdd.pricing.billing_unit 一致 */
   billingUnit: mpBillingUnitSchema,
   /** 能力分类，用于目录筛选与卡片标识 */
-  category: mpCategorySchema,
+  category: modelPlazaCategorySchema,
   price: mpPriceSchema,
   contextWindow: z.number().int().nonnegative(),
   maxOutputTokens: z.number().int().nonnegative(),
@@ -329,7 +329,7 @@ export const mpDiscoveredModelSchema = z.object({
   displayName: z.string(),
   /** 上游声明的计费单位与官方价；非 AIPDD 渠道没有元数据时为单位 token、价格 0 */
   billingUnit: mpBillingUnitSchema,
-  category: mpCategorySchema,
+  category: modelPlazaCategorySchema,
   inputRmbPrice: z.number(),
   outputRmbPrice: z.number(),
   /** 媒体类基础单价：元 / 张、元 / 秒、元 / 次 */
@@ -374,7 +374,7 @@ export const mpCatalogSaveSchema = z.object({
   /** 与上游计费单位完全一致 */
   billingUnit: mpBillingUnitSchema.default("token"),
   /** 能力分类；留空时后端按端点推导 */
-  category: mpCategorySchema.default("text"),
+  category: modelPlazaCategorySchema.default("text"),
   /** 官方原价：token 类按每百万 tokens，媒体类按每张/每秒/每次 */
   inputRmbPrice: rmbPrice.default(0),
   outputRmbPrice: rmbPrice.default(0),
@@ -428,7 +428,7 @@ export const mpImportInputSchema = z.object({
         modelKey: z.string().trim().min(1).max(128),
         displayName: z.string().trim().max(128).default(""),
         billingUnit: mpBillingUnitSchema.default("token"),
-        category: mpCategorySchema.default("text"),
+        category: modelPlazaCategorySchema.default("text"),
         inputRmbPrice: rmbPrice.default(0),
         outputRmbPrice: rmbPrice.default(0),
         callRmbPrice: rmbPrice.default(0),

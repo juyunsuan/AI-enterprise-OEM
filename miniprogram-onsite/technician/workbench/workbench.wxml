@@ -1,0 +1,69 @@
+<view class="empty" wx:if="{{loading}}">正在加载…</view>
+
+<block wx:if="{{!loading}}">
+<view class="card">
+  <view class="row">
+    <view class="who">
+      <image class="avatar" wx:if="{{staffAvatar}}" src="{{staffAvatar}}" mode="aspectFill" />
+      <view class="avatar avatar-empty" wx:else>{{staffName}}</view>
+      <view class="who-text">
+        <text class="title">{{staffName}}</text>
+        <view class="muted">
+          <text wx:if="{{levelName}}">{{levelName}} · </text>
+          <text>{{statusLabel}}</text>
+        </view>
+      </view>
+    </view>
+    <text class="badge" bindtap="openShortcut" data-url="/technician/profile/profile">资料</text>
+  </view>
+  <view class="muted rating" wx:if="{{ratingText}}">{{ratingText}}</view>
+  <view class="notice" wx:if="{{pendingProfile}}">资料变更审核中，审核通过后对外生效。审核期间顾客看到的仍是修改前的资料。</view>
+  <view class="notice notice-warn" wx:if="{{!alertEnabled}}">店主尚未开启一键报警，求救提交会被拒绝，紧急情况请直接拨打店主电话。</view>
+</view>
+
+<view class="stats">
+  <view class="stat" bindtap="openShortcut" data-url="/technician/order-list/order-list">
+    <text class="stat-value">{{stats[0].value}}</text>
+    <text class="muted">{{stats[0].label}}</text>
+  </view>
+  <view class="stat" bindtap="openPending">
+    <text class="stat-value">{{stats[1].value}}</text>
+    <text class="muted">{{stats[1].label}}</text>
+  </view>
+  <view class="stat" bindtap="openServing">
+    <text class="stat-value">{{stats[2].value}}</text>
+    <text class="muted">{{stats[2].label}}</text>
+  </view>
+  <view class="stat">
+    <text class="stat-value">{{stats[3].value}}</text>
+    <text class="muted">{{stats[3].label}}</text>
+  </view>
+</view>
+
+<view class="card">
+  <view class="row">
+    <text class="title">今日下一单</text>
+    <text class="muted">按预约时间排序</text>
+  </view>
+  <view class="next" wx:if="{{nextOrder}}" bindtap="openNextOrder">
+    <view class="row">
+      <text class="next-time">{{nextOrder.timeText}}</text>
+      <text class="badge">{{nextOrder.statusLabel}}</text>
+    </view>
+    <view class="next-service">{{nextOrder.serviceText}}</view>
+    <view class="muted">订单号 {{nextOrder.orderNo}}<text wx:if="{{nextOrder.customerText}}"> · {{nextOrder.customerText}}</text></view>
+    <view class="next-link">查看详情与操作</view>
+  </view>
+  <view class="muted next-empty" wx:elif="{{nextOrderError}}">{{nextOrderError}}</view>
+  <view class="muted next-empty" wx:else>当前没有待服务的订单，去接单列表看看有没有新的单。</view>
+</view>
+
+<view class="card">
+  <view class="title">快捷入口</view>
+  <view class="grid">
+    <view class="grid-item" wx:for="{{shortcuts}}" wx:key="key" bindtap="openShortcut" data-url="{{item.url}}">
+      <text>{{item.label}}</text>
+    </view>
+  </view>
+</view>
+</block>

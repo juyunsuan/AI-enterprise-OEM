@@ -14,20 +14,13 @@ import {
 import { hardwareApi } from "@/api/hardware";
 import { EmptyState, Notice, Panel } from "@/components/ui/panel";
 import { RawImg } from "@/components/ui/raw-img";
+import { formatBytes as formatSize } from "@/lib/format";
 
 const STATUS_COLOR: Record<HwDeviceStatus, string> = {
   ONLINE: "green",
   OFFLINE: "orange",
   NEVER: "default",
 };
-
-function formatSize(bytes: number) {
-  if (!bytes) return "—";
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-  return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
-}
 
 function specValue(value: unknown) {
   if (value === null || value === undefined) return "—";

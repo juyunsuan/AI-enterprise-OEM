@@ -111,10 +111,15 @@ export interface SiteSettings {
    */
   extensionEntryEnabled: boolean;
   /**
-   * 顶部「下载客户端」入口的下载地址：管理员填了才在顶栏展示图标，点击直接打开该地址。
+   * 顶部「AWBot 手机端」下载入口地址：管理员填了才在顶栏展示图标，点击新窗口打开该地址。
    * 留空＝不展示入口；只接受 http(s) 绝对地址或站内路径。
    */
-  clientDownloadUrl: string;
+  mobileDownloadUrl: string;
+  /**
+   * 顶部「AWBotDSH PC 端」下载入口地址：管理员填了才在顶栏展示图标，点击新窗口打开该地址。
+   * 留空＝不展示入口；只接受 http(s) 绝对地址或站内路径。
+   */
+  pcDownloadUrl: string;
 }
 
 /**
@@ -151,7 +156,12 @@ export class SiteSettingsService {
       // 部署期兜底域名：管理员在后台改过之后以库里的值为准。
       siteUrl: normalizeSiteUrl(process.env.SITE_URL),
       extensionEntryEnabled: true,
-      clientDownloadUrl: normalizeDownloadUrl(process.env.CLIENT_DOWNLOAD_URL),
+      mobileDownloadUrl: normalizeDownloadUrl(
+        process.env.AWBOT_MOBILE_DOWNLOAD_URL,
+      ),
+      pcDownloadUrl: normalizeDownloadUrl(
+        process.env.AWBOT_DSH_DOWNLOAD_URL || process.env.CLIENT_DOWNLOAD_URL,
+      ),
     };
   }
 
@@ -162,7 +172,10 @@ export class SiteSettingsService {
     });
     if (!row?.value) return base;
     try {
-      const stored = JSON.parse(row.value) as Partial<SiteSettings>;
+      const stored = JSON.parse(row.value) as Partial<SiteSettings> & {
+        /** 旧版单一「客户端下载地址」：升级后未重新保存前，继续当作 PC 端入口。 */
+        clientDownloadUrl?: string;
+      };
       return {
         siteName: stored.siteName?.trim() || base.siteName,
         siteLogo: stored.siteLogo ?? base.siteLogo,
@@ -201,10 +214,16 @@ export class SiteSettingsService {
             : base.siteUrl,
         // 只有管理员显式关过才隐藏；历史配置没有该字段时保持默认展示
         extensionEntryEnabled: stored.extensionEntryEnabled !== false,
-        clientDownloadUrl:
-          stored.clientDownloadUrl !== undefined
-            ? normalizeDownloadUrl(stored.clientDownloadUrl)
-            : base.clientDownloadUrl,
+        mobileDownloadUrl:
+          stored.mobileDownloadUrl !== undefined
+            ? normalizeDownloadUrl(stored.mobileDownloadUrl)
+            : base.mobileDownloadUrl,
+        pcDownloadUrl:
+          stored.pcDownloadUrl !== undefined
+            ? normalizeDownloadUrl(stored.pcDownloadUrl)
+            : stored.clientDownloadUrl !== undefined
+              ? normalizeDownloadUrl(stored.clientDownloadUrl)
+              : base.pcDownloadUrl,
       };
     } catch {
       return base;
@@ -271,10 +290,14 @@ export class SiteSettingsService {
         body.extensionEntryEnabled !== undefined
           ? body.extensionEntryEnabled === true
           : current.extensionEntryEnabled,
-      clientDownloadUrl:
-        body.clientDownloadUrl !== undefined
-          ? normalizeDownloadUrl(body.clientDownloadUrl)
-          : current.clientDownloadUrl,
+      mobileDownloadUrl:
+        body.mobileDownloadUrl !== undefined
+          ? normalizeDownloadUrl(body.mobileDownloadUrl)
+          : current.mobileDownloadUrl,
+      pcDownloadUrl:
+        body.pcDownloadUrl !== undefined
+          ? normalizeDownloadUrl(body.pcDownloadUrl)
+          : current.pcDownloadUrl,
     };
     await this.prisma.systemSetting.upsert({
       where: { key: SiteSettingsService.SITE_KEY },

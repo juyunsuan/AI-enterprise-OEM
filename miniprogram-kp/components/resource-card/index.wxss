@@ -1,0 +1,76 @@
+.rc {
+  display: flex;
+  align-items: stretch;
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 20rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 12rpx rgba(31, 35, 41, 0.04);
+}
+
+.rc-cover {
+  position: relative;
+  width: 220rpx;
+  height: 150rpx;
+  border-radius: 12rpx;
+  flex-shrink: 0;
+}
+
+.rc-img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* 站点没配封面时用纯文字占位，比裂图或空白块看起来更可控 */
+.rc-ph {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #b6bac2;
+  font-size: 24rpx;
+  background: #eef0f3;
+}
+
+.rc-badge {
+  position: absolute;
+  left: 10rpx;
+  bottom: 10rpx;
+  padding: 0 12rpx;
+  height: 34rpx;
+  line-height: 34rpx;
+  border-radius: 999rpx;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 20rpx;
+}
+
+.rc-main {
+  flex: 1;
+  margin-left: 20rpx;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+}
+
+.rc-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  line-height: 40rpx;
+  max-height: 80rpx;
+}
+
+.rc-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.rc-views {
+  color: #8a8f99;
+  font-size: 22rpx;
+  margin-left: 16rpx;
+}

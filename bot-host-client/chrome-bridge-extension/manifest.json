@@ -1,15 +1,15 @@
 {
   "manifest_version": 3,
-  "name": "BotBuddy 浏览器桥接",
+  "name": "AWBotDSH 浏览器桥接",
   "version": "1.0.0",
-  "description": "把本机 BotBuddy 客户端里的 Agent 接到当前浏览器：查标签页、读页面、点击与填表。数据不出本机。",
+  "description": "把本机 AWBotDSH 客户端里的 Agent 接到当前浏览器：查标签页、读页面、点击与填表。数据不出本机。",
   "permissions": ["tabs", "scripting", "storage"],
   "host_permissions": ["http://127.0.0.1/*", "http://localhost/*", "<all_urls>"],
   "background": {
     "service_worker": "background.js"
   },
   "action": {
-    "default_title": "BotBuddy 浏览器桥接",
+    "default_title": "AWBotDSH 浏览器桥接",
     "default_popup": "popup.html"
   }
 }

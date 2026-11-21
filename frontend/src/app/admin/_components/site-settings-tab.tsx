@@ -187,7 +187,8 @@ export function SiteSettingsTab() {
           hiddenBoardTabs: values.hiddenBoardTabs || [],
           defaultLanguage: values.defaultLanguage || "zh-CN",
           extensionEntryEnabled: values.extensionEntryEnabled !== false,
-          clientDownloadUrl: String(values.clientDownloadUrl || "").trim(),
+          mobileDownloadUrl: String(values.mobileDownloadUrl || "").trim(),
+          pcDownloadUrl: String(values.pcDownloadUrl || "").trim(),
           // 后端只保留「协议 + 域名」，这里先把用户输入的原值交出去（清空即回落当前访问域名）
           siteUrl: String(values.siteUrl || "").trim(),
         },
@@ -286,12 +287,23 @@ export function SiteSettingsTab() {
             <Switch />
           </Form.Item>
           <Form.Item
-            name="clientDownloadUrl"
-            label="客户端下载地址"
-            extra="填了就在顶栏「下载客户端」图标处打开这个地址（如 https://cdn.example.com/BotBuddy-Setup.exe 或站内 /downloads/xxx.exe）；只认 http/https 或站内路径，留空＝顶栏不显示下载图标。"
+            name="mobileDownloadUrl"
+            label="手机端下载地址（AWBot）"
+            extra="填了就在顶栏手机图标处新窗口打开这个地址（如 https://cdn.example.com/AWBot.apk 或站内 /downloads/xxx.apk）；只认 http/https 或站内路径，留空＝顶栏不显示手机端入口。"
           >
             <Input
-              placeholder="https://cdn.example.com/BotBuddy-Setup.exe"
+              placeholder="https://cdn.example.com/AWBot.apk"
+              maxLength={512}
+              allowClear
+            />
+          </Form.Item>
+          <Form.Item
+            name="pcDownloadUrl"
+            label="PC 端下载地址（AWBotDSH）"
+            extra="填了就在顶栏电脑图标处新窗口打开这个地址（如 https://cdn.example.com/AWBotDSH-Setup.exe 或站内 /downloads/xxx.exe）；只认 http/https 或站内路径，留空＝顶栏不显示 PC 端入口。"
+          >
+            <Input
+              placeholder="https://cdn.example.com/AWBotDSH-Setup.exe"
               maxLength={512}
               allowClear
             />

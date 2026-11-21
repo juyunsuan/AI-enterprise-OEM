@@ -1,0 +1,66 @@
+<view class="empty" wx:if="{{loading}}">正在加载…</view>
+
+<block wx:if="{{card}}">
+  <view class="card">
+    <view class="row">
+      <view class="who">
+        <image class="avatar" wx:if="{{card.avatar}}" src="{{card.avatar}}" mode="aspectFill" />
+        <view class="avatar avatar-empty" wx:else>{{card.name}}</view>
+        <view class="who-text">
+          <text class="title">{{card.name}}</text>
+          <view class="muted">
+            <text wx:if="{{card.levelName}}">{{card.levelName}} · </text>
+            <text>{{statusLabel}}</text>
+          </view>
+        </view>
+      </view>
+      <text class="badge" wx:if="{{online}}">在岗</text>
+    </view>
+    <view class="line">
+      <text class="label">所属店铺</text>
+      <text class="value">{{card.shopName || '—'}}</text>
+    </view>
+    <view class="line">
+      <text class="label">评分</text>
+      <text class="value">{{ratingText}}<text class="muted" wx:if="{{countsText}}"> · {{countsText}}</text></text>
+    </view>
+    <view class="line">
+      <text class="label">可服务时段</text>
+      <text class="value">{{windowText}}</text>
+    </view>
+    <view class="line">
+      <text class="label">定位上报</text>
+      <text class="value">{{locationEnabled ? '店主已开启' : '店主未开启'}}</text>
+    </view>
+    <view class="muted tip">手机号仅用于绑定校验，端上不下发；需要变更请联系店主在后台修改。</view>
+  </view>
+
+  <view class="card">
+    <view class="row">
+      <text class="title">资料与审核</text>
+      <text class="action" bindtap="goEdit">编辑资料</text>
+    </view>
+    <view class="notice" wx:if="{{pendingProfile}}">资料变更审核中，审核通过后对外生效。审核期间顾客看到的仍是修改前的资料，可联系店主加快处理。</view>
+    <view class="muted tip" wx:if="{{!pendingProfile}}">修改资料后提交店主审核，通过后才对外生效；等级、分成、证件等由店主在后台维护。</view>
+  </view>
+
+  <view class="card">
+    <view class="row entry" bindtap="goSchedule">
+      <text>我的排期</text>
+      <text class="arrow">›</text>
+    </view>
+    <view class="row entry" bindtap="goFeedback">
+      <text>意见反馈</text>
+      <text class="arrow">›</text>
+    </view>
+    <view class="row entry" bindtap="goAppeal">
+      <text>差评申诉</text>
+      <text class="arrow">›</text>
+    </view>
+  </view>
+
+  <view class="card">
+    <button class="button-ghost" bindtap="unbind" disabled="{{unbinding}}">解绑技师身份</button>
+    <view class="muted tip">解绑只清本机的技师身份，顾客身份照常可用。</view>
+  </view>
+</block>

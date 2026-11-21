@@ -138,11 +138,11 @@ describe('PjProjectsTab 项目 360', () => {
 
     fireEvent.click(await screen.findByText('详情'));
 
-    fireEvent.click(await screen.findByText('交付'));
+    fireEvent.click(await screen.findByRole('tab', { name: /^交付/ }));
     expect(await screen.findByText('任务总数')).toBeTruthy();
     expect(screen.getByText('设备进场验收')).toBeTruthy();
 
-    fireEvent.click(screen.getByText('成本'));
+    fireEvent.click(screen.getByRole('tab', { name: /^成本/ }));
     expect(await screen.findByText('已发生成本')).toBeTruthy();
     expect(screen.getAllByText('外部合作').length).toBeGreaterThan(0);
     expect(screen.getByText('1 单 / 已结算 0')).toBeTruthy();

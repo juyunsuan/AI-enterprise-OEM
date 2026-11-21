@@ -1,0 +1,60 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/category/category",
+    "pages/cart/cart",
+    "pages/me/me",
+    "pages/goods/list",
+    "pages/goods/detail",
+    "pages/order/confirm",
+    "pages/order/list",
+    "pages/order/detail",
+    "pages/order/pay",
+    "pages/refund/apply",
+    "pages/refund/list",
+    "pages/address/list",
+    "pages/address/edit",
+    "pages/coupon/list",
+    "pages/search/search",
+    "pages/login/login",
+    "pages/webview/webview",
+    "pages/diy/page",
+    "pages/me/profile",
+    "pages/service/index"
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#fa3534",
+    "navigationBarTitleText": "商城",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#f5f6f8",
+    "backgroundTextStyle": "dark",
+    "enablePullDownRefresh": false
+  },
+  "tabBar": {
+    "color": "#8a8f99",
+    "selectedColor": "#fa3534",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/category/category",
+        "text": "分类"
+      },
+      {
+        "pagePath": "pages/cart/cart",
+        "text": "购物车"
+      },
+      {
+        "pagePath": "pages/me/me",
+        "text": "我的"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

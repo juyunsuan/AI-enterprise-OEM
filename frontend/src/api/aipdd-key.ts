@@ -7,9 +7,25 @@ import { http, type HttpOptions } from "./http";
  */
 const BASE = "/api/backend/enterprise/account";
 
+export interface AipddKeyBinding {
+  bindingId: number;
+  keyId: number;
+  /** 脱敏串（sk-****abcd），永不回显原文。 */
+  masked: string;
+  aipddUserId: string;
+  profile?: { username?: string; nickName?: string; avatar?: string } | null;
+  boundAt: string;
+  lastVerifiedAt: string | null;
+  status: string;
+  /** 同一把上游 Key 被多少个本地用户绑定。 */
+  sharedWith: number;
+  /** 主 Key：模型/计费调用使用最早绑定的可用 Key。 */
+  primary: boolean;
+}
+
 export interface AipddKeyStatus {
   bound: boolean;
-  /** 已绑定时的脱敏串（sk-****abcd），永不回显原文。 */
+  /** 已绑定时的脱敏串（主 Key），永不回显原文。 */
   masked?: string;
   aipddUserId?: string;
   profile?: { username?: string; nickName?: string; avatar?: string } | null;
@@ -17,6 +33,8 @@ export interface AipddKeyStatus {
   lastVerifiedAt?: string | null;
   /** 同一把上游 Key 被多少个本地用户绑定。 */
   sharedWith?: number;
+  /** 当前账号的全部绑定（含已失效，便于逐个解绑）。 */
+  keys?: AipddKeyBinding[];
   /** 上游官网地址（引导注册用）。 */
   registerUrl: string;
   /** 管理员在站点设置配置的 AIPDD 推荐码；空串＝未配置，不展示引导。 */
@@ -39,9 +57,12 @@ export const aipddKeyApi = {
       method: "PUT",
       body: { key },
     }),
-  unbind: (options?: HttpOptions) =>
-    call<{ unbound: boolean }>(`${BASE}/aipdd-key`, {
-      ...options,
-      method: "DELETE",
-    }),
+  unbind: (keyId?: number, options?: HttpOptions) =>
+    call<{ unbound: boolean; count: number }>(
+      `${BASE}/aipdd-key${keyId ? `?keyId=${encodeURIComponent(keyId)}` : ""}`,
+      {
+        ...options,
+        method: "DELETE",
+      },
+    ),
 };

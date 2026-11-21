@@ -1,0 +1,109 @@
+.page {
+  padding-bottom: 40rpx;
+}
+
+.tabs {
+  display: flex;
+  background: #fff;
+  padding: 0 12rpx;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.tab {
+  flex: 1;
+  text-align: center;
+  padding: 24rpx 0;
+  font-size: 28rpx;
+  color: #5c6470;
+  border-bottom: 4rpx solid transparent;
+}
+
+.tab-active {
+  color: #3370ff;
+  font-weight: 600;
+  border-bottom-color: #3370ff;
+}
+
+.login {
+  margin-top: 48rpx;
+}
+
+.login-tip {
+  margin-top: 12rpx;
+  line-height: 1.6;
+}
+
+.login-btn {
+  margin-top: 32rpx;
+}
+
+.login-error {
+  margin-top: 16rpx;
+  color: #f5413d;
+}
+
+.link {
+  color: #3370ff;
+  margin-top: 16rpx;
+}
+
+.more-tip {
+  margin-top: 12rpx;
+}
+
+.order-head {
+  margin-bottom: 12rpx;
+}
+
+.status {
+  font-size: 26rpx;
+  color: #3370ff;
+}
+
+.order-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.order-time {
+  margin-top: 8rpx;
+}
+
+.order-foot {
+  margin-top: 20rpx;
+  padding-top: 16rpx;
+  border-top: 1rpx solid #f2f3f5;
+}
+
+.amount {
+  color: #f5413d;
+  font-size: 32rpx;
+  font-weight: 600;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+}
+
+.action {
+  margin-left: 16rpx;
+  padding: 10rpx 24rpx;
+  border: 1rpx solid #dcdfe6;
+  border-radius: 32rpx;
+  font-size: 26rpx;
+  color: #5c6470;
+}
+
+.action-primary {
+  border-color: #3370ff;
+  color: #3370ff;
+}
+
+.more {
+  text-align: center;
+  padding: 24rpx 0 8rpx;
+}

@@ -17,6 +17,10 @@ export class BotHostController {
     return ok(await this.hosts.pair(user, body));
   }
 
+  async createPairQr(user: CurrentUser, body: Record<string, unknown>) {
+    return ok(await this.hosts.createPairQr(user, body));
+  }
+
   async setStatus(
     user: CurrentUser,
     hostId: string,
@@ -41,7 +45,7 @@ export class BotHostController {
     return ok(await this.hosts.workspaces(user, hostId));
   }
 
-  /** 指纹窗口候选：RPA「BotBuddy 浏览器」任务选执行位。 */
+  /** 指纹窗口候选：RPA「AWBotDSH 浏览器」任务选执行位。 */
   async fingerprints(user: CurrentUser, hostId: string) {
     return ok(await this.hosts.fingerprints(user, hostId));
   }

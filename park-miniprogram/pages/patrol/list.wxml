@@ -1,0 +1,26 @@
+<view class="wrap">
+  <view wx:if="{{!plans.length && !loading}}" class="empty">暂无巡检计划，请联系园区管理员创建。</view>
+  <view class="card" wx:if="{{plans.length}}">
+    <view class="section-title">提交巡检记录</view>
+    <view class="field">
+      <view class="field-label">巡检计划</view>
+      <picker class="field-value" mode="selector" range="{{plans}}" range-key="name" value="{{planIndex}}" bindchange="onPlan">
+        <view>{{plans[planIndex].name}}</view>
+      </picker>
+    </view>
+    <view class="field">
+      <view class="field-label">巡检点位</view>
+      <picker class="field-value" mode="selector" range="{{plans[planIndex].points}}" range-key="name" value="{{pointIndex}}" bindchange="onPoint">
+        <view>{{plans[planIndex].points[pointIndex].name}}</view>
+      </picker>
+    </view>
+    <view class="field">
+      <view class="field-label">结果</view>
+      <picker class="field-value" mode="selector" range="{{results}}" value="{{resultIndex}}" bindchange="onResult">
+        <view>{{results[resultIndex || 0]}}</view>
+      </picker>
+    </view>
+    <textarea class="textarea" bindinput="onNote" placeholder="巡检说明（选填）"></textarea>
+    <view class="btn" bindtap="submit">{{submitting ? "提交中…" : "提交巡检"}}</view>
+  </view>
+</view>

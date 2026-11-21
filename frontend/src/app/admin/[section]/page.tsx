@@ -11,11 +11,13 @@ import { ContractsTab } from "../_components/contracts-tab";
 import { FlexPayrollSwitch } from "../_components/flex-payroll-switch";
 import { GeoSettingsTab } from "../_components/geo-settings-tab";
 import { GeoSiteManageTab } from "../_components/geo-site-manage-tab";
+import { CircleAdminTab } from "../_components/circle-admin-tab";
 import { ProviderApplicationsTab } from "../_components/provider-applications-tab";
 import { ProvidersManageTab } from "../_components/providers-manage-tab";
 import { SettingsTab } from "../_components/settings-tab";
 import { UpgradeTab } from "../_components/upgrade-tab";
 import { AiCodeTab } from "../_components/ai-code-tab";
+import { DevGuideTab } from "../_components/dev-guide-tab";
 import { TaxAdminTab } from "../_components/tax-admin-tab";
 import { SupplyTab } from "../_components/supply-tab";
 import { EnterprisesTab } from "../_components/enterprises-tab";
@@ -89,6 +91,7 @@ export default function AdminSectionPage() {
       {section === "tax-admin" ? <TaxAdminTab /> : null}
       {section === "geo" ? <GeoSettingsTab /> : null}
       {section === "geo-site" ? <GeoSiteManageTab /> : null}
+      {section === "circle-admin" ? <CircleAdminTab /> : null}
       {section === "marketing-livecode" ? <LivecodeAdminTab /> : null}
       {section === "community" ? <CommunityAdminTab /> : null}
       {section === "video-templates" ? <VideoTemplateAdminTab /> : null}
@@ -104,6 +107,7 @@ export default function AdminSectionPage() {
       {section === "terms" ? <GapsTermsTab /> : null}
       {section === "changelog" ? <GapsChangelogTab /> : null}
       {section === "upgrade" ? <UpgradeTab /> : null}
+      {section === "dev-guide" ? <DevGuideTab /> : null}
       {section === "ai-code" ? <AiCodeTab /> : null}
       {section === "wechat-mp" ? <WechatMpTab /> : null}
       {section === "miniprogram" ? <MiniProgramTab /> : null}

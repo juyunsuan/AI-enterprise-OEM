@@ -1,0 +1,42 @@
+<view class="page page-with-bar">
+  <view class="card" wx:if="{{patients.length}}">
+    <view
+      class="patient"
+      wx:for="{{patients}}"
+      wx:key="id"
+      data-id="{{item.id}}"
+      bindtap="onEdit"
+    >
+      <view class="patient-head">
+        <view class="patient-name">
+          {{item.name}}
+          <text class="tag tag-blue">{{item.relationLabel}}</text>
+          <text class="tag tag-green" wx:if="{{item.isDefault}}">默认</text>
+        </view>
+        <text class="item-meta">{{item.genderLabel}}<text wx:if="{{item.age}}"> · {{item.age}} 岁</text></text>
+      </view>
+      <view class="item-meta" wx:if="{{item.birthdayText}}">生日 {{item.birthdayText}}</view>
+      <view class="item-meta" wx:if="{{item.phone}}">{{item.phone}}</view>
+      <view class="item-meta" wx:if="{{item.bodyText}}">{{item.bodyText}}</view>
+      <view class="patient-actions">
+        <text
+          class="link action"
+          data-id="{{item.id}}"
+          catchtap="onArchive"
+        >健康档案</text>
+        <text
+          class="link danger action"
+          data-id="{{item.id}}"
+          catchtap="onRemove"
+        >删除</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="empty" wx:elif="{{!loading}}">还没有就诊人，添加后可预约挂号与填写健康档案</view>
+  <view class="empty" wx:else>正在加载…</view>
+
+  <view class="action-bar">
+    <button class="button-primary bar-button" bindtap="onAdd">添加就诊人</button>
+  </view>
+</view>

@@ -1,0 +1,108 @@
+.gallery,
+.cover {
+  width: 100%;
+  height: 420rpx;
+  background: #f0f1f5;
+}
+
+.gallery-image {
+  width: 100%;
+  height: 100%;
+}
+
+.price-row {
+  display: flex;
+  align-items: baseline;
+}
+
+.origin {
+  margin-left: 12rpx;
+  color: #a6abb3;
+  font-size: 24rpx;
+  text-decoration: line-through;
+}
+
+.price-tag {
+  margin-left: auto;
+}
+
+.service-name {
+  margin-top: 12rpx;
+  font-size: 36rpx;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.service-meta {
+  margin-top: 12rpx;
+}
+
+.block-title {
+  margin-bottom: 12rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.practitioner-scroll {
+  white-space: nowrap;
+}
+
+.practitioner {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 440rpx;
+  margin-right: 16rpx;
+  padding: 20rpx;
+  box-sizing: border-box;
+  border: 2rpx solid #f0f1f5;
+  border-radius: 12rpx;
+  vertical-align: top;
+}
+
+.practitioner-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.practitioner-name {
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.practitioner-price {
+  margin-top: 6rpx;
+  color: #f5413d;
+  font-size: 26rpx;
+  font-weight: 600;
+}
+
+.radio {
+  width: 32rpx;
+  height: 32rpx;
+  border: 2rpx solid #c4c8d0;
+  border-radius: 50%;
+}
+
+.radio-on {
+  border-color: #1a73e8;
+  background: radial-gradient(circle, #1a73e8 0 55%, #fff 58%);
+}
+
+.disclaimer {
+  margin-top: 20rpx;
+  padding: 16rpx;
+  border-radius: 12rpx;
+  background: #fff7e8;
+  color: #a86b00;
+  font-size: 24rpx;
+  line-height: 1.6;
+}
+
+.bar-price {
+  margin-right: 24rpx;
+}
+
+.bar-button {
+  flex: 1;
+}

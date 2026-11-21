@@ -1,0 +1,4 @@
+{
+  "desc": "租赁管理小程序页面索引",
+  "rules": [{ "action": "allow", "page": "*" }]
+}

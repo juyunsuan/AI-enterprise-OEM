@@ -29,7 +29,7 @@ import type { SeoContext } from './seo-base.service';
 export function createSeoScheduler(prisma: PrismaService): SeoRankScheduler {
   const users = new UserLookupService(prisma);
   const oss = new OssService(new OssSettingsService(prisma));
-  const identity = new IdentityService(prisma, users, oss);
+  const identity = new IdentityService(prisma, users);
   const scope = new HrmScopeService(prisma, identity);
   const crypto = new AccountCrypto();
   const storage = new StorageService(oss);

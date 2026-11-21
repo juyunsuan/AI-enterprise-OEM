@@ -1,0 +1,52 @@
+<view class="page">
+  <view class="empty" wx:if="{{loading}}">正在读取租单…</view>
+  <view class="empty" wx:elif="{{error}}">{{error}}</view>
+
+  <block wx:elif="{{order}}">
+    <view class="card">
+      <view class="row">
+        <text class="title">{{order.itemName}}</text>
+        <text class="status">{{order.statusLabel}}</text>
+      </view>
+      <view class="muted" style="margin-top: 10rpx;">{{order.periodText}} · 共 {{order.days}} 天</view>
+      <view class="muted" style="margin-top: 6rpx;" bindtap="copyOrderNo">单号 {{order.orderNo}}（点击复制）</view>
+    </view>
+
+    <view class="card">
+      <view class="row"><text class="muted">租金</text><text>{{order.rentText}}</text></view>
+      <view class="row" style="margin-top: 8rpx;"><text class="muted">押金</text><text>{{order.depositText}}</text></view>
+      <view class="row" style="margin-top: 8rpx;"><text class="muted">支付状态</text><text>{{order.payStatusLabel}}</text></view>
+      <view class="row" style="margin-top: 8rpx;"><text class="muted">实付</text><text class="price">{{order.payText}}</text></view>
+      <view class="row" style="margin-top: 8rpx;" wx:if="{{order.refundCents > 0}}">
+        <text class="muted">押金退回</text><text>{{order.refundText}}</text>
+      </view>
+    </view>
+
+    <view class="card" wx:if="{{attributes.length}}">
+      <view class="title" style="font-size: 30rpx;">租品信息</view>
+      <view class="tags" style="margin-top: 12rpx;">
+        <text class="tag" wx:for="{{attributes}}" wx:key="key">{{item.key}}：{{item.value}}</text>
+      </view>
+    </view>
+
+    <view class="card" wx:if="{{inspection}}">
+      <view class="title" style="font-size: 30rpx;">还回验车</view>
+      <view class="muted" style="margin-top: 10rpx;">里程 {{inspection.mileage}} km · 油量 {{inspection.fuelPercent}}%</view>
+      <view class="muted" style="margin-top: 6rpx;" wx:if="{{inspection.damage}}">车况备注：{{inspection.damage}}</view>
+      <view class="muted" style="margin-top: 6rpx;" wx:if="{{inspection.damageFee > 0}}">车损扣款：{{inspection.damageText}}</view>
+      <view class="tag-list" wx:if="{{inspection.images.length}}">
+        <image class="thumb" wx:for="{{inspection.images}}" wx:key="*this" src="{{item}}" mode="aspectFill"></image>
+      </view>
+    </view>
+
+    <view class="card" wx:if="{{order.remark}}">
+      <view class="muted">备注：{{order.remark}}</view>
+    </view>
+
+    <view class="footer-bar">
+      <button class="button-ghost" bindtap="callShop" wx:if="{{order.payStatus !== 'PAID'}}">联系门店</button>
+      <button class="button-ghost" bindtap="cancelOrder" wx:if="{{order.status === 'PENDING_PAYMENT'}}" disabled="{{busy}}">取消订单</button>
+      <button class="button-primary" bindtap="payNow" wx:if="{{order.status === 'PENDING_PAYMENT'}}" disabled="{{busy}}">立即支付</button>
+    </view>
+  </block>
+</view>

@@ -20,7 +20,7 @@ import {
   type z,
 } from '@enterprise/contracts';
 import type { PrismaService } from '../prisma/prisma.service';
-import type { OssService } from '../oss/oss.service';
+import type { SystemAssetService } from '../system-asset/system-asset.service';
 import { BusinessException } from '../common/business.exception';
 import { ErrorCode } from '../common/error-code';
 import { currentAgentScope } from '../content/agent-scope';
@@ -128,7 +128,7 @@ export function deviceStatusOf(row: {
 export class HardwareService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly oss: OssService,
+    private readonly assets: SystemAssetService,
   ) {}
 
   // ---------------------------------------------------------------- 硬件广场
@@ -210,7 +210,7 @@ export class HardwareService {
       data: { downloadCount: { increment: 1 } },
     });
     return {
-      url: this.oss.keyUrlOf(row.ossKey),
+      url: this.assets.urlOf(row.ossKey),
       fileName: row.fileName || `${model.code}-${row.version}.bin`,
       fileSize: row.fileSize,
       sha256: row.sha256,
@@ -985,7 +985,7 @@ export class HardwareService {
   }
 
   /** 开发包二进制直传本站 OSS：算 SHA-256 供页面校验，返回元数据由 kitSave 落库。 */
-  async adminKitUpload(file: File) {
+  async adminKitUpload(userId: string, file: File) {
     const bytes = Buffer.from(await file.arrayBuffer());
     if (!bytes.length)
       throw new BusinessException(ErrorCode.BAD_REQUEST, '上传的文件为空');
@@ -997,10 +997,14 @@ export class HardwareService {
     }
     const sha256 = createHash('sha256').update(bytes).digest('hex');
     const fileName = (file.name || 'kit.bin').split('/').pop()!.slice(0, 160);
-    const result = await this.oss.upload(
-      `hardware/kits/${randomUUID()}/${fileName}`,
+    // 开发包字节入账到上传者账号：桶里的字节可计费、可按账号核对
+    const result = await this.assets.put({
+      ownerUserId: userId,
+      path: `hardware/kits/${randomUUID()}/${fileName}`,
       bytes,
-    );
+      name: fileName,
+      bizRef: 'hardware-kit',
+    });
     return { fileName, fileSize: bytes.length, ossKey: result.key, sha256 };
   }
 

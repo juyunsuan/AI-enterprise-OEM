@@ -1,0 +1,56 @@
+<view class="chat">
+  <scroll-view
+    class="msgs"
+    scroll-y
+    scroll-with-animation
+    scroll-into-view="{{scrollTo}}"
+  >
+    <view class="notice notice-warn chat-notice" wx:if="{{notice}}">{{notice}}</view>
+    <view class="empty" wx:if="{{loading}}">正在进入会话…</view>
+    <view class="empty" wx:elif="{{!messages.length && !error}}">
+      会话已建立，向接诊医护描述你的问题吧
+    </view>
+
+    <view
+      class="msg {{item.mine ? 'mine' : ''}}"
+      wx:for="{{messages}}"
+      wx:key="id"
+      id="m{{item.id}}"
+    >
+      <view class="msg-name" wx:if="{{!item.mine}}">{{item.senderName}}</view>
+      <view class="bubble">
+        <image
+          wx:if="{{item.contentType === 'image'}}"
+          class="msg-image"
+          src="{{item.content}}"
+          mode="widthFix"
+        />
+        <text wx:else user-select>{{item.content}}</text>
+        <view class="msg-file" wx:if="{{item.contentType === 'file'}}">
+          附件：{{item.attachmentName || '文件'}}
+        </view>
+      </view>
+      <view class="msg-time">{{item.timeText}}</view>
+    </view>
+
+    <view class="pad"></view>
+  </scroll-view>
+
+  <view class="input-bar">
+    <input
+      class="input msg-input"
+      placeholder="输入消息…"
+      value="{{input}}"
+      confirm-type="send"
+      cursor-spacing="20"
+      disabled="{{!consulting}}"
+      bindinput="onInput"
+      bindconfirm="onSend"
+    />
+    <button
+      class="button-primary send"
+      disabled="{{sending || !consulting}}"
+      bindtap="onSend"
+    >{{sending ? '发送中' : '发送'}}</button>
+  </view>
+</view>

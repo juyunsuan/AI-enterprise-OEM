@@ -1,0 +1,41 @@
+.article {
+  display: flex;
+  align-items: flex-start;
+}
+
+.article-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.article-title {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.article-summary {
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  color: #8a8f99;
+  line-height: 1.6;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.article-time {
+  margin-top: 12rpx;
+  font-size: 22rpx;
+  color: #b6bbc4;
+}
+
+.article-cover {
+  width: 160rpx;
+  height: 120rpx;
+  margin-left: 20rpx;
+  border-radius: 12rpx;
+  background: #e8eaee;
+  flex: none;
+}

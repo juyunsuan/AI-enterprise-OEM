@@ -1,0 +1,3 @@
+-- 0116_knowledge_pay 已创建 `knowledge_pay_sites.wx_upload_key`，
+-- 本迁移保留为空操作：空库重复 ADD COLUMN 会以 1060 失败，阻断后续全部迁移。
+-- 该列随后由 0171_drop_release_ledgers 按条件删除（代码上传密钥下线）。

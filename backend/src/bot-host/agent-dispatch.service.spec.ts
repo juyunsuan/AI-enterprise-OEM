@@ -89,7 +89,7 @@ const HOSTS = [
     clientKind: 'DESKTOP',
     workingDir: 'C:/work',
   },
-  { id: 8, userId: 'u1', name: '测试手机', clientKind: 'MOBOT' },
+  { id: 8, userId: 'u1', name: '测试手机', clientKind: 'AWBOT' },
 ];
 
 /** 企云账号：编号与设备表刻意重排（#7 既是主机也是凭据），台账与工具必须按 kind 路由。 */
@@ -250,7 +250,7 @@ describe('AgentDispatchService.devices', () => {
           { id: 7, clientKind: 'DESKTOP', online: false },
           { id: 9, clientKind: 'DESKTOP', online: true },
         ],
-        MOBOT: [{ id: 8, clientKind: 'MOBOT', online: true }],
+        AWBOT: [{ id: 8, clientKind: 'AWBOT', online: true }],
       },
     });
     const { list } = await svc.devices(user);
@@ -334,8 +334,8 @@ describe('AgentDispatchService.devices', () => {
       },
     });
     const svc = new AgentDispatchService(prisma, hosts, cloudStub());
-    await svc.devices(user, { kind: 'MOBOT' });
-    expect(asked).toEqual(['MOBOT']);
+    await svc.devices(user, { kind: 'AWBOT' });
+    expect(asked).toEqual(['AWBOT']);
   });
 });
 
@@ -388,7 +388,7 @@ describe('AgentDispatchService.tasks', () => {
     expect(onlySchedules.list[0]).toMatchObject({
       type: 'schedule',
       hostName: '测试手机',
-      clientKind: 'MOBOT',
+      clientKind: 'AWBOT',
       taskKey: 'sch_6',
       statusLabel: '启用中',
       source: 'AGENT',
@@ -431,7 +431,7 @@ describe('AgentDispatchService 台账四源合并（方案 §4.7 第 3 条）', 
       'WORKBUDDY:schedule:5',
       'DESKTOP:command:21',
       'WORKBUDDY:command:21',
-      'MOBOT:schedule:5',
+      'AWBOT:schedule:5',
     ]);
     expect(page.total).toBe(4);
     expect(page.list[1]).toMatchObject({ hostName: '桌面主机' });
@@ -576,7 +576,7 @@ function deviceView(row: Row): BotHostView {
     pendingCount: 0,
     channelCount: 0,
     clientKind: 'DESKTOP',
-    mobot: null,
+    awbot: null,
     workspace: { defaultPath: 'C:/work', count: 1 },
     fingerprint: { count: 0 },
     modelGrant: null,
@@ -748,7 +748,7 @@ function toolSetup(
 describe('AgentDispatchService.toolDevices', () => {
   it('类型不在本轮勾选范围内时不查设备，直接告诉模型去哪儿补勾', async () => {
     const { svc, calls } = toolSetup();
-    const text = await svc.toolDevices(user, ['DESKTOP'], { kind: 'MOBOT' });
+    const text = await svc.toolDevices(user, ['DESKTOP'], { kind: 'AWBOT' });
     expect(text).toContain('本轮群控只勾选了 Bot 主机');
     expect(calls.listed).toEqual([]);
   });
@@ -782,25 +782,25 @@ describe('AgentDispatchService.toolDevices', () => {
             enabled: false,
           }),
         ],
-        MOBOT: [
+        AWBOT: [
           deviceView({
             id: 8,
             name: '测试手机',
-            clientKind: 'MOBOT',
+            clientKind: 'AWBOT',
             platform: 'android',
-            mobot: { battery: 82, charging: true, network: 'wifi' },
+            awbot: { battery: 82, charging: true, network: 'wifi' },
           }),
         ],
       },
     });
-    const text = await svc.toolDevices(user, ['DESKTOP', 'MOBOT'], {});
+    const text = await svc.toolDevices(user, ['DESKTOP', 'AWBOT'], {});
     const ids = [...text.matchAll(/设备 #(\d+)/g)].map((m) => Number(m[1]));
     expect(ids).toEqual([8, 7, 10, 9]);
     expect(text).toContain('默认工作区 C:/work');
     expect(text).toContain('电量 82%（充电中）');
     expect(text).toContain('已停用');
     expect(text).toContain('派单前请先给出分配方案');
-    expect(calls.listed).toEqual(['DESKTOP', 'MOBOT']);
+    expect(calls.listed).toEqual(['DESKTOP', 'AWBOT']);
   });
 });
 

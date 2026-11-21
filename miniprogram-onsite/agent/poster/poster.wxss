@@ -1,0 +1,62 @@
+.page {
+  padding: 24rpx 0 60rpx;
+}
+
+.preview {
+  display: block;
+  width: 640rpx;
+  margin: 0 auto;
+  border-radius: 16rpx;
+  box-shadow: 0 8rpx 32rpx rgba(31, 35, 41, 0.16);
+}
+
+.tip {
+  margin: 20rpx 48rpx 0;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.actions {
+  display: flex;
+  padding: 32rpx 48rpx 0;
+}
+
+.btn {
+  flex: 1;
+  margin: 0 12rpx;
+  border-radius: 12rpx;
+  font-size: 30rpx;
+}
+
+.btn.ghost {
+  background: #fff;
+  border: 1rpx solid #d9dde5;
+  color: #1f2329;
+}
+
+.btn.primary {
+  background: #3370ff;
+  color: #fff;
+}
+
+.loading {
+  padding: 120rpx 24rpx;
+  text-align: center;
+  color: #8a8f99;
+}
+
+.error {
+  margin: 24rpx;
+  padding: 20rpx 24rpx;
+  border-radius: 12rpx;
+  background: #fff1f0;
+  color: #cf1322;
+  line-height: 1.6;
+}
+
+/* 离屏画布：只用于导出，不参与可见布局 */
+.poster-canvas {
+  position: fixed;
+  left: -9999px;
+  top: 0;
+}

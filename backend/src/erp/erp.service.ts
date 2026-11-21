@@ -6,6 +6,11 @@ import type { AiEvalService } from '../ai/ai-eval.service';
 import { BusinessException } from '../common/business.exception';
 import { ErrorCode } from '../common/error-code';
 import { clip, ds, orgKey } from '../hrm/hrm.helpers';
+import {
+  PAYMENT_APPROVAL_THRESHOLD,
+  erpDocCode,
+  nextApprovalStatus,
+} from './erp-invariants';
 import { kbChatMulti, parseJsonObject, resolveKbLlm } from '../kb/kb-llm';
 import type { Prisma } from '../../generated/prisma';
 
@@ -74,13 +79,6 @@ const ERP_FUNCTION_LABELS: Record<ErpFunction, string> = {
 /** 组织管理员角色：不细分职能，可管理全部 ERP 职能域（组织主账号/管理员）。 */
 const ERP_ADMIN_ROLES = ['ADMIN', 'OWNER', 'ERP', 'ERP_ADMIN'];
 
-/**
- * 大额付款审批阈值（docs §5.3 采购闭环「付款审批」）：
- * 与 OA「付款申请」模板的大额二次确认同一口径（5 万元）；
- * 应付金额达到该值的应付单需财务审批通过后才可登记付款，低额直接付款。
- */
-const PAYMENT_APPROVAL_THRESHOLD = 50000;
-
 const PAYMENT_APPROVAL_LABELS: Record<string, string> = {
   NONE: '无需审批',
   PENDING: '待付款审批',
@@ -128,13 +126,14 @@ export class ErpService {
     void this.mechanisms.dispatch(org, event, payload).catch(() => undefined);
   }
 
+  /** 单号流水：格式与「当日计数」口径都在 `erp-invariants.erpDocCode`，这里只提供计数。 */
   private async chainNo(
     org: HrmOrg,
     prefix: string,
     count: () => Promise<number>,
   ): Promise<string> {
-    const stamp = today().replace(/-/g, '');
-    return `${prefix}-${stamp}-${String((await count()) + 1).padStart(4, '0')}`;
+    void org;
+    return erpDocCode(prefix, await count());
   }
 
   /**
@@ -489,6 +488,26 @@ export class ErpService {
   async saveProduct(user: CurrentUser, body: Row) {
     const org = await this.org(user);
     this.requireErpRole(org, 'INVENTORY');
+    return this.writeProduct(org, body);
+  }
+
+  /**
+   * CSV 导入产品：复用页面保存的同一套写核心（名称必填、税率截断 0~100、单位缺省、createdBy）。
+   * 缺 code 时补一个时间戳码——导入模板不强制先编好码，但也不能让编码列空着入库。
+   */
+  async importProductRow(org: HrmOrg, body: Row): Promise<string> {
+    const row = await this.writeProduct(org, {
+      ...body,
+      code: text(body.code) || `P${Date.now().toString(36)}`,
+    });
+    return text(row?.code);
+  }
+
+  /**
+   * 产品写核心：页面保存与批量导入都走这里，职能校验留在公开方法里。
+   * 分成两份实现迟早会分叉——历史上导入就是另写一份，结果税率没截断、条码/分类缺省也不同。
+   */
+  private async writeProduct(org: HrmOrg, body: Row) {
     const id = num(body.id);
     const data = {
       code: clip(body.code, 32),
@@ -1460,6 +1479,25 @@ export class ErpService {
   async saveVendor(user: CurrentUser, body: Row) {
     const org = await this.org(user);
     this.requireErpRole(org, 'PURCHASE');
+    return this.writeVendor(org, body);
+  }
+
+  /**
+   * CSV 导入供应商：与页面保存同一套写核心——**必须挂上统一外部主体 bizParty**
+   * （`vendorPartyId` 会按名匹配或建档），并补一个缺省编码。
+   * 原先机制层自己 `prisma.erpVendor.create` 时不写 `partyId`，等于把「外部主体唯一」
+   * 这条链断掉了：项目成本页按名称回匹供应商时找不到主体，付款与发票归属就对不上。
+   */
+  async importVendorRow(org: HrmOrg, body: Row): Promise<string> {
+    const row = await this.writeVendor(org, {
+      ...body,
+      code: text(body.code) || `V${Date.now().toString(36)}`,
+    });
+    return text(row?.code);
+  }
+
+  /** 供应商写核心：页面保存与批量导入共用，职能校验留在公开方法。 */
+  private async writeVendor(org: HrmOrg, body: Row) {
     const id = num(body.id);
     const name = clip(body.name, 120);
     const data = {
@@ -2092,7 +2130,7 @@ export class ErpService {
         where: { id: existing.id },
         data: {
           amount,
-          approvalStatus: this.nextApprovalStatus(
+          approvalStatus: nextApprovalStatus(
             amount,
             existing.approvalStatus,
             num(existing.amount),
@@ -2119,7 +2157,7 @@ export class ErpService {
         sourceId: order.id,
         amount,
         dueDate: today(),
-        approvalStatus: this.nextApprovalStatus(amount, 'NONE'),
+        approvalStatus: nextApprovalStatus(amount, 'NONE'),
         note: `采购入库：${order.orderNo}${order.sourceNo ? `（来源 ${order.sourceNo}）` : ''}`,
       },
     });
@@ -2457,7 +2495,7 @@ export class ErpService {
         where: { id },
         data: {
           ...data,
-          approvalStatus: this.nextApprovalStatus(
+          approvalStatus: nextApprovalStatus(
             amount,
             existing.approvalStatus,
             num(existing.amount),
@@ -2482,7 +2520,7 @@ export class ErpService {
         ...orgKey(org),
         ...data,
         code,
-        approvalStatus: this.nextApprovalStatus(amount, 'NONE'),
+        approvalStatus: nextApprovalStatus(amount, 'NONE'),
       },
     });
     return this.payableView(row, vendorName.get(row.vendorId) || '');
@@ -2556,7 +2594,7 @@ export class ErpService {
           dueDate: nextAt,
           recurrence: row.recurrence,
           nextAt: addDays(nextAt, step),
-          approvalStatus: this.nextApprovalStatus(total, 'NONE'),
+          approvalStatus: nextApprovalStatus(total, 'NONE'),
           note: `周期应付续期（${row.code}）`,
         },
       });
@@ -2627,23 +2665,6 @@ export class ErpService {
       next,
       vendors.find((v) => v.id === next.vendorId)?.name || '',
     );
-  }
-
-  /** 付款审批状态随金额与既有结论推进：低于阈值免审批；金额上调需重新审批。 */
-  private nextApprovalStatus(
-    amount: number,
-    current: string,
-    previousAmount?: number,
-  ): string {
-    if (amount < PAYMENT_APPROVAL_THRESHOLD) return 'NONE';
-    if (
-      current === 'APPROVED' &&
-      previousAmount !== undefined &&
-      amount <= previousAmount
-    ) {
-      return 'APPROVED';
-    }
-    return 'PENDING';
   }
 
   // ------------------------------------------------------------------
@@ -2839,7 +2860,7 @@ export class ErpService {
           sourceId: id,
           amount: num(row.amount),
           dueDate: today(),
-          approvalStatus: this.nextApprovalStatus(num(row.amount), 'NONE'),
+          approvalStatus: nextApprovalStatus(num(row.amount), 'NONE'),
           note: `报销付款 ${row.reportNo}`,
         },
       });

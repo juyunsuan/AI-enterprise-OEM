@@ -11,6 +11,10 @@ import type { PrismaService } from '../prisma/prisma.service';
 import type { IdentityService } from '../identity/identity.service';
 import type { UserLookupService } from '../directory/user-lookup.service';
 import type { OssService } from '../oss/oss.service';
+import type {
+  SystemAssetPutInput,
+  SystemAssetService,
+} from '../system-asset/system-asset.service';
 import { stub } from '../../test/doubles';
 
 /**
@@ -121,12 +125,20 @@ function setup() {
       contentType: 'image/png',
     })),
   };
+  // 系统资产层的双件把字节仍交给同一份 OSS 桩：断言口径（对象路径、coverKeys）不变
+  const assets = {
+    put: async (input: SystemAssetPutInput) => ({
+      ...(await oss.upload(input.path)),
+      assetId: 1,
+    }),
+  };
   const service = new CommunityImportService(
     stub<PrismaService>(prisma),
     stub<IdentityService>(identity),
     stub<UserLookupService>(users),
     stub<OssService>(oss),
     stub<ComfyClient>(comfy),
+    stub<SystemAssetService>(assets),
   );
   return { service, prisma, identity, users, oss, comfy, create };
 }

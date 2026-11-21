@@ -29,6 +29,7 @@ import { crmEndpoints } from "./crm";
 import { biEndpoints } from "./bi";
 import { lowcodeEndpoints } from "./lowcode";
 import { okrEndpoints } from "./okr";
+import { rbacEndpoints } from "./rbac";
 import { partyEndpoints } from "./party";
 import { oaEndpoints } from "./oa";
 import { questionHallEndpoints } from "./question-hall";
@@ -44,6 +45,7 @@ import { kbEndpoints } from "./kb";
 import { hrmEndpoints } from "./hrm";
 import { skillGeneratorEndpoints } from "./skill-generator";
 import { surveyEndpoints } from "./survey";
+import { quizEndpoints } from "./quiz";
 import { moderationEndpoints } from "./moderation";
 import { storageEndpoints } from "./storage";
 import { mechanismsEndpoints } from "./mechanisms";
@@ -51,7 +53,7 @@ import { projectEndpoints } from "./project";
 import { growthEndpoints } from "./growth";
 import { erpEndpoints } from "./erp";
 import { mktEndpoints } from "./mkt";
-import { recruitEndpoints } from "./recruit";
+import { aiSocialEndpoints } from "./ai-social";
 import { seoEndpoints } from "./seo";
 import { geoSiteEndpoints } from "./geo-site";
 import { acquisitionEndpoints } from "./acquisition";
@@ -70,8 +72,25 @@ import { aiCodeEndpoints } from "./ai-code";
 import { wechatMpEndpoints } from "./wechat-mp";
 import { botHostEndpoints } from "./bot-host";
 import { miniprogramEndpoints } from "./miniprogram";
+import { knowledgePayEndpoints } from "./knowledge-pay";
+import { onsiteEndpoints } from "./onsite";
+import { rentalEndpoints } from "./rental";
+import { parkEndpoints } from "./park";
+import { parkOpsEndpoints } from "./park-ops";
+import { brandMallEndpoints } from "./brand-mall";
+import { takeoutEndpoints } from "./takeout";
 import { insightEndpoints } from "./insight";
 import { agentDispatchEndpoints } from "./agent-dispatch";
+import { cardShopEndpoints } from "./card-shop";
+import { digitalHumanEndpoints } from "./digital-human";
+import { healthEndpoints } from "./health";
+import { kuaidiEndpoints } from "./kuaidi";
+import { circleEndpoints } from "./circle";
+import { errandEndpoints } from "./errand";
+import { marketplaceEndpoints } from "./marketplace";
+import { toolLaunchEndpoints } from "./tool-launch";
+import { miniGuideEndpoints } from "./mini-guide";
+import { devGuideEndpoints } from "./dev-guide";
 const jsonValueSchema = z.union([
   z.null(),
   z.string(),
@@ -6972,6 +6991,12 @@ const localEndpoints = {
               email: z.union([z.null(), z.string()]).optional(),
               avatarUrl: z.union([z.null(), z.string()]),
               javaRole: z.string(),
+              /** 子账号：前端据此隐藏主账号专属入口并按 scopes 过滤菜单。 */
+              isSubAccount: z.boolean().optional(),
+              ownerUserId: z.string().optional(),
+              subAccountId: z.number().nullable().optional(),
+              subAccountName: z.string().optional(),
+              scopes: z.array(z.string()).nullable().optional(),
               roles: z.array(z.string()),
               currentIdentity: z.string(),
               identities: z.array(z.string()),
@@ -10889,6 +10914,12 @@ const localEndpoints = {
               email: z.union([z.null(), z.string()]).optional(),
               avatarUrl: z.union([z.null(), z.string()]),
               javaRole: z.string(),
+              /** 子账号：前端据此隐藏主账号专属入口并按 scopes 过滤菜单。 */
+              isSubAccount: z.boolean().optional(),
+              ownerUserId: z.string().optional(),
+              subAccountId: z.number().nullable().optional(),
+              subAccountName: z.string().optional(),
+              scopes: z.array(z.string()).nullable().optional(),
               roles: z.array(z.string()),
               currentIdentity: z.string(),
               identities: z.array(z.string()),
@@ -15583,6 +15614,7 @@ type ModuleEndpoints = typeof adminPageEndpoints &
   typeof biEndpoints &
   typeof lowcodeEndpoints &
   typeof okrEndpoints &
+  typeof rbacEndpoints &
   typeof partyEndpoints &
   typeof oaEndpoints &
   typeof questionHallEndpoints &
@@ -15598,6 +15630,7 @@ type ModuleEndpoints = typeof adminPageEndpoints &
   typeof hrmEndpoints &
   typeof skillGeneratorEndpoints &
   typeof surveyEndpoints &
+  typeof quizEndpoints &
   typeof moderationEndpoints &
   typeof storageEndpoints &
   typeof mechanismsEndpoints &
@@ -15605,7 +15638,7 @@ type ModuleEndpoints = typeof adminPageEndpoints &
   typeof growthEndpoints &
   typeof erpEndpoints &
   typeof mktEndpoints &
-  typeof recruitEndpoints &
+  typeof aiSocialEndpoints &
   typeof seoEndpoints &
   typeof geoSiteEndpoints &
   typeof acquisitionEndpoints &
@@ -15626,8 +15659,25 @@ type ModuleEndpoints = typeof adminPageEndpoints &
   typeof wechatMpEndpoints &
   typeof botHostEndpoints &
   typeof miniprogramEndpoints &
+  typeof knowledgePayEndpoints &
+  typeof onsiteEndpoints &
+  typeof rentalEndpoints &
+  typeof parkEndpoints &
+  typeof parkOpsEndpoints &
+  typeof brandMallEndpoints &
+  typeof takeoutEndpoints &
   typeof insightEndpoints &
-  typeof agentDispatchEndpoints;
+  typeof agentDispatchEndpoints &
+  typeof cardShopEndpoints &
+  typeof digitalHumanEndpoints &
+  typeof healthEndpoints &
+  typeof kuaidiEndpoints &
+  typeof circleEndpoints &
+  typeof errandEndpoints &
+  typeof marketplaceEndpoints &
+  typeof toolLaunchEndpoints &
+  typeof miniGuideEndpoints &
+  typeof devGuideEndpoints;
 export const endpoints: ModuleEndpoints & typeof localEndpoints = {
   ...adminPageEndpoints,
   ...automationEndpoints,
@@ -15643,6 +15693,7 @@ export const endpoints: ModuleEndpoints & typeof localEndpoints = {
   ...biEndpoints,
   ...lowcodeEndpoints,
   ...okrEndpoints,
+  ...rbacEndpoints,
   ...partyEndpoints,
   ...oaEndpoints,
   ...questionHallEndpoints,
@@ -15659,6 +15710,7 @@ export const endpoints: ModuleEndpoints & typeof localEndpoints = {
   ...hrmEndpoints,
   ...skillGeneratorEndpoints,
   ...surveyEndpoints,
+  ...quizEndpoints,
   ...moderationEndpoints,
   ...storageEndpoints,
   ...mechanismsEndpoints,
@@ -15666,7 +15718,7 @@ export const endpoints: ModuleEndpoints & typeof localEndpoints = {
   ...growthEndpoints,
   ...erpEndpoints,
   ...mktEndpoints,
-  ...recruitEndpoints,
+  ...aiSocialEndpoints,
   ...seoEndpoints,
   ...geoSiteEndpoints,
   ...acquisitionEndpoints,
@@ -15686,8 +15738,25 @@ export const endpoints: ModuleEndpoints & typeof localEndpoints = {
   ...wechatMpEndpoints,
   ...botHostEndpoints,
   ...miniprogramEndpoints,
+  ...brandMallEndpoints,
+  ...takeoutEndpoints,
+  ...knowledgePayEndpoints,
+  ...onsiteEndpoints,
+  ...rentalEndpoints,
+  ...parkEndpoints,
+  ...parkOpsEndpoints,
   ...insightEndpoints,
   ...agentDispatchEndpoints,
+  ...cardShopEndpoints,
+  ...digitalHumanEndpoints,
+  ...healthEndpoints,
+  ...kuaidiEndpoints,
+  ...circleEndpoints,
+  ...errandEndpoints,
+  ...marketplaceEndpoints,
+  ...toolLaunchEndpoints,
+  ...miniGuideEndpoints,
+  ...devGuideEndpoints,
   ...localEndpoints,
 };
 export type EndpointId = keyof typeof endpoints;

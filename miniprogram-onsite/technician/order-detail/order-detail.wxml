@@ -1,0 +1,106 @@
+<view class="error" wx:if="{{errorText}}">{{errorText}}</view>
+<view class="empty" wx:elif="{{loading && !order}}">正在加载…</view>
+
+<block wx:if="{{order}}">
+  <view class="card">
+    <view class="row">
+      <text class="title">{{order.statusLabel}}</text>
+      <text class="badge" bindtap="copyOrderNo">{{order.orderNo}}</text>
+    </view>
+    <view class="line">
+      <text class="label">预约时间</text>
+      <text class="value">{{order.timeText}}</text>
+    </view>
+    <view class="line" wx:if="{{order.durationText}}">
+      <text class="label">服务时长</text>
+      <text class="value">{{order.durationText}}</text>
+    </view>
+    <view class="line">
+      <text class="label">顾客</text>
+      <text class="value">{{order.customerName || '—'}}</text>
+    </view>
+    <view class="line">
+      <text class="label">联系电话</text>
+      <view class="value row-inline">
+        <text>{{phoneText || '—'}}</text>
+        <text class="action" wx:if="{{phoneCallable}}" bindtap="callCustomer">拨打</text>
+      </view>
+    </view>
+    <view class="muted" wx:if="{{!phoneCallable && phoneText}}">顾客未付款前电话由平台打码，付款后显示完整号码。</view>
+    <view class="line">
+      <text class="label">地址</text>
+      <view class="value">
+        <view wx:if="{{addressText}}">{{addressText}}</view>
+        <view class="muted" wx:else>顾客未付款，地址暂不下发</view>
+        <view class="muted" wx:if="{{addressContact}}">联系人 {{addressContact}}</view>
+      </view>
+    </view>
+    <view class="row buttons" wx:if="{{addressText}}">
+      <text class="action" bindtap="copyAddress">复制地址</text>
+      <text class="action" wx:if="{{canNavigate}}" bindtap="openMap">打开地图导航</text>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="title">服务明细</view>
+    <view class="item" wx:for="{{items}}" wx:key="id">
+      <view class="row">
+        <text class="item-title">{{item.title}}</text>
+        <text class="muted">{{item.priceText}}</text>
+      </view>
+      <view class="muted">{{item.quantityText}}<text wx:if="{{item.durationText}}"> · {{item.durationText}}</text></view>
+    </view>
+    <view class="line" wx:for="{{feeRows}}" wx:key="key">
+      <text class="label">{{item.label}}</text>
+      <text class="value">{{item.value}}</text>
+    </view>
+    <view class="line total">
+      <text class="label">顾客实付</text>
+      <text class="value">{{amountText}}</text>
+    </view>
+    <view class="muted">以上为顾客侧金额口径，仅作展示；收入与结算以店主后台为准。</view>
+  </view>
+
+  <view class="card" wx:if="{{remarkText}}">
+    <view class="title">顾客备注</view>
+    <view class="remark">{{remarkText}}</view>
+  </view>
+
+  <view class="card">
+    <view class="title">进度记录</view>
+    <view class="stage" wx:for="{{stages}}" wx:key="key">
+      <text class="stage-dot"></text>
+      <text class="stage-label">{{item.label}}</text>
+      <text class="muted">{{item.timeText}}</text>
+    </view>
+    <view class="muted" wx:if="{{!stages.length}}">还没有履约记录。</view>
+    <view class="signature" wx:if="{{signatureImage}}">
+      <view class="muted">顾客手写签名</view>
+      <image class="signature-image" src="{{signatureImage}}" mode="widthFix" bindtap="previewSignature" />
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{canComplete}}">
+    <view class="title">完工照片（选填）</view>
+    <view class="muted tip">可拍摄完工后的现场照片，作为服务完成的补充凭证；不上传也能完成服务。</view>
+    <image class="leave-image" wx:if="{{leaveImage}}" src="{{leaveImage}}" mode="aspectFill" bindtap="previewLeavePhoto" />
+    <button class="button-ghost" bindtap="chooseLeavePhoto">{{leaveImage ? '重新拍摄' : '拍摄完工照片'}}</button>
+  </view>
+
+  <view class="card actions">
+    <view class="muted tip" wx:if="{{canAccept}}">接单后请按预约时间上门；临时去不了请用「拒单」并填写原因。</view>
+    <view class="muted tip" wx:if="{{canDepart}}">出发前请确认已带上工具与材料。</view>
+    <view class="muted tip" wx:if="{{canArrive}}">到达需上传现场照片才能确认到场。</view>
+    <view class="muted tip" wx:if="{{canStart}}">开始服务后计时归本单，请与顾客确认服务内容。</view>
+    <view class="muted tip" wx:if="{{canComplete}}">服务完成后请提醒顾客签收与评价。</view>
+    <view class="row gap">
+      <button class="button-primary flex" wx:if="{{canAccept}}" bindtap="accept" disabled="{{busy}}">接单</button>
+      <button class="button-ghost flex" wx:if="{{canReject}}" bindtap="reject" disabled="{{busy}}">拒单</button>
+      <button class="button-primary flex" wx:if="{{canDepart}}" bindtap="depart" disabled="{{busy}}">出发</button>
+      <button class="button-primary flex" wx:if="{{canArrive}}" bindtap="arrive" disabled="{{busy}}">到达（拍照）</button>
+      <button class="button-primary flex" wx:if="{{canStart}}" bindtap="start" disabled="{{busy}}">开始服务</button>
+      <button class="button-primary flex" wx:if="{{canComplete}}" bindtap="complete" disabled="{{busy}}">完成服务</button>
+    </view>
+    <view class="muted tip" wx:if="{{!hasAction}}">本单当前状态没有可执行的技师操作，如有异常请联系店主。</view>
+  </view>
+</block>

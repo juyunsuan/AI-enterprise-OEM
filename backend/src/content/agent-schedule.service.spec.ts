@@ -265,13 +265,13 @@ describe('定时任务的群控范围', () => {
     const { service, create } = buildScope();
     const view = await service.save(
       user,
-      body({ dispatchScope: ['desktop', 'MOBOT', 'DESKTOP', 'bogus', null] }),
+      body({ dispatchScope: ['desktop', 'AWBOT', 'DESKTOP', 'bogus', null] }),
     );
     expect(create.mock.calls[0][0].data.dispatchScope).toEqual([
       'DESKTOP',
-      'MOBOT',
+      'AWBOT',
     ]);
-    expect(view?.dispatchScope).toEqual(['DESKTOP', 'MOBOT']);
+    expect(view?.dispatchScope).toEqual(['DESKTOP', 'AWBOT']);
   });
 
   it('没勾选就是空数组：到点这一轮不开群控', async () => {
@@ -285,20 +285,20 @@ describe('定时任务的群控范围', () => {
     const { service, update } = buildScope();
     await service.update(user, '1', { title: '每日要闻' });
     expect(update.mock.calls[0][0].data.dispatchScope).toBeUndefined();
-    await service.update(user, '1', { dispatchScope: ['MOBOT'] });
-    expect(update.mock.calls[1][0].data.dispatchScope).toEqual(['MOBOT']);
+    await service.update(user, '1', { dispatchScope: ['AWBOT'] });
+    expect(update.mock.calls[1][0].data.dispatchScope).toEqual(['AWBOT']);
   });
 
   it('到点执行把范围交给这一轮对话', async () => {
     const { service, runSilent } = buildScope({
       ...storedScope,
-      dispatchScope: ['DESKTOP', 'MOBOT'],
+      dispatchScope: ['DESKTOP', 'AWBOT'],
     });
     await service.runNow(user, '1', 'token');
     expect(runSilent).toHaveBeenCalledTimes(1);
     expect(runSilent.mock.calls[0][4].dispatchScope).toEqual([
       'DESKTOP',
-      'MOBOT',
+      'AWBOT',
     ]);
   });
 });

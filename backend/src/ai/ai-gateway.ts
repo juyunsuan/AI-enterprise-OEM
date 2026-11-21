@@ -451,6 +451,20 @@ export async function recordAiUsage(
   });
 }
 
+/**
+ * 历史直连调用点的补计量入口：只写用量事实（record），不触发扣费。
+ *
+ * `aiChat` 只有在调用方显式传 `charge.code` 时才走扣费；这些站点过去直接调
+ * `geoChatMulti`，成本完全不进 `usage_events`。先把账记全，是否计费由平台科目配置决定。
+ */
+export async function meterChatCall(
+  userId: string,
+  result: GeoChatResult,
+  meta: { module: string; operation: string; model: string },
+) {
+  await recordAiUsage(userId, toUsage(result), meta);
+}
+
 /** 逐块回调的对话流（抛错版；静默需求先 resolveModel 再 geoChatStream）。 */
 export async function aiStream(
   prisma: PrismaService,

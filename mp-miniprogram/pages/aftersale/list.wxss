@@ -1,0 +1,14 @@
+.order-line {
+  padding: 12rpx 0;
+}
+
+.thumb.small {
+  width: 120rpx;
+  height: 120rpx;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16rpx;
+}

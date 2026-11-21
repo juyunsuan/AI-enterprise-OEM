@@ -7,7 +7,7 @@
  *   · http    把一个 HTTP 接口包成工具（method / url / headers / body 模板）；
  *   · command 把一条本机命令包成工具（需要 allow-all 权限档）。
  *
- * 插件只在本机落库（~/.botbuddy/botbuddy.db），平台看不到清单也调不到。
+ * 插件只在本机落库（~/.awbotdsh/botbuddy.db），平台看不到清单也调不到。
  * 工具名固定加 `plugin_` 前缀，避免和内置工具（read_file 等）撞名。
  */
 

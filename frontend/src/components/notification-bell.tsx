@@ -61,7 +61,11 @@ export function NotificationBell() {
     } catch {
       // 标记失败不影响跳转
     }
-    if (row.link) router.push(row.link);
+    if (/^https?:\/\//i.test(row.link)) {
+      window.open(row.link, "_blank", "noopener,noreferrer");
+    } else if (row.link) {
+      router.push(row.link);
+    }
     void load();
   };
 

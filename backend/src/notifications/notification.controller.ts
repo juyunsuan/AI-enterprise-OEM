@@ -25,6 +25,10 @@ export class NotificationController {
     return ok(await this.service.read(user, Number(id)));
   }
 
+  async readExternal(user: CurrentUser, id: string) {
+    return ok(await this.service.readExternal(user, id));
+  }
+
   async get(user: CurrentUser, id: string) {
     return ok(await this.service.get(user, Number(id)));
   }

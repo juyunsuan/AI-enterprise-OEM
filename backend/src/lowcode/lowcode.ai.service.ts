@@ -6,6 +6,7 @@ import { ContentModelSettingService } from '../content/model-setting.service';
 import { geoChatMulti } from '../geo/geo-llm.client';
 import { PrismaService } from '../prisma/prisma.service';
 import { LowCodeAccessService } from './lowcode.access.service';
+import { meterChatCall } from '../ai/ai-gateway';
 import {
   type LowCodeProjectRow,
   fieldRuleState,
@@ -119,6 +120,12 @@ export class LowCodeAiService {
       timeoutMs,
       userId: user.userId,
       purpose: 'chat',
+    });
+    // 直连模型也要留用量事实（只记录不扣费），否则成本报表永远看不到这条链路
+    await meterChatCall(user.userId, result, {
+      module: 'lowcode',
+      operation: 'ai-fill',
+      model: target.model,
     });
     return { reply: result.reply, model: target.model };
   }

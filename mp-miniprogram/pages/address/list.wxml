@@ -1,0 +1,36 @@
+<view class="wrap" style="padding-bottom:180rpx">
+  <view wx:if="{{loading}}" class="empty">正在加载地址簿…</view>
+
+  <view wx:elif="{{error}}" class="card">
+    <view class="error-box">{{error}}</view>
+    <view class="btn btn-primary" style="margin-top:20rpx" bindtap="load">重新加载</view>
+  </view>
+
+  <view wx:elif="{{!items.length}}" class="card">
+    <view class="empty" style="padding:80rpx 0">还没有收货地址</view>
+  </view>
+
+  <block wx:else>
+    <view wx:for="{{items}}" wx:key="id" class="card" data-id="{{item.id}}" bindtap="pick">
+      <view class="row">
+        <view class="grow">
+          <view style="font-weight:600">
+            {{item.realName}} {{item.phone}}
+            <text wx:if="{{item.isDefault}}" class="tag" style="margin-left:8rpx">默认</text>
+          </view>
+          <view class="muted" style="margin-top:6rpx">{{item.fullText}}</view>
+        </view>
+        <text wx:if="{{pick}}" style="color:#3370ff">选择</text>
+      </view>
+      <view class="divider"></view>
+      <view class="row">
+        <text class="muted" data-id="{{item.id}}" catchtap="edit">编辑</text>
+        <text class="muted" style="color:#b42318" data-id="{{item.id}}" catchtap="remove">删除</text>
+      </view>
+    </view>
+  </block>
+</view>
+
+<view class="bottom-bar">
+  <view class="btn btn-primary grow" bindtap="add">新增收货地址</view>
+</view>

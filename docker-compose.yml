@@ -52,6 +52,52 @@ services:
     ports:
       - "1690:1690"
 
+  # AWBotDSH ↔ 手机 Remote：平台账号直连的自建服务端。
+  # 登录走平台账号；域名默认跟随平台站点设置（/api/site-config）。
+  # Remote 协议要求纯 origin；Nginx 把 /pair、/api/v1/*、/ws/v1/* 反代到这里。
+  awbot-remote:
+    build:
+      context: ./services/awbot-remote
+    depends_on:
+      - api
+    environment:
+      DSH_SERVER_PUBLIC_URL: ${SITE_URL:-}
+      AIPDD_PLATFORM_URL: http://api:1690
+      DSH_SERVER_HOST: 0.0.0.0
+      DSH_SERVER_PORT: 8081
+      DSH_SERVER_DATA_FILE: /data/state.json
+      # 三项要么都留空（Relay-only），要么同时配置；URL 用逗号分隔。
+      DSH_SERVER_STUN_URLS: ${AWBOT_STUN_URLS:-}
+      DSH_SERVER_TURN_URLS: ${AWBOT_TURN_URLS:-}
+      DSH_SERVER_TURN_SECRET: ${AWBOT_TURN_SECRET:-}
+      DSH_SERVER_TURN_TTL_SECONDS: ${AWBOT_TURN_TTL_SECONDS:-300}
+    volumes:
+      - awbot-remote-data:/data
+    ports:
+      - "127.0.0.1:${AWBOT_REMOTE_PORT:-8081}:8081"
+
+  # 可选 TURN：docker compose --profile turn up -d
+  # 必填 AWBOT_TURN_SECRET、AWBOT_TURN_EXTERNAL_IP，并设置 AWBOT_TURN_URLS / AWBOT_STUN_URLS。
+  coturn:
+    image: coturn/coturn:4.6.2
+    profiles: ["turn"]
+    command:
+      - -n
+      - --log-file=stdout
+      - --lt-cred-mech
+      - --use-auth-secret
+      - --static-auth-secret=${AWBOT_TURN_SECRET:?set AWBOT_TURN_SECRET}
+      - --realm=${AWBOT_TURN_REALM:-awbot}
+      - --fingerprint
+      - --no-cli
+      - --min-port=49160
+      - --max-port=49200
+      - --external-ip=${AWBOT_TURN_EXTERNAL_IP:?set AWBOT_TURN_EXTERNAL_IP}
+    ports:
+      - "${AWBOT_TURN_PORT:-3478}:3478/udp"
+      - "${AWBOT_TURN_PORT:-3478}:3478/tcp"
+      - "49160-49200:49160-49200/udp"
+
   web:
     build:
       context: .
@@ -68,3 +114,4 @@ services:
 
 volumes:
   mysql-data:
+  awbot-remote-data:

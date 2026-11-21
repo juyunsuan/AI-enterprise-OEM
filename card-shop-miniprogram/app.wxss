@@ -1,0 +1,217 @@
+/**
+ * 全局样式：主色由运行时主题决定，页面根节点用 style="{{themeStyle}}" 注入 --primary。
+ */
+page {
+  --primary: #3370ff;
+  --bg: #f5f6f8;
+  --card: #ffffff;
+  --text: #1f2329;
+  --muted: #8a8f99;
+  --line: #eaecef;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 28rpx;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC",
+    "Helvetica Neue", sans-serif;
+}
+
+.page {
+  min-height: 100vh;
+  padding: 24rpx;
+  box-sizing: border-box;
+}
+
+.page-flush {
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.card {
+  background: var(--card);
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 24rpx;
+  box-shadow: 0 2rpx 12rpx rgba(31, 35, 41, 0.04);
+  box-sizing: border-box;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+}
+
+.between {
+  justify-content: space-between;
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+}
+
+.flex1 {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  font-size: 30rpx;
+  font-weight: 600;
+  line-height: 44rpx;
+}
+
+.section-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  margin-bottom: 16rpx;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 24rpx;
+}
+
+.small {
+  font-size: 24rpx;
+}
+
+.price {
+  color: #fa5151;
+  font-weight: 600;
+}
+
+.ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ellipsis-2 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.tag {
+  display: inline-block;
+  padding: 2rpx 14rpx;
+  border-radius: 999rpx;
+  font-size: 22rpx;
+  line-height: 34rpx;
+  background: #f2f3f5;
+  color: var(--muted);
+}
+
+.tag-primary {
+  background: rgba(51, 112, 255, 0.1);
+  color: var(--primary);
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 84rpx;
+  border-radius: 999rpx;
+  font-size: 30rpx;
+  font-weight: 500;
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.btn-ghost {
+  background: #ffffff;
+  color: var(--primary);
+  border: 1rpx solid var(--primary);
+}
+
+.btn-danger {
+  background: #fa5151;
+}
+
+.btn-disabled {
+  background: #c9cdd4;
+  color: #ffffff;
+}
+
+.input {
+  height: 80rpx;
+  padding: 0 20rpx;
+  background: #f7f8fa;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+}
+
+.textarea {
+  width: 100%;
+  min-height: 120rpx;
+  padding: 16rpx 20rpx;
+  background: #f7f8fa;
+  border-radius: 12rpx;
+  font-size: 26rpx;
+  box-sizing: border-box;
+}
+
+.divider {
+  height: 1rpx;
+  background: var(--line);
+  margin: 20rpx 0;
+}
+
+.empty {
+  padding: 120rpx 40rpx;
+  text-align: center;
+  color: var(--muted);
+  font-size: 26rpx;
+}
+
+.safe-bottom {
+  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
+}
+
+.fixed-bottom {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 16rpx 24rpx calc(16rpx + env(safe-area-inset-bottom));
+  background: #ffffff;
+  border-top: 1rpx solid var(--line);
+  display: flex;
+  align-items: center;
+  z-index: 20;
+  box-sizing: border-box;
+}
+
+.goods-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20rpx;
+}
+
+.goods-cover {
+  width: 100%;
+  height: 300rpx;
+  border-radius: 12rpx;
+  background: #f2f3f5;
+  display: block;
+}
+
+.goods-name {
+  margin-top: 12rpx;
+  font-size: 28rpx;
+  line-height: 40rpx;
+  font-weight: 500;
+}
+
+.goods-sub {
+  margin-top: 4rpx;
+  color: var(--muted);
+  font-size: 22rpx;
+}
+
+.copy-secret {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  word-break: break-all;
+}

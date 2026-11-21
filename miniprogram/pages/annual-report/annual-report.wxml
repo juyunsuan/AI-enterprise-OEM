@@ -1,0 +1,105 @@
+<view class="page">
+  <view class="card" wx:if="{{!loggedIn}}">
+    <view class="title">登录后办理工商年报</view>
+    <view class="muted" style="margin-top: 12rpx">年报记录与平台网页端台账共用同一账号，登录后可直接填报和回看。</view>
+    <view class="btn btn-block" style="margin-top: 24rpx" bindtap="goLogin">去登录</view>
+  </view>
+
+  <block wx:else>
+    <view class="empty" wx:if="{{checking}}">正在读取模块配置…</view>
+    <view class="card" wx:elif="{{!enabled}}">
+      <view class="section-label">工商年报模块暂未开放</view>
+      <view class="muted">请联系平台管理员在「小程序管理」中开启「工商年报」功能。</view>
+    </view>
+
+    <block wx:else>
+      <view class="hero-card">
+        <view class="hero-title">工商年报</view>
+        <view class="hero-sub">每年 1 月 1 日至 6 月 30 日，报送上一年度年度报告。</view>
+        <view class="hero-meta" wx:if="{{recordCount}}">
+          已填报 {{recordCount}} 条 · 最近：{{latestTitle}}（{{latestTime}}）
+        </view>
+        <view class="btn-row" style="margin-top: 28rpx">
+          <view class="btn btn-main" bindtap="goForm">立即填报</view>
+          <view class="btn btn-main btn-ghost" bindtap="goRecords">查看记录</view>
+        </view>
+      </view>
+
+      <view class="notice-box">
+        本平台提供填报辅助与记录留存，非国家企业信用信息公示系统官方代理；正式年报公示仍需到官方系统办理。
+      </view>
+
+      <view class="section-label">办理与查询</view>
+
+      <view class="entry-card" bindtap="goForm">
+        <view>
+          <view class="entry-title">年度报告填报</view>
+          <view class="entry-desc">自动带入企业资料与上次填报，按年度保存到平台台账</view>
+        </view>
+        <view class="entry-arrow">›</view>
+      </view>
+
+      <view class="entry-card" bindtap="goRecords">
+        <view>
+          <view class="entry-title">我的填报记录</view>
+          <view class="entry-desc">回看网页端与小程序提交的全部工商年报记录</view>
+        </view>
+        <view class="entry-arrow">›</view>
+      </view>
+
+      <view class="entry-card" bindtap="goGuide" data-type="abnormal">
+        <view>
+          <view class="entry-title">异常经营移出指引</view>
+          <view class="entry-desc">了解列入原因、影响与移出办理思路</view>
+        </view>
+        <view class="entry-arrow">›</view>
+      </view>
+
+      <view class="entry-card" bindtap="goGuide" data-type="annual">
+        <view>
+          <view class="entry-title">年报政策与办理流程</view>
+          <view class="entry-desc">谁要报、报什么、什么时候报，一页看清</view>
+        </view>
+        <view class="entry-arrow">›</view>
+      </view>
+
+      <view class="card">
+        <view class="section-label">办理流程</view>
+        <view class="steps">
+          <view class="step">
+            <view class="step-index">1</view>
+            <view class="step-text">准备企业基本信息、地址电话、从业人数与经营数据。</view>
+          </view>
+          <view class="step">
+            <view class="step-index">2</view>
+            <view class="step-text">在小程序填写并提交，内容自动保存到平台填报台账。</view>
+          </view>
+          <view class="step">
+            <view class="step-index">3</view>
+            <view class="step-text">到国家企业信用信息公示系统完成正式年报公示。</view>
+          </view>
+          <view class="step">
+            <view class="step-index">4</view>
+            <view class="step-text">保存公示回执；如被列入异常，按指引及时申请移出。</view>
+          </view>
+        </view>
+      </view>
+
+      <view class="card">
+        <view class="section-label">相关入口</view>
+        <view class="link-row" bindtap="copyOfficial">
+          <view>国家企业信用信息公示系统</view>
+          <view class="link-action">复制网址</view>
+        </view>
+        <view class="link-row" bindtap="copyWeb">
+          <view>网页端完整台账</view>
+          <view class="link-action">复制地址</view>
+        </view>
+      </view>
+
+      <view class="muted" style="text-align: center; padding: 12rpx 0 40rpx">
+        政策依据：《个体工商户年度报告暂行办法》《企业信息公示暂行条例》
+      </view>
+    </block>
+  </block>
+</view>

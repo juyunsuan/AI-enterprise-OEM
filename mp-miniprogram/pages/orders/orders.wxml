@@ -1,0 +1,64 @@
+<view class="wrap">
+  <view class="tab-line">
+    <view
+      wx:for="{{tabs}}"
+      wx:key="value"
+      class="tab-line-item {{status === item.value ? 'active' : ''}}"
+      data-status="{{item.value}}"
+      bindtap="pickTab"
+    >{{item.label}}</view>
+  </view>
+
+  <view wx:if="{{loading}}" class="empty">正在加载订单…</view>
+
+  <view wx:elif="{{error}}" class="card">
+    <view class="error-box">{{error}}</view>
+    <view class="btn btn-primary" style="margin-top:20rpx" bindtap="reload">重新加载</view>
+  </view>
+
+  <view wx:elif="{{!list.length}}" class="card">
+    <view class="empty" style="padding:80rpx 0">还没有相关订单</view>
+    <view class="btn btn-primary" bindtap="goShopping">去逛逛</view>
+  </view>
+
+  <block wx:else>
+    <view wx:for="{{list}}" wx:key="id" class="card">
+      <view class="row" bindtap="goDetail" data-id="{{item.id}}">
+        <text class="muted">{{item.orderNo}}</text>
+        <text style="color:{{item.statusColor}};font-weight:600">{{item.statusText}}</text>
+      </view>
+
+      <view wx:for="{{item.lines}}" wx:key="key" wx:for-item="line" class="row order-line">
+        <image class="thumb small" src="{{line.image}}" mode="aspectFill" />
+        <view class="grow">
+          <view>{{line.title}}</view>
+          <view class="muted">{{line.skuName}} · {{line.shopName}}</view>
+        </view>
+        <text class="muted">×{{line.quantity}}</text>
+      </view>
+
+      <view class="divider"></view>
+      <view class="row">
+        <text class="muted">{{item.timeText}} · 共 {{item.shopCount}} 家店铺</text>
+        <text class="money">实付 {{item.payText}}</text>
+      </view>
+
+      <view class="actions">
+        <block wx:if="{{item.status === 'PENDING_PAYMENT'}}">
+          <view class="btn btn-small" data-id="{{item.id}}" bindtap="cancel">取消订单</view>
+          <view
+            class="btn btn-small btn-primary"
+            data-id="{{item.id}}"
+            bindtap="repay"
+          >{{busyId === item.id ? '支付中…' : '去支付'}}</view>
+        </block>
+        <block wx:elif="{{item.status === 'SHIPPED'}}">
+          <view class="btn btn-small btn-primary" data-id="{{item.id}}" bindtap="confirm">确认收货</view>
+        </block>
+        <view class="btn btn-small" data-id="{{item.id}}" bindtap="goDetail">查看详情</view>
+      </view>
+    </view>
+
+    <view wx:if="{{list.length}}" class="muted footer">{{hasMore ? '上拉加载更多' : '已经到底了'}}</view>
+  </block>
+</view>

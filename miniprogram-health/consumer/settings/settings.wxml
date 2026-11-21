@@ -1,0 +1,74 @@
+<view class="page">
+  <view class="card" wx:if="{{shop}}">
+    <view class="shop-row">
+      <image wx:if="{{shop.logo}}" class="shop-logo" src="{{shop.logo}}" mode="aspectFill" />
+      <view wx:else class="shop-logo"></view>
+      <view class="shop-body">
+        <view class="shop-name">{{shop.shopName || '健康管理店铺'}}</view>
+        <view class="item-meta">店铺码 {{shop.shopCode}}</view>
+      </view>
+      <text class="link" bindtap="onCopyShopCode">复制</text>
+    </view>
+    <view class="row-item" bindtap="onCall">
+      <text>联系店铺客服</text>
+      <text class="item-meta">{{shop.servicePhone || '未留电话'}}</text>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{agreements.length}}">
+    <view class="block-title">协议与须知</view>
+    <view
+      class="agreement"
+      wx:for="{{agreements}}"
+      wx:key="key"
+      data-key="{{item.key}}"
+      bindtap="onToggleAgreement"
+    >
+      <view class="agreement-head">
+        <view>
+          <view>{{item.title}}</view>
+          <view class="item-meta" wx:if="{{item.updatedText}}">更新于 {{item.updatedText}}</view>
+        </view>
+        <text class="arrow">{{expandedKey === item.key ? '收起' : '查看'}}</text>
+      </view>
+      <text class="agreement-content" wx:if="{{expandedKey === item.key}}">{{item.content || '店铺尚未填写内容，可联系客服索要。'}}</text>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="block-title">服务器地址</view>
+    <input
+      class="input"
+      placeholder="未配置时请在出包时注入"
+      value="{{apiBase}}"
+      bindinput="onBaseInput"
+    />
+    <view class="item-meta base-hint">
+      出包地址：{{builtinBase || '未注入'}}{{override ? ' · 当前使用本地地址' : ''}}
+    </view>
+    <view class="base-actions">
+      <button class="button-sm primary" bindtap="onSaveBase">保存</button>
+      <button class="button-sm" wx:if="{{override}}" bindtap="onResetBase">恢复出包地址</button>
+    </view>
+    <view class="notice notice-warn base-tip">仅用于本地调试；正式顾客使用出包注入的地址。</view>
+  </view>
+
+  <view class="card" wx:if="{{emergencyTip}}">
+    <view class="notice notice-warn">{{emergencyTip}}</view>
+  </view>
+
+  <view class="card">
+    <view class="kv">
+      <text class="kv-label">小程序版本</text>
+      <text class="kv-value">{{versionText}}</text>
+    </view>
+    <view class="kv">
+      <text class="kv-label">模板版本</text>
+      <text class="kv-value">{{templateVersion || '—'}}</text>
+    </view>
+  </view>
+
+  <view class="footer" wx:if="{{loggedIn}}">
+    <button class="button-danger" bindtap="onLogout">退出登录</button>
+  </view>
+</view>

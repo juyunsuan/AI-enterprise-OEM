@@ -1,16 +1,16 @@
 {
-  "total": 6,
+  "total": 309,
   "byCat": {
-    "asNever": 0,
-    "asAny": 0,
-    "asUnknownAs": 3,
+    "asNever": 99,
+    "asAny": 8,
+    "asUnknownAs": 179,
     "tsIgnore": 0,
     "tsExpectError": 0,
-    "eslintDisable": 3,
-    "explicitAny": 0,
+    "eslintDisable": 17,
+    "explicitAny": 6,
     "tsNocheck": 0
   },
   "allowlisted": 6,
-  "commit": "5e152c3",
-  "date": "2026-11-09"
+  "commit": "afe4402",
+  "date": "2026-11-21"
 }

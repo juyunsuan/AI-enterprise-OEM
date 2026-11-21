@@ -1,0 +1,26 @@
+<view class="page">
+  <view class="card">
+    <view class="title">微信一键登录</view>
+    <view class="muted intro">本小程序用于预约上门服务，微信授权仅用于识别你的订单与地址，不会读取其它信息。</view>
+    <view class="muted intro" wx:if="{{shopName}}">当前店铺：{{shopName}}</view>
+  </view>
+
+  <view class="card">
+    <checkbox-group bindchange="onAgreeChange">
+      <label class="agree">
+        <checkbox value="agree" checked="{{agreed}}" color="#3370ff" />
+        <text class="agree-text">我已阅读并同意《用户协议》</text>
+      </label>
+    </checkbox-group>
+    <view class="muted agree-tip">未勾选无法登录。</view>
+  </view>
+
+  <view class="submit">
+    <button class="button-primary" bindtap="submit" disabled="{{loading}}">{{loading ? '登录中…' : '微信一键登录'}}</button>
+  </view>
+
+  <view class="error muted" wx:if="{{error}}">
+    <view>{{error}}</view>
+    <view class="error-tip">可点击上方按钮重试；如多次失败请联系店铺客服。</view>
+  </view>
+</view>

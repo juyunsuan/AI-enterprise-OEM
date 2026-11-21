@@ -1,0 +1,63 @@
+.list-tip {
+  margin: 24rpx 24rpx 0;
+}
+
+.list {
+  padding-bottom: 40rpx;
+}
+
+.item {
+  margin-top: 16rpx;
+}
+
+.who {
+  display: flex;
+  align-items: center;
+}
+
+.avatar {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 44rpx;
+  margin-right: 20rpx;
+  background: #eef1f6;
+}
+
+.avatar-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26rpx;
+  color: #8a8f99;
+  overflow: hidden;
+}
+
+.who-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.item-title {
+  margin-right: 12rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.bottom {
+  margin-top: 12rpx;
+}
+
+.footer {
+  padding: 24rpx 0;
+  text-align: center;
+}
+
+.error {
+  margin: 24rpx 24rpx 0;
+  padding: 16rpx 24rpx;
+  border-radius: 12rpx;
+  background: #fdecec;
+  color: #d93026;
+  font-size: 26rpx;
+  line-height: 1.6;
+}

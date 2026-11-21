@@ -18,3 +18,7 @@
 ## Installation
 
 Copy `SKILL.md` into your agent's skills directory as `ub-mode/SKILL.md` (for example `~/.grok/skills/ub-mode/SKILL.md`, `~/.claude/skills/ub-mode/SKILL.md`, or `~/.cursor/skills/ub-mode/SKILL.md`), then invoke `/ub-mode`.
+
+> 本仓已把 `ub-mode` 纳入开发套件真源：`docs/dev-kit/skills/ub-mode/SKILL.md`。
+> 在仓库根运行 `pnpm setup:dev-kit` 会同步到 `.agents/skills/` 与 `.claude/skills/`；
+> 后台「二次开发指引」页也可直接下载 `ub-mode-v1.0.0.zip`。

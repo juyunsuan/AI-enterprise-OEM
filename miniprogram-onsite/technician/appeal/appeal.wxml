@@ -1,0 +1,89 @@
+<view class="card">
+  <view class="title">发起申诉</view>
+  <view class="muted tip">申诉由店主处理，处理结果在本页查看；只有 4 星以下的差评可以申诉，同一条评价不能重复申诉。</view>
+
+  <view class="field">
+    <text class="label">相关订单</text>
+    <picker range="{{orderOptions}}" value="{{orderPickIndex}}" bindchange="onOrderChange">
+      <view class="picker-value">{{orderOptions[orderPickIndex]}}</view>
+    </picker>
+  </view>
+
+  <view class="field">
+    <text class="label">评价编号</text>
+    <input
+      class="input"
+      type="number"
+      maxlength="12"
+      value="{{reviewId}}"
+      bindinput="onReviewIdInput"
+      placeholder="必填，向店主索取"
+    />
+  </view>
+  <view class="muted tip" wx:if="{{reviewHint}}">{{reviewHint}}</view>
+
+  <view class="field column">
+    <text class="label">申诉理由</text>
+    <textarea
+      class="textarea"
+      maxlength="300"
+      value="{{reason}}"
+      bindinput="onReasonInput"
+      placeholder="说明这条评价与事实不符的地方，例如顾客未到场、服务已完成但被误评"
+    />
+    <text class="muted">最多 300 字。</text>
+  </view>
+
+  <view class="field column">
+    <text class="label">证据图片（选填）</text>
+    <view class="images">
+      <view class="image-item" wx:for="{{images}}" wx:key="*this">
+        <image class="image" src="{{item}}" mode="aspectFill" data-url="{{item}}" bindtap="previewImage" />
+        <text class="image-remove" data-index="{{index}}" catchtap="removeImage">删除</text>
+      </view>
+      <view class="image-add" bindtap="chooseImage" wx:if="{{images.length < 9}}">+ 上传</view>
+    </view>
+    <text class="muted">最多 9 张。</text>
+  </view>
+
+  <view class="error" wx:if="{{errorText}}">{{errorText}}</view>
+  <button
+    class="button-primary submit"
+    bindtap="submit"
+    loading="{{submitting}}"
+    disabled="{{submitting || uploading}}"
+  >提交申诉</button>
+</view>
+
+<view class="card">
+  <view class="row">
+    <text class="title">申诉记录</text>
+    <text class="muted">共 {{total}} 条</text>
+  </view>
+  <view class="error" wx:if="{{listError}}">{{listError}}</view>
+  <view class="record" wx:for="{{list}}" wx:key="id">
+    <view class="row">
+      <text class="order-no">订单 {{item.orderNo}}</text>
+      <text class="badge badge-{{item.status}}">{{item.statusLabel}}</text>
+    </view>
+    <view class="reason">{{item.reason}}</view>
+    <view class="muted">提交时间 {{item.createdText}}</view>
+    <view class="reply" wx:if="{{item.reply}}">处理结果：{{item.reply}}</view>
+    <view class="muted" wx:if="{{item.handledText}}">处理时间 {{item.handledText}}</view>
+    <view class="images" wx:if="{{item.images.length}}">
+      <image
+        class="image"
+        wx:for="{{item.images}}"
+        wx:for-item="url"
+        wx:key="*this"
+        src="{{url}}"
+        mode="aspectFill"
+        data-url="{{url}}"
+        bindtap="previewSingle"
+      />
+    </view>
+  </view>
+  <view class="empty" wx:if="{{!list.length && !loading}}">还没有申诉记录。</view>
+  <view class="empty" wx:if="{{loading}}">正在加载…</view>
+  <view class="muted footer" wx:if="{{list.length && finished}}">已全部加载</view>
+</view>

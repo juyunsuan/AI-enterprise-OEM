@@ -16,7 +16,18 @@ describe.each(['provider', 'flex'])('%s attachments', (kind) => {
   const service = Object.create(
     kind === 'provider' ? IdentityService.prototype : FlexService.prototype,
   ) as Pick<IdentityService, 'uploadAttachments'>;
-  Object.assign(service, { oss: { upload }, identity: { requireRoles } });
+  // 系统资产层的双件仍打到同一份 upload 双件上：对象路径与字节的断言口径不变
+  Object.assign(service, {
+    systemAsset: {
+      put: async (input: { path: string; bytes: Buffer }) =>
+        (await upload(input.path, input.bytes)) as {
+          key: string;
+          url: string;
+          size: number;
+        },
+    },
+    identity: { requireRoles },
+  });
   const user = new CurrentUser('unit', 'unit', 'user');
 
   beforeEach(() => jest.clearAllMocks());

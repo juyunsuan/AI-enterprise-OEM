@@ -1,0 +1,140 @@
+.closed {
+  text-align: center;
+}
+
+.note {
+  margin-top: 8rpx;
+  line-height: 1.6;
+}
+
+.rate-row {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 16rpx;
+}
+
+.rate-row.small {
+  margin-top: 0;
+}
+
+.rate-item {
+  width: 88rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+  margin-right: 16rpx;
+  text-align: center;
+  border: 2rpx solid #dcdfe6;
+  border-radius: 12rpx;
+  color: #5c6068;
+}
+
+.rate-item.small {
+  width: 64rpx;
+  height: 56rpx;
+  line-height: 56rpx;
+}
+
+.rate-item.active {
+  border-color: #3370ff;
+  background: #eef3ff;
+  color: #3370ff;
+}
+
+.rate-row.small .rate-item {
+  width: 64rpx;
+  height: 56rpx;
+  line-height: 56rpx;
+}
+
+.rate-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16rpx 0;
+}
+
+.label {
+  color: #5c6068;
+}
+
+.value {
+  color: #1f2329;
+}
+
+.text-input {
+  width: 100%;
+  height: 200rpx;
+  margin-top: 16rpx;
+  padding: 16rpx;
+  box-sizing: border-box;
+  background: #f7f8fa;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+}
+
+.block-text {
+  margin-top: 16rpx;
+  padding: 16rpx;
+  background: #f7f8fa;
+  border-radius: 12rpx;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.images-head {
+  margin-top: 16rpx;
+}
+
+.images {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 16rpx;
+}
+
+.image-item {
+  position: relative;
+  margin: 0 16rpx 16rpx 0;
+}
+
+.image {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 12rpx;
+  background: #f0f1f5;
+}
+
+.image-del {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  padding: 4rpx 12rpx;
+  background: rgba(31, 35, 41, 0.65);
+  color: #fff;
+  font-size: 22rpx;
+  border-radius: 12rpx 0 12rpx 0;
+}
+
+.image-add {
+  width: 160rpx;
+  height: 160rpx;
+  margin-bottom: 16rpx;
+  line-height: 160rpx;
+  text-align: center;
+  color: #8a8f99;
+  background: #f7f8fa;
+  border: 2rpx dashed #dcdfe6;
+  border-radius: 12rpx;
+  font-size: 24rpx;
+}
+
+.reply {
+  margin-top: 16rpx;
+  padding: 16rpx;
+  background: #f7f8fa;
+  border-radius: 12rpx;
+  line-height: 1.6;
+}
+
+.footer {
+  padding: 0 24rpx 48rpx;
+}

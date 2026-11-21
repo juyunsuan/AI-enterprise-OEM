@@ -13,7 +13,7 @@ import {
 import { endpoint } from "@/api/endpoint";
 
 /**
- * Agent 群控页签的取数层：只取派单台账——三条通道（BotBuddy 主机 / Mobot 手机 / WorkBuddy 企业云）
+ * Agent 群控页签的取数层：只取派单台账——三条通道（AWBotDSH 主机 / AWBot 手机 / WorkBuddy 企业云）
  * 的清单与在线状态都在「Agent-Bot」看，这里不复制一份（账号下可能挂几百台设备）。
  * 写侧派单在对话里由 Agent 发起（M3 内置工具），或在设备 / 企云页签手动下发；
  * 本页签只允许暂停/恢复 Agent 建的定时任务。
@@ -109,13 +109,13 @@ export function deviceChatPath(
   hostId: number,
 ) {
   if (clientKind === "WORKBUDDY") return "/agent-bot?tab=cloud&sub=chat";
-  const tab = clientKind === "MOBOT" ? "mobot" : "bots";
+  const tab = clientKind === "AWBOT" ? "awbot" : "bots";
   return `/agent-bot?tab=${tab}&sub=chat&hostId=${hostId}`;
 }
 
 export function devicePairingPath(clientKind: BotDispatchTargetKind) {
   if (clientKind === "WORKBUDDY") return "/agent-bot?tab=cloud&sub=accounts";
-  return `/agent-bot?tab=${clientKind === "MOBOT" ? "mobot" : "bots"}`;
+  return `/agent-bot?tab=${clientKind === "AWBOT" ? "awbot" : "bots"}`;
 }
 
 /** 企云已下发的会话平台中止不了，按钮只能说「停止跟踪」。 */
@@ -154,7 +154,7 @@ export function dispatchScopeSummary(scope: DispatchScope) {
   return scope.map((kind) => BOT_DISPATCH_TARGET_KIND_SHORT_LABELS[kind]).join(" + ");
 }
 
-/** 输入框上方标签：群控：Bot 主机 + Mobot 手机 + WorkBuddy 企业云。 */
+/** 输入框上方标签：群控：Bot 主机 + AWBot 手机 + WorkBuddy 企业云。 */
 export function dispatchScopeLabel(scope: DispatchScope) {
   return `群控：${scope
     .map((kind) => BOT_DISPATCH_TARGET_KIND_LABELS[kind] || kind)

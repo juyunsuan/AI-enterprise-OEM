@@ -1,0 +1,78 @@
+<view class="page" style="{{themeStyle}}">
+  <view class="card profile">
+    <!-- 站点模板不随包带图片资源：没有头像就用首字占位圆，避免出现裂图 -->
+    <image wx:if="{{member.avatar}}" class="avatar" src="{{member.avatar}}" mode="aspectFill" />
+    <view wx:else class="avatar avatar-ph">{{avatarText}}</view>
+    <view class="profile-main">
+      <view class="profile-name ellipsis">{{member.nickname || '微信用户'}}</view>
+      <view class="muted" wx:if="{{loginFailed}}">未获取到会员身份</view>
+      <view class="muted" wx:else>{{vipText}}</view>
+    </view>
+    <view class="profile-points">
+      <view class="points-value">{{pointsText}}</view>
+      <view class="muted">积分</view>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{loginFailed}}">
+    <view class="muted">登录状态不可用，解锁内容、签到与会员功能会受影响。</view>
+    <view class="btn retry-btn" bindtap="retryLogin">重新登录</view>
+  </view>
+
+  <view class="card sign-card" wx:if="{{show.signIn && !loginFailed}}" bindtap="onSignIn">
+    <view>
+      <view class="section-title">{{signing ? '签到中…' : '每日签到'}}</view>
+      <view class="muted" style="margin-top: 8rpx">{{nextRewardText || '签到可得积分'}}</view>
+    </view>
+    <view class="sign-btn">签到</view>
+  </view>
+
+  <view class="stat-row" wx:if="{{!loginFailed}}">
+    <view class="stat-card card" bindtap="goLearning">
+      <view class="stat-value">{{member.learningCount || 0}}</view>
+      <view class="muted">我的学习</view>
+    </view>
+    <view class="stat-card card" bindtap="goVip">
+      <view class="stat-value">{{member.orderCount || 0}}</view>
+      <view class="muted">已获取课程</view>
+    </view>
+    <view class="stat-card card" bindtap="goFavorites">
+      <view class="stat-value">{{member.favoriteCount || 0}}</view>
+      <view class="muted">我的收藏</view>
+    </view>
+  </view>
+
+  <view class="card cells" wx:if="{{entries.length}}">
+    <view
+      class="cell"
+      wx:for="{{entries}}"
+      wx:key="key"
+      bindtap="openEntry"
+      data-index="{{index}}"
+    >
+      <text class="cell-title">{{item.title}}</text>
+      <text class="arrow">›</text>
+    </view>
+    <view class="cell" wx:if="{{show.contact}}">
+      <text class="cell-title">联系在线客服</text>
+      <button class="contact-btn" open-type="contact">咨询</button>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{show.adTab && adUnit}}">
+    <view class="muted ad-label">推广</view>
+    <ad unit-id="{{adUnit}}"></ad>
+  </view>
+
+  <view class="muted site-footer">{{siteName}}</view>
+
+  <view class="mask" wx:if="{{popup.visible}}" bindtap="closePopup">
+    <view class="popup" catchtap="noop">
+      <view class="popup-title">{{popup.title}}</view>
+      <scroll-view class="popup-body" scroll-y="{{true}}">
+        <rich-text nodes="{{popup.content}}"></rich-text>
+      </scroll-view>
+      <view class="btn popup-close" bindtap="closePopup">关闭</view>
+    </view>
+  </view>
+</view>

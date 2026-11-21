@@ -1,0 +1,120 @@
+.assets-card {
+  margin: 24rpx;
+  padding: 32rpx 28rpx;
+  border-radius: 24rpx;
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.assets-row {
+  display: flex;
+}
+
+.asset {
+  flex: 1;
+  text-align: center;
+}
+
+.asset-value {
+  font-size: 44rpx;
+  font-weight: 600;
+}
+
+.asset-label {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  opacity: 0.85;
+}
+
+.vip-line {
+  margin-top: 26rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 24rpx;
+  opacity: 0.92;
+}
+
+.orders-link {
+  opacity: 0.9;
+}
+
+.gift {
+  margin-top: 16rpx;
+  padding: 10rpx 18rpx;
+  border-radius: 12rpx;
+  background: rgba(255, 255, 255, 0.16);
+  font-size: 22rpx;
+}
+
+.tabs {
+  margin: 8rpx 24rpx 0;
+}
+
+.pkg {
+  margin: 16rpx 24rpx;
+}
+
+.pkg-name {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.pkg-desc {
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  color: #8a8f99;
+}
+
+.pkg-limit {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: #ad6800;
+}
+
+.pkg-price {
+  text-align: right;
+}
+
+.price {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #e5484d;
+}
+
+.price-origin {
+  font-size: 22rpx;
+  color: #b6bbc4;
+  text-decoration: line-through;
+}
+
+.buy {
+  margin-top: 20rpx;
+  height: 76rpx;
+  line-height: 76rpx;
+  text-align: center;
+  border-radius: 38rpx;
+  background: var(--primary);
+  color: #ffffff;
+  font-size: 28rpx;
+}
+
+.buy.disabled {
+  opacity: 0.6;
+}
+
+.card-submit {
+  margin-top: 20rpx;
+}
+
+.hint {
+  margin-top: 16rpx;
+  font-size: 22rpx;
+}
+
+.promoter-entry {
+  margin: 32rpx 24rpx 0;
+  text-align: center;
+  font-size: 26rpx;
+  color: var(--primary);
+}

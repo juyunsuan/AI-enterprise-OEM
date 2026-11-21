@@ -1,0 +1,26 @@
+{
+  "description": "AI 数字人分身小程序（用户模板，微信原生小程序）",
+  "packOptions": {
+    "ignore": [
+      { "type": "file", "value": "project.private.config.json" },
+      { "type": "folder", "value": ".DS_Store" }
+    ]
+  },
+  "setting": {
+    "urlCheck": true,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true,
+    "bigPackageSizeSupport": false,
+    "coverView": false,
+    "packNpmManually": false,
+    "packNpmRelationList": []
+  },
+  "compileType": "miniprogram",
+  "libVersion": "2.30.4",
+  "appid": "touristappid",
+  "projectname": "digital-human-miniprogram",
+  "srcMiniprogramRoot": "./",
+  "miniprogramRoot": "./"
+}

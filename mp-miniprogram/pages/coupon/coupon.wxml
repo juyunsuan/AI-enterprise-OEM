@@ -1,0 +1,79 @@
+<view class="wrap">
+  <view class="tab-line">
+    <view class="tab-line-item {{tab === 'claim' ? 'active' : ''}}" data-tab="claim" bindtap="switchTab">
+      可领优惠券
+    </view>
+    <view class="tab-line-item {{tab === 'mine' ? 'active' : ''}}" data-tab="mine" bindtap="switchTab">
+      我的券
+    </view>
+  </view>
+
+  <view wx:if="{{loading}}" class="empty">正在加载…</view>
+
+  <view wx:elif="{{error}}" class="card">
+    <view class="error-box">{{error}}</view>
+    <view class="btn btn-primary" style="margin-top:20rpx" bindtap="refresh">重新加载</view>
+  </view>
+
+  <block wx:elif="{{tab === 'claim'}}">
+    <view wx:if="{{!coupons.length}}" class="card">
+      <view class="empty" style="padding:60rpx 0">暂时没有可领取的优惠券</view>
+    </view>
+
+    <view
+      wx:for="{{coupons}}"
+      wx:key="id"
+      class="card coupon-row"
+    >
+      <view class="coupon-left">
+        <view class="coupon-value">{{item.valueText}}</view>
+        <view class="muted">{{item.thresholdText}}</view>
+      </view>
+      <view class="grow coupon-body">
+        <view class="coupon-name">{{item.name}}</view>
+        <view class="muted">{{item.issuerType === 'PLATFORM' ? '市场通用' : item.shopName}}</view>
+        <view class="muted">{{item.expireText}}</view>
+      </view>
+      <view
+        class="btn btn-small {{item.claimable ? 'btn-primary' : 'disabled'}}"
+        data-id="{{item.id}}"
+        data-claimable="{{item.claimable}}"
+        bindtap="claim"
+      >{{item.hintText}}</view>
+    </view>
+  </block>
+
+  <block wx:else>
+    <view class="chips">
+      <view class="chip {{ticketStatus === '' ? 'active' : ''}}" data-status="" bindtap="pickTicketStatus">全部</view>
+      <view class="chip {{ticketStatus === 'UNUSED' ? 'active' : ''}}" data-status="UNUSED" bindtap="pickTicketStatus">可使用</view>
+      <view class="chip {{ticketStatus === 'USED' ? 'active' : ''}}" data-status="USED" bindtap="pickTicketStatus">已使用</view>
+      <view class="chip {{ticketStatus === 'EXPIRED' ? 'active' : ''}}" data-status="EXPIRED" bindtap="pickTicketStatus">已过期</view>
+    </view>
+
+    <view wx:if="{{!tickets.length}}" class="card">
+      <view class="empty" style="padding:60rpx 0">还没有领过券，去逛逛吧</view>
+    </view>
+
+    <view
+      wx:for="{{tickets}}"
+      wx:key="ticketId"
+      class="card coupon-row {{item.status !== 'UNUSED' ? 'off' : ''}}"
+    >
+      <view class="coupon-left">
+        <view class="coupon-value">{{item.valueText}}</view>
+        <view class="muted">{{item.thresholdText}}</view>
+      </view>
+      <view class="grow coupon-body">
+        <view class="coupon-name">{{item.name}}</view>
+        <view class="muted">{{item.issuerType === 'PLATFORM' ? '市场通用' : item.shopName}}</view>
+        <view class="muted">{{item.expireText}}</view>
+      </view>
+      <view class="coupon-status">{{item.statusText}}</view>
+    </view>
+
+    <view wx:if="{{tickets.length}}" class="card">
+      <view class="btn btn-ghost" bindtap="goShopping">继续逛逛</view>
+    </view>
+  </block>
+</view>

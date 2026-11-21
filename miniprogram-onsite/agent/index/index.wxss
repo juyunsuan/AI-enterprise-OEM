@@ -1,0 +1,74 @@
+.role {
+  margin-left: 12rpx;
+}
+
+.head-meta {
+  margin-top: 8rpx;
+  line-height: 1.6;
+}
+
+.cards {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 24rpx;
+}
+
+.stat {
+  width: 50%;
+  box-sizing: border-box;
+  padding: 20rpx 24rpx;
+  margin-bottom: 16rpx;
+  background: #fff;
+  border-radius: 16rpx;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 2rpx 12rpx rgba(31, 35, 41, 0.04);
+}
+
+.stat-value {
+  font-size: 36rpx;
+  font-weight: 600;
+  margin-bottom: 6rpx;
+}
+
+.stat-hint {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: #a6a9b0;
+}
+
+.entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid #f0f1f5;
+}
+
+.entry:last-child {
+  border-bottom: none;
+}
+
+.entry-main {
+  display: flex;
+  flex-direction: column;
+}
+
+.entry-label {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.entry-arrow {
+  color: #c0c4cc;
+  font-size: 36rpx;
+}
+
+.link {
+  color: #3370ff;
+  font-size: 26rpx;
+}
+
+.tip {
+  line-height: 1.7;
+}

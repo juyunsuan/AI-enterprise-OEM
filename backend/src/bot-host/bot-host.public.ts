@@ -59,7 +59,7 @@ function text(value: unknown, max = 200) {
 }
 
 export interface BotHostPublicOptions {
-  /** 通道前缀：桌面 /api/public/bot-host，Mobot /api/public/mobot。 */
+  /** 通道前缀：桌面 /api/public/bot-host，AWBot 手机 /api/public/awbot，AWBotDSH 桌面 /api/public/awbotdsh。 */
   basePath?: string;
   /** 该通道只接受此类型的设备令牌；不传＝桌面通道。 */
   clientKind?: BotClientKind;
@@ -74,9 +74,11 @@ export function registerBotHostPublic(
   const hosts = services.botHost;
   const basePath = options.basePath || '/api/public/bot-host';
   const requiredKind: BotClientKind =
-    options.clientKind === 'MOBOT' ? 'MOBOT' : 'DESKTOP';
+    options.clientKind === 'AWBOT' ? 'AWBOT' : 'DESKTOP';
   // 客户端登录按 IP 兜底限流；账号维度的连续失败锁定仍在 AccountService 里。
   const loginLimit = new RateWindow(30, 10 * 60_000);
+  // 扫码兑换免登录，按 IP 限流挡住暴力试码。
+  const qrPairLimit = new RateWindow(20, 10 * 60_000);
 
   const authenticate = async (
     c: Context<ApiEnv>,
@@ -207,7 +209,7 @@ export function registerBotHostPublic(
       }
       const session = await deps.account.account.login(username, password, {
         ip,
-        userAgent: c.req.header('user-agent') || 'BotBuddy',
+        userAgent: c.req.header('user-agent') || 'AWBotDSH',
       });
       const token = issueSsoSession(
         session.userId,
@@ -237,7 +239,7 @@ export function registerBotHostPublic(
   // 码与账号绑定：谁登录客户端谁申请，站内必须用同一账号认领。
   app.post(basePath + '/pair', (c) =>
     signedIn(c, (user, body) =>
-      // 通道即设备类型：桌面通道只能申请桌面码，Mobot 通道只能申请 MOBOT 码。
+      // 通道即设备类型：桌面通道只能申请桌面码，AWBot 通道只能申请 AWBOT 码。
       hosts.requestPairCode(user, { ...body, clientKind: requiredKind }),
     ),
   );
@@ -246,6 +248,108 @@ export function registerBotHostPublic(
   app.post(basePath + '/pair/poll', (c) =>
     signedIn(c, (user, body) => hosts.pollPairCode(user, body)),
   );
+
+  // 扫码配对：站内登录后生成二维码，手机扫码后免登录兑换一次性设备令牌。
+  // 只在 AWBot 通道开放；码带 QR 前缀，旧的 6 位码进不来。
+  if (requiredKind === 'AWBOT') {
+    app.post(basePath + '/pair/qr', (c) => {
+      try {
+        qrPairLimit.consume(
+          clientIp(c) || 'unknown',
+          '配对尝试过于频繁，请稍后再试',
+        );
+      } catch (error) {
+        if (error instanceof BusinessException) {
+          return c.json(denied(error.message), error.getStatus());
+        }
+        return c.json(denied('配对失败'), 500);
+      }
+      return open(c, (body) => hosts.redeemPairQr(body));
+    });
+  }
+
+  // PC 主机生成二维码：手机 AWBot APP 扫码后兑换为同一账号下的 AWBOT 手机设备。
+  app.post(basePath + '/pair/qr/create', async (c) => {
+    try {
+      qrPairLimit.consume(
+        clientIp(c) || 'unknown',
+        '二维码生成过于频繁，请稍后再试',
+      );
+    } catch (error) {
+      return error instanceof BusinessException
+        ? c.json(denied(error.message), error.getStatus())
+        : c.json(denied('生成失败'), 500);
+    }
+    const host = await authenticate(c);
+    if (host instanceof Response) return host;
+    try {
+      const body = await bodyOf(c);
+      const result = await hosts.createPairQr(
+        { userId: host.userId } as CurrentUser,
+        {
+          ...body,
+          hostId: host.id,
+          siteUrl: body.siteUrl || c.req.header('origin') || '',
+        },
+      );
+      return c.json({ ok: true, ...result });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '生成二维码失败';
+      return c.json(
+        denied(message),
+        error instanceof BusinessException ? error.getStatus() : 400,
+      );
+    }
+  });
+
+  // PC 主机查看同账号下的手机设备。
+  app.get(basePath + '/peers/phones', async (c) => {
+    const host = await authenticate(c);
+    if (host instanceof Response) return host;
+    const result = await hosts.list(
+      { userId: host.userId } as CurrentUser,
+      'AWBOT',
+    );
+    return c.json({ ok: true, ...result });
+  });
+
+  // PC 主机向手机设备下发指令。
+  app.post(basePath + '/peers/phones/send', async (c) => {
+    const host = await authenticate(c);
+    if (host instanceof Response) return host;
+    try {
+      const body = await bodyOf(c);
+      const result = await hosts.send(
+        { userId: host.userId } as CurrentUser,
+        text(body.hostId, 20),
+        body,
+      );
+      return c.json({ ok: true, ...result });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '下发失败';
+      return c.json(
+        denied(message),
+        error instanceof BusinessException ? error.getStatus() : 400,
+      );
+    }
+  });
+
+  // 账号会话（手机/站内）向自己的主机下发指令。
+  app.post(basePath + '/hosts/send', async (c) => {
+    const user = await sessionUser(c);
+    if (!user) return c.json(denied('请先登录平台账号'), 401);
+    try {
+      const body = await bodyOf(c);
+      const result = await hosts.send(user, text(body.hostId, 20), body);
+      return c.json({ ok: true, ...result });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '下发失败';
+      return c.json(
+        denied(message),
+        error instanceof BusinessException ? error.getStatus() : 400,
+      );
+    }
+  });
 
   // 心跳：刷新在线态，顺带领取待执行指令、需要中断的指令码与积分余额。
   app.post(basePath + '/heartbeat', (c) =>
@@ -265,7 +369,7 @@ export function registerBotHostPublic(
     handle(c, (host, body) => hosts.result(host, body)),
   );
 
-  // 本机改完模型设置同步到平台（平台侧落一条「BotBuddy · 主机名」渠道并授权给本机）。
+  // 本机改完模型设置同步到平台（平台侧落一条「AWBotDSH · 主机名」渠道并授权给本机）。
   app.post(basePath + '/model-settings', (c) =>
     handle(c, (host, body) => hosts.syncModelFromClient(host, body)),
   );
@@ -277,7 +381,7 @@ export function registerBotHostPublic(
 
   /**
    * AI 调用账号（本设备）：客户端按「Agent 绑定账号」取第三方平台凭据。
-   * 主体即本机——设备类型由通道决定（DESKTOP/MOBOT），设备 ID 取令牌归属主机；
+   * 主体即本机——设备类型由通道决定（DESKTOP/AWBOT），设备 ID 取令牌归属主机；
    * 严格放行：只列/只解密绑定给本机的启用账号，未绑定取不到。口令明文只在
    * credentials 端点解密一次并记审计，与 x-api-key 机器通道同一套服务。
    */
@@ -398,7 +502,7 @@ export function registerBotHostPublic(
   });
 
   /**
-   * RPA「BotBuddy 浏览器」设备：领任务与回传结果走这条主机令牌通道。
+   * RPA「AWBotDSH 浏览器」设备：领任务与回传结果走这条主机令牌通道。
    * 与本地 Chrome 插件的设备通道同一口径——只认本机令牌、按 hostId 收窄可领范围，
    * 报文里只有「做什么」（Automa 工作流正文 + 运行参数）与「做到哪了」，
    * 没有任何目标平台口令（D3-A：口令永不出站，这条链路上平台本来也没存）。
@@ -458,16 +562,32 @@ export function registerBotHostPublic(
 }
 
 /**
- * Mobot 手机通道：与 Bot 主机共用登录、配对、心跳、指令与模型授权实现；
- * 独立前缀 + 强制 MOBOT 设备类型，桌面令牌进不来、Mobot 令牌也进不了桌面通道。
+ * AWBot 手机通道：与 Bot 主机共用登录、配对、心跳、指令与模型授权实现；
+ * 独立前缀 + 强制 AWBOT 设备类型，桌面令牌进不来、AWBot 令牌也进不了桌面通道。
  */
-export function registerMobotPublic(
+export function registerAWBotPublic(
   app: OpenAPIHono<ApiEnv>,
   services: Services,
   deps: BotHostPublicDeps,
 ) {
   registerBotHostPublic(app, services, deps, {
-    basePath: '/api/public/mobot',
-    clientKind: 'MOBOT',
+    basePath: '/api/public/awbot',
+    clientKind: 'AWBOT',
+  });
+}
+
+/**
+ * AWBotDSH 桌面通道：底座换成 DSH 后的新一代桌面客户端。
+ * 设备类型仍按 DESKTOP 落库（与旧 AWBotDSH 同一张设备表），靠独立前缀与新客户端
+ * 心跳里的 caps.client.channel 区分新旧端；旧端令牌与新端令牌互相通用。
+ */
+export function registerAWBotDSHPublic(
+  app: OpenAPIHono<ApiEnv>,
+  services: Services,
+  deps: BotHostPublicDeps,
+) {
+  registerBotHostPublic(app, services, deps, {
+    basePath: '/api/public/awbotdsh',
+    clientKind: 'DESKTOP',
   });
 }

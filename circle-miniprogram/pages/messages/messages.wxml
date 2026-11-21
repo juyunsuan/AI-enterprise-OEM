@@ -1,0 +1,17 @@
+<view class="container">
+  <view class="between" style="margin-bottom:20rpx">
+    <view class="name" style="margin-left:0">消息</view>
+    <view class="btn ghost" bindtap="readAll">全部已读</view>
+  </view>
+
+  <view class="card" wx:for="{{messages}}" wx:key="id" data-index="{{index}}" bindtap="open">
+    <view class="between">
+      <view class="tag">{{item.typeText}}</view>
+      <view class="muted">{{item.timeText}}</view>
+    </view>
+    <view class="content">{{item.content}}</view>
+  </view>
+
+  <view class="empty" wx:if="{{!loading && !messages.length}}">还没有消息</view>
+  <view class="empty" wx:if="{{loading}}">正在加载…</view>
+</view>

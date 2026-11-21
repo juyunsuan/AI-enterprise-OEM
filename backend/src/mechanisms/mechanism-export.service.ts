@@ -51,45 +51,8 @@ export class MechanismExportService extends MechanismBase {
         'source',
       ],
     },
-    {
-      module: 'erp_product',
-      label: '产品',
-      columns: [
-        'id',
-        'code',
-        'name',
-        'unit',
-        'purchasePrice',
-        'salePrice',
-        'taxRate',
-        'status',
-      ],
-    },
-    {
-      module: 'erp_vendor',
-      label: '供应商',
-      columns: [
-        'id',
-        'code',
-        'name',
-        'contactName',
-        'phone',
-        'email',
-        'status',
-      ],
-    },
-    {
-      module: 'erp_stock',
-      label: '库存',
-      columns: [
-        'warehouseId',
-        'variantId',
-        'onHand',
-        'inTransit',
-        'locked',
-        'reorderPoint',
-      ],
-    },
+    // erp_product / erp_vendor / erp_stock 不在此列：主数据导出由 ERP 域注册行提供者
+    // （`erp/erp-mechanism.module.ts`），机制层不再直读别人的表。
   ];
 
   private readonly exportRowProviders = new Map<
@@ -170,48 +133,6 @@ export class MechanismExportService extends MechanismBase {
           durationMinutes: row.durationMinutes,
           status: row.status,
           source: row.source,
-        }));
-      case 'erp_product':
-        return (
-          await this.prisma.erpProduct.findMany({
-            where,
-            orderBy: { id: 'asc' },
-          })
-        ).map((row) => ({
-          id: row.id,
-          code: row.code,
-          name: row.name,
-          unit: row.unit,
-          purchasePrice: ds(row.purchasePrice),
-          salePrice: ds(row.salePrice),
-          taxRate: ds(row.taxRate),
-          status: row.status,
-        }));
-      case 'erp_vendor':
-        return (
-          await this.prisma.erpVendor.findMany({
-            where,
-            orderBy: { id: 'asc' },
-          })
-        ).map((row) => ({
-          id: row.id,
-          code: row.code,
-          name: row.name,
-          contactName: row.contactName,
-          phone: row.phone,
-          email: row.email,
-          status: row.status,
-        }));
-      case 'erp_stock':
-        return (
-          await this.prisma.erpStock.findMany({ where, orderBy: { id: 'asc' } })
-        ).map((row) => ({
-          warehouseId: row.warehouseId,
-          variantId: row.variantId,
-          onHand: ds(row.onHand),
-          inTransit: ds(row.inTransit),
-          locked: ds(row.locked),
-          reorderPoint: ds(row.reorderPoint),
         }));
       default:
         throw new BusinessException(ErrorCode.BAD_REQUEST, '该模块不支持导出');
@@ -375,6 +296,8 @@ export class MechanismExportService extends MechanismBase {
     if (!row)
       throw new BusinessException(ErrorCode.NOT_FOUND, '导出记录不存在');
     if (row.fileKey)
+      // 导出工件由 storage.put 直接落桶（不入用户台账，见本文件写入处），
+      // 所以删除也只清字节：走 assets.remove 会去删一条根本不存在的账。
       await this.storage.remove(row.fileKey).catch(() => undefined);
     await this.prisma.exportJob.delete({ where: { id } });
     return { id };

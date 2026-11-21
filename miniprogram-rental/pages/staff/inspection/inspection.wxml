@@ -1,0 +1,49 @@
+<view class="page">
+  <view class="card">
+    <view class="title">{{kindLabel}}</view>
+    <view class="muted" style="margin-top: 8rpx; line-height: 1.7;">
+      与顾客共同确认车况并拍照留证。还回时填写的车损金额会在结算时从押金中扣除。
+    </view>
+
+    <view class="form-row">
+      <view class="form-label">当前里程（km）</view>
+      <input class="form-input" type="number" value="{{mileage}}" placeholder="仪表盘里程" bindinput="onMileage" />
+    </view>
+    <view class="form-row">
+      <view class="form-label">油量 / 电量（%）</view>
+      <input class="form-input" type="number" value="{{fuelPercent}}" placeholder="0-100" bindinput="onFuel" />
+    </view>
+    <view class="form-row">
+      <view class="form-label">车况说明</view>
+      <textarea class="form-input" value="{{damage}}" placeholder="划痕、凹陷、配件缺失等（选填）" bindinput="onDamage" auto-height></textarea>
+    </view>
+    <view class="form-row" wx:if="{{kind === 'RETURN'}}">
+      <view class="form-label">车损扣款（元）</view>
+      <input class="form-input" type="digit" value="{{damageFee}}" placeholder="无车损填 0" bindinput="onDamageFee" />
+    </view>
+    <view class="form-row">
+      <view class="form-label">内部备注</view>
+      <input class="form-input" value="{{note}}" placeholder="仅门店可见（选填）" bindinput="onNote" />
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="row">
+      <view class="title" style="font-size: 30rpx;">现场照片</view>
+      <view class="muted" bindtap="chooseImage">{{uploading ? '上传中…' : '添加照片'}}</view>
+    </view>
+    <view class="tag-list" style="margin-top: 12rpx;">
+      <view class="image-item" wx:for="{{images}}" wx:key="*this">
+        <image class="thumb" src="{{item}}" mode="aspectFill"></image>
+        <view class="image-remove" data-index="{{index}}" catchtap="removeImage">×</view>
+      </view>
+    </view>
+    <view class="muted" wx:if="{{!images.length}}" style="margin-top: 8rpx;">建议至少拍车身四周与仪表盘</view>
+  </view>
+
+  <view class="footer-bar">
+    <button class="button-primary" bindtap="submit" disabled="{{submitting || uploading}}">
+      {{submitting ? '保存中…' : '保存验车记录'}}
+    </button>
+  </view>
+</view>

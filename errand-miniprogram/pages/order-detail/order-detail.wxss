@@ -1,0 +1,69 @@
+.status {
+  color: #1f6feb;
+  font-size: 26rpx;
+}
+.line {
+  margin: 12rpx 0;
+}
+.fee-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10rpx 0;
+  color: #5c626b;
+}
+.fee-total {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 18rpx;
+  margin-top: 10rpx;
+  border-top: 1rpx solid #f2f3f5;
+  font-size: 34rpx;
+  font-weight: 700;
+}
+.event {
+  display: flex;
+  gap: 16rpx;
+  padding: 12rpx 0;
+  border-bottom: 1rpx solid #f5f6f8;
+}
+.event-time {
+  color: #8a8f99;
+  font-size: 24rpx;
+  width: 260rpx;
+}
+.event-note {
+  flex: 1;
+}
+.photos {
+  display: flex;
+  gap: 12rpx;
+  margin-top: 16rpx;
+}
+.photos image {
+  width: 150rpx;
+  height: 150rpx;
+  border-radius: 12rpx;
+}
+.stars {
+  display: flex;
+  gap: 12rpx;
+  font-size: 48rpx;
+  color: #d5d9e0;
+}
+.star.active {
+  color: #f59e0b;
+}
+.field {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1rpx solid #eef0f3;
+  border-radius: 14rpx;
+  padding: 20rpx;
+  margin-top: 16rpx;
+  background: #fafbfc;
+}
+.actions {
+  display: grid;
+  gap: 16rpx;
+  margin-bottom: 40rpx;
+}

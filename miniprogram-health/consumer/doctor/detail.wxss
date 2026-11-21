@@ -1,0 +1,140 @@
+.profile {
+  display: flex;
+  align-items: center;
+}
+
+.avatar-lg {
+  width: 140rpx;
+  height: 140rpx;
+  margin-right: 24rpx;
+  border-radius: 50%;
+  background: #e5e9f2;
+}
+
+.profile-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.profile-line {
+  display: flex;
+  align-items: center;
+}
+
+.profile-name {
+  margin-right: 12rpx;
+  font-size: 36rpx;
+  font-weight: 600;
+}
+
+.block-title {
+  margin-bottom: 12rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.tags .tag {
+  margin-bottom: 8rpx;
+}
+
+.ways {
+  display: flex;
+}
+
+.way {
+  flex: 1;
+  margin-right: 12rpx;
+  padding: 20rpx 8rpx;
+  border-radius: 12rpx;
+  background: #f7f8fa;
+  text-align: center;
+}
+
+.way:last-child {
+  margin-right: 0;
+}
+
+.way-label {
+  color: #1a73e8;
+  font-size: 26rpx;
+  font-weight: 600;
+}
+
+.way-desc {
+  margin-top: 4rpx;
+  color: #8a8f99;
+  font-size: 20rpx;
+}
+
+.section-head {
+  padding: 24rpx 24rpx 0;
+}
+
+.section-card {
+  padding: 0 24rpx;
+}
+
+.service {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #f0f1f5;
+}
+
+.service:last-child {
+  border-bottom: none;
+}
+
+.service-body {
+  flex: 1;
+  min-width: 0;
+  margin-right: 12rpx;
+}
+
+.service-name {
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.service-meta {
+  margin-top: 6rpx;
+}
+
+.service-price {
+  margin-top: 8rpx;
+}
+
+.review {
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #f0f1f5;
+}
+
+.review:last-child {
+  border-bottom: none;
+}
+
+.review-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8rpx;
+}
+
+.review-stars {
+  color: #f5a623;
+  font-size: 24rpx;
+  letter-spacing: 2rpx;
+}
+
+.footer-tip {
+  padding: 32rpx 24rpx 48rpx;
+  text-align: center;
+  color: #a6abb3;
+  font-size: 22rpx;
+  line-height: 1.6;
+}

@@ -1,0 +1,58 @@
+.closed {
+  text-align: center;
+}
+
+.note {
+  margin-top: 8rpx;
+  line-height: 1.6;
+}
+
+.name-line {
+  display: flex;
+  align-items: center;
+}
+
+.tag {
+  margin-left: 12rpx;
+  padding: 2rpx 12rpx;
+  background: #f2f3f5;
+  border-radius: 8rpx;
+  font-size: 22rpx;
+  color: #5c6068;
+}
+
+.default-tag {
+  margin-left: 12rpx;
+  padding: 2rpx 12rpx;
+  background: #eef3ff;
+  border-radius: 8rpx;
+  font-size: 22rpx;
+  color: #3370ff;
+}
+
+.address {
+  margin-top: 12rpx;
+  line-height: 1.6;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16rpx;
+  padding-top: 16rpx;
+  border-top: 1rpx solid #f0f1f5;
+}
+
+.action {
+  margin-left: 32rpx;
+  font-size: 26rpx;
+  color: #3370ff;
+}
+
+.action.danger {
+  color: #d4380d;
+}
+
+.footer {
+  padding: 0 24rpx 48rpx;
+}

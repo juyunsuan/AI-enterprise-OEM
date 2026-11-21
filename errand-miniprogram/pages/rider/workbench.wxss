@@ -1,0 +1,91 @@
+.stats {
+  display: flex;
+  gap: 16rpx;
+  margin: 20rpx 0;
+}
+.stat {
+  flex: 1;
+  background: #f7f8fa;
+  border-radius: 14rpx;
+  padding: 16rpx;
+  display: grid;
+  gap: 4rpx;
+}
+.withdraw {
+  display: flex;
+  gap: 12rpx;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.field {
+  border: 1rpx solid #eef0f3;
+  border-radius: 12rpx;
+  padding: 14rpx 18rpx;
+  background: #fafbfc;
+}
+.short {
+  width: 180rpx;
+}
+.grow {
+  flex: 1;
+  min-width: 240rpx;
+}
+.order {
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #f2f3f5;
+}
+.order:last-child {
+  border-bottom: none;
+}
+.line {
+  margin: 12rpx 0;
+}
+.amount {
+  font-weight: 700;
+}
+.small {
+  height: 60rpx;
+  padding: 0 24rpx;
+  font-size: 26rpx;
+}
+.map {
+  width: 100%;
+  height: 300rpx;
+  border-radius: 14rpx;
+  margin-top: 12rpx;
+}
+.cards {
+  margin-top: 16rpx;
+  padding-top: 12rpx;
+  border-top: 1rpx solid #f2f3f5;
+}
+.card-form {
+  display: grid;
+  gap: 10rpx;
+  margin-top: 12rpx;
+}
+.bank-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 14rpx 0;
+  border-bottom: 1rpx solid #f5f6f8;
+}
+.income {
+  color: #059669;
+  font-weight: 600;
+}
+.danger {
+  color: #dc2626;
+  font-size: 24rpx;
+}
+.link {
+  color: #1f6feb;
+  font-size: 26rpx;
+}
+.wd {
+  display: flex;
+  justify-content: space-between;
+  padding: 12rpx 0;
+  border-bottom: 1rpx solid #f5f6f8;
+}

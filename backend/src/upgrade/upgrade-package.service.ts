@@ -405,6 +405,16 @@ export class UpgradePackageService {
     }
   }
 
+  /**
+   * 升级包上传（≤512MB）：这是**平台自身工件**，不是用户字节，因此不入数字资产台账。
+   *
+   * 暂不改走 SystemAssetService.putArtifact（OSS）：本类的整条链路都依赖本地文件流——
+   * `saveStream` 落 packagesDir、`extractAndValidate` 用 `listArchive(row.path)` /
+   * `extractArchive` 就地解包并把 `candidateDir` 交给升级执行器，`downloadToFile` 也直接写
+   * 本地文件；`PlatformUpgradePackage.path` 存的是磁盘路径。要换成对象存储就得把
+   * 「下载→解包→灰度应用」整条管道改成流式回源，属于独立一轮改造，本轮先保留本地磁盘，
+   * 不做「为了收口而收口」的半截改动。台账口径上这块字节明确不计费。
+   */
   async upload(file: UploadFile, versionHint = ''): Promise<UpgradePackage> {
     ensureDirs();
     if (!file || !file.name) {

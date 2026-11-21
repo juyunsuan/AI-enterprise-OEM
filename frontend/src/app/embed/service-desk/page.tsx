@@ -27,8 +27,7 @@ type Session = {
   messages: Message[];
 };
 
-export default function ServiceDeskEmbedPage() {
-  const [siteKey, setSiteKey] = useState("");
+export default function ServiceDeskEmbedPage() {  const [siteKey, setSiteKey] = useState("");
   const [session, setSession] = useState<Session | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -40,6 +39,12 @@ export default function ServiceDeskEmbedPage() {
   const [rating, setRating] = useState(0);
   const [closed, setClosed] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  // 小程序客服页会把「店铺/订单」上下文塞进 ctx，随来源一起带给客服坐席
+  const sourceUrl = () => {
+    const ctx = new URLSearchParams(window.location.search).get("ctx") || "";
+    return [document.referrer || "", ctx.trim()].filter(Boolean).join(" ");
+  };
 
   useEffect(() => {
     const key = new URLSearchParams(window.location.search).get("key") || "";
@@ -53,7 +58,7 @@ export default function ServiceDeskEmbedPage() {
       .session({
         siteKey: key,
         token: token || undefined,
-        sourceUrl: document.referrer || "",
+        sourceUrl: sourceUrl(),
       })
       .then((value) => {
         const data = value as Session;
@@ -104,7 +109,7 @@ export default function ServiceDeskEmbedPage() {
         siteKey,
         nickname,
         contact,
-        sourceUrl: document.referrer || "",
+        sourceUrl: sourceUrl(),
       })) as Session;
       window.localStorage.setItem(`sd_${siteKey}`, data.token);
       setSession(data);

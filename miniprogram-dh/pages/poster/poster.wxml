@@ -1,0 +1,28 @@
+<view class="page" style="{{themeStyle}}">
+  <view wx:if="{{error}}" class="status-banner">{{error}}</view>
+
+  <view class="preview" bindtap="previewPoster">
+    <image wx:if="{{canvasPath}}" class="preview-img" src="{{canvasPath}}" mode="widthFix" />
+    <view wx:else class="preview-loading">{{drawing ? '海报生成中…' : '选择下方模板生成海报'}}</view>
+  </view>
+
+  <view wx:if="{{posters.length}}" class="templates">
+    <view
+      wx:for="{{posters}}"
+      wx:key="id"
+      class="template {{poster.id === item.id ? 'on' : ''}}"
+      data-index="{{index}}"
+      bindtap="select"
+    >
+      <image class="template-img" src="{{item.bgUrl}}" mode="aspectFill" />
+      <view class="template-name">{{item.name}}</view>
+    </view>
+  </view>
+
+  <view class="actions">
+    <view class="action" bindtap="savePoster">保存到相册</view>
+    <button class="action share" open-type="share">分享给好友</button>
+  </view>
+
+  <canvas type="2d" id="posterCanvas" class="hidden-canvas"></canvas>
+</view>

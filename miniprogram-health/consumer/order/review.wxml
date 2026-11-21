@@ -1,0 +1,82 @@
+<view class="page">
+  <view class="card score-card">
+    <view class="score-label">总体评分</view>
+    <view class="stars">
+      <text
+        class="star {{score >= item ? 'on' : ''}}"
+        wx:for="{{stars}}"
+        wx:key="*this"
+        data-kind="score"
+        data-score="{{item}}"
+        bindtap="onStar"
+      >★</text>
+    </view>
+    <view class="score-text">{{score}} 分</view>
+  </view>
+
+  <view class="card">
+    <view class="block-title">分项评分</view>
+    <view class="star-row">
+      <text class="star-label">服务态度</text>
+      <view class="stars stars-sm">
+        <text
+          class="star {{attitudeScore >= item ? 'on' : ''}}"
+          wx:for="{{stars}}"
+          wx:key="*this"
+          data-kind="attitudeScore"
+          data-score="{{item}}"
+          bindtap="onStar"
+        >★</text>
+      </view>
+    </view>
+    <view class="star-row">
+      <text class="star-label">专业水平</text>
+      <view class="stars stars-sm">
+        <text
+          class="star {{skillScore >= item ? 'on' : ''}}"
+          wx:for="{{stars}}"
+          wx:key="*this"
+          data-kind="skillScore"
+          data-score="{{item}}"
+          bindtap="onStar"
+        >★</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="block-title">印象标签</view>
+    <view class="tag-wrap">
+      <view
+        class="pill {{item.active ? 'pill-active' : ''}}"
+        wx:for="{{tags}}"
+        wx:key="name"
+        data-index="{{index}}"
+        bindtap="onTag"
+      >{{item.name}}</view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="block-title">评价内容</view>
+    <textarea
+      class="textarea"
+      maxlength="1000"
+      placeholder="说说这次服务的体验，帮助更多病友做参考"
+      value="{{content}}"
+      bindinput="onContent"
+    ></textarea>
+    <view class="anon-row">
+      <text class="kv-label">匿名评价</text>
+      <switch checked="{{anonymous}}" color="#1a73e8" bindchange="onAnonymous" />
+    </view>
+  </view>
+
+  <view class="footer">
+    <button
+      class="button-primary"
+      disabled="{{submitting}}"
+      bindtap="onSubmit"
+    >{{submitting ? '提交中…' : '提交评价'}}</button>
+  </view>
+</view>

@@ -1,0 +1,19 @@
+<view class="wrap">
+  <view class="card">
+    <view class="section-title">园区员工绑定</view>
+    <view class="muted">员工身份与园区顾客完全独立；绑定后只在本园区生效。</view>
+    <view class="field" style="margin-top: 12rpx;">
+      <view class="field-label">园区码</view>
+      <input class="input grow" data-field="park" value="{{park}}" bindinput="onInput" placeholder="园区码" />
+    </view>
+    <view class="field">
+      <view class="field-label">手机号</view>
+      <input class="input grow" data-field="phone" bindinput="onInput" placeholder="管理员登记的手机号" />
+    </view>
+    <view class="field">
+      <view class="field-label">工号</view>
+      <input class="input grow" data-field="staffCode" bindinput="onInput" placeholder="管理员登记的工号" />
+    </view>
+  </view>
+  <view class="btn" bindtap="submit">{{submitting ? "绑定中…" : "绑定并进入工作台"}}</view>
+</view>

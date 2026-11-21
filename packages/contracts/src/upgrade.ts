@@ -172,6 +172,17 @@ export const upgradeJobSchema = z.object({
 });
 export type UpgradeJob = z.infer<typeof upgradeJobSchema>;
 
+/** 平台维护（停服）状态：升级/还原任务与管理员手动停服共用这一个闸。 */
+export const upgradeMaintenanceSchema = z.object({
+  on: z.boolean(),
+  reason: z.string(),
+  jobId: z.number().int(),
+  startedAt: z.string(),
+  /** true＝管理员手动停服（任务结束不会自动恢复）；false＝任务维护中 */
+  manual: z.boolean(),
+});
+export type UpgradeMaintenance = z.infer<typeof upgradeMaintenanceSchema>;
+
 export const upgradeOverviewSchema = z.object({
   currentVersion: z.string(),
   currentCommit: z.string(),
@@ -345,5 +356,29 @@ export const upgradeEndpoints = {
     query: emptyQuery,
     body: z.undefined(),
     response: envelope(z.object({ id: z.number().int() })),
+  },
+  AdminUpgrade_maintenance: {
+    method: "get" as const,
+    path: "/enterprise/admin/upgrade/maintenance",
+    params: z.object({}),
+    query: emptyQuery,
+    body: z.undefined(),
+    response: envelope(upgradeMaintenanceSchema),
+  },
+  AdminUpgrade_setMaintenance: {
+    method: "post" as const,
+    path: "/enterprise/admin/upgrade/maintenance",
+    params: z.object({}),
+    query: emptyQuery,
+    body: z
+      .object({
+        on: z.boolean(),
+        reason: z.string().trim().max(200).default(""),
+      })
+      .refine((value) => !value.on || value.reason.length >= 2, {
+        message: "停服必须写明原因（会展示给全体用户）",
+        path: ["reason"],
+      }),
+    response: envelope(upgradeMaintenanceSchema),
   },
 };

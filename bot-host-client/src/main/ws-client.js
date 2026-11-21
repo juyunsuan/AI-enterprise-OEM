@@ -23,6 +23,11 @@ function connect(wsUrl, options = {}) {
       reject(new Error('仅支持本机 ws:// 地址'));
       return;
     }
+    const host = String(url.hostname || '').replace(/^\[|\]$/g, '');
+    if (!['127.0.0.1', 'localhost', '::1'].includes(host)) {
+      reject(new Error('CDP 只允许连接本机回环地址'));
+      return;
+    }
     const key = crypto.randomBytes(16).toString('base64');
     const request = http.request({
       hostname: url.hostname,

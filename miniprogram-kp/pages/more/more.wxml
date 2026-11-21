@@ -1,0 +1,24 @@
+<view class="page" style="{{themeStyle}}">
+  <view class="empty" wx:if="{{loading}}">加载中…</view>
+  <view class="empty" wx:elif="{{!list.length}}">{{error || '暂无推荐内容'}}</view>
+
+  <!-- wx:for 与 wx:else 不能写在同一标签上（wx:for 优先级更高会打断 if 链），所以套一层 block -->
+  <block wx:else>
+    <view
+      class="card link-item"
+      wx:for="{{list}}"
+      wx:key="id"
+      bindtap="openItem"
+      data-index="{{index}}"
+    >
+      <view class="link-body">
+        <view class="link-title ellipsis">{{item.title}}</view>
+        <view class="muted link-summary ellipsis-2" wx:if="{{item.summary}}">{{item.summary}}</view>
+      </view>
+      <view class="link-cover cover" wx:if="{{item.cover}}">
+        <image class="link-img" src="{{item.cover}}" mode="aspectFill" lazy-load="{{true}}" />
+      </view>
+      <text class="arrow">›</text>
+    </view>
+  </block>
+</view>

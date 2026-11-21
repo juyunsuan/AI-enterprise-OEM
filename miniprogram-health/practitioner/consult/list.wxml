@@ -1,0 +1,34 @@
+<view class="page">
+  <view class="tabs">
+    <view
+      class="tab {{status === item.key ? 'active' : ''}}"
+      wx:for="{{tabs}}"
+      wx:key="key"
+      data-key="{{item.key}}"
+      bindtap="onTab"
+    >{{item.label}}</view>
+  </view>
+
+  <view class="card" wx:if="{{list.length}}">
+    <view class="list-item" wx:for="{{list}}" wx:key="id">
+      <view class="item-head">
+        <view class="item-title">{{item.patientName}} · {{item.typeLabel}}</view>
+        <text class="tag {{item.status}}">{{item.statusLabel}}</text>
+      </view>
+      <view class="item-meta">{{item.consultNo}} · {{item.timeText}}</view>
+      <view class="item-meta" wx:if="{{item.symptomText}}">症状：{{item.symptomText}}</view>
+      <view class="item-meta" wx:if="{{item.attachCount}}" data-id="{{item.id}}" bindtap="onPreview">附件 {{item.attachCount}} 个，点击预览</view>
+      <view class="item-meta" wx:if="{{item.contactPhone}}">联系电话：{{item.contactPhone}}</view>
+      <view class="item-meta" wx:if="{{item.meetingUrl}}">会议链接：{{item.meetingUrl}}</view>
+      <view class="item-meta" wx:if="{{item.conclusion}}">结论：{{item.conclusion}}</view>
+      <view class="actions" wx:if="{{item.canAccept || item.canFinish || item.canReject}}">
+        <button class="mini approve" wx:if="{{item.canAccept}}" data-id="{{item.id}}" bindtap="onAccept">接诊</button>
+        <button class="mini approve" wx:if="{{item.canFinish}}" data-id="{{item.id}}" bindtap="onFinish">完成</button>
+        <button class="mini reject" wx:if="{{item.canReject}}" data-id="{{item.id}}" bindtap="onReject">拒诊</button>
+      </view>
+    </view>
+  </view>
+
+  <view class="empty" wx:elif="{{!loading}}">暂无问诊单</view>
+  <view class="empty" wx:else>正在加载…</view>
+</view>

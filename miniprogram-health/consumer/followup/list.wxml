@@ -1,0 +1,24 @@
+<view class="page">
+  <view class="card" wx:if="{{tasks.length}}">
+    <view
+      class="task"
+      wx:for="{{tasks}}"
+      wx:key="id"
+      data-id="{{item.id}}"
+      bindtap="onTask"
+    >
+      <view class="task-head">
+        <view class="task-title">{{item.title}}</view>
+        <text class="tag tag-orange">{{item.wayLabel}}</text>
+      </view>
+      <view class="item-meta">{{item.patientName}} · 截止 {{item.dueText}}</view>
+      <view class="detail-text" wx:if="{{item.content}}">{{item.content}}</view>
+      <view class="task-foot">
+        <text class="link">填写随访 ›</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="empty" wx:elif="{{!loading}}">暂无待随访任务，医护安排后会出现在这里</view>
+  <view class="empty" wx:else>正在加载…</view>
+</view>

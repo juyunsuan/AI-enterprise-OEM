@@ -1,0 +1,58 @@
+<view class="container">
+  <view class="card">
+    <view class="muted">圈子名称</view>
+    <input class="input" data-key="name" value="{{name}}" bindinput="input" maxlength="40" />
+    <view class="muted" style="margin-top:20rpx">分类</view>
+    <picker range="{{categories}}" range-key="name" value="{{categoryIndex}}" bindchange="pickCategory">
+      <view class="input">{{categories[categoryIndex].name || '请选择分类'}}</view>
+    </picker>
+    <view class="muted" style="margin-top:20rpx">封面</view>
+    <view class="row">
+      <image wx:if="{{cover}}" class="avatar" src="{{cover}}" mode="aspectFill" />
+      <view class="btn ghost" style="margin-left:16rpx" bindtap="pickCover">上传封面</view>
+    </view>
+    <view class="muted" style="margin-top:20rpx">简介</view>
+    <textarea class="textarea" data-key="intro" value="{{intro}}" bindinput="input" maxlength="2000" />
+    <view class="muted" style="margin-top:20rpx">圈规</view>
+    <textarea class="textarea" data-key="rules" value="{{rules}}" bindinput="input" maxlength="5000" />
+    <view class="muted" style="margin-top:20rpx">加入方式</view>
+    <radio-group bindchange="pickMode">
+      <label><radio value="APPROVAL" checked="{{joinMode === 'APPROVAL'}}" />申请加入</label>
+      <label style="margin-left:30rpx"><radio value="FREE" checked="{{joinMode === 'FREE'}}" />自由加入</label>
+    </radio-group>
+    <view class="btn" style="margin-top:20rpx" bindtap="save">保存圈子</view>
+  </view>
+
+  <view class="card" wx:if="{{pending.length}}">
+    <view class="name" style="margin-left:0">待审核成员</view>
+    <view wx:for="{{pending}}" wx:key="userId" style="margin-top:16rpx">
+      <view class="row">
+        <image class="avatar-sm" src="{{item.user.avatar}}" mode="aspectFill" />
+        <view class="name">{{item.user.nickname}}</view>
+        <view class="muted" style="margin-left:auto">{{item.joinedAt}}</view>
+      </view>
+      <view class="actions">
+        <view class="btn" data-userid="{{item.userId}}" data-action="APPROVE" bindtap="memberAction">通过</view>
+        <view class="btn ghost" style="margin-left:16rpx" data-userid="{{item.userId}}" data-action="REMOVE" bindtap="memberAction">拒绝</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="name" style="margin-left:0">成员</view>
+    <view wx:for="{{members}}" wx:key="userId" style="margin-top:16rpx">
+      <view class="row">
+        <image class="avatar-sm" src="{{item.user.avatar}}" mode="aspectFill" />
+        <view class="name">{{item.user.nickname}}</view>
+        <view class="muted" style="margin-left:auto">{{item.role === 'OWNER' ? '圈主' : item.role === 'ADMIN' ? '圈管' : ''}}</view>
+      </view>
+      <view class="actions" wx:if="{{item.role !== 'OWNER'}}">
+        <view class="action" data-userid="{{item.userId}}" data-action="MUTE" bindtap="memberAction">禁言</view>
+        <view class="action" data-userid="{{item.userId}}" data-action="BAN" bindtap="memberAction">封禁</view>
+        <view class="action" data-userid="{{item.userId}}" data-action="REMOVE" bindtap="memberAction">移出</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="empty" wx:if="{{loading}}">正在加载…</view>
+</view>

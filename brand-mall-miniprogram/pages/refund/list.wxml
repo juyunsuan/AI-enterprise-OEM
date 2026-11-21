@@ -1,0 +1,41 @@
+<view class="refund-list">
+  <view class="row" wx:for="{{rows}}" wx:key="id">
+    <view class="row-head" data-id="{{item.orderId}}" bindtap="openOrder">
+      <text class="no">{{item.refundNo}}</text>
+      <text class="status st-{{item.status}}">{{item.statusLabel}}</text>
+    </view>
+    <view class="goods" data-id="{{item.orderId}}" bindtap="openOrder">
+      <image class="pic" src="{{item.image}}" mode="aspectFill" />
+      <view class="goods-info">
+        <view class="ellipsis-2">{{item.title}}</view>
+        <view class="muted">{{item.typeLabel}} · ×{{item.quantity}}</view>
+        <view class="muted">原因：{{item.reason}}</view>
+      </view>
+      <view class="amount">¥{{item.amountText}}</view>
+    </view>
+    <view class="reject" wx:if="{{item.rejectReason}}">驳回原因：{{item.rejectReason}}</view>
+    <view class="reject" wx:if="{{item.adminRemark}}">商家备注：{{item.adminRemark}}</view>
+    <view class="foot">
+      <text class="muted">申请于 {{item.createdAtText}}</text>
+      <view class="actions">
+        <view
+          wx:if="{{item.status === 'REJECTED' || item.status === 'CANCELLED'}}"
+          class="act plain"
+          data-order="{{item.orderId}}"
+          data-item="{{item.itemId}}"
+          bindtap="applyAgain"
+        >
+          重新申请
+        </view>
+        <view class="act plain" data-id="{{item.orderId}}" bindtap="openOrder">订单详情</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="empty" wx:if="{{!rows.length && !loading}}">
+    <view>{{error || '还没有售后申请'}}</view>
+    <view class="link" bindtap="goOrders">去订单里申请 ›</view>
+  </view>
+  <view class="empty" wx:elif="{{!rows.length}}">加载中…</view>
+  <view class="footer-gap"></view>
+</view>

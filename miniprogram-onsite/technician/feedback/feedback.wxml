@@ -1,0 +1,94 @@
+<view class="card">
+  <view class="title">反馈给店主</view>
+  <view class="muted tip">反馈会提交给店主处理，处理结果与店主回复在下方历史里查看。</view>
+
+  <view class="field">
+    <text class="label">分类</text>
+    <picker range="{{categories}}" value="{{categoryIndex}}" bindchange="onCategoryChange">
+      <view class="picker-value">{{categories[categoryIndex]}}</view>
+    </picker>
+  </view>
+
+  <view class="field" wx:if="{{categories[categoryIndex] === '其他'}}">
+    <text class="label">自定义分类</text>
+    <input
+      class="input"
+      maxlength="40"
+      value="{{customCategory}}"
+      bindinput="onCustomCategoryInput"
+      placeholder="选填，最多 40 字"
+    />
+  </view>
+
+  <view class="field">
+    <text class="label">关联订单</text>
+    <picker range="{{orderOptions}}" value="{{orderPickIndex}}" bindchange="onOrderChange">
+      <view class="picker-value">{{orderOptions[orderPickIndex]}}</view>
+    </picker>
+  </view>
+
+  <view class="field column">
+    <text class="label">内容</text>
+    <textarea
+      class="textarea"
+      maxlength="2000"
+      value="{{content}}"
+      bindinput="onContentInput"
+      placeholder="说明遇到的问题或建议，例如排期冲突、订单状态不对、结算疑问"
+    />
+    <text class="muted">必填，至少 4 个字，最多 2000 字。</text>
+  </view>
+
+  <view class="field column">
+    <text class="label">图片（选填）</text>
+    <view class="images">
+      <view class="image-item" wx:for="{{images}}" wx:key="*this">
+        <image class="image" src="{{item}}" mode="aspectFill" data-url="{{item}}" bindtap="previewFormImage" />
+        <text class="image-remove" data-index="{{index}}" catchtap="removeImage">删除</text>
+      </view>
+      <view class="image-add" bindtap="chooseImage" wx:if="{{images.length < 9}}">+ 上传</view>
+    </view>
+    <text class="muted">最多 9 张。</text>
+  </view>
+
+  <view class="error" wx:if="{{errorText}}">{{errorText}}</view>
+  <button
+    class="button-primary submit"
+    bindtap="submit"
+    loading="{{submitting}}"
+    disabled="{{submitting || uploading}}"
+  >提交反馈</button>
+</view>
+
+<view class="card">
+  <view class="row">
+    <text class="title">历史反馈</text>
+    <text class="muted">共 {{total}} 条</text>
+  </view>
+  <view class="error" wx:if="{{listError}}">{{listError}}</view>
+  <view class="record" wx:for="{{history}}" wx:key="id">
+    <view class="row">
+      <text class="category">{{item.category}}</text>
+      <text class="badge">{{item.statusLabel}}</text>
+    </view>
+    <view class="content">{{item.content}}</view>
+    <view class="muted">提交时间 {{item.createdText}}</view>
+    <view class="reply" wx:if="{{item.reply}}">店主回复：{{item.reply}}</view>
+    <view class="muted" wx:if="{{item.handledText}}">处理时间 {{item.handledText}}</view>
+    <view class="images" wx:if="{{item.images.length}}">
+      <image
+        class="image"
+        wx:for="{{item.images}}"
+        wx:for-item="url"
+        wx:key="*this"
+        src="{{url}}"
+        mode="aspectFill"
+        data-url="{{url}}"
+        bindtap="previewHistoryImage"
+      />
+    </view>
+  </view>
+  <view class="empty" wx:if="{{!history.length && !loading}}">还没有反馈记录。</view>
+  <view class="empty" wx:if="{{loading}}">正在加载…</view>
+  <view class="muted footer" wx:if="{{history.length && finished}}">已全部加载</view>
+</view>

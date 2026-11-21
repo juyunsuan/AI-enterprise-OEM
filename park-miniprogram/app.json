@@ -1,0 +1,59 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/visitor/apply",
+    "pages/visitor/list",
+    "pages/venue/list",
+    "pages/venue/book",
+    "pages/activity/list",
+    "pages/activity/detail",
+    "pages/order/list",
+    "pages/bill/list",
+    "pages/approvals/list",
+    "pages/invoice/list",
+    "pages/parking/list",
+    "pages/patrol/list",
+    "pages/repair/apply",
+    "pages/repair/list",
+    "pages/repair/detail",
+    "pages/chat/chat",
+    "pages/profile/profile",
+    "pages/staff/bind",
+    "pages/staff/workbench"
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#3370FF",
+    "navigationBarTitleText": "园区服务",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#f5f6f8",
+    "backgroundTextStyle": "dark",
+    "enablePullDownRefresh": false
+  },
+  "tabBar": {
+    "color": "#8a8f99",
+    "selectedColor": "#3370FF",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/visitor/list",
+        "text": "我的预约"
+      },
+      {
+        "pagePath": "pages/repair/apply",
+        "text": "报修"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "我的"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

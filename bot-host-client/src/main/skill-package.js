@@ -39,6 +39,7 @@ function parseSkillMarkdown(markdown, fallbackId, fallbackName) {
   const text = String(markdown || '').replace(/^\uFEFF/, '');
   let name = '';
   let description = '';
+  let whenToUse = '';
   let body = text;
   const frontmatter = text.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
   if (frontmatter) {
@@ -51,6 +52,7 @@ function parseSkillMarkdown(markdown, fallbackId, fallbackName) {
       if (/^(['"]).*\1$/.test(value)) value = value.slice(1, -1);
       if (key === 'name') name = value;
       if (key === 'description') description = value;
+      if (key === 'whentouse' || key === 'when-to-use') whenToUse = value;
     }
   }
   if (!name) {
@@ -64,6 +66,9 @@ function parseSkillMarkdown(markdown, fallbackId, fallbackName) {
     id,
     name: name.slice(0, MAX_NAME),
     description: description.slice(0, MAX_DESCRIPTION),
+    whenToUse,
+    // 原文保留 frontmatter：落盘给 DSH 发现时不能重新生成 SKILL.md。
+    raw: text,
     body: body.replace(/^\s*\n/, '').slice(0, MAX_BODY),
   };
 }

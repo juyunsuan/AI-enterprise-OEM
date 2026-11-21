@@ -1,0 +1,16 @@
+<view class="page" style="{{themeStyle}}">
+  <view class="muted count" wx:if="{{!loading && list.length}}">共 {{total}} 条内容</view>
+
+  <resource-card
+    wx:for="{{list}}"
+    wx:key="id"
+    item="{{item}}"
+    bindtap="openResource"
+    data-id="{{item.id}}"
+  />
+
+  <view class="empty" wx:if="{{!loading && !list.length}}">{{error || '暂无内容'}}</view>
+  <view class="load-tip" wx:if="{{loadingMore}}">加载中…</view>
+  <view class="load-tip" wx:elif="{{!hasMore && list.length}}">没有更多了</view>
+  <view class="footer-gap"></view>
+</view>

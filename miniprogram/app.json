@@ -10,6 +10,10 @@
     "pages/service-chat/service-chat",
     "pages/notifications/notifications",
     "pages/notification-detail/notification-detail",
+    "pages/annual-report/annual-report",
+    "pages/annual-report-form/annual-report-form",
+    "pages/annual-report-records/annual-report-records",
+    "pages/annual-report-guide/annual-report-guide",
     "pages/me/me"
   ],
   "window": {

@@ -1,0 +1,62 @@
+<view class="page">
+  <view class="card" wx:if="{{bound}}">
+    <view class="title">已绑定医护身份</view>
+    <view class="kv" wx:if="{{practitioner}}">
+      <text class="kv-label">姓名</text>
+      <text class="kv-value">{{practitioner.name}} · {{practitioner.roleLabel}}</text>
+    </view>
+    <view class="kv" wx:if="{{practitioner}}">
+      <text class="kv-label">执业机构</text>
+      <text class="kv-value">{{practitioner.organName || practitioner.hospitalName || '—'}}</text>
+    </view>
+    <view class="kv" wx:if="{{practitioner}}">
+      <text class="kv-label">待随访</text>
+      <text class="kv-value">{{practitioner.pendingFollowups}} 条</text>
+    </view>
+    <view class="notice">医护令牌只在本机保存；换手机或用他人微信请在本页重新绑定。</view>
+    <button class="button-primary action" bindtap="onEnter">进入工作台</button>
+    <button class="button-ghost action" bindtap="onRebind">重新绑定</button>
+  </view>
+
+  <block wx:else>
+    <view class="card">
+      <view class="title">医护工作台绑定</view>
+      <view class="muted intro">
+        请用店主在「医护管理」里登记的手机号和执业证号绑定。仅审核通过且在岗的医护可以进入。
+      </view>
+      <view class="field">
+        <view class="field-label">登记手机号</view>
+        <input
+          class="input"
+          type="number"
+          maxlength="20"
+          placeholder="与店铺登记的一致"
+          value="{{phone}}"
+          bindinput="onPhone"
+        />
+      </view>
+      <view class="field">
+        <view class="field-label">执业证号</view>
+        <input
+          class="input"
+          maxlength="64"
+          placeholder="与店铺审核材料登记的一致"
+          value="{{licenseNo}}"
+          bindinput="onLicense"
+        />
+      </view>
+      <button
+        class="button-primary action"
+        disabled="{{submitting}}"
+        bindtap="onSubmit"
+      >{{submitting ? '绑定中…' : '绑定身份'}}</button>
+    </view>
+
+    <view class="card">
+      <view class="muted">
+        还没有医护身份？请联系店主在健康管理工作台的「医护」中新增并通过审核。
+      </view>
+      <view class="link-line" bindtap="onSettings">服务器地址与协议 ›</view>
+    </view>
+  </block>
+</view>

@@ -1,0 +1,15 @@
+<view class="wrap">
+  <view class="card">
+    <input class="field" placeholder="联系人姓名" value="{{name}}" data-field="name" bindinput="bind" />
+    <input class="field" type="number" placeholder="手机号" value="{{mobile}}" data-field="mobile" bindinput="bind" />
+    <input class="field" placeholder="省" value="{{province}}" data-field="province" bindinput="bind" />
+    <input class="field" placeholder="市" value="{{city}}" data-field="city" bindinput="bind" />
+    <input class="field" placeholder="区" value="{{district}}" data-field="district" bindinput="bind" />
+    <textarea class="field" placeholder="详细地址" value="{{address}}" data-field="address" bindinput="bind" auto-height />
+    <view class="btn btn-ghost" style="margin-bottom: 16rpx;" bindtap="chooseLocation">地图选点（用于算距离）</view>
+    <checkbox-group bindchange="toggleDefault">
+      <label class="muted"><checkbox value="1" checked="{{isDefault}}" />设为默认</label>
+    </checkbox-group>
+  </view>
+  <view class="btn btn-primary" bindtap="save">{{saving ? '保存中…' : '保存'}}</view>
+</view>

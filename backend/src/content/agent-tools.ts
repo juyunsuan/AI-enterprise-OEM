@@ -388,7 +388,7 @@ export const AGENT_TOOLS = [
 /**
  * Agent 群控工具：只有本轮勾选了群控范围（dispatchScope）才注入给模型——
  * 没勾选时模型完全看不到这组工具，避免凭空承诺「我能指挥设备」。
- * 三类目标（BotBuddy 主机 / Mobot 手机 / WorkBuddy 企业云）共用同一组工具，
+ * 三类目标（AWBotDSH 主机 / AWBot 手机 / WorkBuddy 企业云）共用同一组工具，
  * 编号在设备表与企云账号表里会重复，所以 kind 是路由依据。
  */
 export const DISPATCH_TOOLS = [
@@ -397,7 +397,7 @@ export const DISPATCH_TOOLS = [
     function: {
       name: 'list_dispatch_devices',
       description:
-        '列出这个账号名下可以派活的目标：BotBuddy 主机、Mobot 手机、WorkBuddy 企业云账号。含在线/凭据状态、待执行队列数、主机工作区、手机电量、模型授权；企云账号还会带上它可见的 Agent 清单。派单前必须先调它，分配方案只能基于这里返回的真实目标，不能凭空编编号。',
+        '列出这个账号名下可以派活的目标：AWBotDSH 主机、AWBot 手机、WorkBuddy 企业云账号。含在线/凭据状态、待执行队列数、主机工作区、手机电量、模型授权；企云账号还会带上它可见的 Agent 清单。派单前必须先调它，分配方案只能基于这里返回的真实目标，不能凭空编编号。',
       parameters: {
         type: 'object',
         properties: {
@@ -405,7 +405,7 @@ export const DISPATCH_TOOLS = [
             type: 'string',
             enum: [...BOT_DISPATCH_TARGET_KINDS],
             description:
-              '可选：只看某一类目标（DESKTOP＝Bot 主机，MOBOT＝Mobot 手机，WORKBUDDY＝WorkBuddy 企业云）；必须在本轮勾选的范围内',
+              '可选：只看某一类目标（DESKTOP＝Bot 主机，AWBOT＝AWBot 手机，WORKBUDDY＝WorkBuddy 企业云）；必须在本轮勾选的范围内',
           },
         },
       },
@@ -439,7 +439,7 @@ export const DISPATCH_TOOLS = [
           cwd: {
             type: 'string',
             description:
-              '可选：主机工作区目录（仅 BotBuddy 主机，且必须是该设备上报过的候选）',
+              '可选：主机工作区目录（仅 AWBotDSH 主机，且必须是该设备上报过的候选）',
           },
           timeout_sec: {
             type: 'integer',
@@ -497,7 +497,7 @@ export const DISPATCH_TOOLS = [
           },
           cwd: {
             type: 'string',
-            description: '可选：主机工作区目录（仅 BotBuddy 主机）',
+            description: '可选：主机工作区目录（仅 AWBotDSH 主机）',
           },
           agent_id: {
             type: 'string',

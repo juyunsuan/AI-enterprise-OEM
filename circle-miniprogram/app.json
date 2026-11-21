@@ -1,0 +1,53 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/groups/groups",
+    "pages/group-detail/group-detail",
+    "pages/group-apply/group-apply",
+    "pages/post-detail/post-detail",
+    "pages/post-create/post-create",
+    "pages/messages/messages",
+    "pages/mine/mine",
+    "pages/user/user",
+    "pages/search/search",
+    "pages/service/service",
+    "pages/my-groups/my-groups",
+    "pages/group-manage/group-manage",
+    "pages/activity-detail/activity-detail"
+  ],
+  "window": {
+    "navigationBarTitleText": "圈子社区",
+    "navigationBarBackgroundColor": "#ffffff",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#f5f6f8",
+    "backgroundTextStyle": "dark",
+    "enablePullDownRefresh": false
+  },
+  "tabBar": {
+    "color": "#8a8f99",
+    "selectedColor": "#1677ff",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/groups/groups",
+        "text": "圈子"
+      },
+      {
+        "pagePath": "pages/messages/messages",
+        "text": "消息"
+      },
+      {
+        "pagePath": "pages/mine/mine",
+        "text": "我的"
+      }
+    ]
+  },
+  "sitemapLocation": "sitemap.json",
+  "style": "v2",
+  "lazyCodeLoading": "requiredComponents"
+}

@@ -1,0 +1,176 @@
+<view class="page {{hasActions ? 'page-with-bar' : ''}}" wx:if="{{order}}">
+  <view class="hero">
+    <view class="hero-status">{{order.statusLabel}}</view>
+    <view class="hero-amount">{{order.amountText}}</view>
+    <view class="hero-meta">{{order.bizTypeLabel}} · {{order.timeText}}</view>
+    <view class="hero-expire" wx:if="{{canPay && order.expireText}}">
+      请在 {{order.expireText}} 前完成支付，超时订单将自动关闭
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{verifyCode}}">
+    <view class="block-title">核销码</view>
+    <view class="verify-code">{{verifyCode}}</view>
+    <view class="item-meta center">到店服务时向工作人员出示此码</view>
+  </view>
+
+  <view class="card" wx:if="{{shipment}}">
+    <view class="block-title">物流信息</view>
+    <view class="kv">
+      <text class="kv-label">快递公司</text>
+      <text class="kv-value">{{shipment.expressName || '—'}}</text>
+    </view>
+    <view class="kv" wx:if="{{shipment.trackingNo}}">
+      <text class="kv-label">运单号</text>
+      <text class="kv-value">
+        {{shipment.trackingNo}}
+        <text class="link" data-value="{{shipment.trackingNo}}" bindtap="onCopy">复制</text>
+      </text>
+    </view>
+    <view class="kv" wx:if="{{shipment.shippedText}}">
+      <text class="kv-label">发货时间</text>
+      <text class="kv-value">{{shipment.shippedText}}</text>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{order.receiverText}}">
+    <view class="block-title">收货信息</view>
+    <view class="detail-text">{{order.receiverText}}</view>
+  </view>
+
+  <view class="card">
+    <view class="block-title">订单明细</view>
+    <view class="line" wx:for="{{items}}" wx:key="id">
+      <image
+        wx:if="{{item.coverImage}}"
+        class="thumb line-thumb"
+        src="{{item.coverImage}}"
+        mode="aspectFill"
+      />
+      <view class="line-body">
+        <view class="item-title">{{item.name}}</view>
+        <view class="item-meta">
+          <text wx:if="{{item.specText}}">{{item.specText}} · </text>x{{item.quantity}}
+        </view>
+      </view>
+      <text class="line-price">{{item.amountText}}</text>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{priceFlows.length}}">
+    <view class="block-title">金额明细</view>
+    <view class="kv" wx:for="{{priceFlows}}" wx:key="step">
+      <text class="kv-label">{{item.label}}</text>
+      <text class="kv-value {{item.step === 'PAY' ? 'pay-amount' : ''}}">{{item.amountText}}</text>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{consult}}">
+    <view class="block-title">问诊信息</view>
+    <view class="kv" wx:if="{{consult.practitionerName}}">
+      <text class="kv-label">接诊医护</text>
+      <text class="kv-value">{{consult.practitionerName}}</text>
+    </view>
+    <view class="kv">
+      <text class="kv-label">问诊状态</text>
+      <text class="kv-value">{{consult.statusLabel}}</text>
+    </view>
+    <view class="kv" wx:if="{{consult.appointText}}">
+      <text class="kv-label">预约时间</text>
+      <text class="kv-value">{{consult.appointText}}</text>
+    </view>
+    <view class="detail-text" wx:if="{{consult.symptomText}}">病情描述：{{consult.symptomText}}</view>
+    <view class="detail-text" wx:if="{{consult.conclusion}}">医生结论：{{consult.conclusion}}</view>
+    <view class="row more">
+      <text class="link" bindtap="onConsult">查看问诊详情 ›</text>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{sign}}">
+    <view class="block-title">签约信息</view>
+    <view class="kv">
+      <text class="kv-label">签约状态</text>
+      <text class="kv-value">{{sign.statusLabel}}</text>
+    </view>
+    <view class="kv" wx:if="{{sign.rangeText}}">
+      <text class="kv-label">服务周期</text>
+      <text class="kv-value">{{sign.rangeText}}</text>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{green}}">
+    <view class="block-title">绿通信息</view>
+    <view class="kv">
+      <text class="kv-label">需求类型</text>
+      <text class="kv-value">{{green.needLabel}}</text>
+    </view>
+    <view class="kv" wx:if="{{green.matchedHospital}}">
+      <text class="kv-label">匹配医院</text>
+      <text class="kv-value">{{green.matchedHospital}}</text>
+    </view>
+    <view class="kv" wx:if="{{green.matchedDoctor}}">
+      <text class="kv-label">匹配医生</text>
+      <text class="kv-value">{{green.matchedDoctor}}</text>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{review}}">
+    <view class="block-title">我的评价</view>
+    <view class="review-stars">{{review.starsText}}</view>
+    <view class="detail-text" wx:if="{{review.content}}">{{review.content}}</view>
+  </view>
+
+  <view class="card">
+    <view class="block-title">订单信息</view>
+    <view class="kv">
+      <text class="kv-label">订单号</text>
+      <text class="kv-value">
+        {{order.orderNo}}
+        <text class="link" data-value="{{order.orderNo}}" bindtap="onCopy">复制</text>
+      </text>
+    </view>
+    <view class="kv">
+      <text class="kv-label">下单时间</text>
+      <text class="kv-value">{{order.timeText}}</text>
+    </view>
+    <view class="kv" wx:if="{{order.paidText}}">
+      <text class="kv-label">支付时间</text>
+      <text class="kv-value">{{order.paidText}}</text>
+    </view>
+    <view class="kv" wx:if="{{order.remark}}">
+      <text class="kv-label">备注</text>
+      <text class="kv-value">{{order.remark}}</text>
+    </view>
+    <view class="kv" wx:if="{{order.cancelReason}}">
+      <text class="kv-label">取消原因</text>
+      <text class="kv-value">{{order.cancelReason}}</text>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{statusLogs.length}}">
+    <view class="block-title">订单进度</view>
+    <view class="timeline">
+      <view class="tl-item" wx:for="{{statusLogs}}" wx:key="index">
+        <view class="tl-axis">
+          <view class="tl-dot"></view>
+        </view>
+        <view class="tl-body">
+          <view class="tl-title">{{item.toLabel}}</view>
+          <view class="item-meta" wx:if="{{item.note}}">{{item.note}}</view>
+          <view class="item-meta">{{item.timeText}}</view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="action-bar" wx:if="{{hasActions}}">
+    <view class="action-bar-spacer"></view>
+    <button wx:if="{{canCancel}}" class="button-sm" bindtap="onCancel">取消订单</button>
+    <button wx:if="{{canAftersale}}" class="button-sm" bindtap="onAftersale">申请售后</button>
+    <button wx:if="{{canReview}}" class="button-sm primary" bindtap="onReview">评价</button>
+    <button wx:if="{{canPay}}" class="button-primary bar-button" bindtap="onPay">去支付</button>
+  </view>
+</view>
+
+<view class="empty" wx:elif="{{!loading}}">订单不存在或已删除</view>
+<view class="empty" wx:else>正在加载…</view>

@@ -1,0 +1,69 @@
+<view class="wrap">
+  <view class="card">
+    <view class="field">
+      <view class="field-label">预约类型</view>
+      <picker class="field-value" mode="selector" range="{{kinds}}" value="{{kindIndex}}" bindchange="onKindChange">
+        <view>{{kinds[kindIndex]}}</view>
+      </picker>
+    </view>
+    <view class="field">
+      <view class="field-label">访客姓名</view>
+      <input class="input grow" data-field="visitorName" bindinput="onInput" placeholder="必填" />
+    </view>
+    <view class="field">
+      <view class="field-label">手机号</view>
+      <input class="input grow" data-field="visitorPhone" bindinput="onInput" placeholder="访客预约必填" />
+    </view>
+    <view class="field">
+      <view class="field-label">来访单位</view>
+      <input class="input grow" data-field="visitorCompany" bindinput="onInput" placeholder="选填" />
+    </view>
+    <view class="field">
+      <view class="field-label">车牌号</view>
+      <input class="input grow" data-field="plateNo" bindinput="onInput" placeholder="选填" />
+    </view>
+    <view class="field">
+      <view class="field-label">随行人数</view>
+      <input class="input grow" type="number" data-field="companions" bindinput="onInput" placeholder="0" />
+    </view>
+    <view class="field">
+      <view class="field-label">场地/会议室</view>
+      <input class="input grow" data-field="resourceName" bindinput="onInput" placeholder="场地预约时填写" />
+    </view>
+    <view class="field">
+      <view class="field-label">开始日期</view>
+      <picker class="field-value" mode="date" value="{{startDate}}" data-field="startDate" bindchange="onPicker">
+        <view>{{startDate}}</view>
+      </picker>
+    </view>
+    <view class="field">
+      <view class="field-label">开始时间</view>
+      <picker class="field-value" mode="time" value="{{startTime}}" data-field="startTime" bindchange="onPicker">
+        <view>{{startTime}}</view>
+      </picker>
+    </view>
+    <view class="field">
+      <view class="field-label">结束日期</view>
+      <picker class="field-value" mode="date" value="{{endDate}}" data-field="endDate" bindchange="onPicker">
+        <view>{{endDate}}</view>
+      </picker>
+    </view>
+    <view class="field">
+      <view class="field-label">结束时间</view>
+      <picker class="field-value" mode="time" value="{{endTime}}" data-field="endTime" bindchange="onPicker">
+        <view>{{endTime}}</view>
+      </picker>
+    </view>
+    <view class="field">
+      <view class="field-label">来访事由</view>
+      <input class="input grow" data-field="purpose" bindinput="onInput" placeholder="选填" />
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="section-title">备注</view>
+    <textarea class="textarea" data-field="note" bindinput="onInput" placeholder="可填写随行人员、注意事项等"></textarea>
+  </view>
+
+  <view class="btn" bindtap="submit">{{submitting ? "提交中…" : "提交预约"}}</view>
+</view>

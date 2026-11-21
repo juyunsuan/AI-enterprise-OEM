@@ -1,0 +1,131 @@
+.pills {
+  margin-top: 16rpx;
+  display: flex;
+  white-space: nowrap;
+}
+
+.service-pill,
+.day-pill {
+  display: inline-block;
+  padding: 12rpx 24rpx;
+  margin-right: 16rpx;
+  background: #f7f8fa;
+  border: 1rpx solid #dcdfe6;
+  border-radius: 12rpx;
+  font-size: 26rpx;
+  color: #5c6068;
+  text-align: center;
+}
+
+.service-pill.pill-active,
+.day-pill.pill-active {
+  background: #eef3ff;
+  border-color: #3370ff;
+  color: #3370ff;
+}
+
+.pill-sub {
+  margin-top: 4rpx;
+  font-size: 22rpx;
+  color: #8a8f99;
+}
+
+.staff-block {
+  padding-top: 20rpx;
+  border-bottom: 1rpx solid #f0f1f5;
+}
+
+.staff-block:last-child {
+  border-bottom: none;
+}
+
+.staff-head {
+  display: flex;
+  align-items: center;
+}
+
+.avatar.small {
+  width: 72rpx;
+  height: 72rpx;
+  margin-right: 16rpx;
+}
+
+.staff-fallback {
+  width: 72rpx;
+  height: 72rpx;
+  margin-right: 16rpx;
+  border-radius: 50%;
+  background: #eef3ff;
+  color: #3370ff;
+  text-align: center;
+  line-height: 72rpx;
+  font-size: 28rpx;
+}
+
+.staff-main {
+  flex: 1;
+}
+
+.staff-name {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.slot-grid {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 16rpx;
+}
+
+.slot {
+  width: 23%;
+  margin: 0 1% 16rpx;
+  padding: 14rpx 0;
+  box-sizing: border-box;
+  text-align: center;
+  background: #f7f8fa;
+  border: 1rpx solid #dcdfe6;
+  border-radius: 12rpx;
+}
+
+.slot-label {
+  font-size: 26rpx;
+  color: #1f2329;
+}
+
+.slot-reason {
+  margin-top: 4rpx;
+  font-size: 20rpx;
+  color: #a8adb7;
+}
+
+.slot-disabled {
+  background: #fafbfc;
+  border-color: #eceef2;
+}
+
+.slot-disabled .slot-label {
+  color: #b8bdc7;
+}
+
+.slot-active {
+  background: #3370ff;
+  border-color: #3370ff;
+}
+
+.slot-active .slot-label {
+  color: #fff;
+}
+
+.picked {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 12rpx;
+}
+
+.picked-time {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #3370ff;
+}

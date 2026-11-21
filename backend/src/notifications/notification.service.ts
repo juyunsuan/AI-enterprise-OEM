@@ -4,7 +4,7 @@ import { BusinessException } from '../common/business.exception';
 import { ErrorCode } from '../common/error-code';
 import { CurrentUser } from '../auth/current-user';
 import { PrismaService } from '../prisma/prisma.service';
-import type { SnsService } from '../sns/sns.service';
+import type { AiSocialNotificationsService } from '../ai-social/ai-social-notifications.service';
 
 export type NotifyInput = {
   category: string;
@@ -35,8 +35,8 @@ export type NotificationPushSink = {
 export class NotificationService {
   constructor(
     private readonly prisma: PrismaService,
-    /** AIworkin 社交（SNS）通知：只读合并进铃铛，SNS 不可用时降级为本站消息。 */
-    private readonly sns?: SnsService,
+    /** DSH 社交插件通知（按绑定的 AIPDD Key 所属账号拉取）：只读合并进铃铛，不可用时降级本站消息。 */
+    private readonly aiSocial?: AiSocialNotificationsService,
     /** 绑定微信服务号的用户额外收一条微信消息；失败不影响站内消息。 */
     private readonly push?: NotificationPushSink,
   ) {}
@@ -111,11 +111,11 @@ export class NotificationService {
     };
   }
 
-  /** AIworkin 社交通知：站点不可用时只降级本站消息，不把整个铃铛拖垮。 */
-  private async snsRows(userId: string) {
-    if (!this.sns) return null;
+  /** DSH 插件通知：任一 Key 拉取失败只降级本站消息，不把整个铃铛拖垮。 */
+  private async externalRows(userId: string) {
+    if (!this.aiSocial) return null;
     try {
-      return { ...(await this.sns.notifications(userId)), available: true };
+      return await this.aiSocial.snapshot(userId);
     } catch {
       return { rows: [], unread: 0, available: false };
     }
@@ -144,12 +144,14 @@ export class NotificationService {
       ...(query.category ? { category: query.category } : {}),
       ...(unreadOnly ? { readAt: null } : {}),
     };
-    const sns = await this.snsRows(user.userId);
-    const snsList = (sns?.rows || []).filter((row) => !unreadOnly || !row.read);
+    const external = await this.externalRows(user.userId);
+    const externalList = (external?.rows || []).filter(
+      (row) => !unreadOnly || !row.read,
+    );
     if (query.category === 'sns') {
       return pageOf(
-        snsList.slice(offset, offset + pageSize),
-        snsList.length,
+        externalList.slice(offset, offset + pageSize),
+        externalList.length,
         page,
         pageSize,
       );
@@ -164,21 +166,21 @@ export class NotificationService {
       }),
     ]);
     const local = rows.map((row) => this.view(row));
-    if (query.category || page > 1 || !snsList.length) {
+    if (query.category || page > 1 || !externalList.length) {
       return pageOf(local, total, page, pageSize);
     }
-    // SNS 通知只在第一页合并：两站编号体系不同，无法做稳定的跨源游标分页。
-    const merged = [...snsList, ...local]
+    // 外部通知只在第一页合并：两站编号体系不同，无法做稳定的跨源游标分页。
+    const merged = [...externalList, ...local]
       .sort(
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       )
       .slice(0, pageSize);
-    return pageOf(merged, total + snsList.length, page, pageSize);
+    return pageOf(merged, total + externalList.length, page, pageSize);
   }
 
   async unread(user: CurrentUser) {
-    const [count, rows, sns] = await Promise.all([
+    const [count, rows, external] = await Promise.all([
       this.prisma.notification.count({
         where: { userId: user.userId, readAt: null },
       }),
@@ -187,22 +189,22 @@ export class NotificationService {
         orderBy: { id: 'desc' },
         take: 8,
       }),
-      this.snsRows(user.userId),
+      this.externalRows(user.userId),
     ]);
     const local = rows.map((row) => this.view(row));
-    const external = (sns?.rows || []).filter((row) => !row.read);
-    const items = [...external, ...local]
+    const externalUnread = (external?.rows || []).filter((row) => !row.read);
+    const items = [...externalUnread, ...local]
       .sort(
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       )
       .slice(0, 8);
     return {
-      count: count + external.length,
+      count: count + (external?.unread ?? 0),
       items,
       sns: {
-        available: sns?.available ?? false,
-        unread: external.length,
+        available: external?.available ?? false,
+        unread: external?.unread ?? 0,
       },
     };
   }
@@ -240,14 +242,22 @@ export class NotificationService {
       data: { readAt: new Date() },
     });
     let external = 0;
-    if (this.sns && (!category || category === 'sns')) {
+    if (this.aiSocial && (!category || category === 'sns')) {
       try {
-        external = (await this.sns.readAll(user.userId))?.updated || 0;
+        external = (await this.aiSocial.readAll(user.userId))?.updated || 0;
       } catch {
-        // SNS 不可用时只清本站消息
+        // 外部通知不可用时只清本站消息
       }
     }
     return { updated: result.count + external };
+  }
+
+  /** 外部通知（source=sns）标记已读：外部编号里带 Key，路由回对应 AIPDD Key。 */
+  async readExternal(user: CurrentUser, id: string) {
+    if (!this.aiSocial) {
+      throw new BusinessException(ErrorCode.NOT_FOUND, '外部通知不可用');
+    }
+    return this.aiSocial.read(user.userId, id);
   }
 
   /** 清理超过保留期的消息（由列表读取时按天最多清一次，不额外起调度）。 */

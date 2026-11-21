@@ -1,0 +1,125 @@
+.refund-list {
+  min-height: 100vh;
+  padding: 16rpx 24rpx;
+  box-sizing: border-box;
+}
+
+.row {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+  box-sizing: border-box;
+}
+
+.row-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.no {
+  font-size: 24rpx;
+  color: #7b8089;
+}
+
+.status {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #fa3534;
+}
+
+.st-REFUNDED,
+.st-AGREED {
+  color: #22c06e;
+}
+
+.st-REJECTED,
+.st-CANCELLED {
+  color: #8a8f99;
+}
+
+.goods {
+  display: flex;
+  align-items: center;
+  margin: 16rpx 0;
+}
+
+.pic {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 12rpx;
+  background: #f4f5f7;
+  flex-shrink: 0;
+}
+
+.goods-info {
+  flex: 1;
+  min-width: 0;
+  margin-left: 16rpx;
+  font-size: 26rpx;
+  line-height: 38rpx;
+}
+
+.amount {
+  margin-left: 16rpx;
+  color: #fa3534;
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.reject {
+  padding: 14rpx 16rpx;
+  border-radius: 10rpx;
+  background: #fff7e6;
+  color: #8a6d1b;
+  font-size: 22rpx;
+  margin-bottom: 12rpx;
+}
+
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+}
+
+.act {
+  height: 56rpx;
+  line-height: 56rpx;
+  padding: 0 24rpx;
+  border-radius: 999rpx;
+  font-size: 24rpx;
+  margin-left: 16rpx;
+}
+
+.act.plain {
+  border: 1rpx solid #d0d3d9;
+  color: #4d5159;
+}
+
+.muted {
+  color: #8a8f99;
+  font-size: 22rpx;
+}
+
+.empty {
+  padding: 140rpx 24rpx;
+  text-align: center;
+  color: #8a8f99;
+  font-size: 26rpx;
+}
+
+.link {
+  margin-top: 16rpx;
+  color: #fa3534;
+  font-size: 24rpx;
+}
+
+.footer-gap {
+  height: 40rpx;
+}

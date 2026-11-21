@@ -1,0 +1,95 @@
+.vip-card {
+  border-radius: 16rpx;
+  padding: 32rpx;
+  margin-bottom: 24rpx;
+  color: #fff;
+  box-shadow: 0 4rpx 16rpx rgba(31, 35, 41, 0.08);
+}
+
+.vip-name {
+  font-size: 34rpx;
+  font-weight: 600;
+}
+
+.vip-state {
+  margin-top: 12rpx;
+  font-size: 26rpx;
+  opacity: 0.9;
+}
+
+.vip-points {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  opacity: 0.8;
+}
+
+.plan-tip,
+.kami-tip {
+  margin: 12rpx 0 20rpx;
+  line-height: 38rpx;
+}
+
+.plan-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.plan {
+  width: 32%;
+  box-sizing: border-box;
+  text-align: center;
+  padding: 24rpx 8rpx;
+  border: 1rpx solid var(--line);
+  border-radius: 12rpx;
+  margin-bottom: 16rpx;
+}
+
+.plan-label {
+  font-size: 26rpx;
+  font-weight: 600;
+}
+
+.plan-price {
+  font-size: 40rpx;
+  font-weight: 600;
+  color: var(--primary);
+  margin-top: 8rpx;
+}
+
+.plan-buy {
+  margin-top: 16rpx;
+  font-size: 24rpx;
+  color: var(--primary);
+}
+
+.kami-row {
+  display: flex;
+  align-items: center;
+}
+
+.kami-input {
+  flex: 1;
+}
+
+.kami-btn {
+  width: 180rpx;
+  margin-left: 16rpx;
+  flex-shrink: 0;
+}
+
+.is-disabled {
+  opacity: 0.6;
+}
+
+.foot-note {
+  text-align: center;
+  padding: 20rpx 0 40rpx;
+  line-height: 38rpx;
+}
+
+.plan-cash {
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  color: #0f9d58;
+}

@@ -1,0 +1,22 @@
+<view class="wrap">
+  <view wx:if="{{loading}}" class="card muted">正在加载…</view>
+  <view wx:elif="{{error}}" class="card muted">{{error}}</view>
+  <view wx:elif="{{!orders.length}}" class="card">
+    <view class="section-title">还没有订单</view>
+    <view class="btn btn-primary" style="margin-top: 20rpx;" bindtap="goCreate">去下单</view>
+  </view>
+  <block wx:else>
+    <view wx:for="{{orders}}" wx:key="id" class="card" data-no="{{item.orderNo}}" bindtap="open">
+      <view class="row">
+        <text class="section-title">{{item.typeText}}</text>
+        <text class="status">{{item.statusText}}</text>
+      </view>
+      <view class="muted">{{item.orderNo}} · {{item.timeText}}</view>
+      <view class="line">{{item.fromParty.address}} → {{item.toParty.address}}</view>
+      <view class="row">
+        <text class="muted">{{item.distanceKm}} 公里 / {{item.weightKg}} 公斤</text>
+        <text class="amount">¥{{item.totalAmount}}</text>
+      </view>
+    </view>
+  </block>
+</view>

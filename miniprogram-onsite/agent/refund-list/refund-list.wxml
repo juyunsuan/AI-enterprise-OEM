@@ -1,0 +1,23 @@
+<view class="notice refund-tip">退款由店主审批：已生效佣金会按退款金额比例冲销，冲销不回滚已打款的部分，只影响后续结算。</view>
+
+<view class="error" wx:if="{{errorText}}">{{errorText}}</view>
+
+<view class="list" wx:if="{{list.length}}">
+  <view class="card item" wx:for="{{list}}" wx:key="id">
+    <view class="row">
+      <text class="order-no">{{item.refundNo}}</text>
+      <text class="tag {{item.tone}}">{{item.statusLabel}}</text>
+    </view>
+    <view class="muted meta">订单 {{item.orderNo || item.orderId}} · {{item.timeText}}</view>
+    <view class="muted meta" wx:if="{{item.reasonText}}">原因：{{item.reasonText}}</view>
+    <view class="row bottom">
+      <text class="muted">申请 {{item.applyText}} · 实退</text>
+      <text class="amount">{{item.refundText}}</text>
+    </view>
+  </view>
+  <view class="muted footer" wx:if="{{finished}}">共 {{total}} 条，已全部加载</view>
+  <view class="muted footer" wx:else>上拉加载更多</view>
+</view>
+
+<view class="empty" wx:elif="{{loading}}">正在加载…</view>
+<view class="empty" wx:else>名下订单还没有退款记录。</view>

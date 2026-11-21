@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { pageQuerySchema, pageSchema } from "./pagination";
 
 const envelope = <T extends z.ZodType>(data: T) =>
   z.object({ code: z.number(), message: z.string(), data: data.nullable() });
@@ -8,9 +7,9 @@ const emptyQuery = z.object({});
 /**
  * 用户版小程序（移动办公延伸）与平台后台「小程序管理」。
  *
- * 发布链路＝「后台托管代码包 + 小程序码」：后台维护小程序配置、上传代码包版本、
- * 生成 / 上传小程序码；也可用微信代码上传密钥把代码包**直传微信（生成开发版）**，
- * 但**提交审核与发布仍在微信公众平台完成**（微信不开放自动发布接口）。
+ * 发布链路＝「平台内置源码包 + 小程序码」：后台维护小程序配置、生成 / 上传小程序码，
+ * 管理员下载 `pnpm pack:miniprogram` 产出的源码包，在微信开发者工具里填参数、编译、上传与提审。
+ * 平台不再代编译、不再代传微信，也不维护代码包台账。
  *
  * 小程序启动读取 `/api/public/miniprogram/bootstrap`（免登录），登录走
  * `/api/public/miniprogram/login`（wx.login 的 code 换会话，或账号密码登录后绑定）。
@@ -23,6 +22,7 @@ export const MINIPROGRAM_FEATURES = [
   "oa",
   "service",
   "notifications",
+  "annualReport",
 ] as const;
 export type MiniprogramFeature = (typeof MINIPROGRAM_FEATURES)[number];
 export const MINIPROGRAM_FEATURE_LABELS: Record<string, string> = {
@@ -30,15 +30,7 @@ export const MINIPROGRAM_FEATURE_LABELS: Record<string, string> = {
   oa: "OA 审批",
   service: "客服会话",
   notifications: "系统消息",
-};
-
-/** 代码包通道：稳定 / 预览。 */
-export const MINIPROGRAM_RELEASE_CHANNELS = ["STABLE", "BETA"] as const;
-export type MiniprogramReleaseChannel =
-  (typeof MINIPROGRAM_RELEASE_CHANNELS)[number];
-export const MINIPROGRAM_RELEASE_CHANNEL_LABELS: Record<string, string> = {
-  STABLE: "稳定",
-  BETA: "预览",
+  annualReport: "工商年报",
 };
 
 /** 站点域名：只预填，整体可编辑（客户自有域名，不写死外链协议）。 */
@@ -48,37 +40,6 @@ export const miniprogramFeatureToggleSchema = z.object({
 });
 export type MiniprogramFeatureToggle = z.infer<
   typeof miniprogramFeatureToggleSchema
->;
-
-export const miniprogramReleaseRowSchema = z.object({
-  id: z.number(),
-  version: z.string(),
-  channel: z.enum(MINIPROGRAM_RELEASE_CHANNELS),
-  fileName: z.string(),
-  fileSize: z.number(),
-  sha256: z.string(),
-  changelog: z.string(),
-  minBaseLib: z.string(),
-  qrcodeUrl: z.string(),
-  enabled: z.boolean(),
-  downloadCount: z.number(),
-  createdBy: z.string(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
-});
-export type MiniprogramReleaseRow = z.infer<
-  typeof miniprogramReleaseRowSchema
->;
-
-/** 上传 multipart 返回的元数据：由 saveRelease 带版本号落库。 */
-export const miniprogramPackageFileSchema = z.object({
-  fileName: z.string(),
-  fileSize: z.number(),
-  ossKey: z.string(),
-  sha256: z.string(),
-});
-export type MiniprogramPackageFile = z.infer<
-  typeof miniprogramPackageFileSchema
 >;
 
 /** 平台内置包：仓库 `miniprogram/` 用 `pnpm pack:miniprogram` 产出，落在服务器 `update/miniprogram/`。 */
@@ -95,18 +56,11 @@ export const miniprogramSettingsViewSchema = z.object({
   appName: z.string(),
   appId: z.string(),
   appSecretConfigured: z.boolean(),
-  /** 微信代码上传密钥是否已配置（只回状态，不回密文）。 */
-  uploadKeyConfigured: z.boolean(),
-  /** CI 机器人编号（微信侧 1–30，用于区分上传来源）。 */
-  robot: z.number(),
   siteDomain: z.string(),
   themeColor: z.string(),
   features: z.array(miniprogramFeatureToggleSchema),
   qrcodeUrl: z.string(),
-  releaseCount: z.number(),
   boundCount: z.number(),
-  lastUploadVersion: z.string(),
-  lastUploadAt: z.string(),
   updatedAt: z.string(),
 });
 export type MiniprogramSettingsView = z.infer<
@@ -119,9 +73,6 @@ export const miniprogramSettingsInputSchema = z.object({
   appId: z.string().trim().max(64).default(""),
   /** 留空表示保留原值。 */
   appSecret: z.string().max(128).optional(),
-  /** 微信代码上传密钥（`private.<appid>.key` 的内容）；留空表示保留原值。 */
-  uploadKey: z.string().max(4096).optional(),
-  robot: z.number().int().min(1).max(30).default(1),
   siteDomain: z.string().trim().max(200).default(""),
   themeColor: z
     .string()
@@ -134,63 +85,15 @@ export type MiniprogramSettingsInput = z.infer<
   typeof miniprogramSettingsInputSchema
 >;
 
-export const miniprogramReleaseSaveSchema = z.object({
-  version: z.string().trim().min(1).max(40),
-  channel: z.enum(MINIPROGRAM_RELEASE_CHANNELS).default("STABLE"),
-  changelog: z.string().trim().max(1000).default(""),
-  minBaseLib: z.string().trim().max(40).default(""),
-  enabled: z.boolean().default(true),
-  fileName: z.string().trim().max(160),
-  fileSize: z.number().int().min(0),
-  ossKey: z.string().trim().max(400),
-  sha256: z.string().trim().max(64),
+/** 上传图片（目前只用于小程序码）的元数据。 */
+export const miniprogramPackageFileSchema = z.object({
+  fileName: z.string(),
+  fileSize: z.number(),
+  ossKey: z.string(),
+  sha256: z.string(),
 });
-export type MiniprogramReleaseSave = z.infer<
-  typeof miniprogramReleaseSaveSchema
->;
-
-export const miniprogramReleaseUpdateSchema = z.object({
-  version: z.string().trim().min(1).max(40).optional(),
-  channel: z.enum(MINIPROGRAM_RELEASE_CHANNELS).optional(),
-  changelog: z.string().trim().max(1000).optional(),
-  minBaseLib: z.string().trim().max(40).optional(),
-  enabled: z.boolean().optional(),
-  fileName: z.string().trim().max(160).optional(),
-  fileSize: z.number().int().min(0).optional(),
-  ossKey: z.string().trim().max(400).optional(),
-  sha256: z.string().trim().max(64).optional(),
-});
-export type MiniprogramReleaseUpdate = z.infer<
-  typeof miniprogramReleaseUpdateSchema
->;
-
-/** 直传微信的代码来源：台账内版本（走对象存储）或平台内置包（走服务器 update/miniprogram 目录）。 */
-export const MINIPROGRAM_UPLOAD_SOURCES = ["RELEASE", "BUILTIN"] as const;
-export type MiniprogramUploadSource =
-  (typeof MINIPROGRAM_UPLOAD_SOURCES)[number];
-
-/**
- * 后台直传微信：把选定的代码包传到微信（生成开发版）。
- * 版本号与说明默认取代码包自身（台账 version/changelog 或内置包文件名），无需重复填。
- */
-export const miniprogramCodeUploadInputSchema = z.object({
-  source: z.enum(MINIPROGRAM_UPLOAD_SOURCES).default("RELEASE"),
-  /** source=RELEASE 时的台账版本号。 */
-  releaseId: z.number().int().positive().optional(),
-  /** source=BUILTIN 时的内置包文件名。 */
-  fileName: z.string().trim().max(160).optional(),
-});
-export type MiniprogramCodeUploadInput = z.infer<
-  typeof miniprogramCodeUploadInputSchema
->;
-
-export const miniprogramCodeUploadResultSchema = z.object({
-  version: z.string().default(""),
-  uploadedAt: z.string().default(""),
-  message: z.string().default(""),
-});
-export type MiniprogramCodeUploadResult = z.infer<
-  typeof miniprogramCodeUploadResultSchema
+export type MiniprogramPackageFile = z.infer<
+  typeof miniprogramPackageFileSchema
 >;
 
 /** 小程序启动配置（免登录）。功能开关关闭的 tab 在小程序端整个不渲染。 */
@@ -295,50 +198,6 @@ export const miniprogramEndpoints = {
       }),
     ),
   },
-  MiniProgramAdmin_releases: {
-    method: "get" as const,
-    path: "/enterprise/admin/miniprogram/releases",
-    params: z.object({}),
-    query: pageQuerySchema.extend({
-      channel: z.string().default("all"),
-      keyword: z.string().default(""),
-    }),
-    body: z.undefined(),
-    response: envelope(pageSchema(miniprogramReleaseRowSchema)),
-  },
-  MiniProgramAdmin_saveRelease: {
-    method: "post" as const,
-    path: "/enterprise/admin/miniprogram/releases",
-    params: z.object({}),
-    query: emptyQuery,
-    body: miniprogramReleaseSaveSchema,
-    response: envelope(miniprogramReleaseRowSchema),
-  },
-  MiniProgramAdmin_updateRelease: {
-    method: "put" as const,
-    path: "/enterprise/admin/miniprogram/releases/:id",
-    params: z.object({ id: z.string() }),
-    query: emptyQuery,
-    body: miniprogramReleaseUpdateSchema,
-    response: envelope(miniprogramReleaseRowSchema),
-  },
-  MiniProgramAdmin_removeRelease: {
-    method: "delete" as const,
-    path: "/enterprise/admin/miniprogram/releases/:id",
-    params: z.object({ id: z.string() }),
-    query: emptyQuery,
-    body: z.undefined(),
-    response: envelope(z.object({ removed: z.boolean() })),
-  },
-  /** 下载代码包：返回对象存储直链并累计下载量（元数据）。 */
-  MiniProgramAdmin_downloadRelease: {
-    method: "get" as const,
-    path: "/enterprise/admin/miniprogram/releases/:id/download",
-    params: z.object({ id: z.string() }),
-    query: emptyQuery,
-    body: z.undefined(),
-    response: envelope(z.object({ url: z.string(), fileName: z.string() })),
-  },
   /**
    * 小程序码：`mode=GENERATE` 用配置的凭据调微信接口生成（需 AppID / AppSecret），
    * `mode=UPLOAD` 由管理员上传图片（multipart 走单独路由，不进 JSON 契约）。
@@ -353,25 +212,11 @@ export const miniprogramEndpoints = {
       /** UPLOAD 模式下的图片元数据；GENERATE 模式忽略。 */
       fileName: z.string().trim().max(160).optional(),
       ossKey: z.string().trim().max(400).optional(),
-      releaseId: z.number().int().positive().optional(),
     }),
     response: envelope(z.object({ qrcodeUrl: z.string() })),
   },
   /**
-   * 直传微信：用后台保存的代码上传密钥把选定代码包上传到微信（生成开发版）。
-   * 微信侧要求：密钥所属 AppID 与配置一致，且服务器公网 IP 在小程序后台「代码上传」白名单内。
-   * 提审与发布仍须在微信公众平台完成。
-   */
-  MiniProgramAdmin_uploadCode: {
-    method: "post" as const,
-    path: "/enterprise/admin/miniprogram/upload-code",
-    params: z.object({}),
-    query: emptyQuery,
-    body: miniprogramCodeUploadInputSchema,
-    response: envelope(miniprogramCodeUploadResultSchema),
-  },
-  /**
-   * 平台内置包（服务器 `update/miniprogram/*.zip`）：随代码版本携带，不占台账。
+   * 平台内置包（服务器 `update/miniprogram/*.zip`）：随代码版本携带。
    * 下载走二进制路由（`/enterprise/admin/miniprogram/builtin/:file/download`），不进 JSON 契约。
    */
   MiniProgramAdmin_builtin: {

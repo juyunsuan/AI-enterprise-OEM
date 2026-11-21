@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "活动专题",
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "diy-block": "/components/diy/block/index"
+  }
+}

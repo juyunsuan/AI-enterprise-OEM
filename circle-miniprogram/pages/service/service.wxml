@@ -1,0 +1,11 @@
+<web-view wx:if="{{url && !failed}}" src="{{url}}" binderror="onWebError" />
+
+<view class="container" wx:else>
+  <view class="card">
+    <view class="name" style="margin-left:0">联系社区管理员</view>
+    <view class="content">当前未启用在线客服，可通过以下方式联系：</view>
+    <view class="muted" style="margin-top:16rpx" wx:if="{{community.servicePhone}}" bindtap="copyPhone">电话：{{community.servicePhone}}（点击复制）</view>
+    <view class="muted" style="margin-top:12rpx" wx:if="{{community.serviceWechat}}" bindtap="copyWechat">微信：{{community.serviceWechat}}（点击复制）</view>
+    <view class="empty" wx:if="{{!community.servicePhone && !community.serviceWechat}}">管理员还没有填写联系方式</view>
+  </view>
+</view>

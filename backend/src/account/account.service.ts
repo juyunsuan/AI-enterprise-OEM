@@ -474,6 +474,61 @@ export class AccountService {
       data: { lastLoginAt: new Date() },
     });
     await this.logLogin(key, String(account.id), true, ctx);
+    // 子账号：数据归属主账号，令牌里带实际上操作人与可访问模块。
+    const sub = await this.prisma.subAccount.findUnique({
+      where: { accountId: renewed.id },
+    });
+    if (sub) {
+      if (sub.status !== 'ACTIVE') {
+        await this.logLogin(
+          key,
+          String(account.id),
+          false,
+          ctx,
+          '子账号已停用',
+        );
+        throw new BusinessException(
+          ErrorCode.FORBIDDEN,
+          '该子账号已被主账号停用，请联系主账号恢复后重试',
+        );
+      }
+      const owner = await this.prisma.account.findUnique({
+        where: { id: Number(sub.ownerUserId) },
+      });
+      if (!owner || owner.status !== 'ACTIVE') {
+        await this.logLogin(
+          key,
+          String(account.id),
+          false,
+          ctx,
+          '主账号不可用',
+        );
+        throw new BusinessException(
+          ErrorCode.FORBIDDEN,
+          '所属主账号不可用，请联系主账号处理',
+        );
+      }
+      await this.prisma.subAccount.update({
+        where: { id: sub.id },
+        data: { lastLoginAt: new Date() },
+      });
+      return {
+        userId: sub.ownerUserId,
+        username: renewed.username,
+        role: 'user',
+        tokenVersion: owner.tokenVersion,
+        mustChangePassword: renewed.mustChangePassword === 1,
+        public: this.toPublic(renewed),
+        actorUserId: String(renewed.id),
+        subAccountId: sub.id,
+        subAccountName: sub.name,
+        scopes: Array.isArray(sub.scopesJson)
+          ? (sub.scopesJson as string[]).filter(
+              (item): item is string => typeof item === 'string',
+            )
+          : [],
+      };
+    }
     return {
       userId: String(renewed.id),
       username: renewed.username,
@@ -755,7 +810,7 @@ export class AccountService {
 
   async loginLogs(user: CurrentUser, limit = 20) {
     const rows = await this.prisma.loginLog.findMany({
-      where: { userId: user.userId },
+      where: { userId: user.selfId() },
       orderBy: { createdAt: 'desc' },
       take: Math.min(Math.max(limit, 1), 100),
     });
@@ -888,11 +943,25 @@ export class AccountService {
     });
   }
 
-  private sessionOf(account: Account) {
+  private sessionOf(account: Account, user?: CurrentUser) {
+    const role = account.role === 'PLATFORM_ADMIN' ? 'admin' : 'user';
+    if (user?.isSubAccount()) {
+      // 子账号改密后仍以主账号为数据归属：tokenVersion 沿用主账号的，避免被主账号会话校验拦下。
+      return {
+        userId: user.userId,
+        username: account.username,
+        role,
+        tokenVersion: user.tokenVersion ?? account.tokenVersion,
+        actorUserId: String(account.id),
+        subAccountId: user.subAccountId,
+        subAccountName: user.subAccountName,
+        scopes: user.scopes,
+      };
+    }
     return {
       userId: String(account.id),
       username: account.username,
-      role: account.role === 'PLATFORM_ADMIN' ? 'admin' : 'user',
+      role,
       tokenVersion: account.tokenVersion,
     };
   }
@@ -966,14 +1035,18 @@ export class AccountService {
     this.assertPassword(newPassword);
     await this.channels.consumeCode('SET_PASSWORD', channel, target, code);
     const updated = await this.writePassword(account.id, newPassword);
-    await this.audit(user.userId, 'ACCOUNT_PASSWORD_SET', `channel=${channel}`);
-    return { changed: true, session: this.sessionOf(updated) };
+    await this.audit(
+      user.selfId(),
+      'ACCOUNT_PASSWORD_SET',
+      `channel=${channel}`,
+    );
+    return { changed: true, session: this.sessionOf(updated, user) };
   }
 
   // ---------- 登录态自助：改密 / 资料 / 换绑 / 注销 ----------
 
   private async ownedAccount(user: CurrentUser): Promise<Account> {
-    const account = await this.findByUserId(user.userId);
+    const account = await this.findByUserId(user.selfId());
     if (!account)
       throw new BusinessException(ErrorCode.UNAUTHORIZED, '账号不存在');
     return account;
@@ -1000,16 +1073,11 @@ export class AccountService {
         mustChangePassword: 0,
       },
     });
-    await this.audit(user.userId, 'ACCOUNT_PASSWORD_CHANGED', '');
+    await this.audit(user.selfId(), 'ACCOUNT_PASSWORD_CHANGED', '');
     // 回传新会话素材：路由据此换发 Cookie，使当前设备免重登，其余旧会话失效。
     return {
       changed: true,
-      session: {
-        userId: String(updated.id),
-        username: updated.username,
-        role: updated.role === 'PLATFORM_ADMIN' ? 'admin' : 'user',
-        tokenVersion: updated.tokenVersion,
-      },
+      session: this.sessionOf(updated, user),
     };
   }
 
@@ -1112,11 +1180,19 @@ export class AccountService {
 
   async me(user: CurrentUser) {
     const account = await this.prisma.account.findUnique({
-      where: { id: Number(user.userId) },
+      where: { id: Number(user.selfId()) },
     });
     if (!account)
       throw new BusinessException(ErrorCode.UNAUTHORIZED, '账号不存在');
-    return this.toPublic(account);
+    return {
+      ...this.toPublic(account),
+      // 子账号：前端据此隐藏主账号专属入口并按 scopes 过滤菜单。
+      isSubAccount: user.isSubAccount(),
+      ownerUserId: user.userId,
+      subAccountId: user.subAccountId ?? null,
+      subAccountName: user.subAccountName || '',
+      scopes: user.scopes ?? null,
+    };
   }
 
   // ---------- 邀请体系 ----------

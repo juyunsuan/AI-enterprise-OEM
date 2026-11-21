@@ -1,0 +1,8 @@
+<view class="diy-assist">
+  <view wx:if="{{mode === 'QRCODE'}}" class="qr-wrap">
+    <image wx:if="{{image}}" class="qr" src="{{image}}" mode="aspectFit" bindtap="onTap" />
+    <view wx:else class="qr qr-empty">暂未配置二维码</view>
+    <view class="qr-label">{{label}}</view>
+  </view>
+  <view wx:else class="button" bindtap="onTap">{{label}}</view>
+</view>

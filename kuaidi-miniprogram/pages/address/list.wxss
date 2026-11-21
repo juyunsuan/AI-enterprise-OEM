@@ -1,0 +1,40 @@
+.address {
+  padding: 24rpx 28rpx 0;
+}
+
+.address-main {
+  padding-bottom: 20rpx;
+}
+
+.address-name {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.address-region {
+  margin-top: 6rpx;
+  font-size: 26rpx;
+  color: #4e5461;
+}
+
+.tag.default {
+  background: #e8f7ee;
+  color: #059669;
+}
+
+.address-ops {
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1rpx solid #f0f1f3;
+  padding: 16rpx 0;
+}
+
+.op {
+  font-size: 26rpx;
+  color: #646a73;
+  margin-left: 32rpx;
+}
+
+.op.danger {
+  color: #e5484d;
+}

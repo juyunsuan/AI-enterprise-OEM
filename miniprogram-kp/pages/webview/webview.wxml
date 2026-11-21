@@ -1,0 +1,19 @@
+<!-- web-view 必须铺满整页且同层渲染，一旦显示就盖住所有原生提示，所以只在可用时才渲染 -->
+<web-view wx:if="{{valid && !failed}}" src="{{src}}" binderror="onError"></web-view>
+
+<view class="page tip-page" wx:if="{{!valid || failed}}">
+  <view class="card">
+    <view class="section-title">无法打开该页面</view>
+    <view class="muted tip-body">
+      {{failed ? '页面加载失败，通常是该域名未在本小程序后台配置为「业务域名」。' : message}}
+    </view>
+    <view class="muted host" wx:if="{{host}}">域名：{{host}}</view>
+    <view class="divider"></view>
+    <view class="muted tip-body">
+      处理方式：在小程序管理后台「开发 - 开发设置 - 业务域名」中添加该域名（需放置校验文件），
+      或由站点方把内容改放为站内资源。
+    </view>
+    <view class="btn tip-btn" wx:if="{{valid}}" bindtap="copyLink">复制网页链接</view>
+    <view class="btn btn-plain tip-btn" bindtap="goHome">返回首页</view>
+  </view>
+</view>

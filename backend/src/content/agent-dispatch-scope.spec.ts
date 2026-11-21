@@ -8,8 +8,8 @@ import { dispatchScopeBlock, parseDispatchScope } from './agent.service';
 describe('parseDispatchScope', () => {
   it('只保留合法设备类型并去重', () => {
     expect(
-      parseDispatchScope(['desktop', 'MOBOT', 'bogus', 'DESKTOP', 0, null]),
-    ).toEqual(['DESKTOP', 'MOBOT']);
+      parseDispatchScope(['desktop', 'AWBOT', 'bogus', 'DESKTOP', 0, null]),
+    ).toEqual(['DESKTOP', 'AWBOT']);
   });
 
   it('非数组或缺省都算没开群控', () => {
@@ -21,9 +21,9 @@ describe('parseDispatchScope', () => {
 
 describe('dispatchScopeBlock', () => {
   it('按勾选范围写清设备类型，并把确认与拆单规则钉进提示词', () => {
-    const block = dispatchScopeBlock(['DESKTOP', 'MOBOT']);
+    const block = dispatchScopeBlock(['DESKTOP', 'AWBOT']);
     expect(block).toContain('【本轮开启 Agent 群控】');
-    expect(block).toContain('Bot 主机 + Mobot 手机');
+    expect(block).toContain('Bot 主机 + AWBot 手机');
     expect(block).toContain('list_dispatch_devices');
     expect(block).toContain('等用户确认');
     expect(block).toContain('拆成多条任务分别派发');
@@ -32,8 +32,8 @@ describe('dispatchScopeBlock', () => {
   });
 
   it('只勾手机时不承诺主机能力', () => {
-    const block = dispatchScopeBlock(['MOBOT']);
-    expect(block).toContain('Mobot 手机');
+    const block = dispatchScopeBlock(['AWBOT']);
+    expect(block).toContain('AWBot 手机');
     expect(block).not.toContain('Bot 主机 +');
   });
 });

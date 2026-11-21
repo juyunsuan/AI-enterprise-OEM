@@ -2,6 +2,12 @@ import { text } from '../common/api';
 import { PrismaService } from '../prisma/prisma.service';
 import { aiEmbed, parseJsonObject, tryChat } from '../ai/ai-gateway';
 import {
+  insightColorChoices,
+  insightTagValues,
+  WEAR_VISION_JSON_SHAPE,
+} from '@enterprise/contracts';
+import type { InsightTagDimension } from '@enterprise/contracts';
+import {
   hashEmbed,
   LOCAL_EMBED_ID,
   remoteEmbedId,
@@ -24,6 +30,79 @@ export type AssetVisionOutcome = {
   model: string;
   mode: 'llm' | 'rule';
 };
+
+/** 结构化款式理解结果：女装五维标签（色彩带 HEX），供趋势打标直接消费。 */
+export type WearTagOutcome = {
+  category: string;
+  colors: { name: string; hex: string }[];
+  silhouette: string;
+  length: string;
+  patterns: string[];
+  details: string[];
+  fabrics: string[];
+  model: string;
+  mode: 'llm' | 'rule';
+};
+
+const HEX_RE = /^#([0-9a-fA-F]{6})$/;
+
+/** 维度 → 受控词表（逗号连接，塞进打标 system 提示收敛模型输出）。 */
+function wearVocabLine(dim: InsightTagDimension): string {
+  return insightTagValues(dim).join('、');
+}
+
+/** 把模型给的色名收敛到词表，补上词表 HEX；词表外的色名保留但 HEX 留空。 */
+function snapWearColors(raw: unknown): { name: string; hex: string }[] {
+  const list = Array.isArray(raw) ? raw : [];
+  const palette = insightColorChoices();
+  const seen = new Set<string>();
+  const out: { name: string; hex: string }[] = [];
+  for (const item of list) {
+    const rec = (item ?? {}) as Record<string, unknown>;
+    let name = text(rec.name).trim().slice(0, 12);
+    let hex = text(rec.hex).trim();
+    if (!name && hex) {
+      const matched = palette.find(
+        (c) => c.hex?.toLowerCase() === hex.toLowerCase(),
+      );
+      name = matched ? matched.value : '';
+    }
+    if (!name) continue;
+    const canonical = palette.find((c) => c.value === name);
+    if (canonical?.hex) hex = canonical.hex;
+    if (!HEX_RE.test(hex)) hex = canonical?.hex ?? '';
+    if (seen.has(name)) continue;
+    seen.add(name);
+    out.push({ name, hex });
+    if (out.length >= 3) break;
+  }
+  return out;
+}
+
+/** 取值收敛到受控词表：只保留命中词表的标签，按出现顺序去重限量。 */
+function snapWearValues(
+  raw: unknown,
+  dim: InsightTagDimension,
+  limit: number,
+): string[] {
+  const list = Array.isArray(raw) ? raw : raw ? [raw] : [];
+  const allowed = new Set(insightTagValues(dim));
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const item of list) {
+    const value = text(item).trim();
+    if (!value || !allowed.has(value) || seen.has(value)) continue;
+    seen.add(value);
+    out.push(value);
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
+function snapWearSingle(raw: unknown, dim: InsightTagDimension): string {
+  const value = text(raw).trim();
+  return insightTagValues(dim).includes(value) ? value : '';
+}
 
 /** 图片 MIME：只认 OSS 键里的扩展名，认不出按 jpeg。 */
 function mediaTypeOf(name: string, url: string): string {
@@ -122,6 +201,87 @@ export class AssetVisionService {
       text: caption,
       caption,
       labels,
+      model: out.model,
+      mode: 'llm',
+    };
+  }
+
+  /**
+   * 结构化款式理解（女装趋势打标）：视觉槽位模型按受控词表输出五维标签。
+   * 缺 Key / 失败返回 null（不抛穿），由调用方按规则兜底，绝不编造标签。
+   */
+  async understandWear(
+    userId: string,
+    input: { name: string; url: string },
+    token?: string,
+  ): Promise<WearTagOutcome | null> {
+    if (!input.url) return null;
+    const system = [
+      '你是资深服装视觉分析师。只看这张女装图，输出关键设计元素，严格只输出一个 JSON 对象：',
+      WEAR_VISION_JSON_SHAPE,
+      `silhouette（廓形）只能取：${wearVocabLine('silhouette')}。`,
+      `length（长度）只能取：${wearVocabLine('length')}。`,
+      `patterns（图案，至多3个）只能取：${wearVocabLine('pattern')}。`,
+      `details（细节工艺，至多4个）只能取：${wearVocabLine('detail')}。`,
+      `fabrics（材质，至多3个）只能取：${wearVocabLine('fabric')}。`,
+      `colors 给1-3个主/辅色，每项含 name（优先取：${wearVocabLine('color')}）与 hex（#RRGGBB）。`,
+      'category 用简短中文写单品（如 连衣裙/半身裙/针织衫）。',
+      '识别不出的维度用空字符串或空数组，不要编造、不要解释。',
+    ].join('\n');
+    const message: ChatContentPart[] = [
+      {
+        type: 'image',
+        url: input.url,
+        mediaType: mediaTypeOf(input.name, input.url),
+      },
+      { type: 'text', text: '请按受控词表输出 JSON。' },
+    ];
+    let out: Awaited<ReturnType<typeof tryChat>> = null;
+    try {
+      out = await tryChat(this.prisma, {
+        userId,
+        token,
+        mediaType: 'vision',
+        module: 'insight',
+        operation: 'trend.wear_tag',
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: message },
+        ],
+        maxTokens: 500,
+        timeoutMs: 30000,
+        purpose: 'batch',
+      });
+    } catch {
+      return null;
+    }
+    if (!out) return null;
+    const parsed = parseJsonObject(out.reply);
+    if (!parsed) return null;
+    const colors = snapWearColors(parsed.colors);
+    const silhouette = snapWearSingle(parsed.silhouette, 'silhouette');
+    const length = snapWearSingle(parsed.length, 'length');
+    const patterns = snapWearValues(parsed.patterns, 'pattern', 3);
+    const details = snapWearValues(parsed.details, 'detail', 4);
+    const fabrics = snapWearValues(parsed.fabrics, 'fabric', 3);
+    if (
+      !colors.length &&
+      !silhouette &&
+      !length &&
+      !patterns.length &&
+      !details.length &&
+      !fabrics.length
+    ) {
+      return null;
+    }
+    return {
+      category: text(parsed.category).trim().slice(0, 24),
+      colors,
+      silhouette,
+      length,
+      patterns,
+      details,
+      fabrics,
       model: out.model,
       mode: 'llm',
     };

@@ -1,0 +1,92 @@
+<view class="page safe-bottom">
+  <view wx:if="{{loading}}" class="empty">正在加载门店...</view>
+
+  <view wx:elif="{{error}}" class="card error-card">
+    <view class="error-title">门店暂不可用</view>
+    <view class="muted text-12">{{error}}</view>
+    <view class="btn btn-primary retry" bindtap="load">重新加载</view>
+  </view>
+
+  <block wx:else>
+    <view class="hero">
+      <view class="hero-top">
+        <view class="logo">
+          <image wx:if="{{shop.logo}}" src="{{shop.logo}}" mode="aspectFill" class="logo-img" />
+          <view wx:else class="logo-fallback">{{shop.name}}</view>
+        </view>
+        <view class="flex-1">
+          <view class="hero-name">{{shop.name}}</view>
+          <view class="hero-slogan">{{shop.slogan || '现点现做，热乎送达'}}</view>
+        </view>
+        <view class="status {{open ? 'status-open' : 'status-closed'}}">{{statusText}}</view>
+      </view>
+      <view class="hero-info">{{info}}</view>
+      <view wx:if="{{!open}}" class="closed-tip">门店当前休息中，可先浏览菜单，营业后再下单</view>
+    </view>
+
+    <view class="card announcement" wx:if="{{shop.announcement}}">
+      <view class="tag">公告</view>
+      <text class="announcement-text">{{shop.announcement}}</text>
+    </view>
+
+    <view class="mode-row">
+      <view wx:for="{{modes}}" wx:key="*this" class="mode-chip">{{item}}</view>
+    </view>
+
+    <view class="section-head">
+      <view class="section-title">点餐入口</view>
+      <view class="section-more" bindtap="goMenu">全部菜单</view>
+    </view>
+    <view class="order-cta" bindtap="goMenu">
+      <view class="cta-left">
+        <view class="cta-title">开始点餐</view>
+        <view class="cta-sub">按分类挑选，支持规格与加料</view>
+      </view>
+      <view class="cta-btn">去点餐</view>
+    </view>
+
+    <block wx:if="{{hot.length}}">
+      <view class="section-head">
+        <view class="section-title">本店热销</view>
+        <view class="section-more" bindtap="goMenu">更多</view>
+      </view>
+      <scroll-view scroll-x class="hot-scroll" enhanced show-scrollbar="{{false}}">
+        <view class="hot-list">
+          <view wx:for="{{hot}}" wx:key="id" class="hot-card" data-id="{{item.id}}" bindtap="goMenu">
+            <image wx:if="{{item.coverImage}}" src="{{item.coverImage}}" mode="aspectFill" class="hot-img" />
+            <view wx:else class="hot-img hot-placeholder">菜</view>
+            <view class="hot-title ellipsis">{{item.title}}</view>
+            <view class="hot-foot">
+              <view class="price"><text class="price-symbol">¥</text>{{item.priceText}}</view>
+              <view class="hot-sales">已售 {{item.sales}}</view>
+            </view>
+          </view>
+        </view>
+      </scroll-view>
+    </block>
+
+    <view class="section-head">
+      <view class="section-title">快捷服务</view>
+    </view>
+    <view class="quick-grid">
+      <view class="quick-item" bindtap="goOrders">
+        <view class="quick-icon">单</view>
+        <view>我的订单</view>
+      </view>
+      <view class="quick-item" bindtap="goCoupons">
+        <view class="quick-icon">券</view>
+        <view>优惠券</view>
+      </view>
+      <view class="quick-item" bindtap="goAddress">
+        <view class="quick-icon">址</view>
+        <view>收货地址</view>
+      </view>
+      <view class="quick-item" bindtap="openService">
+        <view class="quick-icon">话</view>
+        <view>联系门店</view>
+      </view>
+    </view>
+
+    <view class="footer muted text-12">点餐、订单、优惠券与会员积分均与门店商城共用一套数据</view>
+  </block>
+</view>

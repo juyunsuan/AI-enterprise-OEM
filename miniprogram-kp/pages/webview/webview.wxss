@@ -1,0 +1,17 @@
+.tip-page {
+  padding-top: 60rpx;
+}
+
+.tip-body {
+  margin-top: 16rpx;
+  line-height: 44rpx;
+}
+
+.host {
+  margin-top: 16rpx;
+  word-break: break-all;
+}
+
+.tip-btn {
+  margin-top: 24rpx;
+}

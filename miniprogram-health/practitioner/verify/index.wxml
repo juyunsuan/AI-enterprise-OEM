@@ -1,0 +1,43 @@
+<view class="page">
+  <view class="card">
+    <view class="title">到店核销</view>
+    <view class="muted">输入顾客出示的核销码，或直接扫码。核销后订单归档为「已核销」。</view>
+    <input
+      class="input code-input"
+      maxlength="32"
+      placeholder="输入核销码"
+      value="{{code}}"
+      bindinput="onCode"
+    />
+    <view class="actions">
+      <button class="button-ghost half" bindtap="onScan">扫码</button>
+      <button class="button-primary half" disabled="{{submitting}}" bindtap="onSubmit">
+        {{submitting ? '核销中…' : '确认核销'}}
+      </button>
+    </view>
+  </view>
+
+  <view class="card result" wx:if="{{result}}">
+    <view class="success">核销成功</view>
+    <view class="kv">
+      <text class="kv-label">订单号</text>
+      <text class="kv-value">{{result.orderNo}}</text>
+    </view>
+    <view class="kv">
+      <text class="kv-label">业务类型</text>
+      <text class="kv-value">{{result.orderType}}</text>
+    </view>
+    <view class="kv">
+      <text class="kv-label">实付金额</text>
+      <text class="kv-value">{{result.amountText}}</text>
+    </view>
+    <view class="kv">
+      <text class="kv-label">核销时间</text>
+      <text class="kv-value">{{result.timeText}}</text>
+    </view>
+    <view class="kv">
+      <text class="kv-label">操作人</text>
+      <text class="kv-value">{{result.operatorName}}</text>
+    </view>
+  </view>
+</view>

@@ -17,71 +17,9 @@ export class MechanismImportService extends MechanismBase {
       importRow: (org: HrmOrg, row: Row) => Promise<string>;
     }
   > = {
-    erp_product: {
-      label: '产品',
-      columns: [
-        'code',
-        'name',
-        'unit',
-        'spec',
-        'purchasePrice',
-        'salePrice',
-        'taxRate',
-        'note',
-      ],
-      importRow: async (org, row) => {
-        const name = clip(row.name, 120);
-        if (!name) throw new Error('产品名称不能为空');
-        const code = clip(row.code, 32) || `P${Date.now().toString(36)}`;
-        await this.prisma.erpProduct.create({
-          data: {
-            ...orgKey(org),
-            code,
-            name,
-            unit: clip(row.unit, 16) || '件',
-            spec: clip(row.spec, 120),
-            purchasePrice: num(row.purchasePrice),
-            salePrice: num(row.salePrice),
-            taxRate: num(row.taxRate),
-            note: clip(row.note, 500),
-            createdBy: org.actorId,
-          },
-        });
-        return code;
-      },
-    },
-    erp_vendor: {
-      label: '供应商',
-      columns: [
-        'code',
-        'name',
-        'contactName',
-        'phone',
-        'email',
-        'taxNo',
-        'address',
-        'note',
-      ],
-      importRow: async (org, row) => {
-        const name = clip(row.name, 120);
-        if (!name) throw new Error('供应商名称不能为空');
-        const code = clip(row.code, 32) || `V${Date.now().toString(36)}`;
-        await this.prisma.erpVendor.create({
-          data: {
-            ...orgKey(org),
-            code,
-            name,
-            contactName: clip(row.contactName, 64),
-            phone: clip(row.phone, 32),
-            email: clip(row.email, 120),
-            taxNo: clip(row.taxNo, 32),
-            address: clip(row.address, 200),
-            note: clip(row.note, 500),
-          },
-        });
-        return code;
-      },
-    },
+    // erp_product / erp_vendor 不在这张表里：主数据导入是 ERP 域自己的写操作，机制层只留通用模块。
+    // 由 `erp/erp-mechanism.module.ts` 注册进来，产品税率截断与供应商 bizParty 挂接因此只有一份实现；
+    // 当年这里另写一份 create，导入的供应商没有 partyId，项目成本按名称回匹就断了链。
     hrm_profile: {
       label: '员工档案',
       columns: [
@@ -245,6 +183,25 @@ export class MechanismImportService extends MechanismBase {
       throw new BusinessException(ErrorCode.NOT_FOUND, '映射方案不存在');
     await this.prisma.importFieldMap.delete({ where: { id } });
     return { id };
+  }
+
+  /**
+   * 导入模块注册点（与导出的 `registerExportModule` 对称）。
+   *
+   * 主数据（产品/供应商/库存）的写入属于各自业务域：字段校验、默认值、外部主体挂接、
+   * 编码唯一性都只有域自己说得清。机制层留一份 `prisma.erp*` 直写，就等于把这些规则
+   * 抄了一遍——抄的那份不建 bizParty、不截断税率，导入的数据在下游页面上对不上。
+   * 同 module 重复注册＝覆盖，域自己的实现优先。
+   */
+  registerImportModule(
+    definition: { module: string; label: string; columns: string[] },
+    importRow: (org: HrmOrg, row: Row) => Promise<string>,
+  ) {
+    this.importModules[definition.module] = {
+      label: definition.label,
+      columns: definition.columns,
+      importRow,
+    };
   }
 
   async createJob(user: CurrentUser, body: Row) {

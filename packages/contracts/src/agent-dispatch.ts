@@ -2,7 +2,7 @@ import { z } from "zod";
 
 /**
  * Agent 群控（docs/Agent群控（替换插件页签）产品设计方案.md）：
- * 把「指挥 BotBuddy 主机 + Mobot 手机 + WorkBuddy 企业云」做成 Agent 的能力——目标清单与派单台账都从这里走。
+ * 把「指挥 AWBotDSH 主机 + AWBot 手机 + WorkBuddy 企业云」做成 Agent 的能力——目标清单与派单台账都从这里走。
  * 三类目标各有各的存储与下发通道（设备两表 / 云端两表），这里只定义台账与工具共用的那一套形状。
  */
 
@@ -17,19 +17,19 @@ export const BOT_DISPATCH_SOURCE_LABELS: Record<string, string> = {
 /**
  * 群控可派目标类型（决议 D6 把企云纳进来）。
  * 与 `BOT_CLIENT_KINDS` 刻意分开：后者是 `workbuddy_hosts.client_kind` 的口径——有令牌、靠心跳领指令的机器；
- * 云账号既没有令牌也不心跳，不能塞进设备表，所以群控侧另立三元词汇，DESKTOP / MOBOT 取值保持一致。
+ * 云账号既没有令牌也不心跳，不能塞进设备表，所以群控侧另立三元词汇，DESKTOP / AWBOT 取值保持一致。
  */
-export const BOT_DISPATCH_TARGET_KINDS = ["DESKTOP", "MOBOT", "WORKBUDDY"] as const;
+export const BOT_DISPATCH_TARGET_KINDS = ["DESKTOP", "AWBOT", "WORKBUDDY"] as const;
 export type BotDispatchTargetKind = (typeof BOT_DISPATCH_TARGET_KINDS)[number];
 export const BOT_DISPATCH_TARGET_KIND_LABELS: Record<string, string> = {
   DESKTOP: "Bot 主机",
-  MOBOT: "Mobot 手机",
+  AWBOT: "AWBot 手机",
   WORKBUDDY: "WorkBuddy 企业云",
 };
 /** 「+」入口与范围标签用的短名（一屏放不下「WorkBuddy 企业云」）。 */
 export const BOT_DISPATCH_TARGET_KIND_SHORT_LABELS: Record<string, string> = {
   DESKTOP: "主机",
-  MOBOT: "手机",
+  AWBOT: "手机",
   WORKBUDDY: "企云",
 };
 
@@ -63,12 +63,12 @@ export const botDispatchAgentRefSchema = z.object({
 export type BotDispatchAgentRef = z.infer<typeof botDispatchAgentRefSchema>;
 
 /**
- * 群控目标清单：BotBuddy 主机与 Mobot 手机来自设备表，WorkBuddy 企业云来自企云账号表。
+ * 群控目标清单：AWBotDSH 主机与 AWBot 手机来自设备表，WorkBuddy 企业云来自企云账号表。
  * 只带「能不能派、适合派什么」需要的字段，各通道特有的细节仍回各自页面看。
  */
 export const botDispatchDeviceSchema = z.object({
   id: z.number(),
-  /** DESKTOP / MOBOT＝主机编号，WORKBUDDY＝企云账号编号（与台账行的 hostId 同一口径）。 */
+  /** DESKTOP / AWBOT＝主机编号，WORKBUDDY＝企云账号编号（与台账行的 hostId 同一口径）。 */
   name: z.string(),
   clientKind: z.enum(BOT_DISPATCH_TARGET_KINDS),
   kindLabel: z.string(),
@@ -102,7 +102,7 @@ export const botDispatchTaskSchema = z.object({
   id: z.number(),
   /** 一次性派单用 commandCode（全局唯一）；定时任务用 `sch_{id}`，云端定时用 `csch_{id}`，都能被 list_dispatch_tasks 追踪。 */
   taskKey: z.string(),
-  /** DESKTOP / MOBOT＝主机编号，WORKBUDDY＝企云账号编号；与 `clientKind` 合起来才是行的主键。 */
+  /** DESKTOP / AWBOT＝主机编号，WORKBUDDY＝企云账号编号；与 `clientKind` 合起来才是行的主键。 */
   hostId: z.number(),
   hostName: z.string(),
   /** 存储路由键：WORKBUDDY 的行来自云端两表，其余来自设备两表（设备表永远取不到 WORKBUDDY）。 */

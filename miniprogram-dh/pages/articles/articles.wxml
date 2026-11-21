@@ -1,0 +1,14 @@
+<view class="page" style="{{themeStyle}}">
+  <view wx:if="{{error}}" class="status-banner">{{error}}</view>
+
+  <view wx:for="{{list}}" wx:key="id" class="card article" data-id="{{item.id}}" data-type="{{item.contentType}}" bindtap="open">
+    <view class="article-main">
+      <view class="article-title">{{item.title}}</view>
+      <view wx:if="{{item.summary}}" class="article-summary">{{item.summary}}</view>
+      <view class="article-time">{{item.createdAt}}</view>
+    </view>
+    <image wx:if="{{item.cover}}" class="article-cover" src="{{item.cover}}" mode="aspectFill" />
+  </view>
+
+  <view wx:if="{{!loading && !list.length}}" class="empty">暂无{{title}}</view>
+</view>

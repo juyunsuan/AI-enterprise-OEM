@@ -1,0 +1,94 @@
+.score-card {
+  text-align: center;
+  padding: 40rpx 24rpx;
+}
+
+.score-label {
+  color: #5c6068;
+  font-size: 28rpx;
+}
+
+.stars {
+  display: flex;
+  justify-content: center;
+  margin-top: 16rpx;
+}
+
+.star {
+  padding: 0 12rpx;
+  color: #dfe2e8;
+  font-size: 64rpx;
+  line-height: 1.2;
+}
+
+.star.on {
+  color: #f5a623;
+}
+
+.score-text {
+  margin-top: 8rpx;
+  color: #8a8f99;
+  font-size: 24rpx;
+}
+
+.block-title {
+  margin-bottom: 12rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.star-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12rpx 0;
+}
+
+.star-label {
+  color: #5c6068;
+  font-size: 27rpx;
+}
+
+.stars-sm {
+  margin-top: 0;
+}
+
+.stars-sm .star {
+  padding: 0 8rpx;
+  font-size: 44rpx;
+}
+
+.tag-wrap {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.tag-wrap .pill {
+  margin: 0 16rpx 16rpx 0;
+}
+
+.textarea {
+  width: 100%;
+  height: 200rpx;
+  padding: 16rpx;
+  box-sizing: border-box;
+  background: #f7f8fa;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+}
+
+.anon-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 20rpx;
+}
+
+.footer {
+  padding: 8rpx 24rpx 48rpx;
+}
+
+.button-primary {
+  height: 88rpx;
+  line-height: 88rpx;
+}

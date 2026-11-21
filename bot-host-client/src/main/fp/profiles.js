@@ -5,7 +5,7 @@
  *
  *   · 最多 100 个档案（存储上限）；
  *   · seed 决定内核生成的一整套指纹，跨重启稳定；
- *   · 代理密码用本机密钥（~/.botbuddy/fp-secret.key）AES-256-GCM 加密，
+ *   · 代理密码用本机密钥（~/.awbotdsh/fp-secret.key）AES-256-GCM 加密，
  *     视图只回 hasPassword，明文只在启动内核/转发代理时短暂使用。
  */
 

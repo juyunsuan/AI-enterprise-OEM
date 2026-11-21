@@ -34,6 +34,7 @@ import {
 } from "@enterprise/contracts";
 import { PageHero, Panel } from "@/components/ui/panel";
 import { ToolCard, ToolCardGrid } from "@/components/ui/tool-card";
+import { useToolVisibility } from "@/lib/feature-visibility";
 import { AcquisitionTab } from "./_components/acquisition-tab";
 import { ScrmTab } from "./_components/scrm-tab";
 import { AliyunCallTab } from "./_components/aliyun-call-tab";
@@ -86,6 +87,12 @@ type ToolCard = {
   href?: string;
   /** 站内独立页面：点卡片在站内跳转（如国际独立站）。 */
   to?: string;
+  /**
+   * 功能目录 code：后台关掉该功能时，这张卡与对应视图一并收掉（与侧栏 filterClosedMenu 同口径）。
+   * 本页的工具不是侧栏菜单叶子，此前关掉功能只会让接口 403，卡片照常能点进来。
+   * 一个视图同时被多个功能码治理时写成数组，全开才展示。
+   */
+  feature?: string | string[];
 };
 
 type ToolGroupKey = "acquisition" | "content" | "data" | "touch";
@@ -138,6 +145,7 @@ const TOOLS: ToolCard[] = [
     name: "企微 SCRM",
     icon: <RobotOutlined aria-hidden />,
     group: "acquisition",
+    feature: "wecom-scrm",
     desc: "以企业微信为客户唯一同步源：客户与客户群、活码与欢迎语、自动打标、群发（人工确认不可关闭）、在职/离职继承、SOP、员工侧边栏 H5、敏感词与 AI 质检；启用后企点侧客户导入自动暂停，避免双写。",
   },
   {
@@ -201,6 +209,8 @@ const TOOLS: ToolCard[] = [
     name: "国际独立站",
     icon: <GlobalOutlined aria-hidden />,
     group: "content",
+    // 同一个视图由两个功能码治理：国际独立站（global-site）与 GEO 建站（geo-site），全开才给入口。
+    feature: ["global-site", "geo-site"],
     desc: "拖拽搭建多语言独立站：页面、菜单、文章与产品按语言分别维护，模板库、发布台账与域名绑定；可发布到平台子域或客户自有域名，欠费只停服不删数据。",
   },
   {
@@ -266,6 +276,21 @@ const isBigdataTool = (key: ToolKey): key is BigdataDatasetKey =>
 export default function MarketingToolsPage() {
   const [tab, setTab] = useState<ToolKey>("overview");
   const router = useRouter();
+  const { isOpen } = useToolVisibility();
+
+  /** 工具是否可展示：功能目录没关掉它绑定的功能码（未绑功能码的照常展示）。 */
+  const toolOpen = (tool: ToolCard) => {
+    const codes = Array.isArray(tool.feature)
+      ? tool.feature
+      : tool.feature
+        ? [tool.feature]
+        : [];
+    return codes.every((code) => isOpen(code));
+  };
+  const visibleTools = TOOLS.filter(toolOpen);
+  // 直链 ?tab=scrm / ?tab=geo-site 也要跟着开关收窄：被关掉的工具不渲染视图。
+  const activeTool = TOOLS.find((tool) => tool.key === tab);
+  const blocked = tab !== "overview" && activeTool ? !toolOpen(activeTool) : false;
 
   // 功能目录里的「企业微信 SCRM」用 ?tab=wecom-scrm 直达该卡片，避免落到总览再找一遍。
   // 独立站作为营销工具页内 tab 渲染（与其它工具同款版式）；旧链接 ?tab=geo-site / international-site 都落到这个页签。
@@ -297,7 +322,7 @@ export default function MarketingToolsPage() {
       {tab === "overview" ? (
         <div style={{ display: "grid", gap: 20 }}>
           {TOOL_GROUPS.map((group) => {
-            const rows = TOOLS.filter((tool) => tool.group === group.key);
+            const rows = visibleTools.filter((tool) => tool.group === group.key);
             if (!rows.length) return null;
             return (
               <Panel
@@ -332,6 +357,12 @@ export default function MarketingToolsPage() {
             );
           })}
         </div>
+      ) : blocked ? (
+        <Panel title="该工具已关闭">
+          <span className="muted text-12">
+            「{activeTool?.name}」对应的功能已在后台功能开关里关闭，接口同批次拦截；需要启用请到「平台管理 · 功能开关」打开对应功能，或让主账号在「子账号与操作日志」里给你授权该模块。
+          </span>
+        </Panel>
       ) : (
         <>
           {tab === "acquisition" ? (

@@ -7,6 +7,7 @@ import {
   type GeoChatResult,
 } from '../geo/geo-llm.client';
 import type { PrismaService } from '../prisma/prisma.service';
+import { meterChatCall } from '../ai/ai-gateway';
 
 /**
  * 知识库 LLM 薄适配（§10.5）：
@@ -96,6 +97,12 @@ export async function kbChatMulti(
       timeoutMs: 60_000,
       userId,
       api: channel.protocol === 'anthropic' ? 'anthropic' : 'openai',
+    });
+    // 直连模型也要留用量事实（只记录不扣费），否则成本报表永远看不到这条链路
+    await meterChatCall(userId, result, {
+      module: 'kb',
+      operation: 'chat',
+      model: channel.model,
     });
     return { ...result, model: channel.model };
   } catch {

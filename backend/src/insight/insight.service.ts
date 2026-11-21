@@ -17,6 +17,12 @@ import {
   insightPurposesInScope,
   insightScopeOfPurpose,
   validateInsightUrlTemplate,
+  insightPriceBandOf,
+  INSIGHT_COMMERCIAL_BANDS,
+  insightTagDimensionLabel,
+  parseInsightTagMetricKey,
+  insightColorHexMap,
+  consultingFrameworkLabel,
 } from '@enterprise/contracts';
 import type { InsightCollectionSkillKey } from '@enterprise/contracts';
 import type {
@@ -24,6 +30,11 @@ import type {
   InsightPageObject,
   InsightPurpose,
   InsightSourceKind,
+  FdeAnalysisResult,
+  ConsultingAnalysisResult,
+  ConsultingFrameworkKey,
+  ConsultingFrameworkResult,
+  ConsultingProfile,
 } from '@enterprise/contracts';
 import type { Prisma } from '../../generated/prisma';
 import { LIST_ALL_LIMIT, text } from '../common/api';
@@ -34,10 +45,29 @@ import { IdentityService } from '../identity/identity.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { DataTableService } from '../data-table/data-table.service';
 import { toJsonArray, toJsonObject } from '../shared/json-value';
-import { aiJson } from '../ai/ai-gateway';
+import { aiChat, aiJson, parseJsonObject } from '../ai/ai-gateway';
+import {
+  buildFdeMessages,
+  fdeIndustryLabel,
+  fdeIndustryOf,
+  fdeProfileSummary,
+  normalizeFdeProfile,
+  normalizeFdeResult,
+} from './fde-framework';
+import {
+  buildFrameworkMessages,
+  buildSynthesisMessages,
+  consultingIndustryOf,
+  consultingProfileSummary,
+  normalizeConsultingInput,
+  normalizeFrameworkResult,
+  normalizeSynthesis,
+} from './consulting-framework';
 import type { DeliverableSink } from '../content/deliverable';
 import type { AssetVisionService } from '../content/vision.service';
+import type { ContentMediaService } from '../content/content-media.service';
 import type { RpaChromeScheduleService } from '../rpa/chrome-schedule.service';
+import type PptxGenJS from 'pptxgenjs';
 
 /**
  * 智慧分析板块服务（采集先行：先配目的与源头 → 采集落表 → 分析只读采集结果）。
@@ -50,7 +80,7 @@ import type { RpaChromeScheduleService } from '../rpa/chrome-schedule.service';
  * - 热点是采集行的聚合产物，删了可重算，MVP 分组＝话题∪关键词（D2=A）；
  * - 三热度分列（interaction/visual/commercial），趋势只读消费既有数字资产与采集结果；
  * - 一切按账号（userId）归属；AI 全走统一网关，产物经 deliverable 通道入数字资产；
- * - 派发按数据源建周期任务（D4：BotBuddy 主机托管为主、本机浏览器代理为备），
+ * - 派发按数据源建周期任务（D4：AWBotDSH 主机托管为主、本机浏览器代理为备），
  *   任何前置不满足都降级为「目标 + 手动入口」，不阻断订阅主流程。
  */
 
@@ -69,7 +99,21 @@ type PresetKey = keyof typeof INSIGHT_PRESET_TABLES;
 const DAY_MS = 86_400_000;
 const REPORT_MAX_TOKENS = 3000;
 const REPORT_TIMEOUT_MS = 90_000;
+/** AI-FDE 报告是一次性长文结构化产出，给足 token 与超时；仍走统一网关计量。 */
+const FDE_MAX_TOKENS = 14000;
+const FDE_TIMEOUT_MS = 180_000;
+/**
+ * 企业咨询：逐模型各调一次（并行，单次产出小、不易被截断），再单独调一次做综合汇总。
+ * 单模型产出上限按「一个方法论 + 3-6 个结论分组」估算。
+ */
+const CONSULTING_FRAMEWORK_MAX_TOKENS = 6000;
+const CONSULTING_FRAMEWORK_TIMEOUT_MS = 90_000;
+const CONSULTING_FRAMEWORK_CONCURRENCY = 4;
+const CONSULTING_SYNTHESIS_MAX_TOKENS = 6000;
+const CONSULTING_SYNTHESIS_TIMEOUT_MS = 120_000;
 const TAG_BATCH_LIMIT = 50;
+/** 调度自动打标每账号单轮上限（省额度，开关开启才跑）。 */
+const TAG_AUTO_LIMIT = 15;
 /** 一订阅最多派多少个源头的任务（再多就是自己给自己刷配额）。 */
 const MAX_SOURCES_PER_SUBSCRIPTION = 8;
 /** 统计落表行数时单次扫描的行数上限（与既有订阅内容计数同口径，内存归并）。 */
@@ -79,7 +123,7 @@ const CHANNEL_FRESH_MS = 90_000;
 /** 一轮采集的落表统计窗：派发后这么久之内进来的同源行算本轮产物。 */
 const RUN_LAND_WINDOW_MS = 2 * 3600_000;
 
-/** 采集通道：host＝BotBuddy 主机托管窗口，local＝本机 Chrome 浏览器代理。 */
+/** 采集通道：host＝AWBotDSH 主机托管窗口，local＝本机 Chrome 浏览器代理。 */
 type CollectionChannel = 'host' | 'local';
 
 /** 订阅挂的周期采集任务引用：一源一任务，故必须带回 sourceId 才能把批次关联回首轮源头。 */
@@ -160,9 +204,36 @@ function str(value: unknown): string {
   return text(value).trim();
 }
 
+/**
+ * 销量展示值解析：页面公开的多是 "1.2万+"、"300+"、"5千"、"销量123" 这类粗口径。
+ * 取首个数字并按 万/千/w/k 量级放大；解析不出按 0。仅供业务参考，不当精准经营依据。
+ */
+function salesValue(raw: unknown): number {
+  const s = text(raw);
+  if (!s) return 0;
+  const m = s.match(/(\d+(?:\.\d+)?)\s*([万千wkW K]?)/);
+  if (!m) return 0;
+  const base = Number(m[1]);
+  if (!Number.isFinite(base)) return 0;
+  const unit = (m[2] || '').toLowerCase();
+  if (unit === '万' || unit === 'w') return base * 10000;
+  if (unit === '千' || unit === 'k') return base * 1000;
+  return base;
+}
+
 function strArray(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value.map((item) => str(item)).filter(Boolean);
+}
+
+/** JSON 列 → 字符串键值；只给提交清单这类扁平结构用。 */
+function jsonStringRecord(value: unknown): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return out;
+  for (const [key, item] of Object.entries(value)) {
+    out[key] = str(item);
+  }
+  return out;
 }
 
 function isoOrEmpty(value: Date | null | undefined): string {
@@ -174,10 +245,12 @@ export class InsightService {
   deliverableSink?: DeliverableSink;
   /** 采集派发通道（services.ts 装配）：订阅→浏览器代理计划任务。 */
   schedule?: RpaChromeScheduleService;
-  /** 主机托管通道（services.ts 装配）：订阅→BotBuddy 主机定时任务（采集主通道）。 */
+  /** 主机托管通道（services.ts 装配）：订阅→AWBotDSH 主机定时任务（采集主通道）。 */
   hostChannel?: InsightHostChannel;
   /** 视觉理解通道（services.ts 装配）：资产批量打标→元素趋势指标。 */
   vision?: AssetVisionService;
+  /** 图像生成通道（services.ts 装配）：款式衍生图生图（withImages 时用）。 */
+  media?: ContentMediaService;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -272,6 +345,29 @@ export class InsightService {
     return { contentTableId, ledgerTableId, ecomTableId };
   }
 
+  /**
+   * 趋势标签观测表 id：缓存在 setting.scoreConfig.wearTableId（不加 Prisma 列/迁移）。
+   * 表被删则按模板重建并记回；列由 ensurePresetTable 自动补齐。
+   */
+  private async ensureWearTableId(user: CurrentUser): Promise<number> {
+    const setting = await this.ensureSetting(user);
+    const stored =
+      setting.scoreConfig && typeof setting.scoreConfig === 'object'
+        ? (setting.scoreConfig as Record<string, unknown>)
+        : {};
+    const currentId = num(stored.wearTableId);
+    const tableId = await this.ensurePresetTable(user, 'wearTag', currentId);
+    if (tableId !== currentId) {
+      await this.prisma.insightSetting.update({
+        where: { id: setting.id },
+        data: {
+          scoreConfig: toJsonObject({ ...stored, wearTableId: tableId }),
+        },
+      });
+    }
+    return tableId;
+  }
+
   private async tableInfo(tableId: number) {
     if (tableId <= 0) {
       return { id: 0, exists: false, name: '', fieldCount: 0 };
@@ -316,7 +412,7 @@ export class InsightService {
     return [
       {
         kind: 'managed',
-        label: 'BotBuddy 主机托管窗口（主通道）',
+        label: 'AWBotDSH 主机托管窗口（主通道）',
         online: host > 0,
       },
       {
@@ -1451,7 +1547,7 @@ export class InsightService {
       return {
         dispatched: true,
         reason: `已下发 ${dispatched}/${sources.length} 轮采集（${
-          refs[0]?.channel === 'host' ? 'BotBuddy 主机托管' : '本机浏览器代理'
+          refs[0]?.channel === 'host' ? 'AWBotDSH 主机托管' : '本机浏览器代理'
         }，按采集包的幂等锚写回采集表）`,
         goal,
         entryPath: this.collectionEntryPath(scope, 'runs'),
@@ -1463,7 +1559,7 @@ export class InsightService {
       dispatched: false,
       reason: online
         ? '任务已挂上但本轮没跑起来，请到采集批次 / 计划任务看最近一次失败原因'
-        : '主备采集通道均离线：请在 BotBuddy 主机开托管窗口，或本机安装浏览器代理',
+        : '主备采集通道均离线：请在 AWBotDSH 主机开托管窗口，或本机安装浏览器代理',
       goal,
       entryPath: online ? '/rpa?tab=schedule' : '/agent-bot',
     };
@@ -1745,6 +1841,239 @@ export class InsightService {
     return { groups: list.length, upserted };
   }
 
+  // ---------- 商业趋势重算：读「电商选品观测」行 → commercial 指标（价格带/关键词/店铺）----------
+
+  /**
+   * 商业选品维度生产者（补过去只读不写的 commercial）。读电商采集行，按
+   * 价格带 / 来源关键词 / 店铺 三组聚合出占比、销量指数、均价与环比增速，
+   * 写成日频 commercial 指标快照，供价格带图、红蓝海四象限、竞品对比、爆款打分直接消费。
+   * 可重复执行（按 userId+key+period upsert）。
+   */
+  async recomputeTrendMetrics(user: CurrentUser) {
+    const setting = await this.ensureSetting(user);
+    const { ecomTableId } = await this.ensurePresetTables(user);
+    const rows = await this.prisma.dataTableRow.findMany({
+      where: { tableId: ecomTableId, createdBy: user.userId },
+      orderBy: { createdAt: 'desc' },
+      take: TALLY_ROW_LIMIT,
+    });
+    const config = this.scoreConfig(setting);
+    const now = Date.now();
+    const windowStart = now - config.timeWindowDays * DAY_MS;
+    const seven = now - 7 * DAY_MS;
+    const period = new Date().toISOString().slice(0, 10);
+
+    type Acc = {
+      count: number;
+      priceSum: number;
+      salesSum: number;
+      recentSales: number;
+      prevSales: number;
+      recentCount: number;
+      prevCount: number;
+    };
+    const blank = (): Acc => ({
+      count: 0,
+      priceSum: 0,
+      salesSum: 0,
+      recentSales: 0,
+      prevSales: 0,
+      recentCount: 0,
+      prevCount: 0,
+    });
+    const bands = new Map<string, Acc>();
+    const shops = new Map<string, Acc>();
+    const keywords = new Map<string, Acc>();
+    let total = 0;
+    for (const row of rows) {
+      const at = row.createdAt.getTime();
+      if (at < windowStart) continue;
+      const data = (row.data ?? {}) as Record<string, unknown>;
+      const price = num(data.price);
+      const sales = salesValue(data.sales_display);
+      total += 1;
+      const feed = (map: Map<string, Acc>, key: string) => {
+        if (!key) return;
+        const acc = map.get(key) ?? blank();
+        acc.count += 1;
+        acc.priceSum += price;
+        acc.salesSum += sales;
+        if (at >= seven) {
+          acc.recentSales += sales;
+          acc.recentCount += 1;
+        } else if (at >= seven - 7 * DAY_MS) {
+          acc.prevSales += sales;
+          acc.prevCount += 1;
+        }
+        map.set(key, acc);
+      };
+      feed(bands, `priceband:${insightPriceBandOf(price)}`);
+      feed(shops, str(data.shop) ? `shop:${str(data.shop)}` : '');
+      feed(keywords, str(data.keyword) ? `keyword:${str(data.keyword)}` : '');
+    }
+
+    const denom = Math.max(1, total);
+    let written = 0;
+    const growthOf = (acc: Acc, metric: 'recentSales' | 'recentCount') => {
+      const prevKey = metric.replace('recent', 'prev') as
+        'prevSales' | 'prevCount';
+      const prev = acc[prevKey];
+      const recent = acc[metric];
+      if (prev > 0) return ((recent - prev) / prev) * 100;
+      return recent > 0 ? 100 : 0;
+    };
+
+    // 价格带：value=占比，raw 带均价/销量指数/增速
+    for (const [key, acc] of bands) {
+      const share = (acc.count / denom) * 100;
+      const growth = growthOf(acc, 'recentCount');
+      await this.prisma.insightMetric.upsert({
+        where: {
+          userId_metricKey_metricType_period: {
+            userId: user.userId,
+            metricKey: key,
+            metricType: 'commercial',
+            period,
+          },
+        },
+        create: {
+          userId: user.userId,
+          metricKey: key,
+          metricType: 'commercial',
+          period,
+          value: share,
+          rawValue: toJsonObject({
+            count: acc.count,
+            avgPrice: acc.count ? acc.priceSum / acc.count : 0,
+            salesSum: acc.salesSum,
+            salesIndex: 0,
+            growthRate: growth,
+          }),
+          growthRate: growth,
+        },
+        update: {
+          value: share,
+          rawValue: toJsonObject({
+            count: acc.count,
+            avgPrice: acc.count ? acc.priceSum / acc.count : 0,
+            salesSum: acc.salesSum,
+            salesIndex: 0,
+            growthRate: growth,
+          }),
+          growthRate: growth,
+        },
+      });
+      written += 1;
+    }
+
+    // 关键词（红蓝海纵轴候选）：value=占比，增速按销量
+    for (const [key, acc] of keywords) {
+      const share = (acc.count / denom) * 100;
+      const growth = growthOf(acc, 'recentSales');
+      await this.prisma.insightMetric.upsert({
+        where: {
+          userId_metricKey_metricType_period: {
+            userId: user.userId,
+            metricKey: key,
+            metricType: 'commercial',
+            period,
+          },
+        },
+        create: {
+          userId: user.userId,
+          metricKey: key,
+          metricType: 'commercial',
+          period,
+          value: share,
+          rawValue: toJsonObject({
+            count: acc.count,
+            avgPrice: acc.count ? acc.priceSum / acc.count : 0,
+            salesSum: acc.salesSum,
+            salesIndex: 0,
+            growthRate: growth,
+          }),
+          growthRate: growth,
+        },
+        update: {
+          value: share,
+          rawValue: toJsonObject({
+            count: acc.count,
+            avgPrice: acc.count ? acc.priceSum / acc.count : 0,
+            salesSum: acc.salesSum,
+            salesIndex: 0,
+            growthRate: growth,
+          }),
+          growthRate: growth,
+        },
+      });
+      written += 1;
+    }
+
+    // 店铺竞品：value=销量指数（相对最高店铺归一 0–100）
+    const maxShopSales = Math.max(
+      1,
+      ...[...shops.values()].map((acc) => acc.salesSum),
+    );
+    for (const [key, acc] of shops) {
+      const salesIndex = (acc.salesSum / maxShopSales) * 100;
+      await this.prisma.insightMetric.upsert({
+        where: {
+          userId_metricKey_metricType_period: {
+            userId: user.userId,
+            metricKey: key,
+            metricType: 'commercial',
+            period,
+          },
+        },
+        create: {
+          userId: user.userId,
+          metricKey: key,
+          metricType: 'commercial',
+          period,
+          value: salesIndex,
+          rawValue: toJsonObject({
+            count: acc.count,
+            avgPrice: acc.count ? acc.priceSum / acc.count : 0,
+            salesSum: acc.salesSum,
+            salesIndex,
+          }),
+          growthRate: growthOf(acc, 'recentSales'),
+        },
+        update: {
+          value: salesIndex,
+          rawValue: toJsonObject({
+            count: acc.count,
+            avgPrice: acc.count ? acc.priceSum / acc.count : 0,
+            salesSum: acc.salesSum,
+            salesIndex,
+          }),
+          growthRate: growthOf(acc, 'recentSales'),
+        },
+      });
+      written += 1;
+    }
+
+    return { rows: total, written };
+  }
+
+  // ---------- 采集后置自动打标（开关控，默认关，避免定时烧额度）----------
+
+  /**
+   * 调度调用：仅当账号开启 autoTagEnabled 且有视觉通道时，跑一小批结构化打标。
+   * 未开启直接跳过，不产生任何模型调用。
+   */
+  async autoTagForUser(user: CurrentUser, token?: string) {
+    const settings = await this.getSettings(user);
+    if (!settings.autoTagEnabled || !this.vision) {
+      return {
+        skipped: true as const,
+        reason: settings.autoTagEnabled ? '视觉通道未装配' : '自动打标未开启',
+      };
+    }
+    const result = await this.tagAssets(user, { limit: TAG_AUTO_LIMIT }, token);
+    return { skipped: false as const, ...result };
+  }
+
   // ---------- 趋势只读视图（S7 前只回既有资产与指标）----------
 
   async trendsOverview(user: CurrentUser) {
@@ -1792,13 +2121,7 @@ export class InsightService {
       assetCount,
       taggedCount,
       elementTrends: visual.map((row) => this.shapeMetric(row)),
-      colorTrends: [] as {
-        metricKey: string;
-        metricType: string;
-        period: string;
-        value: number;
-        growthRate: number;
-      }[],
+      colorTrends: await this.latestTagMetrics(user.userId, 'color', 20),
       quadrant,
       linkageEnabled: setting.linkageEnabled === 1,
       // 趋势采集健康度与热点侧同一算法，只是数 trend-* 那组采集目的
@@ -1806,9 +2129,358 @@ export class InsightService {
     };
   }
 
+  // ---------- 趋势多维分析视图（专业看板：曲线 / 色彩 / 价格带 / 红蓝海 / 竞品 / 预测）----------
+
+  /** 某标签维度的最新周期指标列表（用于色彩榜等），value 即占比。 */
+  private async latestTagMetrics(
+    userId: string,
+    dimension: string,
+    limit: number,
+  ) {
+    const rows = await this.prisma.insightMetric.findMany({
+      where: {
+        userId,
+        metricType: 'visual',
+        metricKey: { startsWith: `${dimension}:` },
+      },
+      orderBy: { period: 'desc' },
+      take: 400,
+    });
+    const best = new Map<string, (typeof rows)[number]>();
+    for (const row of rows) {
+      if (!best.has(row.metricKey)) best.set(row.metricKey, row);
+    }
+    const hexMap = insightColorHexMap();
+    return [...best.values()]
+      .sort((a, b) => Number(b.value) - Number(a.value))
+      .slice(0, limit)
+      .map((row) => ({
+        metricKey: row.metricKey,
+        metricType: row.metricType,
+        period: row.period,
+        value: Number(row.value),
+        growthRate: Number(row.growthRate),
+        hex: hexMap[parseInsightTagMetricKey(row.metricKey)?.value ?? ''] ?? '',
+      }));
+  }
+
+  /** 取某 metricKey 在 [from,to] 周期区间内的时序点（按 period 升序）。 */
+  private async metricSeriesInRange(
+    userId: string,
+    metricType: string,
+    fromPeriod: string,
+    toPeriod: string,
+    keyFilter: (key: string) => boolean,
+  ) {
+    const rows = await this.prisma.insightMetric.findMany({
+      where: {
+        userId,
+        metricType,
+        period: { gte: fromPeriod, lte: toPeriod },
+      },
+      orderBy: { period: 'asc' },
+      take: 4000,
+    });
+    const byKey = new Map<
+      string,
+      { period: string; value: number; growthRate: number }[]
+    >();
+    for (const row of rows) {
+      if (!keyFilter(row.metricKey)) continue;
+      const list = byKey.get(row.metricKey) ?? [];
+      list.push({
+        period: row.period,
+        value: Number(row.value),
+        growthRate: Number(row.growthRate),
+      });
+      byKey.set(row.metricKey, list);
+    }
+    return byKey;
+  }
+
+  async trendAnalysis(user: CurrentUser, query: Record<string, unknown>) {
+    const setting = await this.ensureSetting(user);
+    const days = Math.max(7, Math.min(365, num(query.windowDays) || 90));
+    const dimensionFilter = str(query.dimension);
+    const now = new Date();
+    const from = new Date(now.getTime() - days * DAY_MS);
+    const fromPeriod = from.toISOString().slice(0, 10);
+    const toPeriod = now.toISOString().slice(0, 10);
+    const hexMap = insightColorHexMap();
+
+    const [assetCount, tagRows] = await Promise.all([
+      this.prisma.digitalAssetEntry.count({ where: { userId: user.userId } }),
+      this.prisma.digitalAssetEntry.findMany({
+        where: { userId: user.userId, type: 'image' },
+        select: { labels: true },
+        take: 1000,
+      }),
+    ]);
+    const taggedCount = tagRows.filter(
+      (row) => strArray(row.labels).length > 0,
+    ).length;
+
+    // 视觉曲线：按 dimension:value 取时序，筛维度、取占比最高的若干条成曲线
+    const visualSeries = await this.metricSeriesInRange(
+      user.userId,
+      'visual',
+      fromPeriod,
+      toPeriod,
+      (key) => !dimensionFilter || key.startsWith(`${dimensionFilter}:`),
+    );
+    const buildTagSeries = (
+      byKey: Map<
+        string,
+        { period: string; value: number; growthRate: number }[]
+      >,
+      limit: number,
+    ) => {
+      const ranked = [...byKey.entries()]
+        .map(([key, points]) => {
+          const parsed = parseInsightTagMetricKey(key);
+          const latest = points[points.length - 1];
+          return {
+            key,
+            dimension: parsed?.dimension ?? '',
+            value: parsed?.value ?? key,
+            label: parsed
+              ? `${insightTagDimensionLabel(parsed.dimension)}·${parsed.value}`
+              : key,
+            hex:
+              parsed?.dimension === 'color' ? (hexMap[parsed.value] ?? '') : '',
+            share: latest?.value ?? 0,
+            growthRate: latest?.growthRate ?? 0,
+            points,
+          };
+        })
+        .sort((a, b) => b.share - a.share)
+        .slice(0, limit);
+      return ranked.map((item) => ({
+        dimension: item.dimension,
+        value: item.value,
+        label: item.label,
+        hex: item.hex,
+        share: item.share,
+        growthRate: item.growthRate,
+        points: item.points,
+      }));
+    };
+    const series = buildTagSeries(visualSeries, 24);
+    const colorSeries = buildTagSeries(
+      await this.metricSeriesInRange(
+        user.userId,
+        'visual',
+        fromPeriod,
+        toPeriod,
+        (k) => k.startsWith('color:'),
+      ),
+      16,
+    );
+
+    // 商业曲线：价格带 / 关键词 / 店铺
+    const bandMap = await this.metricSeriesInRange(
+      user.userId,
+      'commercial',
+      fromPeriod,
+      toPeriod,
+      (k) => k.startsWith('priceband:'),
+    );
+    const keywordMap = await this.metricSeriesInRange(
+      user.userId,
+      'commercial',
+      fromPeriod,
+      toPeriod,
+      (k) => k.startsWith('keyword:'),
+    );
+    const shopMap = await this.metricSeriesInRange(
+      user.userId,
+      'commercial',
+      fromPeriod,
+      toPeriod,
+      (k) => k.startsWith('shop:'),
+    );
+
+    const readRaw = async (key: string) => {
+      const row = await this.prisma.insightMetric.findFirst({
+        where: {
+          userId: user.userId,
+          metricType: 'commercial',
+          metricKey: key,
+        },
+        orderBy: { period: 'desc' },
+      });
+      return (
+        row?.rawValue && typeof row.rawValue === 'object'
+          ? (row.rawValue as Record<string, unknown>)
+          : {}
+      ) as Record<string, number>;
+    };
+
+    type BandRow = {
+      key: string;
+      label: string;
+      count: number;
+      share: number;
+      avgPrice: number;
+      salesIndex: number;
+      growthRate: number;
+    };
+    const priceBands: BandRow[] = [];
+    for (const band of INSIGHT_COMMERCIAL_BANDS) {
+      const key = `priceband:${band.key}`;
+      const points = bandMap.get(key) ?? [];
+      if (!points.length) continue;
+      const latest = points[points.length - 1];
+      const raw = await readRaw(key);
+      priceBands.push({
+        key: band.key,
+        label: band.label,
+        count: raw.count ?? 0,
+        share: latest.value,
+        avgPrice: raw.avgPrice ?? 0,
+        salesIndex: raw.salesIndex ?? 0,
+        growthRate: latest.growthRate,
+      });
+    }
+
+    // 红蓝海四象限：关键词销量占比(X) × 环比增速(Y)
+    type QuadrantRow = {
+      concept: string;
+      interaction: number;
+      commercial: number;
+      growth: number;
+      share: number;
+      hint: string;
+    };
+    const quadrant: QuadrantRow[] = [];
+    for (const [key, points] of keywordMap) {
+      const value =
+        parseInsightTagMetricKey(key)?.value ?? key.replace('keyword:', '');
+      const latest = points[points.length - 1];
+      if (!latest) continue;
+      const share = latest.value;
+      const growth = latest.growthRate;
+      quadrant.push({
+        concept: value,
+        interaction: share,
+        commercial: Math.max(0, Math.min(100, share)),
+        growth,
+        share,
+        hint: this.redBlueHint(share, growth),
+      });
+    }
+    quadrant.sort((a, b) => Number(b.share) - Number(a.share));
+
+    type CompetitorRow = {
+      shop: string;
+      count: number;
+      avgPrice: number;
+      salesIndex: number;
+      hotScore: number;
+    };
+    const competitors: CompetitorRow[] = [];
+    for (const [key, points] of shopMap) {
+      const shop = key.replace('shop:', '');
+      const latest = points[points.length - 1];
+      if (!latest) continue;
+      const raw = await readRaw(key);
+      competitors.push({
+        shop,
+        count: raw.count ?? 0,
+        avgPrice: raw.avgPrice ?? 0,
+        salesIndex: latest.value,
+        hotScore: raw.salesIndex ?? latest.value,
+      });
+    }
+    competitors.sort((a, b) => Number(b.salesIndex) - Number(a.salesIndex));
+
+    // 预测：对占比最高的若干视觉标签做线性外推（方向性，非精确销量）
+    const predictions = series.slice(0, 12).map((item) => {
+      const { trend, nextShare, confidence } = this.linearForecast(item.points);
+      return {
+        dimension: item.dimension,
+        value: item.value,
+        label: item.label,
+        trend,
+        nextShare,
+        confidence,
+        note: this.forecastNote(trend, confidence),
+      };
+    });
+
+    return {
+      window: {
+        from: fromPeriod,
+        to: toPeriod,
+        days,
+      },
+      assetCount,
+      taggedCount,
+      commercialCount: priceBands.length + quadrant.length,
+      series,
+      colorTrends: colorSeries,
+      priceBands,
+      quadrant,
+      competitors: competitors.slice(0, 20),
+      predictions,
+      linkageEnabled: setting.linkageEnabled === 1,
+      // 采集健康度：趋势侧与热点侧同一算法（供「采集批次」页签复用）
+      ...(await this.collectionHealth(user, 'trend')),
+    };
+  }
+
+  private redBlueHint(share: number, growth: number): string {
+    const hiShare = share >= 50;
+    const hiGrowth = growth >= 20;
+    if (hiShare && hiGrowth) return '明星区：高占比且高增速，重点跟进';
+    if (hiShare && !hiGrowth) return '红海区：占比高但增速放缓，差异化突围';
+    if (!hiShare && hiGrowth) return '蓝海区：占比低但增速快，提前布局';
+    return '观察区：低占比低增速，暂不投入';
+  }
+
+  /** 线性外推 + 简易置信度（点数越多、残差越小越可信）。 */
+  private linearForecast(points: { value: number }[]): {
+    trend: string;
+    nextShare: number;
+    confidence: number;
+  } {
+    const n = points.length;
+    if (n < 2) return { trend: 'insufficient', nextShare: 0, confidence: 0 };
+    const xs = points.map((_, i) => i);
+    const ys = points.map((p) => p.value);
+    const sx = xs.reduce((a, b) => a + b, 0);
+    const sy = ys.reduce((a, b) => a + b, 0);
+    const sxy = xs.reduce((acc, x, i) => acc + x * ys[i], 0);
+    const sxx = xs.reduce((acc, x) => acc + x * x, 0);
+    const denom = n * sxx - sx * sx;
+    const slope = denom === 0 ? 0 : (n * sxy - sx * sy) / denom;
+    const intercept = (sy - slope * sx) / n;
+    const next = Math.max(0, Math.min(100, intercept + slope * n));
+    const current = ys[n - 1];
+    const delta = next - current;
+    // 拟合优度粗估
+    const meanY = sy / n;
+    const ssTot = ys.reduce((a, y) => a + (y - meanY) ** 2, 0);
+    const ssRes = ys.reduce(
+      (a, y, i) => a + (y - (intercept + slope * i)) ** 2,
+      0,
+    );
+    const r2 = ssTot === 0 ? 0 : Math.max(0, 1 - ssRes / ssTot);
+    const confidence = Math.round(Math.min(1, r2 * (n / (n + 2))) * 100);
+    const trend = delta > 1 ? 'rising' : delta < -1 ? 'declining' : 'stable';
+    return { trend, nextShare: Number(next.toFixed(1)), confidence };
+  }
+
+  private forecastNote(trend: string, confidence: number): string {
+    if (trend === 'insufficient') return '样本周期不足，暂不预测';
+    const dir =
+      trend === 'rising' ? '上行' : trend === 'declining' ? '回落' : '平稳';
+    return `方向性${dir}（置信 ${confidence}%，基于历史占比外推，非精确销量）`;
+  }
+
   // ---------- S2 采集派发（复用浏览器代理计划任务，失败降级不阻断）----------
 
-  /** 选一台在线设备：BotBuddy 托管窗口优先（名称含「托管/洞察/fingerprint」线索），否则最近心跳的本机插件。 */
+  /** 选一台在线设备：AWBotDSH 托管窗口优先（名称含「托管/洞察/fingerprint」线索），否则最近心跳的本机插件。 */
   private async pickOnlineDevice(userId: string) {
     const devices = await this.prisma.rpaChromeDevice.findMany({
       where: { createdBy: userId, status: 'ONLINE' },
@@ -1829,7 +2501,7 @@ export class InsightService {
     return { freq: 'daily', time: '03:00' };
   }
 
-  /** 选一台在线的 BotBuddy 主机（桌面客户端托管窗口，能定时跑采集包＝主通道）。 */
+  /** 选一台在线的 AWBotDSH 主机（桌面客户端托管窗口，能定时跑采集包＝主通道）。 */
   private async pickOnlineHost(userId: string) {
     return this.prisma.workbuddyHost
       .findFirst({
@@ -1886,7 +2558,7 @@ export class InsightService {
   }
 
   /**
-   * 为订阅按数据源重建周期采集任务（一源一任务；D4：BotBuddy 主机托管为主、本机浏览器代理为备）。
+   * 为订阅按数据源重建周期采集任务（一源一任务；D4：AWBotDSH 主机托管为主、本机浏览器代理为备）。
    * 前置不满足（无通道 / 无在线设备 / 上游拒建）只回原因并跳过，
    * 采集仍可在「垂类订阅 → 立即采集」里手动跑一轮，绝不因此让订阅保存失败。
    */
@@ -2152,6 +2824,417 @@ export class InsightService {
     return rows.map((row) => this.shapeReport(row));
   }
 
+  // ---------- AI-FDE 实施分析 ----------
+
+  /**
+   * 提交企业现状 → 统一模型网关产出实施框架 → 结构化落库。
+   * 先建 running 记录再调模型：失败也留在历史里，用户能看到失败原因而不是凭空消失。
+   */
+  async fdeAnalyze(user: CurrentUser, body: Record<string, unknown>) {
+    const profile = normalizeFdeProfile(body);
+    const industry = fdeIndustryOf(profile);
+    const companyName = str(profile.companyName).slice(0, 200);
+    const created = await this.prisma.insightFdeAnalysis.create({
+      data: {
+        userId: user.userId,
+        companyName,
+        industry,
+        status: 'running',
+        profile: toJsonObject(profile),
+      },
+    });
+    try {
+      const messages = buildFdeMessages(profile);
+      const reply = await aiChat(this.prisma, {
+        userId: user.userId,
+        module: 'insight',
+        operation: 'fde.analyze',
+        messages: [
+          { role: 'system', content: messages.system },
+          { role: 'user', content: messages.user },
+        ],
+        maxTokens: FDE_MAX_TOKENS,
+        timeoutMs: FDE_TIMEOUT_MS,
+        purpose: 'batch',
+      });
+      const parsed = parseJsonObject(reply.reply);
+      const result = parsed ? normalizeFdeResult(parsed) : null;
+      if (!result) {
+        throw new BusinessException(
+          ErrorCode.BAD_REQUEST,
+          '模型返回的分析结果不完整，请重试，或到「模型服务 → 模型设置」更换更强的文本模型',
+        );
+      }
+      const updated = await this.prisma.insightFdeAnalysis.update({
+        where: { id: created.id },
+        data: {
+          status: 'success',
+          result: toJsonObject(result),
+          model: reply.model.slice(0, 128),
+          error: '',
+        },
+      });
+      await this.identity.audit(
+        user.userId,
+        'AI-FDE实施分析',
+        `${companyName} · ${fdeIndustryLabel(industry)} · ${fdeProfileSummary(profile)}`,
+      );
+      return this.shapeFdeAnalysis(updated);
+    } catch (error) {
+      const message = (error as Error)?.message || 'AI-FDE 分析生成失败';
+      await this.prisma.insightFdeAnalysis
+        .update({
+          where: { id: created.id },
+          data: { status: 'failed', error: message.slice(0, 500) },
+        })
+        .catch(() => undefined);
+      throw error;
+    }
+  }
+
+  async listFdeAnalyses(user: CurrentUser) {
+    const rows = await this.prisma.insightFdeAnalysis.findMany({
+      where: { userId: user.userId },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+    return rows.map((row) => this.shapeFdeAnalysisSummary(row));
+  }
+
+  async fdeAnalysisDetail(user: CurrentUser, id: number) {
+    const row = await this.prisma.insightFdeAnalysis.findFirst({
+      where: { id, userId: user.userId },
+    });
+    if (!row) {
+      throw new BusinessException(ErrorCode.NOT_FOUND, '分析记录不存在');
+    }
+    return this.shapeFdeAnalysis(row);
+  }
+
+  async removeFdeAnalysis(user: CurrentUser, id: number) {
+    const row = await this.prisma.insightFdeAnalysis.findFirst({
+      where: { id, userId: user.userId },
+    });
+    if (!row) {
+      throw new BusinessException(ErrorCode.NOT_FOUND, '分析记录不存在');
+    }
+    await this.prisma.insightFdeAnalysis.delete({ where: { id } });
+    return { id, deleted: true };
+  }
+
+  private fdeResultOf(
+    value: Prisma.JsonValue | null | undefined,
+  ): FdeAnalysisResult | null {
+    return value && typeof value === 'object' && !Array.isArray(value)
+      ? (value as unknown as FdeAnalysisResult)
+      : null;
+  }
+
+  private shapeFdeAnalysis(row: {
+    id: number;
+    companyName: string;
+    industry: string;
+    status: string;
+    profile: Prisma.JsonValue | null;
+    result: Prisma.JsonValue | null;
+    model: string;
+    error: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }) {
+    const result = this.fdeResultOf(row.result);
+    return {
+      id: row.id,
+      companyName: row.companyName,
+      industry: row.industry,
+      industryLabel: fdeIndustryLabel(row.industry),
+      status: row.status,
+      readinessScore: result?.overview.readinessScore ?? 0,
+      oneLineDiagnosis: result?.overview.oneLineDiagnosis ?? '',
+      model: row.model,
+      error: row.error,
+      profile: jsonStringRecord(row.profile),
+      result,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+    };
+  }
+
+  private shapeFdeAnalysisSummary(row: {
+    id: number;
+    companyName: string;
+    industry: string;
+    status: string;
+    profile: Prisma.JsonValue | null;
+    result: Prisma.JsonValue | null;
+    model: string;
+    error: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }) {
+    const result = this.fdeResultOf(row.result);
+    return {
+      id: row.id,
+      companyName: row.companyName,
+      industry: row.industry,
+      industryLabel: fdeIndustryLabel(row.industry),
+      status: row.status,
+      readinessScore: result?.overview.readinessScore ?? 0,
+      oneLineDiagnosis: result?.overview.oneLineDiagnosis ?? '',
+      model: row.model,
+      error: row.error,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+    };
+  }
+
+  // ---------- 企业咨询（多模型战略分析）----------
+
+  private async runConsultingFrameworks(
+    user: CurrentUser,
+    profile: ConsultingProfile,
+    frameworks: ConsultingFrameworkKey[],
+  ): Promise<ConsultingFrameworkResult[]> {
+    const queue = [...frameworks];
+    const results: ConsultingFrameworkResult[] = [];
+    const worker = async () => {
+      for (let key = queue.shift(); key; key = queue.shift()) {
+        results.push(await this.runConsultingFramework(user, profile, key));
+      }
+    };
+    await Promise.all(
+      Array.from(
+        { length: Math.min(CONSULTING_FRAMEWORK_CONCURRENCY, queue.length) },
+        () => worker(),
+      ),
+    );
+    return frameworks.map(
+      (key) =>
+        results.find((item) => item.key === key) as ConsultingFrameworkResult,
+    );
+  }
+
+  private async runConsultingFramework(
+    user: CurrentUser,
+    profile: ConsultingProfile,
+    key: ConsultingFrameworkKey,
+  ): Promise<ConsultingFrameworkResult> {
+    const messages = buildFrameworkMessages(profile, key);
+    const reply = await aiChat(this.prisma, {
+      userId: user.userId,
+      module: 'insight',
+      operation: 'consulting.framework',
+      messages: [
+        { role: 'system', content: messages.system },
+        { role: 'user', content: messages.user },
+      ],
+      maxTokens: CONSULTING_FRAMEWORK_MAX_TOKENS,
+      timeoutMs: CONSULTING_FRAMEWORK_TIMEOUT_MS,
+      purpose: 'batch',
+    });
+    const parsed = parseJsonObject(reply.reply);
+    const item = parsed ? normalizeFrameworkResult(parsed, key) : null;
+    if (!item) {
+      throw new BusinessException(
+        ErrorCode.BAD_REQUEST,
+        `「${consultingFrameworkLabel(key)}」分析结果不完整，请重试，或更换更强的文本模型`,
+      );
+    }
+    return item;
+  }
+
+  /**
+   * 提交企业数据 + 勾选模型 → 统一模型网关逐维度分析 → 综合建议结构化落库。
+   * 与 AI-FDE 同口径：先建 running 记录再调模型，失败也留在历史里。
+   */
+  async consultingAnalyze(user: CurrentUser, body: Record<string, unknown>) {
+    const input = normalizeConsultingInput(body);
+    const industry = consultingIndustryOf(input.profile);
+    const companyName = str(input.profile.companyName).slice(0, 200);
+    const created = await this.prisma.insightConsultingAnalysis.create({
+      data: {
+        userId: user.userId,
+        companyName,
+        industry,
+        frameworks: input.frameworks.join(','),
+        status: 'running',
+        profile: toJsonObject(input.profile),
+      },
+    });
+    try {
+      const frameworkResults = await this.runConsultingFrameworks(
+        user,
+        input.profile,
+        input.frameworks,
+      );
+      const messages = buildSynthesisMessages(
+        input.profile,
+        input.frameworks,
+        frameworkResults,
+      );
+      const reply = await aiChat(this.prisma, {
+        userId: user.userId,
+        module: 'insight',
+        operation: 'consulting.synthesis',
+        messages: [
+          { role: 'system', content: messages.system },
+          { role: 'user', content: messages.user },
+        ],
+        maxTokens: CONSULTING_SYNTHESIS_MAX_TOKENS,
+        timeoutMs: CONSULTING_SYNTHESIS_TIMEOUT_MS,
+        purpose: 'batch',
+      });
+      const parsed = parseJsonObject(reply.reply);
+      const result = parsed
+        ? normalizeSynthesis(parsed, frameworkResults)
+        : null;
+      if (!result) {
+        throw new BusinessException(
+          ErrorCode.BAD_REQUEST,
+          '模型返回的综合建议不完整，请重试',
+        );
+      }
+      const updated = await this.prisma.insightConsultingAnalysis.update({
+        where: { id: created.id },
+        data: {
+          status: 'success',
+          result: toJsonObject(result),
+          model: reply.model.slice(0, 128),
+          error: '',
+        },
+      });
+      await this.identity.audit(
+        user.userId,
+        '企业咨询',
+        consultingProfileSummary(input),
+      );
+      return this.shapeConsultingAnalysis(updated);
+    } catch (error) {
+      const message = (error as Error)?.message || '企业咨询分析生成失败';
+      await this.prisma.insightConsultingAnalysis
+        .update({
+          where: { id: created.id },
+          data: { status: 'failed', error: message.slice(0, 500) },
+        })
+        .catch(() => undefined);
+      throw error;
+    }
+  }
+
+  async listConsultingAnalyses(user: CurrentUser) {
+    const rows = await this.prisma.insightConsultingAnalysis.findMany({
+      where: { userId: user.userId },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+    return rows.map((row) => this.shapeConsultingAnalysisSummary(row));
+  }
+
+  async consultingAnalysisDetail(user: CurrentUser, id: number) {
+    const row = await this.prisma.insightConsultingAnalysis.findFirst({
+      where: { id, userId: user.userId },
+    });
+    if (!row) {
+      throw new BusinessException(ErrorCode.NOT_FOUND, '分析记录不存在');
+    }
+    return this.shapeConsultingAnalysis(row);
+  }
+
+  async removeConsultingAnalysis(user: CurrentUser, id: number) {
+    const row = await this.prisma.insightConsultingAnalysis.findFirst({
+      where: { id, userId: user.userId },
+    });
+    if (!row) {
+      throw new BusinessException(ErrorCode.NOT_FOUND, '分析记录不存在');
+    }
+    await this.prisma.insightConsultingAnalysis.delete({ where: { id } });
+    return { id, deleted: true };
+  }
+
+  private consultingResultOf(
+    value: Prisma.JsonValue | null | undefined,
+  ): ConsultingAnalysisResult | null {
+    return value && typeof value === 'object' && !Array.isArray(value)
+      ? (value as unknown as ConsultingAnalysisResult)
+      : null;
+  }
+
+  private consultingFrameworkKeys(raw: string): string[] {
+    return raw
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  private shapeConsultingAnalysis(row: {
+    id: number;
+    companyName: string;
+    industry: string;
+    frameworks: string;
+    status: string;
+    profile: Prisma.JsonValue | null;
+    result: Prisma.JsonValue | null;
+    model: string;
+    error: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }) {
+    const result = this.consultingResultOf(row.result);
+    const frameworkKeys = this.consultingFrameworkKeys(row.frameworks);
+    return {
+      id: row.id,
+      companyName: row.companyName,
+      industry: row.industry,
+      industryLabel: fdeIndustryLabel(row.industry),
+      frameworkKeys,
+      frameworkLabels: frameworkKeys.map((key) =>
+        consultingFrameworkLabel(key),
+      ),
+      status: row.status,
+      overallScore: result?.overview.overallScore ?? 0,
+      oneLineSummary: result?.overview.oneLineSummary ?? '',
+      model: row.model,
+      error: row.error,
+      profile: jsonStringRecord(row.profile),
+      result,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+    };
+  }
+
+  private shapeConsultingAnalysisSummary(row: {
+    id: number;
+    companyName: string;
+    industry: string;
+    frameworks: string;
+    status: string;
+    result: Prisma.JsonValue | null;
+    model: string;
+    error: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }) {
+    const result = this.consultingResultOf(row.result);
+    const frameworkKeys = this.consultingFrameworkKeys(row.frameworks);
+    return {
+      id: row.id,
+      companyName: row.companyName,
+      industry: row.industry,
+      industryLabel: fdeIndustryLabel(row.industry),
+      frameworkKeys,
+      frameworkLabels: frameworkKeys.map((key) =>
+        consultingFrameworkLabel(key),
+      ),
+      status: row.status,
+      overallScore: result?.overview.overallScore ?? 0,
+      oneLineSummary: result?.overview.oneLineSummary ?? '',
+      model: row.model,
+      error: row.error,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+    };
+  }
+
   private async buildReportDigest(
     user: CurrentUser,
     kind: string,
@@ -2217,8 +3300,765 @@ export class InsightService {
     return `${head}\n\n### 数据摘要\n\n\`\`\`\n${digest}\n\`\`\`\n`;
   }
 
-  // ---------- S7 资产批量 VLM 打标 → 元素趋势指标 ----------
+  // ---------- S6 AI 多页趋势报告 / PPTX ----------
 
+  /**
+   * 工具侧 AI 直接生成结构化趋势报告（非采集端 AWBotDSH）。
+   * 1) 取趋势分析结果压成数据摘要；2) aiJson 产出分节叙事；3) 可选用前端导出的图表 PNG
+   *    拼成 .pptx（pptxgenjs），经 deliverableSink 入数字资产。模型/归档不可用时
+   *    仍回结构化 outline，不阻断，也不编造数据。
+   */
+  async generateDeck(
+    user: CurrentUser,
+    body: Record<string, unknown>,
+    token?: string,
+  ) {
+    const settings = await this.getSettings(user);
+    const days = Math.max(7, Math.min(365, num(body.windowDays) || 90));
+    const requestedFormat = (str(body.format) || 'pptx').toLowerCase();
+    const template =
+      str(body.template) || settings.deckTemplate || 'trend-board';
+    const brand = settings.deckBrand ?? {};
+    const brandName = str(body.brandName) || str(brand.name) || '流行趋势分析';
+    const theme = this.deckTheme(template, brand);
+    const chartImages = Array.isArray(body.chartImages)
+      ? (body.chartImages as { title?: string; dataUrl?: string }[])
+      : [];
+    const analysis = await this.trendAnalysis(user, { windowDays: days });
+    const digest = this.buildDeckDigest(analysis, days);
+    const report = await this.prisma.insightReport.create({
+      data: {
+        userId: user.userId,
+        kind: 'deck',
+        window: toJsonObject({ days, template, brandName }),
+        status: 'running',
+      },
+    });
+    const generated = await aiJson<{
+      title: string;
+      sections: { heading: string; body: string }[];
+    }>(this.prisma, {
+      userId: user.userId,
+      token,
+      module: 'insight',
+      operation: 'trend.deck',
+      messages: [
+        {
+          role: 'system',
+          content:
+            '你是资深时尚趋势分析师。基于给定趋势数据，输出一份可直接进 PPT 的结构化报告 JSON：' +
+            '{"title":string,"sections":[{"heading":string,"body":string}]}。' +
+            'sections 依次覆盖「大盘概览」「色彩趋势」「廓形·材质·细节」「商业·价格带·竞品」「红蓝海机会」「趋势预测与企划建议」，' +
+            '每节 body 2-4 句、只引用给定数字、不编造，语言专业克制。',
+        },
+        { role: 'user', content: digest.slice(0, 8000) },
+      ],
+      maxTokens: REPORT_MAX_TOKENS,
+      timeoutMs: REPORT_TIMEOUT_MS,
+      purpose: 'batch',
+      validate: (data) => {
+        const title = str(data.title);
+        const sectionsRaw = Array.isArray(data.sections) ? data.sections : [];
+        const sections = sectionsRaw
+          .map((item) => {
+            const row = item as Record<string, unknown>;
+            return { heading: str(row.heading), body: str(row.body) };
+          })
+          .filter((item) => item.heading || item.body);
+        if (!title && !sections.length) return null;
+        return {
+          title: title || `${brandName}趋势报告`,
+          sections: sections.length
+            ? sections
+            : [{ heading: '数据概览', body: digest.slice(0, 1200) }],
+        };
+      },
+    });
+    const outline = generated?.data?.sections ?? [
+      { heading: '数据概览', body: digest.slice(0, 1500) },
+    ];
+    const deckTitle = generated?.data?.title ?? `${brandName}趋势报告`;
+
+    let producedFormat = 'outline';
+    let assetId = '';
+    let downloadUrl = '';
+    let slideCount = outline.length + 1;
+    let error = generated
+      ? ''
+      : '未绑定模型 Key 或模型未产出，报告为规则式数据摘要';
+    if (this.deliverableSink) {
+      if (requestedFormat === 'pdf') {
+        try {
+          const html = this.renderDeckHtml(
+            deckTitle,
+            outline,
+            chartImages,
+            { brandName, days, template },
+            theme,
+          );
+          const registered = (await this.deliverableSink(user.userId, {
+            bytes: Buffer.from(html, 'utf-8'),
+            filename: `trend-deck-${new Date().toISOString().slice(0, 10)}.html`,
+            labels: ['智慧分析', '趋势报告', 'PDF'],
+            dir: 'insight',
+            source: `insight_deck#${report.id}`,
+          })) as Record<string, unknown> | null;
+          assetId = str(registered?.id ?? registered?.assetId ?? '');
+          downloadUrl = str(registered?.url ?? registered?.previewUrl ?? '');
+          producedFormat = 'pdf';
+          slideCount = outline.length + 1;
+          error =
+            'PDF 为打印就绪版报告（打开后浏览器「打印/另存为 PDF」即得 .pdf），含图表高清嵌入。';
+        } catch (deckError) {
+          error = `PDF(打印版) 生成失败：${deckError instanceof Error ? deckError.message : String(deckError)}`;
+        }
+      } else {
+        try {
+          const pptx = await this.renderDeckPptx(
+            deckTitle,
+            outline,
+            chartImages,
+            { brandName, days, template },
+            theme,
+          );
+          if (pptx) {
+            const filename = `trend-deck-${new Date()
+              .toISOString()
+              .slice(0, 10)}.pptx`;
+            const registered = (await this.deliverableSink(user.userId, {
+              bytes: pptx.buffer,
+              filename,
+              labels: ['智慧分析', '趋势报告', 'PPT'],
+              dir: 'insight',
+              source: `insight_deck#${report.id}`,
+            })) as Record<string, unknown> | null;
+            assetId = str(registered?.id ?? registered?.assetId ?? '');
+            downloadUrl = str(registered?.url ?? registered?.previewUrl ?? '');
+            slideCount = pptx.slideCount;
+            producedFormat = 'pptx';
+          }
+        } catch (deckError) {
+          error = `PPTX 生成失败，已回结构化大纲：${
+            deckError instanceof Error ? deckError.message : String(deckError)
+          }`;
+        }
+      }
+    }
+    const updated = await this.prisma.insightReport.update({
+      where: { id: report.id },
+      data: {
+        status: 'success',
+        content: digest.slice(0, 60000),
+        assetId: assetId.slice(0, 64),
+        error,
+      },
+    });
+    await this.identity.audit(
+      user.userId,
+      '智慧分析趋势报告生成',
+      `${deckTitle} · ${days} 天窗口 · ${requestedFormat}`,
+    );
+    return {
+      id: updated.id,
+      status: updated.status,
+      format: producedFormat,
+      assetId,
+      downloadUrl,
+      slideCount,
+      error,
+      outline,
+      createdAt: updated.createdAt.toISOString(),
+    };
+  }
+
+  private buildDeckDigest(
+    analysis: Awaited<ReturnType<InsightService['trendAnalysis']>>,
+    days: number,
+  ): string {
+    const lines: string[] = [
+      `【流行趋势窗口 近 ${days} 天】数字资产 ${analysis.assetCount}，已打标 ${analysis.taggedCount}，商业观测聚合 ${analysis.commercialCount} 项。`,
+    ];
+    if (analysis.series.length) {
+      lines.push('— 元素/款式标签占比（Top）：');
+      for (const item of analysis.series.slice(0, 15)) {
+        lines.push(
+          `  · ${item.label} 占比 ${item.share.toFixed(1)}%（增速 ${item.growthRate.toFixed(1)}%）`,
+        );
+      }
+    }
+    if (analysis.colorTrends.length) {
+      lines.push('— 色彩趋势（Top）：');
+      for (const item of analysis.colorTrends.slice(0, 12)) {
+        lines.push(
+          `  · ${item.value}${item.hex ? ` ${item.hex}` : ''} 占比 ${item.share.toFixed(1)}%（增速 ${item.growthRate.toFixed(1)}%）`,
+        );
+      }
+    }
+    if (analysis.priceBands.length) {
+      lines.push('— 价格带：');
+      for (const band of analysis.priceBands) {
+        lines.push(
+          `  · ${band.label} 元 占比 ${Number(band.share).toFixed(1)}% 均价 ${Number(band.avgPrice).toFixed(0)}（增速 ${Number(band.growthRate).toFixed(1)}%）`,
+        );
+      }
+    }
+    if (analysis.quadrant.length) {
+      lines.push('— 红蓝海关键词（占比×增速）Top：');
+      for (const q of analysis.quadrant.slice(0, 12)) {
+        lines.push(
+          `  · ${q.concept} 占比 ${Number(q.share).toFixed(1)}% 增速 ${Number(q.growth).toFixed(1)}%｜${q.hint}`,
+        );
+      }
+    }
+    if (analysis.competitors.length) {
+      lines.push('— 竞品店铺（销量指数 Top）：');
+      for (const c of analysis.competitors.slice(0, 8)) {
+        lines.push(
+          `  · ${c.shop} 销量指数 ${Number(c.salesIndex).toFixed(0)} 均价 ${Number(c.avgPrice).toFixed(0)}`,
+        );
+      }
+    }
+    if (analysis.predictions.length) {
+      lines.push('— 方向性预测（Top）：');
+      for (const p of analysis.predictions.slice(0, 10)) {
+        lines.push(`  · ${p.label} ${p.note}`);
+      }
+    }
+    return lines.join('\n');
+  }
+
+  /** 解析报告主题：内置 3 套 + 用户品牌覆盖（主色/字体/logo）。返回 hex 不带 # 供 pptx，带 # 供 html。 */
+  private deckTheme(
+    template: string,
+    brand: Record<string, unknown>,
+  ): {
+    accent: string;
+    secondary: string;
+    font: string;
+    logoUrl: string;
+  } {
+    const presets: Record<
+      string,
+      { accent: string; secondary: string; font: string }
+    > = {
+      'trend-board': {
+        accent: '0B7285',
+        secondary: '66A6CF',
+        font: 'Microsoft YaHei',
+      },
+      'trend-planning': {
+        accent: '7A1F2B',
+        secondary: 'C8892A',
+        font: 'Microsoft YaHei',
+      },
+      brand: { accent: '1F4FA3', secondary: '6C8CD5', font: 'Microsoft YaHei' },
+    };
+    const base = presets[template] ?? presets['trend-board'];
+    const rawColor = str(brand.primaryColor).replace('#', '');
+    const rawFont = str(brand.fontName);
+    return {
+      accent: /^[0-9a-fA-F]{6}$/.test(rawColor)
+        ? rawColor.toUpperCase()
+        : base.accent,
+      secondary: base.secondary,
+      font: rawFont || base.font,
+      logoUrl: str(brand.logoUrl),
+    };
+  }
+
+  /**
+   * 打印就绪 HTML 报告（浏览器「打印/另存为 PDF」即得 PDF）：CJK 零字体依赖、图表内嵌 base64。
+   * 这是无服务端安装（LibreOffice/puppeteer）与无内置中文字体条件下，导出 PDF 的正确路径。
+   */
+  private renderDeckHtml(
+    title: string,
+    outline: { heading: string; body: string }[],
+    chartImages: { title?: string; dataUrl?: string }[],
+    meta: { brandName: string; days: number; template: string },
+    theme: { accent: string; secondary: string; font: string; logoUrl: string },
+  ): string {
+    const accent = `#${theme.accent}`;
+    const esc = (value: string) =>
+      value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const sections = outline
+      .map(
+        (s) =>
+          `<section><h2>${esc(s.heading)}</h2><p>${esc(s.body).replace(/\n/g, '<br/>')}</p></section>`,
+      )
+      .join('\n');
+    const charts = chartImages
+      .filter((c) => str(c.dataUrl).startsWith('data:image'))
+      .map(
+        (c) =>
+          `<figure><img src="${c.dataUrl}" alt="${esc(c.title ?? '图表')}"/>${c.title ? `<figcaption>${esc(c.title)}</figcaption>` : ''}</figure>`,
+      )
+      .join('\n');
+    const logo =
+      theme.logoUrl && /^https?:\/\//i.test(theme.logoUrl)
+        ? `<img class="logo" src="${theme.logoUrl}" alt="logo"/>`
+        : '';
+    return [
+      '<!DOCTYPE html><html lang="zh"><head><meta charset="utf-8"/>',
+      `<title>${esc(title)}</title>`,
+      '<style>',
+      `@page{margin:16mm}body{font-family:"${theme.font}","PingFang SC","Microsoft YaHei",sans-serif;color:#1b1f25;margin:0;padding:32px;background:#fff}`,
+      `.logo{height:32px;margin-bottom:16px}`,
+      `h1{color:${accent};font-size:30px;margin:6px 0 4px}`,
+      `.sub{color:#888;font-size:13px;margin-bottom:24px}`,
+      `section{page-break-inside:avoid;margin:22px 0}`,
+      `h2{color:${accent};font-size:18px;border-left:4px solid ${accent};padding-left:10px}`,
+      `p{line-height:1.8;font-size:14px;white-space:pre-wrap}`,
+      `figure{page-break-inside:avoid;margin:18px 0;text-align:center}`,
+      `figure img{max-width:100%;border:1px solid #eee;border-radius:8px}`,
+      `figcaption{color:#666;font-size:13px;margin-top:6px}`,
+      '@media print{.no-print{display:none}}',
+      '</style></head><body>',
+      logo,
+      `<h1>${esc(title)}</h1>`,
+      `<div class="sub">${esc(meta.brandName)}｜数据窗口 近 ${meta.days} 天｜模板 ${esc(meta.template)}｜AI 生成</div>`,
+      '<div class="no-print" style="background:#f3f7ff;border:1px solid #d6e4ff;border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:20px">按 Ctrl/Cmd + P，选「另存为 PDF」即可得到与本页一致的 PDF。</div>',
+      sections,
+      '<h2 style="margin-top:32px">图表附录</h2>',
+      charts || '<p>（本次未附带图表截图）</p>',
+      '<script>window.addEventListener("load",function(){setTimeout(function(){try{window.print()}catch(e){}},400)})</script>',
+      '</body></html>',
+    ].join('\n');
+  }
+
+  /** pptxgenjs 渲染封面 + 分节 + 图表 PNG；不可用返回 null（调用方回 outline）。 */
+  private async renderDeckPptx(
+    title: string,
+    outline: { heading: string; body: string }[],
+    chartImages: { title?: string; dataUrl?: string }[],
+    meta: { brandName: string; days: number; template: string },
+    theme: { accent: string; secondary: string; font: string; logoUrl: string },
+  ): Promise<{ buffer: Buffer; slideCount: number } | null> {
+    let PptxMod: unknown;
+    try {
+      PptxMod = await import('pptxgenjs');
+    } catch {
+      return null;
+    }
+    const Ctor =
+      (PptxMod as { default?: typeof PptxGenJS }).default ??
+      (PptxMod as typeof PptxGenJS);
+    if (typeof Ctor !== 'function') return null;
+    const pptx = new Ctor();
+    pptx.defineLayout({ name: 'WIDE', width: 13.33, height: 7.5 });
+    pptx.layout = 'WIDE';
+    pptx.theme = { headFontFace: theme.font, bodyFontFace: theme.font };
+    const accent = theme.accent;
+    const cover = pptx.addSlide();
+    cover.background = { color: 'FFFFFF' };
+    if (theme.logoUrl && /^https?:\/\//i.test(theme.logoUrl)) {
+      try {
+        cover.addImage({ path: theme.logoUrl, x: 0.8, y: 0.6, w: 2, h: 0.6 });
+      } catch {
+        // logo 拉取失败不影响封面文字
+      }
+    }
+    cover.addText(meta.brandName, {
+      x: 0.8,
+      y: 2.6,
+      w: 11.7,
+      h: 0.9,
+      fontSize: 20,
+      color: '666666',
+    });
+    cover.addText(title, {
+      x: 0.8,
+      y: 3.3,
+      w: 11.7,
+      h: 1.2,
+      fontSize: 38,
+      bold: true,
+      color: accent,
+    });
+    cover.addText(`数据窗口：近 ${meta.days} 天｜AI 生成`, {
+      x: 0.8,
+      y: 4.6,
+      w: 11.7,
+      h: 0.6,
+      fontSize: 14,
+      color: '999999',
+    });
+    for (const section of outline) {
+      const slide = pptx.addSlide();
+      slide.addText(section.heading || '', {
+        x: 0.6,
+        y: 0.4,
+        w: 12.1,
+        h: 0.7,
+        fontSize: 24,
+        bold: true,
+        color: accent,
+      });
+      slide.addText(section.body || '', {
+        x: 0.6,
+        y: 1.3,
+        w: 12.1,
+        h: 2.2,
+        fontSize: 16,
+        color: '333333',
+        valign: 'top',
+      });
+    }
+    for (const chart of chartImages) {
+      const dataUrl = str(chart.dataUrl);
+      if (!dataUrl.startsWith('data:image')) continue;
+      const slide = pptx.addSlide();
+      if (chart.title) {
+        slide.addText(chart.title, {
+          x: 0.6,
+          y: 0.3,
+          w: 12.1,
+          h: 0.6,
+          fontSize: 20,
+          bold: true,
+          color: accent,
+        });
+      }
+      slide.addImage({ data: dataUrl, x: 0.8, y: 1.1, w: 11.7, h: 5.8 });
+    }
+    const buffer = (await pptx.write({ outputType: 'nodebuffer' })) as Buffer;
+    const slideCount =
+      1 +
+      outline.length +
+      chartImages.filter((c) => str(c.dataUrl).startsWith('data:image')).length;
+    return { buffer, slideCount };
+  }
+
+  // ---------- S9 款式衍生（对标爆款衍生）----------
+
+  /**
+   * 以一个锚点（关键词/单品/概念）为中心，沿配色焕新·细节衍生·材质替换·廓形调整四向出建议。
+   * 依据用真实聚合数据（同维度市场占比/增速）服务端附上，AI 只负责解读文案，不编造证据。
+   * 图生图衍生款依赖图像模型通道，未配置时如实说明、不伪造图片。
+   */
+  async deriveStyle(
+    user: CurrentUser,
+    body: Record<string, unknown>,
+    token?: string,
+  ) {
+    const anchor = str(body.anchor);
+    if (!anchor) {
+      throw new BusinessException(
+        ErrorCode.BAD_REQUEST,
+        '请先选择衍生锚点（关键词或单品）',
+      );
+    }
+    const category = str(body.category) || anchor;
+    const days = Math.max(7, Math.min(365, num(body.windowDays) || 90));
+    const withImages = body.withImages === true;
+    const sourceImage = str(body.imageUrl);
+    const analysis = await this.trendAnalysis(user, { windowDays: days });
+
+    const pick = (dimension: string) =>
+      analysis.series
+        .filter((s) => s.dimension === dimension)
+        .slice(0, 5)
+        .map(
+          (s) =>
+            `${s.value}(${s.share.toFixed(1)}%·${s.growthRate >= 0 ? '+' : ''}${s.growthRate.toFixed(0)}%)`,
+        );
+    const colors = analysis.colorTrends
+      .slice(0, 6)
+      .map(
+        (c) => `${c.value}${c.hex ? ` ${c.hex}` : ''}(${c.share.toFixed(1)}%)`,
+      );
+
+    const seed = [
+      {
+        key: 'color',
+        title: '配色焕新',
+        angle: '爆款核心点',
+        evidence: colors,
+      },
+      {
+        key: 'detail',
+        title: '细节衍生',
+        angle: '增长机会',
+        evidence: pick('detail'),
+      },
+      {
+        key: 'fabric',
+        title: '材质替换',
+        angle: '衍生方向',
+        evidence: pick('fabric'),
+      },
+      {
+        key: 'silhouette',
+        title: '廓形调整',
+        angle: '趋势团队点评',
+        evidence: pick('silhouette'),
+      },
+    ];
+
+    const digest = [
+      `【衍生锚点】${anchor}（品类 ${category}），数据窗口近 ${days} 天。`,
+      `配色参考：${colors.join('、') || '（暂无色彩样本）'}`,
+      `细节参考：${seed[1].evidence.join('、') || '（暂无）'}`,
+      `材质参考：${seed[2].evidence.join('、') || '（暂无）'}`,
+      `廓形参考：${seed[3].evidence.join('、') || '（暂无）'}`,
+    ].join('\n');
+
+    const generated = await aiJson<{
+      directions: { key: string; commentary: string }[];
+    }>(this.prisma, {
+      userId: user.userId,
+      token,
+      module: 'insight',
+      operation: 'trend.derive',
+      messages: [
+        {
+          role: 'system',
+          content:
+            '你是资深女装设计趋势顾问。针对锚点款式，给出四个衍生方向的落地建议 JSON：' +
+            '{"directions":[{"key":"color|detail|fabric|silhouette","commentary":string}]}，' +
+            '每条 commentary 1-2 句、结合给定市场占比/增速、专业可执行，只用给定证据、不编造数字。',
+        },
+        { role: 'user', content: digest },
+      ],
+      maxTokens: 1800,
+      timeoutMs: REPORT_TIMEOUT_MS,
+      purpose: 'batch',
+      validate: (data) => {
+        const arr = Array.isArray(data.directions) ? data.directions : [];
+        const map = new Map<string, string>();
+        for (const item of arr) {
+          const row = item as Record<string, unknown>;
+          const key = str(row.key);
+          const commentary = str(row.commentary);
+          if (key && commentary) map.set(key, commentary);
+        }
+        if (!map.size) return null;
+        return {
+          directions: [...map].map(([key, commentary]) => ({
+            key,
+            commentary,
+          })),
+        };
+      },
+    });
+    const commentaryByKey = new Map(
+      (generated?.data?.directions ?? []).map((d) => [d.key, d.commentary]),
+    );
+    const directions = seed.map((item) => ({
+      key: item.key,
+      title: item.title,
+      angle: item.angle,
+      evidence: item.evidence,
+      commentary:
+        commentaryByKey.get(item.key) ||
+        (generated
+          ? ''
+          : '未绑定模型 Key，以下为依据真实数据的占比/增速罗列，供人工判断。'),
+    }));
+
+    const derivedImages: string[] = [];
+    let note = '';
+    const derivePrompt: Record<string, string> = {
+      color: `保持同款女装版型与细节，只按趋势焕新配色：${colors.slice(0, 3).join('、') || '当季流行色'}。高级质感，电商主图风格。`,
+      detail: `在保持整体廓形前提下，增强门襟/口袋/领口等细节工艺（${seed[1].evidence.slice(0, 3).join('、') || '精致细节'}），同款同色。`,
+      fabric: `同款版型，材质替换为更高级的面料质感（${seed[2].evidence.slice(0, 2).join('、') || '高级面料'}），微哑光泽、垂坠感。`,
+      silhouette: `同款配色与面料，做廓形微调（${seed[3].evidence.slice(0, 2).join('、') || '松弛廓形'}），更贴合当季版型走向。`,
+    };
+    if (withImages) {
+      if (!this.media || !sourceImage) {
+        note =
+          '图生图需图像模型通道与一张参考款图；未装配或未提供参考图，本次仅输出文字衍生建议。';
+      } else {
+        const failed: string[] = [];
+        for (const item of directions) {
+          try {
+            const result = await this.media.editImage(
+              user,
+              token,
+              {
+                imageUrl: sourceImage,
+                prompt: derivePrompt[item.key] || `女装款式衍生：${item.title}`,
+                size: '1024x1024',
+                namePrefix: `衍生款-${item.title}`,
+              },
+              undefined,
+              { source: 'workbench' },
+            );
+            const url = str(result?.url);
+            if (url) derivedImages.push(url);
+            else failed.push(item.title);
+          } catch {
+            failed.push(item.title);
+          }
+        }
+        if (derivedImages.length) {
+          note = `已生成 ${derivedImages.length} 张衍生款图${failed.length ? `，${failed.join('、')} 方向未成功` : ''}。`;
+        } else {
+          note = '图像模型未产出衍生款（通道不可用或额度受限），已回文字建议。';
+        }
+      }
+    }
+
+    return {
+      anchor,
+      category,
+      directions,
+      derivedImages,
+      note,
+    };
+  }
+
+  // ---------- S6b 趋势数据 XLSX 导出 ----------
+
+  async trendExport(user: CurrentUser, body: Record<string, unknown>) {
+    const days = Math.max(7, Math.min(365, num(body.windowDays) || 90));
+    const dimension = str(body.dimension);
+    const analysis = await this.trendAnalysis(user, {
+      windowDays: days,
+      dimension,
+    });
+    if (!this.deliverableSink) {
+      return {
+        format: 'xlsx',
+        assetId: '',
+        downloadUrl: '',
+        sheets: [] as string[],
+        rowCount: 0,
+        error: '产物归档通道未装配，无法导出文件',
+      };
+    }
+    let ExcelJSMod: unknown;
+    try {
+      ExcelJSMod = await import('exceljs');
+    } catch {
+      return {
+        format: 'xlsx',
+        assetId: '',
+        downloadUrl: '',
+        sheets: [] as string[],
+        rowCount: 0,
+        error: 'exceljs 未安装，无法生成 XLSX',
+      };
+    }
+    type ExcelSheet = {
+      addRow(values: (string | number)[]): unknown;
+      getRow(index: number): { font: { bold?: boolean } };
+    };
+    type ExcelWorkbook = {
+      addWorksheet(name: string): ExcelSheet;
+      xlsx: { writeBuffer(): Promise<ArrayBuffer | Buffer> };
+    };
+    const ExcelJS = ((ExcelJSMod as { default?: unknown }).default ??
+      ExcelJSMod) as { Workbook: new () => ExcelWorkbook };
+    const wb = new ExcelJS.Workbook();
+    const addSheet = (
+      name: string,
+      header: string[],
+      rows: (string | number)[][],
+    ) => {
+      const sheet = wb.addWorksheet(name);
+      sheet.addRow(header);
+      for (const row of rows) sheet.addRow(row);
+      sheet.getRow(1).font = { bold: true };
+      return rows.length;
+    };
+    const sheets: string[] = [];
+    let rowCount = 0;
+    rowCount += addSheet(
+      '元素趋势',
+      ['维度', '标签', '占比%', '增速%', '最新周期'],
+      analysis.series.map((s) => [
+        s.dimension,
+        s.value,
+        Number(s.share.toFixed(1)),
+        Number(s.growthRate.toFixed(1)),
+        s.points[s.points.length - 1]?.period ?? '',
+      ]),
+    );
+    sheets.push('元素趋势');
+    rowCount += addSheet(
+      '色彩趋势',
+      ['色名', 'HEX', '占比%', '增速%'],
+      analysis.colorTrends.map((c) => [
+        c.value,
+        c.hex,
+        Number(c.share.toFixed(1)),
+        Number(c.growthRate.toFixed(1)),
+      ]),
+    );
+    sheets.push('色彩趋势');
+    rowCount += addSheet(
+      '价格带',
+      ['区间', '款数', '占比%', '均价', '增速%'],
+      analysis.priceBands.map((b) => [
+        b.label,
+        b.count,
+        Number(b.share.toFixed(1)),
+        Math.round(b.avgPrice),
+        Number(b.growthRate.toFixed(1)),
+      ]),
+    );
+    sheets.push('价格带');
+    rowCount += addSheet(
+      '竞品店铺',
+      ['店铺', '款数', '均价', '销量指数'],
+      analysis.competitors.map((c) => [
+        c.shop,
+        c.count,
+        Math.round(c.avgPrice),
+        Math.round(c.salesIndex),
+      ]),
+    );
+    sheets.push('竞品店铺');
+    rowCount += addSheet(
+      '红蓝海',
+      ['关键词', '销量占比%', '环比增速%', '建议'],
+      analysis.quadrant.map((q) => [
+        q.concept,
+        Number(q.share.toFixed(1)),
+        Number(q.growth.toFixed(1)),
+        q.hint,
+      ]),
+    );
+    sheets.push('红蓝海');
+    rowCount += addSheet(
+      '方向性预测',
+      ['标签', '趋势', '下期占比%', '置信%', '说明'],
+      analysis.predictions.map((p) => [
+        p.label,
+        p.trend,
+        p.nextShare,
+        p.confidence,
+        p.note,
+      ]),
+    );
+    sheets.push('方向性预测');
+
+    const buffer = (await wb.xlsx.writeBuffer()) as ArrayBuffer;
+    const filename = `trend-data-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    const registered = (await this.deliverableSink(user.userId, {
+      bytes: Buffer.from(buffer),
+      filename,
+      labels: ['智慧分析', '趋势数据', 'XLSX'],
+      dir: 'insight',
+      source: 'insight_export',
+    })) as Record<string, unknown> | null;
+    return {
+      format: 'xlsx',
+      assetId: str(registered?.id ?? registered?.assetId ?? ''),
+      downloadUrl: str(registered?.url ?? registered?.previewUrl ?? ''),
+      sheets,
+      rowCount,
+      error: '',
+    };
+  }
+
+  // ---------- S7 款式结构化打标（受控词表）→ 分维度 visual 指标 ----------
+
+  /**
+   * 打标改走结构化款式理解：颜色(HEX)/廓形/长度/图案/细节/材质 六维，
+   * 每个标签写 `dimension:value` 的 visual 指标（value=当日携带该标签的款式占比 0–100），
+   * 并按上一周期同键值算环比增速，供趋势曲线与色卡消费。识别不出不写，不编造。
+   */
   async tagAssets(
     user: CurrentUser,
     body: Record<string, unknown>,
@@ -2249,79 +4089,155 @@ export class InsightService {
       };
     }
     const period = new Date().toISOString().slice(0, 10);
-    const elementTally = new Map<string, number>();
+    const wearTableId = await this.ensureWearTableId(user);
+    const wearRows: Record<string, unknown>[] = [];
+    // key = `${dimension}:${value}`，value = 携带该标签的款式数
+    const tally = new Map<string, number>();
     let tagged = 0;
     let firstModel = '';
     let anyLlm = false;
     for (const asset of assets) {
-      const outcome = await this.vision.understand(
+      const wear = await this.vision.understandWear(
         user.userId,
-        {
-          name: asset.name,
-          type: asset.type,
-          url: asset.url,
-          text: asset.text,
-        },
+        { name: asset.name, url: asset.url },
         token,
       );
-      const aiLabels = (outcome.labels ?? []).filter(Boolean).slice(0, 10);
-      if (!aiLabels.length) continue;
-      if (outcome.mode === 'llm') anyLlm = true;
-      if (outcome.model && !firstModel) firstModel = outcome.model;
-      // 合并标签：人工在前、AI 候选在后，去重限 20，仅更新本地台账镜像（不覆盖平台原始文件）
+      if (!wear) continue;
+      anyLlm = true;
+      if (wear.model && !firstModel) firstModel = wear.model;
+      const tagKeys = new Set<string>();
+      for (const color of wear.colors) tagKeys.add(`color:${color.name}`);
+      if (wear.silhouette) tagKeys.add(`silhouette:${wear.silhouette}`);
+      if (wear.length) tagKeys.add(`length:${wear.length}`);
+      for (const v of wear.patterns) tagKeys.add(`pattern:${v}`);
+      for (const v of wear.details) tagKeys.add(`detail:${v}`);
+      for (const v of wear.fabrics) tagKeys.add(`fabric:${v}`);
+      if (!tagKeys.size) continue;
+      tagged += 1;
+      // 标签写回资产台账镜像（供「找相似」/人工校订），不覆盖平台原始文件
       const base = strArray(asset.labels);
       const merged = base
-        .concat(aiLabels)
+        .concat([wear.category, ...tagKeys].filter(Boolean))
         .filter((label, index, arr) => label && arr.indexOf(label) === index)
-        .slice(0, 20);
+        .slice(0, 24);
       await this.prisma.digitalAssetEntry.update({
         where: { id: asset.id },
         data: { labels: merged },
       });
-      tagged += 1;
-      for (const label of aiLabels) {
-        elementTally.set(label, (elementTally.get(label) ?? 0) + 1);
-      }
+      for (const key of tagKeys) tally.set(key, (tally.get(key) ?? 0) + 1);
+      wearRows.push({
+        title: asset.name,
+        url: asset.url,
+        category: wear.category,
+        color_main: wear.colors[0]?.name ?? '',
+        color_main_hex: wear.colors[0]?.hex ?? '',
+        color_palette: wear.colors
+          .slice(1)
+          .map((c) => `${c.name}${c.hex ? `(${c.hex})` : ''}`)
+          .join('、'),
+        silhouette: wear.silhouette,
+        length: wear.length,
+        patterns: wear.patterns.join('、'),
+        details: wear.details.join('、'),
+        fabrics: wear.fabrics.join('、'),
+        brand: '',
+        tag_version: 'womenswear-v1',
+        collected_at: new Date().toISOString(),
+      });
     }
-    // 写视觉时序：本日每个元素出现次数归一到 0–100
-    const maxCount = Math.max(1, ...elementTally.values());
-    for (const [element, count] of elementTally) {
+    const denom = Math.max(1, tagged);
+    for (const [key, count] of tally) {
+      const share = (count / denom) * 100;
+      const growthRate = await this.metricGrowth(
+        user.userId,
+        'visual',
+        key,
+        period,
+        share,
+      );
       await this.prisma.insightMetric.upsert({
         where: {
           userId_metricKey_metricType_period: {
             userId: user.userId,
-            metricKey: element,
+            metricKey: key,
             metricType: 'visual',
             period,
           },
         },
         create: {
           userId: user.userId,
-          metricKey: element,
+          metricKey: key,
           metricType: 'visual',
           period,
-          value: (count / maxCount) * 100,
-          rawValue: toJsonObject({ count }),
-          growthRate: 0,
+          value: share,
+          rawValue: toJsonObject({ count, total: denom }),
+          growthRate,
         },
         update: {
-          value: (count / maxCount) * 100,
-          rawValue: toJsonObject({ count }),
+          value: share,
+          rawValue: toJsonObject({ count, total: denom }),
+          growthRate,
         },
       });
     }
+    // 结构化打标结果幂等落「趋势标签观测」表（按款式图链接去重）
+    if (wearRows.length) {
+      try {
+        await this.dataTable.landRows(user, {
+          tableId: wearTableId,
+          fields: INSIGHT_PRESET_TABLES.wearTag.columns.map((column) => ({
+            name: column.name,
+            key: column.fieldKey,
+            type: column.fieldType,
+          })),
+          rows: wearRows,
+          dedupBy: ['url'],
+        });
+      } catch {
+        // 落表失败不影响 visual 指标（指标已写），仅记录降级
+      }
+    }
     await this.identity.audit(
       user.userId,
-      '智慧分析资产打标',
-      `扫描 ${assets.length} 图，打标 ${tagged}（${anyLlm ? '模型' : '规则'}）`,
+      '智慧分析款式打标',
+      `扫描 ${assets.length} 图，结构化打标 ${tagged}`,
     );
     return {
       scanned: assets.length,
       tagged,
       model: firstModel,
       mode: anyLlm ? 'llm' : 'rule',
-      reason: anyLlm ? '' : '未绑定模型 Key 或模型不可用，已按规则式标签兜底',
+      reason: anyLlm
+        ? ''
+        : '未绑定视觉模型 Key 或模型不可用，本轮未产出结构化标签（不编造）',
     };
+  }
+
+  /**
+   * 环比增速：同 userId+type+key 在上一周期（默认回看 7 天）的值 → 本日值的变化百分比。
+   * 找不到上一周期基准则返回 0（首次进样不算暴涨）。
+   */
+  private async metricGrowth(
+    userId: string,
+    metricType: string,
+    metricKey: string,
+    period: string,
+    currentValue: number,
+    lookbackDays = 7,
+  ): Promise<number> {
+    const base = new Date(`${period}T00:00:00Z`).getTime();
+    if (!Number.isFinite(base)) return 0;
+    const prevPeriod = new Date(base - lookbackDays * DAY_MS)
+      .toISOString()
+      .slice(0, 10);
+    const prior = await this.prisma.insightMetric.findFirst({
+      where: { userId, metricType, metricKey, period: prevPeriod },
+      orderBy: { updatedAt: 'desc' },
+    });
+    if (!prior) return 0;
+    const prev = Number(prior.value);
+    if (prev <= 0) return currentValue > 0 ? 100 : 0;
+    return ((currentValue - prev) / prev) * 100;
   }
 
   // ---------- S4 台账同步（系统列 upsert，不覆盖用户列）----------
@@ -2556,21 +4472,26 @@ export class InsightService {
 
   async getSettings(user: CurrentUser) {
     const setting = await this.ensureSetting(user);
+    const stored =
+      setting.scoreConfig && typeof setting.scoreConfig === 'object'
+        ? (setting.scoreConfig as Record<string, unknown>)
+        : {};
     return {
       linkageEnabled: setting.linkageEnabled === 1,
+      autoTagEnabled: stored.autoTagEnabled === true,
       contentTableId: setting.contentTableId,
       ledgerTableId: setting.ledgerTableId,
       ecomTableId: setting.ecomTableId,
+      wearTableId: num(stored.wearTableId),
       reportWindowDays:
-        num(
-          (setting.scoreConfig && typeof setting.scoreConfig === 'object'
-            ? (setting.scoreConfig as Record<string, unknown>).reportWindowDays
-            : undefined) ?? undefined,
-        ) || INSIGHT_SCORE_DEFAULTS.timeWindowDays,
-      scoreConfig:
-        setting.scoreConfig && typeof setting.scoreConfig === 'object'
-          ? (setting.scoreConfig as Record<string, unknown>)
+        num(stored.reportWindowDays ?? undefined) ||
+        INSIGHT_SCORE_DEFAULTS.timeWindowDays,
+      deckTemplate: str(stored.deckTemplate) || 'trend-board',
+      deckBrand:
+        stored.deckBrand && typeof stored.deckBrand === 'object'
+          ? (stored.deckBrand as Record<string, unknown>)
           : {},
+      scoreConfig: stored,
     };
   }
 
@@ -2586,11 +4507,23 @@ export class InsightService {
         data: { linkageEnabled: body.linkageEnabled === true ? 1 : 0 },
       });
     }
+    if (body.autoTagEnabled !== undefined) {
+      scoreConfig.autoTagEnabled = body.autoTagEnabled === true;
+    }
     if (body.reportWindowDays !== undefined) {
       scoreConfig.reportWindowDays = Math.max(
         1,
         Math.min(365, num(body.reportWindowDays)),
       );
+    }
+    if (body.deckTemplate !== undefined) {
+      scoreConfig.deckTemplate = str(body.deckTemplate) || 'trend-board';
+    }
+    if (body.deckBrand && typeof body.deckBrand === 'object') {
+      scoreConfig.deckBrand = {
+        ...(scoreConfig.deckBrand ?? {}),
+        ...(body.deckBrand as Record<string, unknown>),
+      };
     }
     if (body.scoreConfig && typeof body.scoreConfig === 'object') {
       scoreConfig.weights = {
@@ -2603,7 +4536,11 @@ export class InsightService {
       where: { id: setting.id },
       data: { scoreConfig: toJsonObject(scoreConfig) },
     });
-    await this.identity.audit(user.userId, '智慧分析设置保存', '联动/打分参数');
+    await this.identity.audit(
+      user.userId,
+      '智慧分析设置保存',
+      '联动/打标/报告参数',
+    );
     return this.getSettings(user);
   }
 

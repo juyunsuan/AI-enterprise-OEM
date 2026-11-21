@@ -1,0 +1,27 @@
+.task {
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid #f0f1f5;
+}
+
+.task:last-child {
+  border-bottom: none;
+}
+
+.task-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.task-title {
+  flex: 1;
+  margin-right: 16rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.task-foot {
+  margin-top: 12rpx;
+  text-align: right;
+}

@@ -1,0 +1,51 @@
+<view class="page" wx:if="{{profile}}">
+  <view class="hero">
+    <view class="hero-name">{{profile.name}}</view>
+    <view class="hero-meta">{{profile.roleLabel}} · {{profile.title || '未填写职称'}}</view>
+    <view class="hero-meta" wx:if="{{profile.organName || profile.hospitalName}}">
+      {{profile.organName || profile.hospitalName}}{{profile.departmentName ? ' · ' + profile.departmentName : ''}}
+    </view>
+    <view class="hero-score" wx:if="{{profile.scoreCount}}">评分 {{profile.score}} · {{profile.scoreCount}} 条评价</view>
+  </view>
+
+  <view class="stats">
+    <view class="stat" wx:for="{{stats}}" wx:key="key">
+      <view class="stat-value {{item.tone}}">{{item.value}}</view>
+      <view class="stat-label">{{item.label}}</view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="title">今日排班</view>
+    <view class="muted" wx:if="{{!shifts.length}}">今天没有班次</view>
+    <view class="list-item" wx:for="{{shifts}}" wx:key="id">
+      <view class="item-title">{{item.text}}</view>
+    </view>
+    <view class="slot-line" wx:if="{{slots.length}}">
+      <text class="slot {{item.status}}" wx:for="{{slots}}" wx:key="id">{{item.text}}</text>
+    </view>
+  </view>
+
+  <view class="card nav-card">
+    <view
+      class="nav"
+      wx:for="{{nav}}"
+      wx:key="key"
+      data-url="{{item.url}}"
+      bindtap="onNav"
+    >
+      <view class="nav-main">
+        <view class="nav-label">{{item.label}}</view>
+        <view class="item-meta">{{item.desc}}</view>
+      </view>
+      <text class="chevron">›</text>
+    </view>
+  </view>
+
+  <view class="foot">
+    <text class="link" bindtap="onLogout">退出医护登录</text>
+  </view>
+</view>
+
+<view class="empty" wx:elif="{{!loading}}">医护身份不可用，请重新绑定</view>
+<view class="empty" wx:else>正在加载…</view>

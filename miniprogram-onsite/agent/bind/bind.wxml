@@ -1,0 +1,31 @@
+<view class="card">
+  <view class="title">代理中心</view>
+  <view class="muted tip">本入口供区域代理 / 业务员 / 渠道商使用：绑定后查看自己名下顾客的订单与佣金台账。顾客请回首页下单。</view>
+  <view class="link" bindtap="goCustomerHome">我是顾客，回首页</view>
+</view>
+
+<view class="card">
+  <view class="field">
+    <text class="label">手机号</text>
+    <input
+      class="input"
+      type="number"
+      maxlength="11"
+      placeholder="与店主后台登记的联系手机号一致"
+      value="{{phone}}"
+      bindinput="onPhoneInput"
+    />
+  </view>
+  <view class="muted tip">手机号由店主在「代理分销」里录入；同一个号同时登记为代理与业务员时，按代理身份进入。</view>
+  <view class="error" wx:if="{{error}}">{{error}}</view>
+  <button
+    class="button-primary submit"
+    bindtap="submit"
+    loading="{{submitting}}"
+    disabled="{{submitting}}"
+  >绑定代理身份</button>
+</view>
+
+<view class="card">
+  <view class="muted">绑定失败常见原因：手机号没有在本店登记为代理 / 业务员 / 渠道商、已被店主停用、或店铺暂停服务。以上情况请联系店主处理。</view>
+</view>

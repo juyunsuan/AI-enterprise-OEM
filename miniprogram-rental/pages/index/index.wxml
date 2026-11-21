@@ -1,0 +1,82 @@
+<view class="page">
+  <view class="empty" wx:if="{{loading}}">正在读取门店配置…</view>
+
+  <view class="card" wx:elif="{{!shop.shopCode}}">
+    <view class="title">门店暂未开通</view>
+    <view class="muted" style="margin-top: 12rpx;">{{error || '请联系门店完成开通后再试'}}</view>
+    <button class="button-primary" style="margin-top: 24rpx;" bindtap="retry">重新加载</button>
+  </view>
+
+  <block wx:else>
+    <view class="card">
+      <view class="row">
+        <view>
+          <view class="title">{{shop.shopName}}</view>
+          <view class="muted" style="margin-top: 8rpx;">{{shop.address || '到店取还，请提前联系门店'}}</view>
+          <view class="muted shop-phone" wx:if="{{shop.servicePhone}}" bindtap="callPhone">电话 {{shop.servicePhone}}</view>
+        </view>
+        <image class="cover" src="{{shop.logo}}" mode="aspectFill" wx:if="{{shop.logo}}"></image>
+      </view>
+    </view>
+
+    <view class="card notice-card" wx:if="{{notice}}">
+      <view class="title" style="font-size: 30rpx;">门店公告</view>
+      <view class="muted notice-text">{{notice}}</view>
+    </view>
+
+    <view class="quick">
+      <view class="quick-item" bindtap="openOrders">
+        <view class="quick-title">我的租单</view>
+        <view class="muted">查看进度与取还</view>
+      </view>
+      <view class="quick-item" bindtap="openStaff">
+        <view class="quick-title">员工入口</view>
+        <view class="muted">验车 / 交接 / 结算</view>
+      </view>
+      <view class="quick-item" bindtap="openDesk" wx:if="{{deskKey}}">
+        <view class="quick-title">在线客服</view>
+        <view class="muted">AI 客服即时答</view>
+      </view>
+    </view>
+
+    <view class="section">
+      <view class="section-head">
+        <text class="title">可租租品</text>
+        <text class="muted">{{items.length}} 项</text>
+      </view>
+
+      <view class="empty" wx:if="{{itemError}}">
+        <view>{{itemError}}</view>
+        <view class="link" bindtap="loadItems">重新加载</view>
+      </view>
+      <view class="empty" wx:elif="{{!items.length}}">门店暂未上架租品</view>
+
+      <view class="card item-card" wx:for="{{items}}" wx:key="id" data-id="{{item.id}}" bindtap="openItem">
+        <image class="cover" src="{{item.cover}}" mode="aspectFill" wx:if="{{item.cover}}"></image>
+        <view class="item-main">
+          <view class="item-title">{{item.name}}</view>
+          <view class="muted" wx:if="{{item.category}}">{{item.category}}</view>
+          <view class="tags" wx:if="{{item.tags.length}}">
+            <text class="tag" wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this">{{tag}}</text>
+          </view>
+          <view class="row" style="margin-top: 12rpx;">
+            <text class="price">{{item.priceText}}<text class="muted"> / 天</text></text>
+            <text class="muted">押金 {{item.depositText}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="card" wx:if="{{scrmQr}}" bindtap="previewScrm">
+      <view class="row">
+        <view>
+          <view class="title">{{scrmName || '专属顾问'}}</view>
+          <view class="muted" style="margin-top: 8rpx;">扫码添加企业微信，点击可放大</view>
+        </view>
+        <image class="cover" src="{{scrmQr}}" mode="aspectFit"></image>
+      </view>
+    </view>
+
+    <view class="empty muted">租赁管理 · 在线支付与线下交接均由本门店完成</view>
+  </block>
+</view>

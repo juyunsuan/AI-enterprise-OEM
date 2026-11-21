@@ -186,8 +186,9 @@ export function registerPlatformAdminRoutes(
         siteUrl: z.string().max(512).optional(),
         // 顶部统一 Chrome 插件入口总开关：关掉后所有用户都看不到入口图标
         extensionEntryEnabled: z.boolean().optional(),
-        // 顶部「下载客户端」入口的下载地址：留空即隐藏入口，归一化在 service 里做
-        clientDownloadUrl: z.string().max(512).optional(),
+        // 顶部下载入口：手机端（AWBot）与 PC 端（AWBotDSH），留空即隐藏对应入口，归一化在 service 里做
+        mobileDownloadUrl: z.string().max(512).optional(),
+        pcDownloadUrl: z.string().max(512).optional(),
       })
       .parse(await c.req.json());
     return json(c, await module.site.save(body), '站点设置已保存');

@@ -1,0 +1,57 @@
+<view class="page" style="{{themeStyle}}">
+  <view class="empty" wx:if="{{!enabled}}">店主未开启「我的订单」。可凭订单号与联系方式在查单页取卡。</view>
+
+  <block wx:else>
+    <view class="empty" wx:if="{{loginError}}">
+      登录失败：{{loginError}}。仍可匿名查单取卡。
+    </view>
+
+    <block wx:if="{{logged}}">
+      <view class="filter-row">
+        <view
+          class="filter-item {{filter === item.key ? 'filter-active' : ''}}"
+          wx:for="{{filters}}"
+          wx:key="key"
+          bindtap="switchFilter"
+          data-key="{{item.key}}"
+        >
+          {{item.label}}
+        </view>
+      </view>
+
+      <view class="empty" wx:if="{{error}}">{{error}}</view>
+      <view class="empty" wx:elif="{{!orders.length && !loading}}">还没有订单，去挑一件吧</view>
+    </block>
+
+    <view
+      class="card order-card"
+      wx:for="{{orders}}"
+      wx:key="id"
+      bindtap="openOrder"
+      data-index="{{index}}"
+    >
+      <view class="row between">
+        <text class="muted small">{{item.orderNo}}</text>
+        <text class="tag {{item.payState === 'PAID' ? 'tag-primary' : ''}}">{{item.payStateLabel}}</text>
+      </view>
+      <view class="row order-body">
+        <image class="goods-thumb" src="{{item.goodsCover}}" mode="aspectFill" />
+        <view class="flex1 col">
+          <text class="goods-name ellipsis-2">{{item.goodsName}}</text>
+          <view class="row between order-foot">
+            <text class="muted small">{{item.createdText}}</text>
+            <text class="small">¥{{item.totalText}} · {{item.quantity}} 张</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="muted loading-text" wx:if="{{loading}}">加载中…</view>
+    <view class="muted loading-text" wx:elif="{{orders.length && finished}}">没有更多了</view>
+
+    <view class="row quick-row">
+      <view class="btn btn-ghost action-btn" bindtap="goQuery">匿名查单取卡</view>
+      <view class="btn btn-ghost action-btn" bindtap="goSearch">搜商品</view>
+    </view>
+  </block>
+</view>

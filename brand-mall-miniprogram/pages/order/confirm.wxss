@@ -1,0 +1,289 @@
+.confirm-page {
+  min-height: 100vh;
+  padding: 16rpx 24rpx;
+  box-sizing: border-box;
+}
+
+.card {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+  box-sizing: border-box;
+}
+
+.address {
+  display: flex;
+  align-items: center;
+}
+
+.addr-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.addr-line {
+  display: flex;
+  align-items: center;
+}
+
+.addr-name {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.addr-phone {
+  margin-left: 16rpx;
+  font-size: 26rpx;
+  color: #4d5159;
+}
+
+.addr-tag {
+  margin-left: 12rpx;
+  padding: 0 12rpx;
+  height: 32rpx;
+  line-height: 32rpx;
+  border-radius: 999rpx;
+  background: rgba(250, 53, 52, 0.1);
+  color: #fa3534;
+  font-size: 20rpx;
+}
+
+.addr-detail {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: #7b8089;
+  line-height: 36rpx;
+}
+
+.addr-empty {
+  flex: 1;
+  font-size: 28rpx;
+  color: #fa3534;
+}
+
+.arrow {
+  margin-left: 12rpx;
+  color: #8a8f99;
+}
+
+.goods {
+  display: flex;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #eaecef;
+}
+
+.goods:last-child {
+  border-bottom: none;
+}
+
+.pic {
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: 12rpx;
+  background: #f4f5f7;
+  flex-shrink: 0;
+}
+
+.goods-info {
+  flex: 1;
+  min-width: 0;
+  margin-left: 16rpx;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.name {
+  font-size: 28rpx;
+  line-height: 40rpx;
+}
+
+.sku {
+  font-size: 22rpx;
+}
+
+.goods-foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.price {
+  color: #fa3534;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.qty {
+  font-size: 24rpx;
+  color: #8a8f99;
+}
+
+.muted {
+  color: #8a8f99;
+  font-size: 22rpx;
+}
+
+.cell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid #eaecef;
+  font-size: 28rpx;
+}
+
+.cell:last-child {
+  border-bottom: none;
+}
+
+.cell-label {
+  width: 160rpx;
+  color: #4d5159;
+}
+
+.cell-value {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+  color: #fa3534;
+  font-size: 26rpx;
+}
+
+.points-input,
+.remark-input {
+  flex: 1;
+  text-align: right;
+  font-size: 26rpx;
+}
+
+.amounts {
+  padding: 8rpx 24rpx;
+}
+
+.amount-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18rpx 0;
+  font-size: 26rpx;
+  color: #4d5159;
+}
+
+.minus {
+  color: #fa3534;
+}
+
+.total {
+  border-top: 1rpx solid #eaecef;
+  font-size: 28rpx;
+  color: #1f1f1f;
+}
+
+.block-tip {
+  margin: 0 0 16rpx;
+  padding: 20rpx 24rpx;
+  border-radius: 12rpx;
+  background: #fff7e6;
+  color: #d98200;
+  font-size: 24rpx;
+  line-height: 36rpx;
+}
+
+.footer-gap {
+  height: 130rpx;
+}
+
+.bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 100rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fff;
+  border-top: 1rpx solid #eaecef;
+  padding: 0 24rpx;
+  box-sizing: border-box;
+  z-index: 20;
+}
+
+.bar-total {
+  display: flex;
+  align-items: baseline;
+}
+
+.bar-price {
+  margin-left: 10rpx;
+  color: #fa3534;
+  font-size: 36rpx;
+  font-weight: 600;
+}
+
+.bar-btn {
+  min-width: 220rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+  text-align: center;
+  border-radius: 999rpx;
+  background: #fa3534;
+  color: #fff;
+  font-size: 28rpx;
+}
+
+.bar-btn.dis {
+  background: #d8d8d8;
+}
+
+.mask {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 30;
+}
+
+.sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 70vh;
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 24rpx 24rpx 0 0;
+  padding: 28rpx;
+  box-sizing: border-box;
+}
+
+.sheet-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  margin-bottom: 16rpx;
+}
+
+.sheet-item {
+  padding: 22rpx 0;
+  border-bottom: 1rpx solid #eaecef;
+  font-size: 28rpx;
+}
+
+.sheet-item.dis {
+  opacity: 0.5;
+}
+
+.sheet-name {
+  font-size: 28rpx;
+  color: #1f2329;
+}
+
+.sheet-add {
+  padding: 24rpx 0 8rpx;
+  color: #fa3534;
+  font-size: 26rpx;
+}

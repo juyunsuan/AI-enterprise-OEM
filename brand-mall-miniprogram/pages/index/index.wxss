@@ -1,0 +1,33 @@
+.diy-page {
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding-bottom: 24rpx;
+}
+
+.tip {
+  margin: 24rpx;
+  padding: 28rpx;
+  background: #fff;
+  border-radius: 20rpx;
+  font-size: 26rpx;
+  color: #1f2329;
+}
+
+.tip-sub {
+  margin: 12rpx 0 20rpx;
+}
+
+.mini {
+  display: inline-flex;
+  height: 60rpx;
+  padding: 0 28rpx;
+  align-items: center;
+  border-radius: 999rpx;
+  background: #fa3534;
+  color: #fff;
+  font-size: 24rpx;
+}
+
+.footer-gap {
+  height: 40rpx;
+}

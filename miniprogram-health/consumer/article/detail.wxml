@@ -1,0 +1,114 @@
+<view class="page page-with-bar" wx:if="{{kind === 'post' && post}}">
+  <view class="card">
+    <view class="post-head">
+      <image wx:if="{{post.authorAvatar}}" class="avatar" src="{{post.authorAvatar}}" mode="aspectFill" />
+      <view wx:else class="avatar"></view>
+      <view>
+        <view>{{post.authorName}}</view>
+        <view class="item-meta">{{post.timeText}} · {{post.viewCount}} 浏览</view>
+      </view>
+    </view>
+    <view class="title post-title" wx:if="{{post.title}}">{{post.title}}</view>
+    <view class="post-content">{{post.content}}</view>
+    <view class="post-images" wx:if="{{post.images.length}}">
+      <image
+        wx:for="{{post.images}}"
+        wx:key="*this"
+        class="post-image"
+        src="{{item}}"
+        mode="aspectFill"
+        data-url="{{item}}"
+        bindtap="onPreview"
+      />
+    </view>
+    <view class="tags" wx:if="{{post.tags.length}}">
+      <text class="tag tag-blue" wx:for="{{post.tags}}" wx:key="*this">{{item}}</text>
+    </view>
+    <view class="post-foot item-meta" wx:if="{{post.topic}}">话题：{{post.topic}}</view>
+  </view>
+
+  <view class="card">
+    <view class="block-title">评论（{{post.comments.length}}）</view>
+    <view class="comment" wx:for="{{post.comments}}" wx:key="id">
+      <image wx:if="{{item.authorAvatar}}" class="avatar-sm" src="{{item.authorAvatar}}" mode="aspectFill" />
+      <view wx:else class="avatar-sm"></view>
+      <view class="comment-body">
+        <view class="comment-name">{{item.authorName}}</view>
+        <view class="comment-text">{{item.content}}</view>
+        <view class="item-meta">{{item.timeText}}</view>
+      </view>
+    </view>
+    <view class="item-meta" wx:if="{{!post.comments.length}}">还没有评论，来说两句吧</view>
+  </view>
+
+  <view class="notice notice-warn tip" wx:if="{{post.notice}}">{{post.notice}}</view>
+
+  <view class="action-bar">
+    <input
+      class="comment-input"
+      placeholder="友善评论，交流经验"
+      maxlength="500"
+      value="{{commentText}}"
+      bindinput="onInputComment"
+    />
+    <button class="button-primary bar-button" disabled="{{submitting}}" bindtap="onSubmitComment">发送</button>
+    <button
+      class="like-button {{post.liked ? 'liked' : ''}}"
+      disabled="{{submitting}}"
+      bindtap="onLike"
+    >{{post.liked ? '已赞' : '赞'}} {{post.likeCount}}</button>
+  </view>
+</view>
+
+<view class="page" wx:elif="{{kind === 'question' && question}}">
+  <view class="card">
+    <view class="title">{{question.title}}</view>
+    <view class="detail-text" wx:if="{{question.detail}}">{{question.detail}}</view>
+    <view class="tags">
+      <text class="tag tag-orange" wx:if="{{question.bountyText}}">悬赏 {{question.bountyText}}</text>
+      <text class="item-meta">{{question.timeText}}</text>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{question.answers.length}}">
+    <view class="block-title">回答（{{question.answers.length}}）</view>
+    <view class="answer" wx:for="{{question.answers}}" wx:key="id">
+      <view class="answer-head">
+        <image wx:if="{{item.practitionerAvatar}}" class="avatar-sm" src="{{item.practitionerAvatar}}" mode="aspectFill" />
+        <view wx:else class="avatar-sm"></view>
+        <view>
+          <view class="comment-name">
+            {{item.practitionerName}}
+            <text class="tag tag-green" wx:if="{{item.adopted}}">已采纳</text>
+          </view>
+          <view class="item-meta">{{item.practitionerTitle || '认证医护'}} · {{item.timeText}}</view>
+        </view>
+      </view>
+      <view class="detail-text">{{item.content}}</view>
+      <view class="item-meta" wx:if="{{item.likeCount}}">{{item.likeCount}} 人觉得有帮助</view>
+    </view>
+  </view>
+  <view class="empty" wx:elif="{{!loading}}">还没有回答，医护看到后会尽快回复</view>
+
+  <view class="notice notice-warn tip" wx:if="{{question.disclaimer}}">{{question.disclaimer}}</view>
+</view>
+
+<view class="page" wx:elif="{{kind === 'article' && article}}">
+  <view class="card">
+    <view class="title">{{article.title}}</view>
+    <view class="item-meta article-meta">
+      <text wx:if="{{article.authorName}}">{{article.authorName}} · </text>{{article.timeText}} · {{article.viewCount}} 阅读
+    </view>
+    <view class="tags" wx:if="{{article.tags.length}}">
+      <text class="tag tag-blue" wx:for="{{article.tags}}" wx:key="*this">{{item}}</text>
+    </view>
+  </view>
+
+  <view class="card">
+    <rich-text class="rich" nodes="{{article.contentHtml}}"></rich-text>
+    <view class="notice notice-warn" wx:if="{{!article.contentHtml}}">{{article.summary || '该内容暂未提供正文'}}</view>
+  </view>
+</view>
+
+<view class="empty" wx:elif="{{!loading}}">{{error || '内容不存在或已下线'}}</view>
+<view class="empty" wx:else>正在加载…</view>

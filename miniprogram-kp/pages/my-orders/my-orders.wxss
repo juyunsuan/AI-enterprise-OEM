@@ -1,0 +1,59 @@
+.order-card {
+  display: flex;
+  align-items: center;
+}
+
+.order-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.order-title {
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.order-meta {
+  margin-top: 8rpx;
+}
+
+.order-side {
+  margin-left: 20rpx;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.amount {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.status {
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: var(--muted);
+}
+
+.status.paid {
+  color: #0f9d58;
+}
+
+.status.refunded {
+  color: #d4380d;
+}
+
+.status.pending {
+  color: var(--vip);
+}
+
+.empty {
+  padding: 80rpx 40rpx;
+  text-align: center;
+  color: var(--muted);
+  font-size: 26rpx;
+}
+
+.empty-btn {
+  width: 260rpx;
+  margin: 28rpx auto 0;
+}

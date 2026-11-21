@@ -1,0 +1,21 @@
+<view class="rc">
+  <view class="rc-cover cover">
+    <image
+      wx:if="{{item.cover}}"
+      class="rc-img"
+      src="{{item.cover}}"
+      mode="aspectFill"
+      lazy-load="{{true}}"
+    />
+    <view wx:else class="rc-ph">{{item.mediaLabel || '内容'}}</view>
+    <view class="rc-badge" wx:if="{{item.mediaLabel}}">{{item.mediaLabel}}</view>
+  </view>
+  <view class="rc-main">
+    <view class="rc-title ellipsis-2">{{item.title}}</view>
+    <view class="rc-meta">
+      <text class="{{item.accessClass || 'tag'}}" wx:if="{{item.accessLabel}}">{{item.accessLabel}}</text>
+      <text class="rc-views" wx:if="{{item.viewText}}">浏览 {{item.viewText}}</text>
+      <text class="rc-views" wx:if="{{item.dateText}}">{{item.dateText}}</text>
+    </view>
+  </view>
+</view>

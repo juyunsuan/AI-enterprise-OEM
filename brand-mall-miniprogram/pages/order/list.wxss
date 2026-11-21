@@ -1,0 +1,159 @@
+.order-list-page {
+  min-height: 100vh;
+}
+
+.tabs {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  background: #fff;
+  border-bottom: 1rpx solid #eaecef;
+}
+
+.tab {
+  flex: 1;
+  text-align: center;
+  padding: 24rpx 0;
+  font-size: 26rpx;
+  color: #4d5159;
+}
+
+.tab.on {
+  color: #fa3534;
+  font-weight: 600;
+  border-bottom: 4rpx solid #fa3534;
+}
+
+.order {
+  background: #fff;
+  border-radius: 16rpx;
+  margin: 16rpx 24rpx;
+  padding: 24rpx;
+  box-sizing: border-box;
+}
+
+.order-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+
+.order-no {
+  font-size: 24rpx;
+  color: #7b8089;
+}
+
+.order-status {
+  font-size: 26rpx;
+  color: #fa3534;
+  font-weight: 600;
+}
+
+.thumb-row {
+  display: flex;
+  align-items: center;
+}
+
+.thumb {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 12rpx;
+  background: #f4f5f7;
+  margin-right: 12rpx;
+}
+
+.more {
+  margin-left: 8rpx;
+}
+
+.order-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12rpx;
+}
+
+.summary {
+  flex: 1;
+  min-width: 0;
+  font-size: 26rpx;
+  color: #1f2329;
+  line-height: 38rpx;
+}
+
+.amount {
+  margin-left: 16rpx;
+  color: #fa3534;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.refund-tag {
+  color: #d98200;
+  font-size: 22rpx;
+}
+
+.order-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20rpx;
+  padding-top: 20rpx;
+  border-top: 1rpx solid #eaecef;
+}
+
+.act {
+  min-width: 150rpx;
+  height: 60rpx;
+  line-height: 60rpx;
+  text-align: center;
+  border-radius: 999rpx;
+  font-size: 24rpx;
+  margin-left: 16rpx;
+}
+
+.act.plain {
+  border: 1rpx solid #d0d3d9;
+  color: #4d5159;
+}
+
+.act.main {
+  background: #fa3534;
+  color: #fff;
+}
+
+.muted {
+  color: #8a8f99;
+  font-size: 22rpx;
+}
+
+.empty {
+  padding: 140rpx 24rpx;
+  text-align: center;
+  color: #8a8f99;
+  font-size: 26rpx;
+}
+
+.empty-btn {
+  margin-top: 24rpx;
+  display: inline-flex;
+  height: 68rpx;
+  padding: 0 32rpx;
+  align-items: center;
+  border-radius: 999rpx;
+  background: #fa3534;
+  color: #fff;
+  font-size: 26rpx;
+}
+
+.loading {
+  text-align: center;
+  color: #adb2bb;
+  font-size: 22rpx;
+  padding: 24rpx 0;
+}
+
+.footer-gap {
+  height: 40rpx;
+}

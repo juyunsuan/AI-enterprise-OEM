@@ -1,0 +1,39 @@
+.report {
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid #f0f1f5;
+}
+
+.report:last-child {
+  border-bottom: none;
+}
+
+.report-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.report-title {
+  flex: 1;
+  margin-right: 16rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.dot {
+  display: inline-block;
+  width: 14rpx;
+  height: 14rpx;
+  margin-left: 8rpx;
+  border-radius: 50%;
+  background: #f5413d;
+  vertical-align: middle;
+}
+
+.report-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12rpx;
+}

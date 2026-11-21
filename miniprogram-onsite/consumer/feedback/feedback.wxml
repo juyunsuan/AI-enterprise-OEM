@@ -1,0 +1,93 @@
+<view class="empty" wx:if="{{loading}}">正在准备…</view>
+
+<view class="card" wx:elif="{{notReady}}">
+  <view class="title">店铺暂未开通</view>
+  <view class="muted detail-text">{{readyReason}}</view>
+</view>
+
+<view class="empty" wx:elif="{{error}}">{{error}}</view>
+
+<block wx:else>
+  <view class="card">
+    <view class="title">反馈类型</view>
+    <view class="pills wrap">
+      <view
+        class="pill {{item.activeClass}}"
+        wx:for="{{categories}}"
+        wx:key="key"
+        data-key="{{item.key}}"
+        bindtap="onCategoryTap"
+      >{{item.label}}</view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="title">具体说明</view>
+    <textarea
+      class="textarea"
+      value="{{content}}"
+      maxlength="2000"
+      placeholder="写明时间、服务人员与具体问题，便于店铺核实（至少 4 个字）"
+      bindinput="onContentInput"
+    ></textarea>
+    <view class="field-label">图片（选填，最多 {{imageMax}} 张）</view>
+    <view class="images">
+      <view class="image-item" wx:for="{{images}}" wx:key="*this">
+        <image
+          class="image"
+          src="{{item}}"
+          mode="aspectFill"
+          data-index="{{index}}"
+          bindtap="previewImage"
+        ></image>
+        <text class="image-remove" data-index="{{index}}" catchtap="removeImage">删除</text>
+      </view>
+      <view class="image-add" wx:if="{{images.length < imageMax}}" bindtap="chooseImages">
+        {{uploading ? '上传中…' : '+ 上传'}}
+      </view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="muted">反馈会直接进入店铺后台，处理结果由店铺回复；紧急情况请直接拨打店内电话。</view>
+  </view>
+
+  <view class="card">
+    <view class="row">
+      <text class="title">我的反馈</text>
+      <text class="link" bindtap="loadFeedbacks">{{loadingFeedbacks ? '刷新中…' : '刷新'}}</text>
+    </view>
+    <view class="muted" wx:if="{{feedbackError}}">{{feedbackError}}</view>
+    <view class="muted" wx:elif="{{!feedbacks.length}}">还没有提交过反馈</view>
+    <view class="list-item" wx:for="{{feedbacks}}" wx:key="id">
+      <view class="item-head">
+        <text class="item-title">{{item.category}}</text>
+        <text class="{{item.handled ? 'tag tag-green' : 'muted'}}">{{item.statusText}}</text>
+      </view>
+      <view class="detail-text">{{item.content}}</view>
+      <view class="images" wx:if="{{item.images.length}}">
+        <image
+          class="history-image"
+          wx:for="{{item.images}}"
+          wx:for-item="photo"
+          wx:for-index="photoIndex"
+          wx:key="*this"
+          src="{{photo}}"
+          mode="aspectFill"
+          data-index="{{index}}"
+          data-src="{{photo}}"
+          bindtap="previewHistoryImage"
+        ></image>
+      </view>
+      <view class="item-meta" wx:if="{{item.reply}}">店铺回复</view>
+      <view class="detail-text" wx:if="{{item.reply}}">{{item.reply}}</view>
+      <view class="item-meta">{{item.createdText}}</view>
+    </view>
+  </view>
+
+  <view class="footer">
+    <button class="button-primary" bindtap="submit" disabled="{{submitting}}">
+      {{submitting ? '正在提交…' : '提交反馈'}}
+    </button>
+  </view>
+</block>

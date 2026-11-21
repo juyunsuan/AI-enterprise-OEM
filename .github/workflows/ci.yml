@@ -33,6 +33,8 @@ jobs:
       - run: pnpm --filter @enterprise/contracts build
       # 架构边界 + 插件能力声明一致性（原语/错误码/协议版本/站点矩阵/版本号 ↔ 契约与 manifest 零差异）。
       - run: pnpm check:architecture
+      # 开发套件真源与生成物：根入口 / 技能双目录 / 分域接口索引 / 下载 zip 任一漂移即红。
+      - run: pnpm devkit:check
       # Agent 能力底座的安全不变量（出站守卫 / 禁跳转 / 围栏 / 无人值守默认拒写 / 验密 / 配额 / 快照）
       # 纯静态断言，不连库：闸门被重构顺手拆掉时在这里失败。
       - run: pnpm test:agent-security

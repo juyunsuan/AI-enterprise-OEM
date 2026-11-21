@@ -1,0 +1,24 @@
+.link {
+  color: #1f6feb;
+  font-size: 26rpx;
+}
+.addr {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #f2f3f5;
+}
+.addr:last-child {
+  border-bottom: none;
+}
+.ops {
+  display: grid;
+  gap: 8rpx;
+  text-align: right;
+  color: #1f6feb;
+  font-size: 24rpx;
+}
+.danger {
+  color: #dc2626;
+}

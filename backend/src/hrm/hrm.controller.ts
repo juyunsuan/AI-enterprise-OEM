@@ -176,10 +176,6 @@ export class HrmController {
     return this.recruitService.generateJd(body, user);
   }
 
-  publishJob(user: CurrentUser, body: { id: number }) {
-    return this.recruitService.publishJob(body.id, user);
-  }
-
   // ---------- 招聘：候选人 / 投递 / 评估 ----------
 
   listCandidates(user: CurrentUser, query: PageQuery & { q?: string }) {

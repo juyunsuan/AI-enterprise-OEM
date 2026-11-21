@@ -27,6 +27,7 @@ import {
   scrmStatsStaffSchema,
   scrmStatsTrendSchema,
   scrmTagGroupSchema,
+  scrmTerminalSettingSchema,
   scrmTimelineSchema,
   scrmTransferSchema,
   scrmUnassignedSchema,
@@ -69,6 +70,7 @@ export type ScrmStatsTrend = z.infer<typeof scrmStatsTrendSchema>;
 export type ScrmStatsStaff = z.infer<typeof scrmStatsStaffSchema>;
 export type ScrmMaterial = z.infer<typeof scrmMaterialSchema>;
 export type ScrmSidebarTicket = z.infer<typeof scrmSidebarTicketSchema>;
+export type ScrmTerminalSetting = z.infer<typeof scrmTerminalSettingSchema>;
 
 export const scrmApi = {
   settings: endpoint(endpoints.Scrm_settings),
@@ -76,6 +78,8 @@ export const scrmApi = {
   testConnection: endpoint(endpoints.Scrm_testConnection),
   sync: endpoint(endpoints.Scrm_sync),
   overview: endpoint(endpoints.Scrm_overview),
+  terminalSettings: endpoint(endpoints.Scrm_terminalSettings),
+  terminalToggle: endpoint(endpoints.Scrm_terminalToggle),
 
   contacts: endpoint(endpoints.Scrm_contacts),
   contact: endpoint(endpoints.Scrm_contact),

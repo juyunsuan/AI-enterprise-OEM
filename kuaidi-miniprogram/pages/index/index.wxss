@@ -1,0 +1,132 @@
+.hero {
+  border-radius: 24rpx;
+  padding: 40rpx 32rpx;
+  color: #ffffff;
+  margin-bottom: 20rpx;
+}
+
+.pick-row {
+  padding: 24rpx 0;
+  border-top: 1rpx solid #f0f1f3;
+}
+
+.pick-row:first-of-type {
+  border-top: none;
+  padding-top: 8rpx;
+}
+
+.pick-name {
+  font-size: 30rpx;
+  font-weight: 600;
+  margin-bottom: 6rpx;
+}
+
+.switch-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  border-radius: 16rpx;
+  padding: 16rpx 24rpx;
+  margin-bottom: 20rpx;
+}
+
+.switch-link {
+  color: #1f6feb;
+  font-size: 24rpx;
+}
+
+.hero-logo {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 20rpx;
+  background: rgba(255, 255, 255, 0.16);
+  margin-bottom: 16rpx;
+}
+
+.hero-name {
+  font-size: 40rpx;
+  font-weight: 600;
+}
+
+.hero-slogan {
+  margin-top: 6rpx;
+  font-size: 24rpx;
+  opacity: 0.85;
+}
+
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  margin-bottom: 4rpx;
+}
+
+.grid-item {
+  width: calc(50% - 10rpx);
+  box-sizing: border-box;
+  background: #ffffff;
+  border-radius: 20rpx;
+  padding: 28rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 8rpx rgba(31, 35, 41, 0.04);
+}
+
+.grid-item.primary {
+  background: #1f6feb;
+  color: #ffffff;
+}
+
+.grid-item.primary .grid-sub {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.grid-title {
+  font-size: 32rpx;
+  font-weight: 600;
+}
+
+.grid-sub {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: #8a8f99;
+}
+
+.company-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 14rpx 0;
+}
+
+.company-row + .company-row {
+  border-top: 1rpx solid #f0f1f3;
+}
+
+.company-name {
+  font-weight: 500;
+}
+
+.service-card {
+  display: flex;
+  align-items: center;
+}
+
+.service-arrow {
+  font-size: 44rpx;
+  color: #c0c4cc;
+}
+
+.contact-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 14rpx 0;
+}
+
+.contact-value {
+  color: #1f2329;
+}
+
+.footer {
+  text-align: center;
+  padding: 20rpx 40rpx 60rpx;
+}

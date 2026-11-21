@@ -10,6 +10,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AccessPolicyService } from './access-policy.service';
 import { SkillReviewService } from './skill-review.service';
 import { packageDigest } from './skill-review.rules';
+import { meterChatCall } from '../ai/ai-gateway';
 import {
   formatSecurityFailure,
   runUploadSecurityGate,
@@ -299,6 +300,12 @@ export class SkillReviewRunner {
         maxTokens: 1500,
         timeoutMs: 60_000,
         userId,
+      });
+      // 直连模型也要留用量事实（只记录不扣费），否则成本报表永远看不到这条链路
+      await meterChatCall(userId, result, {
+        module: 'skillhub',
+        operation: 'security-review',
+        model: channel.model,
       });
       const tokens = result.promptTokens + result.completionTokens;
       const verdict = normalizeVerdict(parseVerdictJson(result.reply));

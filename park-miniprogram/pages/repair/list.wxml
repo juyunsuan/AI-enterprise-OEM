@@ -1,0 +1,13 @@
+<view class="wrap">
+  <view wx:if="{{!list.length && !loading}}" class="empty">还没有工单，去「报修」提交一条。</view>
+  <view wx:for="{{list}}" wx:key="id" class="card" data-id="{{item.id}}" bindtap="goDetail">
+    <view class="row">
+      <view class="section-title">{{item.title}}</view>
+      <text class="tag">{{item.statusLabel}}</text>
+    </view>
+    <view class="muted">{{item.orderNo}} · {{item.categoryLabel}} · {{item.createdAt}}</view>
+    <view class="muted" wx:if="{{item.location}}">位置：{{item.location}}</view>
+    <view class="muted" wx:if="{{item.assigneeName}}">处理人：{{item.assigneeName}}</view>
+    <view class="muted" wx:if="{{item.rating}}">评价：{{item.rating}} 星</view>
+  </view>
+</view>

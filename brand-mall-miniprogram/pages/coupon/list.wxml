@@ -1,0 +1,48 @@
+<view class="page">
+  <view class="tabs">
+    <view class="tab {{tab === 'shop' ? 'on' : ''}}" data-tab="shop" bindtap="switchTab">领券中心</view>
+    <view class="tab {{tab === 'mine' ? 'on' : ''}}" data-tab="mine" bindtap="switchTab">我的券包</view>
+  </view>
+
+  <block wx:if="{{tab === 'shop'}}">
+    <view class="ticket" wx:for="{{shopList}}" wx:key="id">
+      <view class="ticket-left">
+        <view class="ticket-value">{{item.valueText}}</view>
+        <view class="ticket-rule">{{item.ruleText}}</view>
+      </view>
+      <view class="ticket-body">
+        <view class="ticket-name ellipsis">{{item.name}}</view>
+        <view class="muted">{{item.scopeText}} · {{item.validText}}</view>
+      </view>
+      <view class="ticket-op">
+        <view wx:if="{{item.sold}}" class="btn mini plain">已抢完</view>
+        <view wx:elif="{{item.received}}" class="btn mini plain">已领取</view>
+        <view wx:else class="btn mini" data-index="{{index}}" bindtap="receive">领取</view>
+      </view>
+    </view>
+  </block>
+
+  <block wx:else>
+    <view class="ticket {{item.status === 'UNUSED' ? '' : 'dead'}}" wx:for="{{myList}}" wx:key="ticketId">
+      <view class="ticket-left">
+        <view class="ticket-value">{{item.valueText}}</view>
+        <view class="ticket-rule">{{item.ruleText}}</view>
+      </view>
+      <view class="ticket-body">
+        <view class="ticket-name ellipsis">{{item.name}}</view>
+        <view class="muted">{{item.expireText}}</view>
+        <view class="muted">领取 {{item.receivedText}}</view>
+      </view>
+      <view class="ticket-op">
+        <view class="tag">{{item.statusLabel}}</view>
+        <view wx:if="{{item.status === 'UNUSED'}}" class="btn mini" bindtap="useCoupon">去使用</view>
+      </view>
+    </view>
+  </block>
+
+  <view class="empty" wx:if="{{loading}}">加载中…</view>
+  <view class="empty" wx:elif="{{tab === 'shop' && !shopList.length}}">暂无可领取的优惠券</view>
+  <view class="empty" wx:elif="{{tab === 'mine' && !myList.length}}">{{error || '券包还是空的，去领券中心看看'}}</view>
+
+  <view class="footer-gap"></view>
+</view>

@@ -3,7 +3,7 @@
 /**
  * agent/config.js
  *
- * 本机 Agent 的配置与资源，全部落在 SQLite（~/.botbuddy/botbuddy.db）：
+ * 本机 Agent 的配置与资源，全部落在 SQLite（~/.awbotdsh/botbuddy.db）：
  *   settings    agent.channels / agent.temperature / agent.maxTokens /
  *               agent.enabledSkills / agent.personaId
  *   channels    模型渠道（openai / anthropic，密钥只在本机）

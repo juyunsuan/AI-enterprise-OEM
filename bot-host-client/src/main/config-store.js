@@ -10,7 +10,6 @@
  *                  source='recent' 是实际干过活的目录（带 last_used_at）
  *
  * 与 Agent 自己的配置（模型渠道、技能、数字分身、记忆）分开落表，由 agent/config.js 管理。
- * 老版本 ~/.botbuddy/config.json 在首次启动时一次性导入，老文件留在原处不删。
  */
 
 const fs = require('fs');
@@ -19,40 +18,81 @@ const path = require('path');
 
 const db = require('./db');
 
+/** 同目录下旧版 JSON（改名前的临时过渡格式），只在本机同目录读取。 */
 const LEGACY_CONFIG_FILE = path.join(db.DATA_DIR, 'config.json');
-/** 改名前的目录；只在没有新版 JSON 时兜底一次。 */
-const LEGACY_OLD_DIR_FILE = path.join(os.homedir(), '.aipdd-enterprise', 'config.json');
 
 const SETTING_KEYS = [
   'baseUrl',
+  'apiBasePath',
   'token',
   'deviceName',
+  'hostId',
   'workingDir',
   'heartbeatSeconds',
   'autoStart',
   'permissionPolicy',
   'chromeBridgeToken',
   'chromeBridgePort',
+  'disabledChromeExtIds',
   // 平台账号会话：连接码只在登录后申请；令牌与主机令牌分开存，退出登录不影响已配对的主机。
   'userToken',
   'userName',
   'userEmail',
   'userAvatar',
-  // RPA「BotBuddy 浏览器」设备：本机是否自动领取并执行平台派发的 Automa 任务。
+  // RPA「AWBotDSH 浏览器」设备：本机是否自动领取并执行平台派发的 Automa 任务。
   'rpaAutoRun'
 ];
 
 const RECENT_KEEP = 20;
 
+/* ------------------------------------------------------------ 敏感设置加密 */
+
+/** 令牌类设置由主进程注入系统密钥环加密；单测没有 Electron，默认原样存取。 */
+const SECRET_KEYS = new Set(['token', 'userToken']);
+const PLAIN_CIPHER = {
+  active: false,
+  encrypt: (value) => value,
+  decrypt: (value) => value
+};
+let secretCipher = PLAIN_CIPHER;
+
+function encodeSecret(key, value) {
+  return SECRET_KEYS.has(key) ? secretCipher.encrypt(value) : value;
+}
+
+function decodeSecret(key, value) {
+  return SECRET_KEYS.has(key) ? secretCipher.decrypt(value) : value;
+}
+
+/** 明文旧值就地升级为密文：只在加密可用时执行一次。 */
+function migrateSecrets() {
+  if (!secretCipher.active) return;
+  SECRET_KEYS.forEach((key) => {
+    const raw = db.getSetting(key, '');
+    if (typeof raw === 'string' && raw && !raw.startsWith('enc:')) {
+      db.setSetting(key, secretCipher.encrypt(raw));
+    }
+  });
+}
+
+function setSecretCipher(cipher) {
+  secretCipher = cipher && cipher.active ? cipher : PLAIN_CIPHER;
+  migrateSecrets();
+}
+
 const DEFAULTS = {
   // Platform base URL. Prefilled only — always fully editable by the user.
   baseUrl: 'http://127.0.0.1:1690',
+  // 平台通道前缀：AWBotDSH 走独立通道；找不到时 platform-client 会回退旧 /api/public/bot-host。
+  apiBasePath: '/api/public/awbotdsh',
   // Token is only written after a successful pair.
   token: '',
   // Friendly device name shown in the UI.
-  deviceName: os.hostname() || 'BotBuddy Host',
+  deviceName: os.hostname() || 'AWBotDSH Host',
+  // 平台主机 ID：扫码配对时写进二维码，手机据此同时绑定这台电脑。
+  hostId: 0,
   // 默认工作区：Agent 缺省在这里干活。
-  workingDir: path.join(os.homedir(), 'BotBuddy', 'Workspace'),
+  workingDir: path.join(os.homedir(), 'AWBotDSH', 'Workspace'),
   // Heartbeat interval in seconds.
   heartbeatSeconds: 5,
   // Whether to open at login. Defaults false until paired.
@@ -63,6 +103,8 @@ const DEFAULTS = {
   // Chrome 桥接：只监听 127.0.0.1；令牌首次启动自动生成，插件侧要填同一串。
   chromeBridgeToken: '',
   chromeBridgePort: 35911,
+  // 内置 Chrome 扩展的禁用清单（按目录 id）；默认三者全开。
+  disabledChromeExtIds: [],
   // 平台账号会话（登录平台后由 /bot-host/login 换回，30 天有效）。
   userToken: '',
   userName: '',
@@ -93,13 +135,12 @@ function cleanPathList(list) {
 /* ------------------------------------------------------- 老 JSON 一次性导入 */
 
 function readLegacyJson() {
-  for (const file of [LEGACY_CONFIG_FILE, LEGACY_OLD_DIR_FILE]) {
-    try {
-      if (!fs.existsSync(file)) continue;
-      return JSON.parse(fs.readFileSync(file, 'utf8'));
-    } catch (err) {
-      console.error('[config-store] legacy config unreadable:', file, err.message);
-    }
+  const file = LEGACY_CONFIG_FILE;
+  try {
+    if (!fs.existsSync(file)) return null;
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch (err) {
+    console.error('[config-store] legacy config unreadable:', file, err.message);
   }
   return null;
 }
@@ -183,10 +224,15 @@ function normalize(raw) {
   }
 
   cfg.token = typeof cfg.token === 'string' ? cfg.token.trim() : '';
+  cfg.apiBasePath =
+    typeof cfg.apiBasePath === 'string' && cfg.apiBasePath.trim()
+      ? '/' + cfg.apiBasePath.trim().replace(/^\/+|\/+$/g, '')
+      : DEFAULTS.apiBasePath;
   cfg.deviceName =
     typeof cfg.deviceName === 'string' && cfg.deviceName.trim()
       ? cfg.deviceName.trim()
       : DEFAULTS.deviceName;
+  cfg.hostId = Number(cfg.hostId) || 0;
 
   cfg.workingDir = stripSlash(cfg.workingDir) || DEFAULTS.workingDir;
 
@@ -207,6 +253,14 @@ function normalize(raw) {
       ? bridgePort
       : DEFAULTS.chromeBridgePort;
 
+  cfg.disabledChromeExtIds = Array.from(
+    new Set(
+      (Array.isArray(cfg.disabledChromeExtIds) ? cfg.disabledChromeExtIds : [])
+        .filter((id) => typeof id === 'string' && id.trim())
+        .map((id) => id.trim().slice(0, 80))
+    )
+  ).slice(0, 100);
+
   cfg.userToken = typeof cfg.userToken === 'string' ? cfg.userToken.trim() : '';
   cfg.userName = typeof cfg.userName === 'string' ? cfg.userName.trim().slice(0, 64) : '';
   cfg.userEmail = typeof cfg.userEmail === 'string' ? cfg.userEmail.trim().slice(0, 160) : '';
@@ -224,7 +278,7 @@ function load() {
   migrateLegacyOnce();
   const raw = {};
   SETTING_KEYS.forEach((key) => {
-    raw[key] = db.getSetting(key, DEFAULTS[key]);
+    raw[key] = decodeSecret(key, db.getSetting(key, DEFAULTS[key]));
   });
   const rows = readWorkspaceRows();
   raw.workspaces = rows.whitelist;
@@ -238,7 +292,7 @@ function save(partial) {
   const patch = partial || {};
   db.tx(() => {
     SETTING_KEYS.forEach((key) => {
-      if (key in patch) db.setSetting(key, merged[key]);
+      if (key in patch) db.setSetting(key, encodeSecret(key, merged[key]));
     });
     if ('workspaces' in patch) {
       replaceRows(
@@ -281,7 +335,7 @@ function clearToken() {
 
 /** 退出平台账号：清会话与昵称，不动已配对的主机令牌。 */
 function clearUser() {
-  return save({ userToken: '', userName: '', userEmail: '', userAvatar: '' });
+  return save({ userToken: '', userName: '', userEmail: '', userAvatar: '', hostId: 0 });
 }
 
 function isLoggedIn() {
@@ -294,6 +348,7 @@ module.exports = {
   LEGACY_CONFIG_FILE,
   DEFAULTS,
   RECENT_KEEP,
+  setSecretCipher,
   load,
   get,
   save,

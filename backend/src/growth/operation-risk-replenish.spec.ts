@@ -3,12 +3,19 @@ import type { MechanismService } from '../mechanisms/mechanism.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { TaskDraft } from '../task-center/task-source';
 import { stub } from '../../test/doubles';
+import { noopErpPort } from '../erp/erp-port';
+import { ErpWriteBridge } from '../erp/erp-write.bridge';
+import type { ErpPort } from '../erp/erp-port';
 import { OperationRiskService } from './operation-risk.service';
 
 /**
  * docs §8.4「库存低于阈值 → 补货申请」：
  * 扫描后要落一张待审批的正式采购单（后续仍走采购审批），任务派给采购岗位；
  * 同一仓库 + 变体已有在途补货单时复用，不重复建单。
+ *
+ * 这里注入的是**真的** `ErpWriteBridge`（底下还是同一份 prisma 替身）：
+ * 建单已经收口到 ERP 写端口，用真实现才测得到「号源走当日流水、事件由 ERP 域发一次、
+ * 复用在途单」这三条口径，而不是只测调用方把 create 传对了参数。
  */
 
 type Row = Record<string, unknown>;
@@ -31,34 +38,9 @@ function setup(options: { openOrder?: Row | null; lowStock?: boolean } = {}) {
   const openOrder = options.openOrder === undefined ? null : options.openOrder;
   const lowStock = options.lowStock !== false;
   const prisma = {
-    erpReceivable: { findMany: jest.fn(async () => []) },
-    erpPayable: { findMany: jest.fn(async () => []) },
     pjProject: { findMany: jest.fn(async () => []) },
     pjCostItem: { groupBy: jest.fn(async () => []) },
-    erpStock: {
-      findMany: jest.fn(async () =>
-        lowStock
-          ? [{ warehouseId: 1, variantId: 9, onHand: 2, reorderPoint: 10 }]
-          : [],
-      ),
-    },
     pjTask: { findMany: jest.fn(async () => []) },
-    erpVariant: {
-      findMany: jest.fn(async () => [
-        { id: 9, sku: 'SKU-9', name: '可乐 330ml' },
-      ]),
-      findFirst: jest.fn(async () => ({
-        id: 9,
-        sku: 'SKU-9',
-        productId: 3,
-        purchasePrice: 5,
-      })),
-    },
-    erpVendor: {
-      findMany: jest.fn(async () => []),
-      findFirst: jest.fn(async () => ({ id: 7 })),
-    },
-    erpProduct: { findUnique: jest.fn(async () => ({ taxRate: 13 })) },
     orgStaff: {
       findMany: jest.fn(async () => [
         {
@@ -69,14 +51,34 @@ function setup(options: { openOrder?: Row | null; lowStock?: boolean } = {}) {
       ]),
     },
     erpPurchaseOrder: {
-      findFirst: jest.fn(async () => openOrder),
-      count: jest.fn(async () => 0),
       create: jest.fn(async ({ data }: { data: Row }) => {
         created.push(data);
         return { id: 100, orderNo: data.orderNo };
       }),
     },
   };
+  const findReplenishmentOrder = jest.fn(async () => openOrder);
+  const erp = stub<ErpPort>({
+    ...noopErpPort,
+    listStock: jest.fn(async () =>
+      lowStock
+        ? [{ warehouseId: 1, variantId: 9, onHand: 2, reorderPoint: 10 }]
+        : [],
+    ),
+    listVariants: jest.fn(async () => [
+      {
+        id: 9,
+        sku: 'SKU-9',
+        name: '可乐 330ml',
+        productId: 3,
+        purchasePrice: 5,
+      },
+    ]),
+    findReplenishmentOrder,
+    getProductTaxRate: jest.fn(async () => 13),
+    findActiveVendor: jest.fn(async () => ({ id: 7, name: '供应商甲' })),
+    countPurchaseOrdersCreatedSince: jest.fn(async () => 0),
+  });
   const mechanisms = {
     dispatch: jest.fn(async (_org: HrmOrg, event: string, payload: Row) => {
       events.push({ event, payload });
@@ -93,8 +95,23 @@ function setup(options: { openOrder?: Row | null; lowStock?: boolean } = {}) {
         return null;
       },
     },
+    erp,
+    // 写真实现：同一个 prisma 替身，断言仍然落在 created/events 上
+    new ErpWriteBridge(
+      stub<PrismaService>(prisma),
+      stub<MechanismService>(mechanisms),
+      erp,
+    ),
   );
-  return { service, prisma, drafts, events, created };
+  return {
+    service,
+    prisma,
+    erp,
+    findReplenishmentOrder,
+    drafts,
+    events,
+    created,
+  };
 }
 
 describe('库存低于补货点 → 补货申请（docs §8.4）', () => {
@@ -147,7 +164,10 @@ describe('库存低于补货点 → 补货申请（docs §8.4）', () => {
 
   it('关闭前复核：在途补货单存在即放行（不必等库存回补）', async () => {
     const ctx = setup();
-    ctx.prisma.erpPurchaseOrder.count.mockResolvedValue(1);
+    ctx.findReplenishmentOrder.mockResolvedValueOnce({
+      id: 100,
+      orderNo: 'CG-20261119-0001',
+    });
     const outcome = await ctx.service.recheck(
       { orgType: 'ENTERPRISE', orgUserId: 'ent-1' },
       'stock:1:9:o100',

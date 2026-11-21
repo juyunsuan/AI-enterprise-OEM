@@ -1,0 +1,79 @@
+<view class="diy-page" style="{{pageStyle}}">
+  <block wx:if="{{decorated}}">
+    <diy-block wx:for="{{blocks}}" wx:key="key" type="{{item.type}}" props="{{item.props}}" ctx="{{ctx}}" />
+  </block>
+
+  <block wx:else>
+    <view class="head" style="background: linear-gradient(180deg, {{themeColor}} 0%, #ffffff 100%)">
+      <image class="avatar" src="{{avatar || ''}}" mode="aspectFill" wx:if="{{avatar}}" />
+      <view class="avatar ph" wx:else>{{logged ? '我' : '登录'}}</view>
+      <view class="head-main">
+        <view class="name">{{logged ? nickname : '点击任意入口自动登录'}}</view>
+        <view class="sub" wx:if="{{logged}}">
+          <text wx:if="{{pointsText}}">积分 {{pointsText}}</text>
+          <text class="dot" wx:if="{{balanceText !== '0.00'}}">余额 ¥{{balanceText}}</text>
+        </view>
+      </view>
+      <view class="head-more" bindtap="goProfile">资料 ›</view>
+    </view>
+
+    <view class="card">
+      <view class="card-title">我的订单</view>
+      <view class="orders">
+        <view class="order-item" data-status="PENDING_PAYMENT" bindtap="goOrders">
+          <view class="order-icon">付</view>
+          <view class="order-text">待付款</view>
+          <view class="badge" wx:if="{{pendingCount}}">{{pendingCount}}</view>
+        </view>
+        <view class="order-item" data-status="PAID" bindtap="goOrders">
+          <view class="order-icon">发</view>
+          <view class="order-text">待发货</view>
+        </view>
+        <view class="order-item" data-status="SHIPPED" bindtap="goOrders">
+          <view class="order-icon">收</view>
+          <view class="order-text">待收货</view>
+        </view>
+        <view class="order-item" data-status="COMPLETED" bindtap="goOrders">
+          <view class="order-icon">完</view>
+          <view class="order-text">已完成</view>
+        </view>
+        <view class="order-item" data-status="ALL" bindtap="goOrders">
+          <view class="order-icon">全</view>
+          <view class="order-text">全部订单</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="cell" bindtap="goCoupons">
+        <text>优惠券</text>
+        <text class="arrow">›</text>
+      </view>
+      <view class="cell" bindtap="goAddress">
+        <text>收货地址</text>
+        <text class="arrow">›</text>
+      </view>
+      <view class="cell" bindtap="goRefunds">
+        <text>退款/售后</text>
+        <text class="arrow">›</text>
+      </view>
+      <view class="cell" bindtap="goProfile">
+        <text>积分与资料</text>
+        <text class="arrow">›</text>
+      </view>
+      <view class="cell" bindtap="goService">
+        <text>联系客服</text>
+        <text class="arrow">›</text>
+      </view>
+    </view>
+  </block>
+
+  <view class="card debug">
+    <view class="cell" bindtap="setApiBase">
+      <text class="muted">服务器地址：{{apiBase || '未注入'}}</text>
+      <text class="muted">调试</text>
+    </view>
+  </view>
+
+  <view class="footer-gap"></view>
+</view>

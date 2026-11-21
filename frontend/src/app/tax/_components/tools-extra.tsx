@@ -359,7 +359,7 @@ export function TaxRecordsPanel() {
         </Notice>
       ) : null}
       <div className="text-12 muted" style={{ marginBottom: 10 }}>
-        试算、工商年检、旧账导入与报表导出的填报内容自动留痕，可随时回看
+        试算、工商年检（含小程序填报）、旧账导入与报表导出的填报内容自动留痕，可随时回看
       </div>
       <div className="table-wrap">
         <Table<TaxRecord>
@@ -377,7 +377,7 @@ export function TaxRecordsPanel() {
             emptyText: (
               <EmptyState
                 icon={<BookOutlined aria-hidden />}
-                text="暂无填报记录。使用下方财税工具完成试算、工商年检、旧账导入或报表导出后，内容将自动留存于此"
+                text="暂无填报记录。使用下方财税工具完成试算、工商年检（网页或小程序）、旧账导入或报表导出后，内容将自动留存于此"
               />
             ),
           }}
@@ -412,7 +412,13 @@ export function TaxRecordsPanel() {
                   (snapshot.tax_amount !== undefined
                     ? `应纳税（费）额合计 ¥${money(snapshot.tax_amount)}`
                     : "—");
-                return <span className="text-12 muted">{summary}</span>;
+                const fromMiniProgram = snapshot.source === "MINIPROGRAM";
+                return (
+                  <span className="text-12 muted">
+                    {summary}
+                    {fromMiniProgram ? " · 小程序填报" : ""}
+                  </span>
+                );
               },
             },
             {

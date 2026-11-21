@@ -1,0 +1,38 @@
+.tip {
+  margin-top: 12rpx;
+  line-height: 1.6;
+}
+
+.link {
+  margin-top: 20rpx;
+  color: #3370ff;
+  font-size: 26rpx;
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #eef0f3;
+}
+
+.label {
+  width: 160rpx;
+  color: #4e5969;
+}
+
+.input {
+  flex: 1;
+  font-size: 28rpx;
+}
+
+.error {
+  margin-top: 20rpx;
+  color: #f53f3f;
+  font-size: 26rpx;
+  line-height: 1.5;
+}
+
+.submit {
+  margin-top: 32rpx;
+}

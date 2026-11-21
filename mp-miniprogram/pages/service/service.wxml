@@ -1,0 +1,24 @@
+<web-view wx:if="{{chatUrl}}" src="{{chatUrl}}"></web-view>
+
+<view wx:else class="wrap">
+  <view class="card">
+    <view class="section-title">在线客服暂未开通</view>
+    <view class="muted">
+      {{marketName}}还没有绑定在线客服。{{shopName ? '可以先到「' + shopName + '」店铺页查看公告，或在订单里发起售后。' : '可以先看看商品，或到订单里发起售后。'}}
+    </view>
+  </view>
+
+  <view wx:if="{{orderNo}}" class="card">
+    <view class="row">
+      <text class="muted">咨询订单</text>
+      <text class="link" bindtap="copyOrderNo">复制订单号</text>
+    </view>
+    <view class="order-no">{{orderNo}}</view>
+    <view class="muted">联系客服时附上订单号，能更快定位问题。</view>
+  </view>
+
+  <view class="card">
+    <view class="btn btn-ghost" style="margin-bottom:16rpx" bindtap="goOrders">查看我的订单</view>
+    <view class="btn btn-ghost" bindtap="goShopping">继续逛逛</view>
+  </view>
+</view>

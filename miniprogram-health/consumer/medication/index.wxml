@@ -1,0 +1,62 @@
+<view class="page">
+  <view class="card" wx:if="{{patients.length}}">
+    <view class="row">
+      <text class="kv-label">就诊人</text>
+      <picker
+        mode="selector"
+        range="{{patientNames}}"
+        value="{{patientIndex}}"
+        bindchange="onPatient"
+      >
+        <view class="picker-inline">{{patientNames[patientIndex] || '请选择'}} ›</view>
+      </picker>
+    </view>
+    <view class="row date-row">
+      <text class="kv-label">打卡日期</text>
+      <picker mode="date" value="{{date}}" end="{{today}}" bindchange="onDate">
+        <view class="picker-inline">{{date}} ›</view>
+      </picker>
+    </view>
+    <view class="progress" wx:if="{{totalCount}}">
+      今日已服 {{takenCount}} / {{totalCount}} 次
+    </view>
+  </view>
+
+  <view class="card" wx:elif="{{!loading}}">
+    <view class="empty">请先添加就诊人</view>
+    <button class="button-primary" bindtap="onAddPatient">添加就诊人</button>
+  </view>
+
+  <view class="card" wx:if="{{medications.length}}">
+    <view class="med" wx:for="{{medications}}" wx:key="id">
+      <view class="med-head">
+        <view class="med-name">
+          {{item.name}}
+          <text class="tag" wx:if="{{item.spec}}">{{item.spec}}</text>
+        </view>
+        <text class="tag tag-blue" wx:if="{{item.frequency}}">{{item.frequency}}</text>
+      </view>
+      <view class="item-meta">
+        {{item.doseText || ''}}
+        <text wx:if="{{item.way}}"> · {{item.way}}</text>
+        <text wx:if="{{item.rangeText}}"> · {{item.rangeText}}</text>
+      </view>
+      <view class="time-wrap">
+        <view
+          class="time {{slot.status === 'TAKEN' ? 'time-done' : ''}} {{slot.status === 'SKIPPED' || slot.status === 'MISSED' ? 'time-skip' : ''}}"
+          wx:for="{{item.times}}"
+          wx:key="time"
+          wx:for-item="slot"
+          data-med="{{item.id}}"
+          data-time="{{slot.time}}"
+          bindtap="onTimeTap"
+        >
+          <view class="time-text">{{slot.time}}</view>
+          <view class="time-status">{{slot.statusLabel || '打卡'}}</view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="empty" wx:elif="{{!loading && patients.length}}">该就诊人暂无用药方案</view>
+</view>

@@ -332,52 +332,6 @@ export class HrmRecruitService {
     return { jd: draft.slice(0, 20000), mode: 'llm' as const };
   }
 
-  /** 发布到对外渠道：JD 裁剪为 description，同职位重复发布只更新不新建。 */
-  async publishJob(id: number, user: CurrentUser) {
-    const org = await this.scope.resolve(user);
-    this.scope.requireAdmin(org);
-    const job = await this.prisma.hrmJob.findFirst({
-      where: { id, orgType: org.orgType, orgUserId: org.orgUserId },
-    });
-    if (!job) throw new BusinessException(ErrorCode.NOT_FOUND, '职位不存在');
-    if (job.status !== 'OPEN') {
-      throw new BusinessException(
-        ErrorCode.CONFLICT,
-        '只有进行中的职位可以发布',
-      );
-    }
-    const description = this.channelDescription(job.jd, job.tier);
-    const tags = [job.department, job.tier].filter(Boolean).slice(0, 10);
-    const post =
-      job.hiringPostId > 0
-        ? await this.prisma.hiringPost.update({
-            where: { id: job.hiringPostId },
-            data: {
-              title: clip(job.title, 100),
-              description,
-              headCount: job.headCount,
-              tags,
-            },
-          })
-        : await this.prisma.hiringPost.create({
-            data: {
-              userId: org.orgUserId,
-              type: 'FULL_TIME',
-              title: clip(job.title, 100),
-              description,
-              headCount: job.headCount,
-              currency: 'AWCOIN',
-              tags,
-              status: 'LOCAL_PUBLISHED',
-            },
-          });
-    const row = await this.prisma.hrmJob.update({
-      where: { id: job.id },
-      data: { hiringPostId: post.id },
-    });
-    return this.jobView(row);
-  }
-
   // ---------- 内部工具 ----------
 
   private requestView(row: {
@@ -483,21 +437,6 @@ export class HrmRecruitService {
       '## 任职要求',
       requirements || '- 要求具备岗位所需的专业能力',
     ].join('\n');
-  }
-
-  /** 对外渠道正文：只保留要点段，隐去内部预算/理由，避免对内信息外泄。 */
-  private channelDescription(jd: string, tier: string): string {
-    const lines = String(jd || '')
-      .split('\n')
-      .map((line) => line.trim())
-      .filter(
-        (line) =>
-          line &&
-          !/用人理由|预算|内部|薪酬带宽/.test(line) &&
-          !line.startsWith('#'),
-      );
-    const body = lines.join('\n').slice(0, 4000);
-    return tier ? `${body}\n\n职级带：${tier}`.slice(0, 4000) : body;
   }
 
   private async charge(

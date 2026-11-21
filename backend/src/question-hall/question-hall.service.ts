@@ -8,6 +8,7 @@ import { geoChatMulti } from '../geo/geo-llm.client';
 import { IdentityService } from '../identity/identity.service';
 import { NotificationService } from '../notifications/notification.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { meterChatCall } from '../ai/ai-gateway';
 
 const TITLE_MAX = 200;
 const BODY_MAX = 4000;
@@ -607,6 +608,12 @@ export class QuestionHallService {
         timeoutMs: 120_000,
         userId: user.userId,
         purpose: 'chat',
+      });
+      // 直连模型也要留用量事实（只记录不扣费），否则成本报表永远看不到这条链路
+      await meterChatCall(user.userId, answer, {
+        module: 'question-hall',
+        operation: 'resolve-summary',
+        model: target.model,
       });
       replyText = answer.reply;
     } catch (error) {

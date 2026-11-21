@@ -1,0 +1,89 @@
+.shop-row {
+  display: flex;
+  align-items: center;
+  padding-bottom: 16rpx;
+  border-bottom: 1rpx solid #f0f1f5;
+}
+
+.shop-logo {
+  width: 88rpx;
+  height: 88rpx;
+  margin-right: 20rpx;
+  border-radius: 16rpx;
+  background: #f0f1f5;
+}
+
+.shop-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.shop-name {
+  font-size: 32rpx;
+  font-weight: 600;
+}
+
+.block-title {
+  margin-bottom: 12rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.row-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 20rpx;
+}
+
+.agreement {
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #f0f1f5;
+}
+
+.agreement:last-child {
+  border-bottom: none;
+}
+
+.agreement-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.agreement-content {
+  display: block;
+  margin-top: 12rpx;
+  padding: 16rpx;
+  background: #f7f8fa;
+  border-radius: 12rpx;
+  color: #5c6068;
+  font-size: 26rpx;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.arrow {
+  color: #1a73e8;
+  font-size: 26rpx;
+  white-space: nowrap;
+}
+
+.base-hint {
+  margin-top: 8rpx;
+}
+
+.base-actions {
+  display: flex;
+  margin-top: 12rpx;
+}
+
+.base-actions .button-sm {
+  margin-left: 0;
+  margin-right: 16rpx;
+}
+
+.base-tip {
+  margin-top: 12rpx;
+}

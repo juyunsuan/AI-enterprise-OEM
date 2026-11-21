@@ -1,0 +1,92 @@
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.head .title {
+  flex: 1;
+  margin-right: 16rpx;
+  font-size: 34rpx;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.stat-row {
+  margin-top: 12rpx;
+}
+
+.block-title {
+  margin-bottom: 12rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.file {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #f0f1f5;
+}
+
+.file:last-child {
+  border-bottom: none;
+}
+
+.file-name {
+  flex: 1;
+  margin-right: 16rpx;
+  font-size: 27rpx;
+  word-break: break-all;
+}
+
+.item-row {
+  display: flex;
+  align-items: flex-start;
+  padding: 14rpx 0;
+  border-bottom: 1rpx solid #f0f1f5;
+  font-size: 26rpx;
+}
+
+.item-row:last-child {
+  border-bottom: none;
+}
+
+.item-head {
+  color: #8a8f99;
+  font-size: 24rpx;
+}
+
+.col-name {
+  flex: 1.4;
+  padding-right: 8rpx;
+}
+
+.col-value {
+  flex: 1;
+  font-weight: 600;
+}
+
+.col-ref {
+  flex: 1;
+  color: #8a8f99;
+  text-align: right;
+}
+
+.abnormal {
+  color: #f5413d;
+}
+
+.advice {
+  padding: 12rpx 0;
+  border-bottom: 1rpx solid #f0f1f5;
+}
+
+.advice:last-child {
+  border-bottom: none;
+}
+
+.tip {
+  margin: 24rpx;
+}

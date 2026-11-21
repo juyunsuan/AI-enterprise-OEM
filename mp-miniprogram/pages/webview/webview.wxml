@@ -1,0 +1,7 @@
+<web-view wx:if="{{url}}" src="{{url}}"></web-view>
+
+<view wx:else class="wrap">
+  <view class="card">
+    <view class="error-box">{{error || '页面地址不可用'}}</view>
+  </view>
+</view>

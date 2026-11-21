@@ -1,0 +1,99 @@
+<view class="empty" wx:if="{{loading}}">正在加载可约时段…</view>
+
+<view class="card" wx:elif="{{notReady}}">
+  <view class="title">店铺暂未开通</view>
+  <view class="muted detail-text">{{readyReason}}</view>
+</view>
+
+<view class="empty" wx:elif="{{error}}">{{error}}</view>
+
+<block wx:else>
+  <view class="card" wx:if="{{needService}}">
+    <view class="row">
+      <text class="title">选择服务项目</text>
+      <text class="muted">价格与时长以服务详情为准</text>
+    </view>
+    <scroll-view class="pills" scroll-x>
+      <view
+        class="pill service-pill {{item.activeClass}}"
+        wx:for="{{services}}"
+        wx:key="id"
+        data-id="{{item.id}}"
+        bindtap="onServiceTap"
+      >
+        <view>{{item.title}}</view>
+        <view class="pill-sub">{{item.priceText}} · {{item.durationText}}</view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <view class="card" wx:if="{{serviceTitle}}">
+    <view class="row">
+      <text class="title">{{serviceTitle}}</text>
+      <text class="muted">{{serviceDurationText}}</text>
+    </view>
+    <view class="muted" wx:if="{{timeUnitText}}">时段{{timeUnitText}}，选中后确认页会给出完整金额</view>
+  </view>
+
+  <view class="card">
+    <view class="title">选择日期</view>
+    <scroll-view class="pills day-pills" scroll-x>
+      <view
+        class="pill day-pill {{item.activeClass}}"
+        wx:for="{{days}}"
+        wx:key="day"
+        data-day="{{item.day}}"
+        bindtap="onDayTap"
+      >
+        <view>{{item.label}}</view>
+        <view class="pill-sub">{{item.countText}}</view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <view class="card" wx:if="{{timelines.length}}">
+    <view class="title">选择时段</view>
+    <view class="staff-block" wx:for="{{timelines}}" wx:key="staffId" wx:for-item="row" wx:for-index="staffIndex">
+      <view class="staff-head">
+        <image class="avatar small" src="{{row.avatar}}" mode="aspectFill" wx:if="{{row.avatar}}"></image>
+        <view class="staff-fallback" wx:else>{{row.staffName[0]}}</view>
+        <view class="staff-main">
+          <view class="staff-name">
+            {{row.staffName}}
+            <text class="tag tag-blue" wx:if="{{row.levelName}}">{{row.levelName}}</text>
+          </view>
+          <view class="muted">
+            <text wx:if="{{row.ratingText}}">{{row.ratingText}} 分</text>
+            <text wx:if="{{row.windowText}}"> · {{row.windowText}}</text>
+            <text> · {{row.availableCount}} 个可约</text>
+          </view>
+        </view>
+      </view>
+      <view class="slot-grid">
+        <view
+          class="slot {{item.disabledClass}} {{item.activeClass}}"
+          wx:for="{{row.slots}}"
+          wx:key="startAt"
+          data-staff="{{staffIndex}}"
+          data-slot="{{index}}"
+          bindtap="onSlotTap"
+        >
+          <view class="slot-label">{{item.label}}</view>
+          <view class="slot-reason" wx:if="{{item.reasonText}}">{{item.reasonText}}</view>
+        </view>
+      </view>
+    </view>
+    <view class="notice" wx:if="{{note}}">{{note}}</view>
+  </view>
+
+  <view class="empty" wx:elif="{{emptyText}}">{{emptyText}}</view>
+
+  <view class="footer">
+    <view class="picked" wx:if="{{selected}}">
+      <text class="muted">{{selected.staffName}}</text>
+      <text class="picked-time">{{selected.label}}</text>
+    </view>
+    <view class="muted" wx:else>请选择一个可约时段</view>
+    <button class="button-primary" bindtap="next" disabled="{{!canNext}}">下一步</button>
+  </view>
+</block>

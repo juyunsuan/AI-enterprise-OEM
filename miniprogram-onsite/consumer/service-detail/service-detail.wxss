@@ -1,0 +1,62 @@
+.banner {
+  width: 100%;
+  height: 480rpx;
+  background: #f0f1f5;
+}
+
+.banner-image {
+  width: 100%;
+  height: 480rpx;
+}
+
+.price-row {
+  display: flex;
+  align-items: baseline;
+  margin-top: 12rpx;
+}
+
+.price {
+  font-size: 40rpx;
+  margin-right: 16rpx;
+}
+
+.market {
+  margin-right: 16rpx;
+  text-decoration: line-through;
+}
+
+.tags {
+  margin-top: 16rpx;
+}
+
+.staff-row {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #f0f1f5;
+}
+
+.staff-row:last-child {
+  border-bottom: none;
+}
+
+.staff-avatar {
+  width: 88rpx;
+  height: 88rpx;
+  margin-right: 20rpx;
+  border-radius: 50%;
+  background: #eef3ff;
+  color: #3370ff;
+  text-align: center;
+  line-height: 88rpx;
+  font-size: 32rpx;
+}
+
+.staff-main {
+  flex: 1;
+}
+
+.staff-name {
+  font-size: 30rpx;
+  font-weight: 600;
+}

@@ -1,0 +1,18 @@
+<view class="container">
+  <view class="card" wx:if="{{site.name}}">
+    <view class="subtitle">{{site.name}} · 学习资料</view>
+    <view class="muted">由管理员从数字资产管理里挑选，图片可直接预览，文档可下载查看。</view>
+  </view>
+
+  <view wx:if="{{!list.length}}" class="empty">还没有学习资料。</view>
+
+  <view class="card" wx:for="{{list}}" wx:key="url">
+    <view class="material-row" data-index="{{index}}" bindtap="openMaterial">
+      <view>
+        <view class="strong">{{item.title}}</view>
+        <view class="muted" style="margin-top:6rpx;">{{item.type || 'file'}}</view>
+      </view>
+      <view class="mini-btn">打开</view>
+    </view>
+  </view>
+</view>

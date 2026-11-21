@@ -1,0 +1,49 @@
+.cover-swiper {
+  height: 750rpx;
+  border-radius: 20rpx;
+  overflow: hidden;
+  margin-bottom: 20rpx;
+  background: #ffffff;
+}
+
+.cover-image {
+  width: 100%;
+  height: 100%;
+}
+
+.price-line {
+  display: flex;
+  align-items: baseline;
+  gap: 12rpx;
+}
+
+.price {
+  font-size: 44rpx;
+}
+
+.del {
+  text-decoration: line-through;
+}
+
+.title {
+  font-size: 32rpx;
+  font-weight: 600;
+  margin-top: 10rpx;
+}
+
+.sku-chip {
+  border: 1rpx solid #e5e6eb;
+}
+
+.sku-chip.active {
+  border-color: #3370ff;
+}
+
+.sku-chip.soldout {
+  opacity: 0.45;
+}
+
+.detail {
+  font-size: 26rpx;
+  line-height: 1.7;
+}

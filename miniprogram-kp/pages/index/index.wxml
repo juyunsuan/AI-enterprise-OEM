@@ -1,0 +1,122 @@
+<view class="page" style="{{themeStyle}}">
+  <view class="empty" wx:if="{{siteDisabled}}">
+    站点暂未开放，请联系管理员在后台开启后重试。
+  </view>
+
+  <block wx:else>
+    <view class="search-bar" wx:if="{{show.search}}" bindtap="goSearch">
+      <view class="search-box">
+        <text class="search-icon">搜索</text>
+        <text class="search-ph">{{hotWords[0] || '搜索感兴趣的课程'}}</text>
+      </view>
+    </view>
+
+    <swiper
+      class="banner"
+      wx:if="{{show.banner && banners.length}}"
+      indicator-dots="{{true}}"
+      indicator-active-color="#ffffff"
+      autoplay="{{true}}"
+      circular="{{true}}"
+      interval="4000"
+      duration="500"
+    >
+      <swiper-item wx:for="{{banners}}" wx:key="id">
+        <view class="banner-item" bindtap="onBannerTap" data-index="{{index}}">
+          <image class="banner-img" src="{{item.image}}" mode="aspectFill" />
+          <view class="banner-title ellipsis" wx:if="{{item.title}}">{{item.title}}</view>
+        </view>
+      </swiper-item>
+    </swiper>
+
+    <view class="card notice-bar" wx:if="{{show.notice && notices.length}}" bindtap="goNoticeList">
+      <text class="notice-flag">公告</text>
+      <swiper
+        class="notice-swiper"
+        vertical="{{true}}"
+        autoplay="{{true}}"
+        circular="{{true}}"
+        interval="3000"
+        duration="500"
+      >
+        <swiper-item wx:for="{{notices}}" wx:key="id">
+          <view class="notice-item ellipsis" bindtap="onNoticeTap" data-index="{{index}}">{{item.title}}</view>
+        </swiper-item>
+      </swiper>
+      <text class="arrow">›</text>
+    </view>
+
+    <view class="quick card" wx:if="{{show.categories}}">
+      <view class="quick-item" bindtap="goKindList" data-kind="new" data-title="最新上线">
+        <view class="quick-name">最新</view>
+        <view class="muted">看新课程</view>
+      </view>
+      <view class="quick-item" bindtap="goKindList" data-kind="hot" data-title="热门推荐">
+        <view class="quick-name">热门</view>
+        <view class="muted">大家都在看</view>
+      </view>
+      <view class="quick-item" bindtap="goKindList" data-kind="vip" data-title="会员专区">
+        <view class="quick-name vip-name">VIP</view>
+        <view class="muted">会员专享课程</view>
+      </view>
+      <view class="quick-item" bindtap="goKindList" data-kind="all" data-title="全部课程">
+        <view class="quick-name">全部</view>
+        <view class="muted">全部课程</view>
+      </view>
+    </view>
+
+    <block wx:if="{{show.categories}}">
+      <view class="section-block" wx:for="{{categoryBlocks}}" wx:key="index">
+        <view class="section-head">
+          <view class="section-title">{{item.category.title}}</view>
+          <view class="muted" bindtap="goCategory" data-id="{{item.category.id}}" data-title="{{item.category.title}}">
+            更多 ›
+          </view>
+        </view>
+        <scroll-view class="h-scroll" scroll-x="{{true}}" enhanced="{{true}}" show-scrollbar="{{false}}">
+          <view class="h-list">
+            <view
+              class="h-item"
+              wx:for="{{item.list}}"
+              wx:for-item="res"
+              wx:key="id"
+              bindtap="openResource"
+              data-id="{{res.id}}"
+            >
+              <view class="h-cover cover">
+                <image wx:if="{{res.cover}}" class="h-img" src="{{res.cover}}" mode="aspectFill" lazy-load="{{true}}" />
+                <view wx:else class="h-ph">{{res.mediaLabel}}</view>
+                <view class="h-badge">{{res.accessLabel}}</view>
+              </view>
+              <view class="h-title ellipsis-2">{{res.title}}</view>
+            </view>
+          </view>
+        </scroll-view>
+      </view>
+    </block>
+
+    <block wx:if="{{show.hot && hotList.length}}">
+      <view class="section-head">
+        <view class="section-title">热门推荐</view>
+        <view class="muted" bindtap="goKindList" data-kind="hot" data-title="热门推荐">更多 ›</view>
+      </view>
+      <resource-card
+        wx:for="{{hotList}}"
+        wx:key="id"
+        item="{{item}}"
+        bindtap="openResource"
+        data-id="{{item.id}}"
+      />
+    </block>
+
+    <view class="card more-entry" wx:if="{{moreTitle}}" bindtap="goMore">
+      <view class="section-title">{{moreTitle}}</view>
+      <view class="muted" style="margin-top: 8rpx">编辑精选的外链与推荐内容</view>
+    </view>
+
+    <view class="empty" wx:if="{{!loading && !banners.length && !categoryBlocks.length && !hotList.length}}">
+      暂无可展示的内容{{error ? '：' + error : ''}}
+    </view>
+    <view class="footer-gap"></view>
+  </block>
+</view>

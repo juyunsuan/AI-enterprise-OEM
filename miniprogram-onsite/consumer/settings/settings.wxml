@@ -1,0 +1,56 @@
+<view class="card warn-card" wx:if="{{notReady}}">
+  <view class="title">店铺暂未开通</view>
+  <view class="muted note">{{readyReason}}</view>
+</view>
+
+<view class="card">
+  <view class="title">当前信息</view>
+  <view class="row item">
+    <text class="muted">服务器地址</text>
+    <text class="value">{{apiBase || '未配置'}}</text>
+  </view>
+  <view class="row item">
+    <text class="muted">店铺码</text>
+    <text class="value">{{shopCode || '未注入'}}</text>
+  </view>
+  <view class="muted note">店铺码由出包时按店铺注入，小程序里为只读，不支持修改。</view>
+  <view class="row item">
+    <text class="muted">版本号</text>
+    <text class="value">{{version || '—'}}</text>
+  </view>
+</view>
+
+<view class="card">
+  <view class="title">服务器地址</view>
+  <view class="muted note">仅本地调试用：正式包的地址由出包注入，改这里只影响当前设备。</view>
+  <input
+    class="text-input"
+    value="{{apiInput}}"
+    placeholder="https://example.com"
+    bindinput="onApiInput"
+  />
+  <view class="btn-row">
+    <button class="button-primary half" bindtap="saveApiBase">保存</button>
+    <button class="button-plain half" bindtap="resetApiBase">恢复默认</button>
+  </view>
+</view>
+
+<view class="card">
+  <view class="row">
+    <text class="title">登录状态</text>
+    <text class="link" bindtap="clearLogin">清除登录状态</text>
+  </view>
+  <view class="muted note">清除顾客与技师令牌，下次进入小程序会重新用微信登录。</view>
+</view>
+
+<view class="card">
+  <view class="title">隐私说明</view>
+  <view class="privacy">本小程序用于门店提供上门服务，为完成下单、履约与售后，会收集以下信息：</view>
+  <view class="privacy">1. 微信标识：用于识别你的顾客身份，免去注册。</view>
+  <view class="privacy">2. 手机号与联系人：用于服务人员联系你、上门核对接。</view>
+  <view class="privacy">3. 服务地址与地图坐标：用于安排上门路线与测算车费。</view>
+  <view class="privacy">4. 定位信息：仅在你点击地图选点或服务人员到场打卡时使用；拒绝授权时可用文字地址继续下单。</view>
+  <view class="privacy">5. 评价图片与售后凭证：用于处理评价与退款。</view>
+  <view class="privacy">以上信息仅用于本店提供服务，不用于与本服务无关的用途。</view>
+  <view class="privacy">合规提示：上门服务（含健康、美容等）在微信侧属需资质类目，需商家自行完成小程序类目认证与相关经营资质；平台仅提供软件工具，不代为认证、不承诺过审。资金结算进入商家自己的微信商户账户。</view>
+</view>

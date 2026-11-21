@@ -1,0 +1,29 @@
+<view class="wrap">
+  <view wx:if="{{!list.length && !loading}}" class="empty">
+    还没有预约记录，去首页发起访客或场地预约。
+  </view>
+
+  <view wx:for="{{list}}" wx:key="id" class="card">
+    <view class="row">
+      <view class="section-title">{{item.kindLabel}} · {{item.visitorName}}</view>
+      <text class="tag">{{item.statusLabel}}</text>
+    </view>
+    <view class="muted">{{item.startText}} → {{item.endText}}</view>
+    <view wx:if="{{item.resourceName}}" class="muted">场地：{{item.resourceName}}</view>
+    <view wx:if="{{item.purpose}}" class="muted">事由：{{item.purpose}}</view>
+
+    <block wx:if="{{item.status === 'APPROVED' && item.passText}}">
+      <image wx:if="{{item.qrDataUrl}}" src="{{item.qrDataUrl}}" mode="widthFix" style="width: 320rpx; height: 320rpx; margin: 16rpx auto; display: block;" />
+      <view class="pass-code" data-code="{{item.passText}}" bindtap="copyPass">{{item.passText}}</view>
+      <view class="muted" style="text-align: center;">到门岗出示二维码或通行码，点击可复制</view>
+    </block>
+    <view wx:if="{{item.status === 'CHECKED_IN'}}" class="tag green" style="margin-top: 12rpx;">已核验入园</view>
+
+    <view class="row" style="margin-top: 16rpx;">
+      <view></view>
+      <view>
+        <text wx:if="{{item.canCancel}}" class="btn danger small" data-id="{{item.id}}" bindtap="cancel">取消预约</text>
+      </view>
+    </view>
+  </view>
+</view>

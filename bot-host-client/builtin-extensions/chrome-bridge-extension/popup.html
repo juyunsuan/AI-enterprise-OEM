@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <title>AWBotDSH 浏览器桥接</title>
+    <style>
+      body { width: 300px; margin: 0; padding: 14px; font: 13px/1.6 system-ui, "Microsoft YaHei", sans-serif; color: #1f2329; }
+      h1 { margin: 0 0 10px; font-size: 14px; }
+      label { display: block; margin-bottom: 10px; }
+      span { display: block; margin-bottom: 4px; color: #646a73; font-size: 12px; }
+      input { width: 100%; box-sizing: border-box; padding: 6px 8px; border: 1px solid #d0d3d6; border-radius: 6px; font: inherit; }
+      button { width: 100%; padding: 7px 10px; border: 0; border-radius: 6px; background: #3370ff; color: #fff; font: inherit; cursor: pointer; }
+      button:disabled { opacity: .6; cursor: default; }
+      p { margin: 10px 0 0; color: #646a73; font-size: 12px; }
+      #state { font-weight: 600; }
+      .bad { color: #f53f3f; }
+      .ok { color: #00a870; }
+    </style>
+  </head>
+  <body>
+    <h1>AWBotDSH 浏览器桥接</h1>
+    <label>
+      <span>桥接地址</span>
+      <input id="url" placeholder="http://127.0.0.1:35911" />
+    </label>
+    <label>
+      <span>桥接令牌（客户端「插件」页复制）</span>
+      <input id="token" placeholder="粘贴令牌" />
+    </label>
+    <button id="save">保存并连接</button>
+    <p>状态：<span id="state">—</span></p>
+    <p>桥接只在本机回环地址上工作，页面内容与 Cookie 不会上传到平台。</p>
+    <script src="popup.js"></script>
+  </body>
+</html>

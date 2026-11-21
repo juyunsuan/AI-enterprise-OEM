@@ -1,0 +1,31 @@
+<scroll-view class="tabs" scroll-x="true" enable-flex="true">
+  <view
+    class="tab {{activeKey === item.key ? 'tab-active' : ''}}"
+    wx:for="{{tabs}}"
+    wx:key="key"
+    data-key="{{item.key}}"
+    bindtap="switchTab"
+  >{{item.label}}</view>
+</scroll-view>
+
+<view class="error" wx:if="{{errorText}}">{{errorText}}</view>
+
+<view class="list" wx:if="{{list.length}}">
+  <view class="card item" wx:for="{{list}}" wx:key="id" data-id="{{item.id}}" bindtap="openOrder">
+    <view class="row">
+      <text class="order-no" data-no="{{item.orderNo}}" catchtap="copyOrderNo">{{item.orderNo}}</text>
+      <text class="badge">{{item.statusLabel}}</text>
+    </view>
+    <view class="service">{{item.serviceText}}</view>
+    <view class="muted">预约时间 {{item.timeText}}</view>
+    <view class="row bottom">
+      <text class="muted">{{item.customerText}}</text>
+      <text class="amount">{{item.amountText}}</text>
+    </view>
+  </view>
+  <view class="muted footer" wx:if="{{finished}}">共 {{total}} 单，已全部加载</view>
+  <view class="muted footer" wx:else>上拉加载更多</view>
+</view>
+
+<view class="empty" wx:elif="{{loading}}">正在加载…</view>
+<view class="empty" wx:else>当前状态下没有订单。地址与联系电话请进详情查看。</view>

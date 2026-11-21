@@ -87,6 +87,7 @@ function rowToConversation(row) {
     pluginIds: parseIdList(row.plugin_ids),
     channelId: row.channel_id || '',
     workspacePath: row.workspace_path || '',
+    fpProfileId: row.fp_profile_id || '',
     createdAt: row.created_at,
     updatedAt: row.updated_at
   };
@@ -106,7 +107,7 @@ function rowToMessage(row) {
 }
 
 const CONVERSATION_COLUMNS =
-  'id, title, persona_id, skill_ids, plugin_ids, channel_id, workspace_path, created_at, updated_at';
+  'id, title, persona_id, skill_ids, plugin_ids, channel_id, workspace_path, fp_profile_id, created_at, updated_at';
 const MESSAGE_COLUMNS = 'id, conversation_id, role, content, status, tool_name, attachments, created_at';
 
 function listConversations() {
@@ -135,7 +136,7 @@ function createConversation() {
     .db()
     .prepare(
       `SELECT c.id, c.title, c.persona_id, c.skill_ids, c.plugin_ids, c.channel_id,
-              c.workspace_path, c.created_at, c.updated_at
+              c.workspace_path, c.fp_profile_id, c.created_at, c.updated_at
        FROM chat_conversations c
        WHERE c.title = '' AND NOT EXISTS (
          SELECT 1 FROM chat_messages m WHERE m.conversation_id = c.id
@@ -183,6 +184,11 @@ function updateConversation(id, fields) {
     const dir = String(patch.workspacePath || '').trim().replace(/[\\/]+$/, '');
     sets.push('workspace_path = ?');
     values.push(dir && path.isAbsolute(dir) ? dir.slice(0, 1000) : '');
+  }
+  if ('fpProfileId' in patch) {
+    const id = String(patch.fpProfileId || '').trim();
+    sets.push('fp_profile_id = ?');
+    values.push(/^[A-Za-z0-9._-]{1,64}$/.test(id) ? id : '');
   }
   if ('skillIds' in patch) {
     sets.push('skill_ids = ?');

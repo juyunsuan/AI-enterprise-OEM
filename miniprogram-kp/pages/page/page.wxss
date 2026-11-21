@@ -1,0 +1,18 @@
+.title {
+  font-size: 34rpx;
+  font-weight: 600;
+  line-height: 48rpx;
+}
+
+.body {
+  font-size: 28rpx;
+  line-height: 48rpx;
+  word-break: break-all;
+}
+
+.empty {
+  padding: 80rpx 40rpx;
+  text-align: center;
+  color: var(--muted);
+  font-size: 26rpx;
+}

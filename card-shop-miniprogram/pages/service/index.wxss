@@ -1,0 +1,37 @@
+.hint {
+  margin-bottom: 20rpx;
+  line-height: 36rpx;
+}
+
+.order-no {
+  margin: 12rpx 0 8rpx;
+  font-size: 32rpx;
+  font-weight: 600;
+  letter-spacing: 1rpx;
+}
+
+.contact-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22rpx 0;
+  border-bottom: 1rpx solid var(--line);
+}
+
+.contact-row:last-of-type {
+  border-bottom: none;
+}
+
+.contact-value {
+  margin-right: 16rpx;
+  font-size: 28rpx;
+}
+
+.copy-link {
+  color: var(--primary);
+  font-size: 24rpx;
+}
+
+.query-btn {
+  margin-top: 24rpx;
+}

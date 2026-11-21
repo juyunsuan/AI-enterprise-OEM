@@ -1,0 +1,103 @@
+<view class="wrap">
+  <view class="card" wx:if="{{profile}}">
+    <block wx:if="{{editing}}">
+      <view class="field">
+        <view class="field-label">昵称</view>
+        <input class="input grow" data-field="editName" value="{{editName}}" bindinput="onFieldInput" maxlength="60" placeholder="你的昵称" />
+      </view>
+      <view class="field">
+        <view class="field-label">手机号</view>
+        <input class="input grow" type="number" data-field="editPhone" value="{{editPhone}}" bindinput="onFieldInput" maxlength="20" placeholder="手机号（选填）" />
+      </view>
+      <view class="row" style="margin-top: 16rpx;">
+        <view></view>
+        <view>
+          <text class="btn small ghost" bindtap="cancelEdit">取消</text>
+          <text class="btn small" bindtap="saveProfile">保存</text>
+        </view>
+      </view>
+    </block>
+    <block wx:else>
+      <view class="row">
+        <view>
+          <view class="section-title">{{profile.nickname || "园区用户"}}</view>
+          <view class="muted">{{profile.phone || "未填写手机号"}}</view>
+        </view>
+        <text class="btn small ghost" bindtap="startEdit">编辑资料</text>
+      </view>
+    </block>
+    <view class="field">
+      <view class="field-label">所属企业</view>
+      <view class="field-value">{{profile.tenantName || "未绑定"}}</view>
+    </view>
+    <view class="field">
+      <view class="field-label">身份</view>
+      <view class="field-value">{{profile.memberRoleLabel}}</view>
+    </view>
+  </view>
+  <view wx:else class="card">
+    <view class="section-title">尚未登录</view>
+    <view class="muted">进入首页后会自动微信登录；若登录失败，请检查园区小程序 AppID / AppSecret。</view>
+  </view>
+
+  <view class="card" wx:if="{{profile && !profile.tenantId}}">
+    <view class="section-title">绑定企业</view>
+    <view class="muted">向园区管理员获取企业加入码后填写。</view>
+    <view class="field" style="margin-top: 12rpx;">
+      <input class="input grow" value="{{bindCode}}" bindinput="onBindInput" placeholder="企业加入码" />
+      <text class="btn small" bindtap="bindTenant">绑定</text>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="section-title">我的服务</view>
+    <view class="field" data-path="/pages/visitor/list" bindtap="go">
+      <view class="grow">我的预约</view>
+      <text class="muted">查看通行码</text>
+    </view>
+    <view class="field" data-path="/pages/repair/list" bindtap="go">
+      <view class="grow">我的工单</view>
+      <text class="muted">进度与评价</text>
+    </view>
+    <view class="field" data-path="/pages/order/list" bindtap="go">
+      <view class="grow">我的订单</view>
+      <text class="muted">场地费用与支付状态</text>
+    </view>
+    <view class="field" data-path="/pages/bill/list" bindtap="go">
+      <view class="grow">我的账单</view>
+      <text class="muted">租金与缴费状态</text>
+    </view>
+    <view class="field" data-path="/pages/invoice/list" bindtap="go">
+      <view class="grow">我的发票</view>
+      <text class="muted">园区开票记录</text>
+    </view>
+    <view class="field" data-path="/pages/parking/list" bindtap="go">
+      <view class="grow">停车许可</view>
+      <text class="muted">车辆登记与审批</text>
+    </view>
+    <view wx:if="{{profile && profile.memberRole === 'TENANT_ADMIN'}}" class="field" data-path="/pages/approvals/list" bindtap="go">
+      <view class="grow">企业审批</view>
+      <text class="muted">审批员工访客申请</text>
+    </view>
+    <view class="field" data-path="/pages/chat/chat" bindtap="go">
+      <view class="grow">AI 客服</view>
+      <text class="muted">咨询与转人工</text>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="section-title">消息提醒</view>
+    <view class="muted">开启后，审批结果、通行核验与工单完成会收到微信订阅消息。</view>
+    <view class="btn ghost" bindtap="subscribe">订阅通知</view>
+  </view>
+
+  <view class="card">
+    <view class="section-title">园区员工</view>
+    <view wx:if="{{staff && staff.name}}" class="muted">当前身份：{{staff.name}} · {{staff.role}}</view>
+    <view wx:else class="muted">园区员工用手机号 + 工号绑定后，可审批、核验通行码与处理工单。</view>
+    <view class="btn ghost" data-path="/pages/staff/bind" bindtap="go">员工绑定</view>
+    <view wx:if="{{staff && staff.name}}" class="btn" data-path="/pages/staff/workbench" bindtap="go">进入员工工作台</view>
+  </view>
+
+  <view class="btn danger" bindtap="logout" wx:if="{{hasToken || staff}}">退出登录</view>
+</view>

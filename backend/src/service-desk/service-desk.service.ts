@@ -26,11 +26,12 @@ import { CurrentUser } from '../auth/current-user';
 import { IdentityService } from '../identity/identity.service';
 import { UserLookupService } from '../directory/user-lookup.service';
 import { NotificationService } from '../notifications/notification.service';
-import { OssService } from '../oss/oss.service';
+import type { SystemAssetService } from '../system-asset/system-asset.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '../../generated/prisma';
 import { toJsonInput } from '../common/json-input';
 import { geoChatMulti, type ChatMessage } from '../geo/geo-llm.client';
+import { meterChatCall } from '../ai/ai-gateway';
 
 type Emit = (
   event: string,
@@ -57,6 +58,27 @@ export type AcqReceptionContext = {
 
 const MAX_MESSAGE = 4000;
 
+/** 一次 AI 应答引用的知识出处（业主端问答与业务工具引用同一份结构）。 */
+export type AiAnswerReference = { title: string; ref: string };
+
+/** 知识库召回结果：拼进提示词的文本 + 可展示的出处清单。 */
+export type AiKnowledgeResult = {
+  text: string;
+  references: AiAnswerReference[];
+};
+
+/**
+ * 纯AI客服员工的一次应答（通用问答口，业务工具按 agentId 引用时同形返回）。
+ * handoff=true 表示这条命中了转人工口径、按规则应交真人接手。
+ */
+export type AiAgentAnswer = {
+  agentId: number;
+  agentName: string;
+  answer: string;
+  references: AiAnswerReference[];
+  handoff: boolean;
+};
+
 const hashToken = (token: string) =>
   createHash('sha256').update(token).digest('hex');
 
@@ -68,11 +90,71 @@ const asStringArray = (value: unknown): string[] => {
   return [];
 };
 
+/** AI 员工的接待台账（会话量/满意度/转人工），团队页签与概览卡共用。 */
+export type AiAgentStats = {
+  handledCount: number;
+  activeCount: number;
+  handoffCount: number;
+  /** 0~1，转人工量 / 接待会话量 */
+  handoffRate: number;
+  ratingCount: number;
+  /** 1~5，一位小数；无评分为 0 */
+  ratingAvg: number;
+};
+
+/** 纯AI客服员工的接待时段（空对象＝全天）。 */
+export type ServiceDeskWorkingHours = {
+  days?: unknown;
+  start?: unknown;
+  end?: unknown;
+};
+
+/**
+ * 会话应答模式口径：
+ * - 由在岗 AI 员工接待时，以员工自己的 AUTO|BOT 为准——因为会话创建时会把当时的账号 `aiMode`
+ *   快照写进 `row.aiMode`（永远非空），直接 `row.aiMode || 员工mode` 会让员工配置永远不生效；
+ * - 例外只有两个：转人工（SUGGEST）与显式关停（OFF）是会话级动作，必须压过员工配置；
+ * - 没有员工在岗时沿用原口径：会话快照优先，缺省回落账号设置。
+ */
+export function effectiveAiMode(
+  rowAiMode: string,
+  agentOrSettingMode: string,
+  agentOnDuty: boolean,
+) {
+  if (!agentOnDuty) return rowAiMode || agentOrSettingMode;
+  if (rowAiMode === 'SUGGEST' || rowAiMode === 'OFF') return rowAiMode;
+  return agentOrSettingMode;
+}
+
+/** 试问接口带的上下文：只取文本消息，最多留 10 轮，防止把整段会话灌进提示词。 */
+const asChatHistory = (value: unknown): ChatMessage[] => {
+  if (!Array.isArray(value)) return [];
+  return value
+    .slice(-20)
+    .map((item) => {
+      const row = (item || {}) as { role?: unknown; content?: unknown };
+      const role: ChatMessage['role'] =
+        row.role === 'assistant' ? 'assistant' : 'user';
+      return { role, content: text(row.content).trim().slice(0, 2000) };
+    })
+    .filter((item) => item.content);
+};
+
+const asIntList = (value: unknown): number[] => {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => Number(item))
+    .filter((item) => Number.isInteger(item) && item > 0)
+    .slice(0, 20);
+};
+
 /**
  * AI客服（账号级 SaaS）。
  * - 一个账号多个站点；访客只来自挂了接入代码的官网（匿名，凭访客令牌）；
  * - 真人接待：排队 → 接入 → 转接 → 结束邀评；
  * - AI 四种模式：固定文案 / 手动建议 / 自动回复（可转人工） / 纯AI接待（不转人工）。
+ * - 纯AI客服员工（service_desk_ai_agents）是团队里的一类员工：人设、模型、知识库范围与转人工口径都挂在员工身上，
+ *   自动分配可以把它派给会话；其它业务域要用 AI，只引用它的 id 走 answerForAgent，不在各自域内再造 AI。
  * 实时：进程内事件总线 + SSE，断线前端降级轮询；不引入 Redis / WebSocket。
  */
 export class ServiceDeskService {
@@ -90,9 +172,15 @@ export class ServiceDeskService {
 
   /**
    * 知识库召回钩子（AI 底座 §5 P1-A 统一挂载，services.ts 装配）：
-   * 按客服 consumerType 召回片段拼进系统提示；未装配或失败时静默跳过，不影响回复。
+   * - 传 spaceIds = 只在指定空间召回（纯AI客服员工自带的知识库范围）；
+   * - 留空 = 按账号级 SERVICE_DESK 消费者绑定召回（老配置行为不变）。
+   * 未装配或召回失败时静默跳过，不影响回复。
    */
-  kbRecall?: (ownerUserId: string, query: string) => Promise<string>;
+  kbRecall?: (
+    ownerUserId: string,
+    query: string,
+    spaceIds?: number[],
+  ) => Promise<AiKnowledgeResult>;
 
   /**
    * 获客接待钩子（A8）：按渠道会话解析销售剧本与客户档案，
@@ -140,7 +228,7 @@ export class ServiceDeskService {
     private readonly identity: IdentityService,
     private readonly users: UserLookupService,
     private readonly notifications: NotificationService,
-    private readonly oss: OssService,
+    private readonly assets: SystemAssetService,
     private readonly models: {
       resolveTarget: (
         user: CurrentUser,
@@ -358,6 +446,49 @@ export class ServiceDeskService {
     return rows.map((row) => this.siteView(row));
   }
 
+  /** 业务模块（品牌商城等）按 id 取本人站点；不存在或不属于本人返回 null。 */
+  async siteRef(ownerUserId: string, id: number) {
+    if (!Number.isInteger(id) || id <= 0) return null;
+    const row = await this.prisma.serviceDeskSite.findFirst({
+      where: { id, ownerUserId },
+      select: { id: true, siteKey: true, name: true, enabled: true },
+    });
+    return row ?? null;
+  }
+
+  /**
+   * 业务模块首次接入时幂等开通站点：同账号同名的复用，避免一次请求超时后重复建。
+   * 来源白名单留空＝不限制，小程序 web-view 不携带浏览器 Origin。
+   */
+  async ensureSite(ownerUserId: string, name: string) {
+    const siteName = text(name).trim().slice(0, 80) || '在线客服';
+    const exist = await this.prisma.serviceDeskSite.findFirst({
+      where: { ownerUserId, name: siteName },
+      select: { id: true, siteKey: true, name: true, enabled: true },
+    });
+    if (exist) return exist;
+    const count = await this.prisma.serviceDeskSite.count({
+      where: { ownerUserId },
+    });
+    if (count >= 20) {
+      throw new BusinessException(
+        ErrorCode.BAD_REQUEST,
+        '一个账号最多 20 个客服站点，已占满：请到「AI 客服 › 站点」删除不用的站点后重启商城，或直接在那里手动新建一个站点',
+      );
+    }
+    const row = await this.prisma.serviceDeskSite.create({
+      data: {
+        ownerUserId,
+        siteKey: `sk_${randomBytes(12).toString('hex')}`,
+        name: siteName,
+        allowedOrigins: toJsonInput([]),
+        appearance: toJsonInput({ title: `${siteName} · 在线客服` }),
+      },
+      select: { id: true, siteKey: true, name: true, enabled: true },
+    });
+    return row;
+  }
+
   /** 访客窗口外观：只按 siteKey 暴露名称/标题/主色/图标，不含来源白名单等配置。 */
   async publicSite(siteKey: string) {
     const site = await this.prisma.serviceDeskSite.findUnique({
@@ -481,12 +612,17 @@ export class ServiceDeskService {
         '图标不能超过 2MB',
       );
     }
-    const uploaded = await this.oss.upload(
-      `service-desk/site-icon/${user.userId}/${Date.now()}-${randomBytes(
+    // 站点图标字节入账到操作人账号：不再产生无账字节
+    const uploaded = await this.assets.put({
+      ownerUserId: user.userId,
+      path: `service-desk/site-icon/${user.userId}/${Date.now()}-${randomBytes(
         4,
       ).toString('hex')}.${normalized}`,
-      content,
-    );
+      bytes: content,
+      name,
+      assetType: 'image',
+      bizRef: 'service-desk-site-icon',
+    });
     return { url: uploaded.url, name, size: uploaded.size };
   }
 
@@ -1228,6 +1364,8 @@ export class ServiceDeskService {
       channelId: number;
       groupId: number;
       assigneeUserId: string;
+      assigneeType?: string;
+      aiAgentId?: number;
       visitorId: number;
       status: string;
       crmLeadId: number;
@@ -1243,6 +1381,7 @@ export class ServiceDeskService {
       siteNames: Map<number, string>;
       channelNames: Map<number, string>;
       agentNames: Map<string, string>;
+      aiAgentNames?: Map<number, string>;
       visitorNames: Map<number, { nickname: string; contact: string }>;
       lastMessages: Map<number, string>;
     },
@@ -1258,6 +1397,10 @@ export class ServiceDeskService {
       groupId: row.groupId,
       assigneeUserId: row.assigneeUserId,
       assigneeName: meta.agentNames.get(row.assigneeUserId) || '',
+      // 接待方：真人坐席或纯AI客服员工，前端据此显示「AI 接待中 / 真人接待」。
+      assigneeType: row.assigneeType || (row.aiAgentId ? 'AI' : 'USER'),
+      aiAgentId: row.aiAgentId || 0,
+      aiAgentName: meta.aiAgentNames?.get(row.aiAgentId || 0) || '',
       visitorName: visitor?.nickname || `访客 #${row.visitorId}`,
       visitorContact: visitor?.contact || '',
       status: row.status,
@@ -1282,13 +1425,17 @@ export class ServiceDeskService {
       channelId: number;
       assigneeUserId: string;
       visitorId: number;
+      aiAgentId?: number;
     }[],
   ) {
     const channelIds = [...new Set(rows.map((row) => row.channelId))].filter(
       (id) => id > 0,
     );
-    const [sites, channels, agents, visitors, lastMessages] = await Promise.all(
-      [
+    const aiAgentIds = [
+      ...new Set(rows.map((row) => row.aiAgentId || 0)),
+    ].filter((id) => id > 0);
+    const [sites, channels, agents, visitors, lastMessages, aiAgents] =
+      await Promise.all([
         this.prisma.serviceDeskSite.findMany({
           where: { id: { in: [...new Set(rows.map((row) => row.siteId))] } },
         }),
@@ -1310,12 +1457,18 @@ export class ServiceDeskService {
             return [row.id, message?.content || ''] as const;
           }),
         ),
-      ],
-    );
+        aiAgentIds.length
+          ? this.prisma.serviceDeskAiAgent.findMany({
+              where: { id: { in: aiAgentIds } },
+              select: { id: true, name: true },
+            })
+          : Promise.resolve([] as { id: number; name: string }[]),
+      ]);
     return {
       siteNames: new Map(sites.map((item) => [item.id, item.name])),
       channelNames: new Map(channels.map((item) => [item.id, item.name])),
       agentNames: agents,
+      aiAgentNames: new Map(aiAgents.map((item) => [item.id, item.name])),
       visitorNames: new Map(
         visitors.map((item) => [
           item.id,
@@ -1783,6 +1936,8 @@ export class ServiceDeskService {
     }
     const updated = await this.touchConversation(id, {
       assigneeUserId: user.userId,
+      // 真人接入即改接待方；aiAgentId 保留，作为「先前由哪位 AI 客服接待」的留痕。
+      assigneeType: 'USER',
       status: 'active',
       ...(row.firstResponseAt ? {} : { firstResponseAt: new Date() }),
     });
@@ -2195,18 +2350,22 @@ export class ServiceDeskService {
 
   // ---------------------------------------------------------------- AI
 
-  private async ownerTarget(ownerUserId: string) {
+  private async ownerTarget(
+    ownerUserId: string,
+    override?: { channelId?: number; model?: string },
+  ) {
     const setting = await this.ensureSetting(ownerUserId);
+    // 员工级覆盖（纯AI客服自带模型/渠道）优先于账号级设置；都没配就走模型网关默认目标。
+    const model = text(override?.model) || setting.aiModel.trim();
+    const channelId = Number(override?.channelId || 0) || setting.aiChannelId;
+    const targetOverride =
+      model && channelId >= 0 ? { channelId, model } : undefined;
     const owner = new CurrentUser(ownerUserId, '', '');
-    const override =
-      setting.aiModel.trim() && setting.aiChannelId >= 0
-        ? { channelId: setting.aiChannelId, model: setting.aiModel.trim() }
-        : undefined;
     const target = await this.models.resolveTarget(
       owner,
       'text',
       undefined,
-      override,
+      targetOverride,
     );
     return { setting, target };
   }
@@ -2230,17 +2389,28 @@ export class ServiceDeskService {
     ownerUserId: string,
     system: string,
     history: ChatMessage[],
+    override?: { channelId?: number; model?: string },
   ) {
-    const { setting, target } = await this.ownerTarget(ownerUserId);
+    const { setting, target } = await this.ownerTarget(ownerUserId, override);
     const reply = await geoChatMulti({
       baseUrl: target.baseUrl,
       apiKey: target.apiKey || '',
-      model: setting.aiModel.trim() || target.model || '',
+      model:
+        text(override?.model).trim() ||
+        setting.aiModel.trim() ||
+        target.model ||
+        '',
       messages: [{ role: 'system', content: system }, ...history],
       maxTokens: 800,
       timeoutMs: 60000,
       userId: ownerUserId,
       purpose: 'chat',
+    });
+    // 直连模型也要留用量事实（只记录不扣费），否则成本报表永远看不到这条链路
+    await meterChatCall(ownerUserId, reply, {
+      module: 'service-desk',
+      operation: 'ai-reply',
+      model: target.model || '',
     });
     return reply.reply;
   }
@@ -2314,14 +2484,446 @@ export class ServiceDeskService {
     return '';
   }
 
+  /* ------------------------------------------------------------- 纯AI客服员工 */
+
+  /** 员工知识库空间名：只认本账号的空间，越权 id 不落名，避免拿别人的库撑门面。 */
+  private async kbSpaceNames(ownerUserId: string, ids: number[]) {
+    const unique = [...new Set(ids.filter((id) => id > 0))];
+    if (!unique.length) return new Map<number, string>();
+    const rows = await this.prisma.kbSpace.findMany({
+      where: { id: { in: unique }, ownerUserId },
+      select: { id: true, name: true },
+    });
+    return new Map(rows.map((row) => [row.id, row.name]));
+  }
+
+  /** 接待时段判定：空对象＝全天；days 用 0=周日；start/end 为 "HH:mm"。 */
+  private inWorkingHours(value: unknown, at = new Date()) {
+    const hours = (
+      value && typeof value === 'object' ? value : {}
+    ) as ServiceDeskWorkingHours;
+    const days = Array.isArray(hours.days)
+      ? hours.days
+          .map((item) => Number(item))
+          .filter((item) => Number.isInteger(item) && item >= 0 && item <= 6)
+      : [];
+    if (days.length && !days.includes(at.getDay())) return false;
+    const start = text(hours.start).trim();
+    const end = text(hours.end).trim();
+    if (!start || !end) return true;
+    const now = `${String(at.getHours()).padStart(2, '0')}:${String(
+      at.getMinutes(),
+    ).padStart(2, '0')}`;
+    return now >= start && now <= end;
+  }
+
+  /**
+   * AI 员工接待台账：会话量、当前在处理、满意度与转人工量。
+   * 口径说明：转人工＝该会话最初由这位 AI 员工接入（ai_agent_id 留痕）、后来改由真人接待
+   * （assignee_type=USER），不依赖关键词命中记录，避免与「AI 应答失败转人工」的其它入口口径打架。
+   */
+  private async aiAgentStats(ownerUserId: string, ids: number[]) {
+    const empty = new Map<number, AiAgentStats>();
+    if (!ids.length) return empty;
+    const [handled, active, handedOff, rated] = await Promise.all([
+      this.prisma.serviceDeskConversation.groupBy({
+        by: ['aiAgentId'],
+        where: { ownerUserId, aiAgentId: { in: ids } },
+        _count: { _all: true },
+      }),
+      this.prisma.serviceDeskConversation.groupBy({
+        by: ['aiAgentId'],
+        where: { ownerUserId, aiAgentId: { in: ids }, status: 'active' },
+        _count: { _all: true },
+      }),
+      this.prisma.serviceDeskConversation.groupBy({
+        by: ['aiAgentId'],
+        where: {
+          ownerUserId,
+          aiAgentId: { in: ids },
+          assigneeType: 'USER',
+        },
+        _count: { _all: true },
+      }),
+      this.prisma.serviceDeskConversation.groupBy({
+        by: ['aiAgentId'],
+        where: { ownerUserId, aiAgentId: { in: ids }, rating: { gt: 0 } },
+        _count: { _all: true },
+        _avg: { rating: true },
+      }),
+    ]);
+    const map = new Map<number, AiAgentStats>();
+    const touch = (id: number) => {
+      if (!map.has(id))
+        map.set(id, {
+          handledCount: 0,
+          activeCount: 0,
+          handoffCount: 0,
+          handoffRate: 0,
+          ratingCount: 0,
+          ratingAvg: 0,
+        });
+      return map.get(id)!;
+    };
+    handled.forEach((item) => {
+      touch(item.aiAgentId).handledCount = item._count._all;
+    });
+    active.forEach((item) => {
+      touch(item.aiAgentId).activeCount = item._count._all;
+    });
+    handedOff.forEach((item) => {
+      const stats = touch(item.aiAgentId);
+      stats.handoffCount = item._count._all;
+      stats.handoffRate = stats.handledCount
+        ? Math.round((stats.handoffCount / stats.handledCount) * 100) / 100
+        : 0;
+    });
+    rated.forEach((item) => {
+      const stats = touch(item.aiAgentId);
+      stats.ratingCount = item._count._all;
+      stats.ratingAvg = Math.round((item._avg.rating || 0) * 10) / 10;
+    });
+    return map;
+  }
+
+  private async aiAgentView(
+    ownerUserId: string,
+    row: {
+      id: number;
+      name: string;
+      avatar: string;
+      intro: string;
+      groupId: number;
+      status: string;
+      mode: string;
+      persona: string;
+      aiChannelId: number;
+      aiModel: string;
+      kbSpaceIds: Prisma.JsonValue;
+      handoffKeywords: Prisma.JsonValue;
+      handoffGroupId: number;
+      maxConcurrent: number;
+      workingHours: Prisma.JsonValue;
+      greetingText: string;
+      createdAt: Date;
+    },
+    stats?: AiAgentStats,
+  ) {
+    const spaceIds = asIntList(row.kbSpaceIds);
+    const spaceNames = await this.kbSpaceNames(ownerUserId, spaceIds);
+    const ledger =
+      stats || (await this.aiAgentStats(ownerUserId, [row.id])).get(row.id);
+    return {
+      id: row.id,
+      name: row.name,
+      avatar: row.avatar,
+      intro: row.intro,
+      groupId: row.groupId,
+      status: row.status,
+      statusLabel: row.status === 'ON' ? '在岗' : '已停用',
+      mode: row.mode,
+      modeLabel:
+        row.mode === 'BOT' ? '纯AI接待（不转人工）' : 'AI 先接（可转人工）',
+      persona: row.persona,
+      aiChannelId: row.aiChannelId,
+      aiModel: row.aiModel,
+      kbSpaceIds: spaceIds,
+      kbSpaces: spaceIds.map((id) => spaceNames.get(id) || `#${id}`),
+      handoffKeywords: asStringArray(row.handoffKeywords),
+      handoffGroupId: row.handoffGroupId,
+      maxConcurrent: row.maxConcurrent,
+      workingHours: row.workingHours,
+      greetingText: row.greetingText,
+      activeCount: ledger?.activeCount || 0,
+      handledCount: ledger?.handledCount || 0,
+      handoffCount: ledger?.handoffCount || 0,
+      handoffRate: ledger?.handoffRate || 0,
+      ratingCount: ledger?.ratingCount || 0,
+      ratingAvg: ledger?.ratingAvg || 0,
+      onDuty: row.status === 'ON' && this.inWorkingHours(row.workingHours),
+      createdAt: row.createdAt.toISOString(),
+    };
+  }
+
+  /** AI 员工列表：团队页签与业务工具的「选一个纯AI客服」下拉共用同一份数据。 */
+  async aiAgents(user: CurrentUser) {
+    const rows = await this.prisma.serviceDeskAiAgent.findMany({
+      where: { ownerUserId: user.userId },
+      orderBy: [{ status: 'asc' }, { id: 'asc' }],
+    });
+    // 台账一次批量取回，避免每个员工各发一组聚合查询。
+    const ledger = await this.aiAgentStats(
+      user.userId,
+      rows.map((row) => row.id),
+    );
+    const views = await Promise.all(
+      rows.map((row) => this.aiAgentView(user.userId, row, ledger.get(row.id))),
+    );
+    return views;
+  }
+
+  async saveAiAgent(user: CurrentUser, body: Record<string, unknown>) {
+    const id = Number(body.id || 0);
+    const name = text(body.name).trim().slice(0, 60);
+    if (!name) {
+      throw new BusinessException(ErrorCode.BAD_REQUEST, '请填写 AI 客服名称');
+    }
+    const mode = ['AUTO', 'BOT'].includes(text(body.mode))
+      ? text(body.mode)
+      : 'AUTO';
+    const spaceIds = asIntList(body.kbSpaceIds);
+    if (spaceIds.length) {
+      const owned = await this.prisma.kbSpace.count({
+        where: { id: { in: spaceIds }, ownerUserId: user.userId },
+      });
+      if (owned !== spaceIds.length) {
+        throw new BusinessException(
+          ErrorCode.BAD_REQUEST,
+          '绑定的知识库不存在或不属于本账号',
+        );
+      }
+    }
+    const data = {
+      name,
+      avatar: text(body.avatar).trim().slice(0, 500),
+      intro: text(body.intro).trim().slice(0, 200),
+      groupId: Math.max(0, Number(body.groupId || 0)),
+      mode,
+      persona: text(body.persona).slice(0, 6000),
+      aiChannelId: Math.max(0, Number(body.aiChannelId || 0)),
+      aiModel: text(body.aiModel).trim().slice(0, 128),
+      kbSpaceIds: toJsonInput(spaceIds),
+      handoffKeywords: toJsonInput(
+        asStringArray(body.handoffKeywords).slice(0, 20),
+      ),
+      handoffGroupId: Math.max(0, Number(body.handoffGroupId || 0)),
+      maxConcurrent: Math.min(
+        500,
+        Math.max(1, Number(body.maxConcurrent || 50)),
+      ),
+      workingHours: toJsonInput(body.workingHours || {}),
+      greetingText: text(body.greetingText).slice(0, 2000),
+    };
+    if (id) {
+      const updated = await this.prisma.serviceDeskAiAgent.updateMany({
+        where: { id, ownerUserId: user.userId },
+        data,
+      });
+      if (!updated.count) {
+        throw new BusinessException(ErrorCode.NOT_FOUND, 'AI 客服不存在');
+      }
+    } else {
+      const created = await this.prisma.serviceDeskAiAgent.create({
+        data: { ownerUserId: user.userId, ...data },
+      });
+      return this.aiAgentView(user.userId, created);
+    }
+    const row = await this.prisma.serviceDeskAiAgent.findFirst({
+      where: { id, ownerUserId: user.userId },
+    });
+    if (!row) throw new BusinessException(ErrorCode.NOT_FOUND, 'AI 客服不存在');
+    return this.aiAgentView(user.userId, row);
+  }
+
+  async setAiAgentStatus(user: CurrentUser, id: number, status: string) {
+    const next = status === 'DISABLED' ? 'DISABLED' : 'ON';
+    const updated = await this.prisma.serviceDeskAiAgent.updateMany({
+      where: { id, ownerUserId: user.userId },
+      data: { status: next },
+    });
+    if (!updated.count) {
+      throw new BusinessException(ErrorCode.NOT_FOUND, 'AI 客服不存在');
+    }
+    return { id, status: next };
+  }
+
+  /** 删除只收配置：历史会话仍保留 ai_agent_id，接待记录不能因为删员工而失真。 */
+  async deleteAiAgent(user: CurrentUser, id: number) {
+    const active = await this.prisma.serviceDeskConversation.count({
+      where: { ownerUserId: user.userId, aiAgentId: id, status: 'active' },
+    });
+    if (active) {
+      throw new BusinessException(
+        ErrorCode.CONFLICT,
+        `该 AI 客服还在接待 ${active} 个会话，请先停用或等会话结束`,
+      );
+    }
+    const deleted = await this.prisma.serviceDeskAiAgent.deleteMany({
+      where: { id, ownerUserId: user.userId },
+    });
+    if (!deleted.count) {
+      throw new BusinessException(ErrorCode.NOT_FOUND, 'AI 客服不存在');
+    }
+    return { id };
+  }
+
+  /**
+   * 员工运行配置：员工自带的人设/模型/知识库/转人工口径优先，账号级 AI 设置只做回落。
+   * mode 为员工自己的 AUTO|BOT；账号级 aiMode 只在没有员工接待该会话时才起作用。
+   */
+  private aiRuntime(
+    setting: { aiMode: string; aiHandoffKeywords: unknown },
+    agent: null | {
+      name: string;
+      mode: string;
+      persona: string;
+      kbSpaceIds: unknown;
+      handoffKeywords: unknown;
+      aiChannelId: number;
+      aiModel: string;
+    },
+  ) {
+    const agentKeywords = agent ? asStringArray(agent.handoffKeywords) : [];
+    return {
+      agentName: agent?.name || '',
+      mode: agent ? agent.mode : setting.aiMode,
+      pureAi: (agent ? agent.mode : setting.aiMode) === 'BOT',
+      persona: agent ? text(agent.persona) : '',
+      spaceIds: agent ? asIntList(agent.kbSpaceIds) : [],
+      handoffKeywords: agentKeywords.length
+        ? agentKeywords
+        : asStringArray(setting.aiHandoffKeywords),
+      model: {
+        channelId: agent?.aiChannelId || 0,
+        model: agent ? text(agent.aiModel).trim() : '',
+      },
+    };
+  }
+
+  /** 知识召回：给了空间就按空间召，没给回落账号级客服绑定；召回失败按「无知识」继续应答。 */
+  private async aiKnowledge(
+    ownerUserId: string,
+    query: string,
+    spaceIds: number[],
+  ): Promise<AiKnowledgeResult> {
+    if (!this.kbRecall) return { text: '', references: [] };
+    try {
+      return await this.kbRecall(ownerUserId, query, spaceIds);
+    } catch {
+      return { text: '', references: [] };
+    }
+  }
+
+  /**
+   * 通用问答口：任何业务域引用某个纯AI客服员工时都走这里（健康小程序的 AI 医护即由此接入）。
+   * 本方法只出答案与知识出处，不写会话、不认识任何业务域；转人工口径以 handoff 返回给调用方。
+   */
+  async answerForAgent(input: {
+    ownerUserId: string;
+    agentId: number;
+    question: string;
+    history?: ChatMessage[];
+  }): Promise<AiAgentAnswer> {
+    const question = text(input.question).trim().slice(0, 2000);
+    if (!question) {
+      throw new BusinessException(ErrorCode.BAD_REQUEST, '请填写要提问的内容');
+    }
+    const agent = await this.prisma.serviceDeskAiAgent.findFirst({
+      where: { id: input.agentId, ownerUserId: input.ownerUserId },
+    });
+    if (!agent) {
+      throw new BusinessException(
+        ErrorCode.NOT_FOUND,
+        '绑定的 AI 客服不存在，或不属于本账号',
+      );
+    }
+    if (agent.status !== 'ON') {
+      throw new BusinessException(
+        ErrorCode.CONFLICT,
+        `「${agent.name}」已停用，请先在 AI客服 → 团队 里启用`,
+      );
+    }
+    const setting = await this.ensureSetting(input.ownerUserId);
+    const runtime = this.aiRuntime(setting, agent);
+    const canned = await this.findFaqAnswer(input.ownerUserId, question);
+    if (canned) {
+      return {
+        agentId: agent.id,
+        agentName: agent.name,
+        answer: canned,
+        references: [],
+        handoff: false,
+      };
+    }
+    const lower = question.toLowerCase();
+    const handoff =
+      !runtime.pureAi &&
+      runtime.handoffKeywords.some((key) => key && lower.includes(key));
+    const [knowledge, faqs] = await Promise.all([
+      this.aiKnowledge(input.ownerUserId, question, runtime.spaceIds),
+      this.prisma.serviceDeskFaq.findMany({
+        where: { ownerUserId: input.ownerUserId, enabled: true },
+      }),
+    ]);
+    const system = this.systemPrompt(
+      runtime.pureAi,
+      [this.knowledge(faqs), knowledge.text.trim()]
+        .filter(Boolean)
+        .join('\n\n'),
+      [],
+      runtime.persona,
+      agent.name,
+    );
+    const reply = await this.callModel(
+      input.ownerUserId,
+      system,
+      [...(input.history || []), { role: 'user', content: question }],
+      runtime.model,
+    );
+    return {
+      agentId: agent.id,
+      agentName: agent.name,
+      answer: reply.trim().slice(0, 2000),
+      references: knowledge.references,
+      handoff,
+    };
+  }
+
+  /** 业主端「试问一句」：与自动回复同一套员工配置，用来验人设与知识库效果。 */
+  async askAiAgent(user: CurrentUser, body: Record<string, unknown>) {
+    const agentId = Number(body.agentId || 0);
+    if (!agentId) {
+      throw new BusinessException(
+        ErrorCode.BAD_REQUEST,
+        '请选择要试问的 AI 客服',
+      );
+    }
+    const answer = await this.answerForAgent({
+      ownerUserId: user.userId,
+      agentId,
+      question: text(body.question),
+      history: asChatHistory(body.history),
+    });
+    return answer;
+  }
+
   private async autoReply(ownerUserId: string, conversationId: number) {
     const setting = await this.ensureSetting(ownerUserId);
     const row = await this.prisma.serviceDeskConversation.findFirst({
       where: { id: conversationId, ownerUserId },
     });
     if (!row || row.status === 'closed') return;
-    const mode = row.aiMode || setting.aiMode;
+    // 会话由哪个纯AI客服员工接待，就用那个员工的人设/模型/知识库/转人工口径；没绑员工才走账号级 AI 设置。
+    const agentRow = row.aiAgentId
+      ? await this.prisma.serviceDeskAiAgent.findFirst({
+          where: { id: row.aiAgentId, ownerUserId },
+        })
+      : null;
+    const runtime = this.aiRuntime(
+      setting,
+      agentRow && agentRow.status === 'ON' ? agentRow : null,
+    );
+    // 会话创建时会把当时的账号 aiMode 写进 row.aiMode（永远非空），所以由在岗 AI 员工接待的会话
+    // 必须以员工自己的 AUTO|BOT 为准；只有转人工（SUGGEST）与显式关停（OFF）这两种会话级例外压得过它。
+    const aiOnDuty = Boolean(agentRow && agentRow.status === 'ON');
+    const mode = effectiveAiMode(
+      row.aiMode,
+      aiOnDuty ? runtime.mode : setting.aiMode,
+      aiOnDuty,
+    );
     if (mode === 'OFF') return;
+    // AI 员工接待时消息署名用它，真人看得清是哪位 AI 在说话。
+    const label = runtime.agentName;
     const channelTarget = this.channelTargetOf(row);
     const messages = await this.prisma.serviceDeskMessage.findMany({
       where: { conversationId },
@@ -2342,13 +2944,14 @@ export class ServiceDeskService {
         faqAnswer,
         'ai',
         channelTarget,
+        label,
       );
       return;
     }
     if (mode !== 'AUTO' && mode !== 'BOT') return;
     const pureAi = mode === 'BOT';
     if (!pureAi) {
-      const keywords = asStringArray(setting.aiHandoffKeywords).map((item) =>
+      const keywords = runtime.handoffKeywords.map((item) =>
         item.toLowerCase(),
       );
       const content = lastVisitor.content.toLowerCase();
@@ -2367,11 +2970,13 @@ export class ServiceDeskService {
     const faqs = await this.prisma.serviceDeskFaq.findMany({
       where: { ownerUserId, enabled: true },
     });
-    // 知识库召回（统一挂载）：把客服绑定空间的片段并进「知识」，未装配则跳过
-    const kbContext = this.kbRecall
-      ? await this.kbRecall(ownerUserId, lastVisitor.content).catch(() => '')
-      : '';
-    const knowledge = [this.knowledge(faqs), kbContext.trim()]
+    // 知识召回：员工自带的知识库范围优先，没绑空间才回落账号级客服绑定；未装配钩子则跳过
+    const kb = await this.aiKnowledge(
+      ownerUserId,
+      lastVisitor.content,
+      runtime.spaceIds,
+    );
+    const knowledge = [this.knowledge(faqs), kb.text.trim()]
       .filter(Boolean)
       .join('\n\n');
     const history: ChatMessage[] = messages
@@ -2381,10 +2986,16 @@ export class ServiceDeskService {
         role: item.senderType === 'visitor' ? 'user' : 'assistant',
         content: item.content,
       }));
-    const system = this.systemPrompt(pureAi, knowledge, acq?.sections || []);
+    const system = this.systemPrompt(
+      pureAi,
+      knowledge,
+      acq?.sections || [],
+      runtime.persona,
+      label,
+    );
     let reply = '';
     try {
-      reply = await this.callModel(ownerUserId, system, history);
+      reply = await this.callModel(ownerUserId, system, history, runtime.model);
     } catch (error) {
       if (pureAi) {
         await this.appendAi(
@@ -2393,6 +3004,7 @@ export class ServiceDeskService {
           '抱歉，这个问题我暂时回答不了。你可以补充一些细节，或留下联系方式，我们会尽快回复你。',
           'ai',
           channelTarget,
+          label,
         );
         return;
       }
@@ -2411,6 +3023,7 @@ export class ServiceDeskService {
           '抱歉，这个问题我暂时回答不了。你可以补充一些细节，或留下联系方式，我们会尽快回复你。',
           'ai',
           channelTarget,
+          label,
         );
         return;
       }
@@ -2424,6 +3037,7 @@ export class ServiceDeskService {
       finalText,
       'ai',
       channelTarget,
+      label,
     );
     if (acq) await acq.afterReply(finalText).catch(() => undefined);
   }
@@ -2453,23 +3067,31 @@ export class ServiceDeskService {
     }
   }
 
-  /** 组装顺序：平台安全约束 → 剧本边界 → 知识 → 客户档案 → 最近会话（会话走 history）。 */
+  /** 组装顺序：平台安全约束 →（员工人设）→ 剧本边界 → 知识 → 客户档案 → 最近会话（会话走 history）。 */
   private systemPrompt(
     pureAi: boolean,
     knowledge: string,
     sections: { name: string; text: string }[],
+    persona = '',
+    speaker = '',
   ) {
     const base = pureAi
       ? '你是企业官网客服助手。不承诺价格/合同/赔付/时效，不编造；不要承诺转接人工客服，遇到不确定的问题就请访客补充信息或留下联系方式，说明会尽快回复。'
       : '你是企业官网客服助手。不承诺价格/合同/赔付/时效，不编造；不确定就回答「我帮你转接人工客服」。';
-    if (!sections.length) return `${base}\n\n知识：\n${knowledge}`;
+    // 人设是「这个员工是谁、按什么口径说话」，安全约束永远在人设之前，不能被员工配置绕过。
+    const identity = persona
+      ? `\n\n岗位设定：${persona.trim().slice(0, 2000)}`
+      : '';
+    const named = speaker ? `\n\n对外署名：${speaker.trim().slice(0, 60)}` : '';
+    if (!sections.length)
+      return `${base}${identity}${named}\n\n知识：\n${knowledge}`;
     const playbook = sections
       .map((item) => `## ${item.name}\n${item.text}`)
       .join('\n\n');
     const tail = pureAi
       ? '按上面的销售剧本接待：剧本边界优先于知识，剧本没写到的按知识回答；仍不确定就请对方补充信息或留下联系方式。'
       : '按上面的销售剧本接待：剧本边界优先于知识，剧本没写到的按知识回答；仍不确定就使用转人工话术并请求人工介入。';
-    return `${base}\n\n${tail}\n\n${playbook}\n\n知识：\n${knowledge}`;
+    return `${base}${identity}${named}\n\n${tail}\n\n${playbook}\n\n知识：\n${knowledge}`;
   }
 
   private async appendAi(
@@ -2484,6 +3106,7 @@ export class ServiceDeskService {
       userName?: string;
       extra?: Record<string, string>;
     } | null,
+    label = '',
   ) {
     const message = await this.prisma.serviceDeskMessage.create({
       data: { conversationId, senderType, content },
@@ -2497,7 +3120,7 @@ export class ServiceDeskService {
         id: message.id,
         conversationId,
         senderType,
-        senderName: senderType === 'ai' ? 'AI 助手' : '系统',
+        senderName: senderType === 'ai' ? label || 'AI 助手' : '系统',
         contentType: 'text',
         content,
         attachmentUrl: '',
@@ -2758,9 +3381,73 @@ export class ServiceDeskService {
     };
   }
 
+  /**
+   * 选一个可接单的纯AI客服员工：先按会话所属客服组匹配（groupId=0 的员工接全局），
+   * 再要求启用 + 在接待时段内 + 未满负荷，负载低的优先。没有可用员工返回 null，交回真人分流。
+   */
+  private async pickAiAgent(ownerUserId: string, groupId: number) {
+    const rows = await this.prisma.serviceDeskAiAgent.findMany({
+      where: { ownerUserId, status: 'ON' },
+      orderBy: { id: 'asc' },
+    });
+    const candidates = rows.filter(
+      (row) =>
+        (!row.groupId || !groupId || row.groupId === groupId) &&
+        this.inWorkingHours(row.workingHours),
+    );
+    if (!candidates.length) return null;
+    const counts = await this.prisma.serviceDeskConversation.groupBy({
+      by: ['aiAgentId'],
+      where: {
+        ownerUserId,
+        status: 'active',
+        aiAgentId: { in: candidates.map((row) => row.id) },
+      },
+      _count: { _all: true },
+    });
+    const countMap = new Map(
+      counts.map((item) => [item.aiAgentId, item._count._all]),
+    );
+    return (
+      candidates
+        .filter((row) => (countMap.get(row.id) || 0) < row.maxConcurrent)
+        .sort(
+          (a, b) =>
+            (countMap.get(a.id) || 0) / a.maxConcurrent -
+            (countMap.get(b.id) || 0) / b.maxConcurrent,
+        )[0] || null
+    );
+  }
+
   private async assignIfPossible(ownerUserId: string, conversationId: number) {
     const setting = await this.ensureSetting(ownerUserId);
     if (!setting.autoAssign) return;
+    const conversation = await this.prisma.serviceDeskConversation.findFirst({
+      where: { id: conversationId, ownerUserId },
+      select: { groupId: true },
+    });
+    // 纯AI客服员工是团队里的一类员工：有可用员工就先接，接不住再排真人。
+    const ai = await this.pickAiAgent(ownerUserId, conversation?.groupId || 0);
+    if (ai) {
+      await this.touchConversation(conversationId, {
+        assigneeType: 'AI',
+        aiAgentId: ai.id,
+        assigneeUserId: '',
+        status: 'active',
+      });
+      if (ai.greetingText) {
+        await this.appendAi(
+          ownerUserId,
+          conversationId,
+          ai.greetingText,
+          'ai',
+          null,
+          ai.name,
+        );
+      }
+      // 首条访客消息进来时由 openSend 触发 autoReply，这里不重复应答，只打招呼。
+      return;
+    }
     const online = await this.prisma.serviceDeskAgent.findMany({
       where: { ownerUserId, status: 'ONLINE', role: { not: 'owner' } },
       orderBy: { lastAssignedAt: 'asc' },

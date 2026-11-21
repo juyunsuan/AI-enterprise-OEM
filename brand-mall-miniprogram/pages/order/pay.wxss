@@ -1,0 +1,174 @@
+.pay-page {
+  min-height: 100vh;
+  padding: 24rpx;
+  box-sizing: border-box;
+}
+
+.head {
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 56rpx 24rpx;
+  text-align: center;
+  margin-bottom: 24rpx;
+}
+
+.amount {
+  font-size: 72rpx;
+  font-weight: 700;
+  color: #fa3534;
+}
+
+.tip {
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: #7b8089;
+}
+
+.card {
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 24rpx;
+  box-sizing: border-box;
+}
+
+.row-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.method {
+  display: flex;
+  align-items: center;
+}
+
+.method-icon {
+  width: 68rpx;
+  height: 68rpx;
+  border-radius: 16rpx;
+  background: #22c06e;
+  color: #fff;
+  text-align: center;
+  line-height: 68rpx;
+  font-size: 26rpx;
+  margin-right: 20rpx;
+}
+
+.method-icon.offline {
+  background: #ff9900;
+}
+
+.method-text {
+  font-size: 28rpx;
+}
+
+.radio {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  border: 1rpx solid #d0d3d9;
+  text-align: center;
+  line-height: 40rpx;
+  color: #fff;
+  font-size: 22rpx;
+}
+
+.radio.on {
+  background: #fa3534;
+  border-color: #fa3534;
+}
+
+.offline-box {
+  margin-top: 20rpx;
+  padding: 20rpx;
+  border-radius: 12rpx;
+  background: #fff7e6;
+  color: #8a6d1b;
+  font-size: 24rpx;
+  line-height: 36rpx;
+}
+
+.strong {
+  font-weight: 600;
+}
+
+.offline-actions {
+  display: flex;
+  margin-top: 20rpx;
+}
+
+.btn-plain {
+  flex: 1;
+  height: 68rpx;
+  line-height: 68rpx;
+  text-align: center;
+  border-radius: 999rpx;
+  border: 1rpx solid #d0d3d9;
+  color: #4d5159;
+  font-size: 26rpx;
+  margin-right: 16rpx;
+  background: #fff;
+}
+
+.btn-plain:last-child {
+  margin-right: 0;
+}
+
+.muted {
+  color: #8a8f99;
+  font-size: 22rpx;
+}
+
+.message {
+  margin-top: 24rpx;
+  padding: 20rpx;
+  border-radius: 12rpx;
+  background: #fff1f0;
+  color: #f53f3f;
+  font-size: 24rpx;
+}
+
+.footer-gap {
+  height: 140rpx;
+}
+
+.bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
+  background: #fff;
+  border-top: 1rpx solid #eaecef;
+  padding: 16rpx 24rpx;
+  box-sizing: border-box;
+  z-index: 20;
+}
+
+.bar-plain,
+.bar-main {
+  height: 76rpx;
+  line-height: 76rpx;
+  text-align: center;
+  border-radius: 999rpx;
+  font-size: 28rpx;
+}
+
+.bar-plain {
+  flex: 1;
+  border: 1rpx solid #d0d3d9;
+  color: #4d5159;
+}
+
+.bar-main {
+  flex: 2;
+  background: #fa3534;
+  color: #fff;
+}
+
+.bar-main.dis {
+  opacity: 0.6;
+}

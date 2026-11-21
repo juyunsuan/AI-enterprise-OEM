@@ -1,0 +1,30 @@
+<view class="page" style="{{themeStyle}}">
+  <view class="empty" wx:if="{{loading}}">正在加载…</view>
+  <view class="empty" wx:elif="{{error}}">{{error}}</view>
+
+  <block wx:elif="{{item}}">
+    <view class="card">
+      <view class="article-title">{{item.title}}</view>
+      <view class="row article-meta">
+        <text class="muted small" wx:if="{{item.createdText}}">{{item.createdText}}</text>
+        <text class="tag" wx:if="{{kind === 'NOTICE'}}">公告</text>
+        <text class="tag" wx:elif="{{kind === 'PAGE'}}">单页</text>
+      </view>
+      <view class="muted summary" wx:if="{{item.summary}}">{{item.summary}}</view>
+      <view class="divider"></view>
+      <rich-text class="article-body" wx:if="{{item.content}}" nodes="{{item.content}}"></rich-text>
+      <text class="muted" wx:else>正文为空</text>
+
+      <image
+        class="article-image"
+        wx:for="{{item.images}}"
+        wx:for-item="image"
+        wx:key="*this"
+        src="{{image}}"
+        mode="widthFix"
+        bindtap="previewImage"
+        data-url="{{image}}"
+      />
+    </view>
+  </block>
+</view>

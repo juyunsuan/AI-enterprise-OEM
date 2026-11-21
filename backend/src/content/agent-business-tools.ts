@@ -50,12 +50,6 @@ export type AgentBusinessContext = {
     ): Promise<{ id: number; number?: string; title?: string }>;
     submit(user: CurrentUser, id: string): Promise<Record<string, unknown>>;
   };
-  recruit: {
-    updateApplicationStatus(
-      user: CurrentUser,
-      body: Record<string, unknown>,
-    ): Promise<Record<string, unknown>>;
-  };
   /** 本地 Chrome 插件 RPA：设备清单 + 会话（LLM 决策 / 确定性动作回放）生命周期。 */
   rpaChrome: {
     listDevices(user: CurrentUser): Promise<Record<string, unknown>>;
@@ -230,29 +224,6 @@ export const BUSINESS_TOOLS: BusinessTool[] = [
     write: true,
     callable: true,
     billing: '写操作：真实提交审批，不消耗积分',
-  },
-  {
-    spec: {
-      type: 'function',
-      function: {
-        name: 'recruit_update_application',
-        description:
-          '变更招聘投递状态。该动作在权限红线上：投递状态变更需要本人确认，Agent 不会代为执行，请引导用户到「招聘求职」页自行操作。',
-        parameters: {
-          type: 'object',
-          properties: {
-            id: { type: 'integer', description: '投递编号' },
-            status: { type: 'string', description: '目标状态' },
-            note: { type: 'string', description: '备注' },
-          },
-          required: ['id', 'status'],
-        },
-      },
-    },
-    operationId: 'Recruit_updateApplicationStatus',
-    write: true,
-    callable: false,
-    billing: '红线动作：不自动执行',
   },
   {
     spec: {

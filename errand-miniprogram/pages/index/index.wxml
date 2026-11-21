@@ -1,0 +1,77 @@
+<view class="wrap">
+  <view wx:if="{{loading}}" class="card muted">正在加载…</view>
+
+  <view wx:elif="{{error}}" class="card">
+    <view class="section-title">暂时不能下单</view>
+    <view class="muted">{{error}}</view>
+    <view class="btn btn-primary" style="margin-top: 24rpx;" bindtap="retry">重试</view>
+  </view>
+
+  <block wx:else>
+    <view class="hero" style="background: {{themeColor}};">
+      <view class="row">
+        <image wx:if="{{site.logo}}" class="logo" src="{{site.logo}}" mode="aspectFill" />
+        <view class="grow" style="margin-left: 20rpx;">
+          <view class="hero-title">{{site.name}}</view>
+          <view class="hero-sub">{{site.slogan || '同城帮送 · 帮我买'}}</view>
+        </view>
+      </view>
+      <view class="hero-meta">{{cityName || site.city}}{{site.businessHours ? ' · ' + site.businessHours : ''}}</view>
+      <picker
+        wx:if="{{cities.length > 1}}"
+        range="{{cities}}"
+        range-key="name"
+        bindchange="pickCity"
+      >
+        <view class="city-picker">当前城市：{{cityName || cities[0].name}} · 切换 ›</view>
+      </picker>
+    </view>
+
+    <view wx:if="{{notice}}" class="card notice">{{notice}}</view>
+
+    <view class="card">
+      <view class="section-title">你要跑腿做什么</view>
+      <view class="service-row">
+        <view class="service-item" data-type="SEND" bindtap="goCreate">
+          <view class="service-icon">送</view>
+          <view class="service-name">帮我送</view>
+          <view class="muted">取件 → 送达</view>
+        </view>
+        <view wx:if="{{buyEnabled}}" class="service-item" data-type="BUY" bindtap="goCreate">
+          <view class="service-icon">买</view>
+          <view class="service-name">帮我买</view>
+          <view class="muted">代购 → 送达</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="menu-row" wx:if="{{myOrders}}" bindtap="goOrders">
+        <text>我的订单</text><text class="muted">›</text>
+      </view>
+      <view class="menu-row" bindtap="goProfile">
+        <text>我的资料</text><text class="muted">昵称 / 头像 ›</text>
+      </view>
+      <view class="menu-row" wx:if="{{addressBook}}" bindtap="goAddress">
+        <text>地址簿</text><text class="muted">›</text>
+      </view>
+      <view class="menu-row" wx:if="{{coupon}}" bindtap="goCoupons">
+        <text>优惠券</text><text class="muted">{{coupons.length}} 张可领 ›</text>
+      </view>
+      <view class="menu-row" bindtap="goRider">
+        <text>骑手报名 / 工作台</text><text class="muted">›</text>
+      </view>
+      <view class="menu-row" wx:if="{{desk}}" bindtap="goService">
+        <text>在线客服</text><text class="muted">AI 客服 ›</text>
+      </view>
+      <view class="menu-row" wx:if="{{showContact}}" bindtap="callPhone">
+        <text>联系电话</text><text class="muted">{{contact.phone || site.phone || '›'}}</text>
+      </view>
+    </view>
+
+    <view class="card protocol" wx:if="{{protocolEnabled && site.protocolText}}">
+      <view class="section-title">下单须知</view>
+      <text class="muted">{{site.protocolText}}</text>
+    </view>
+  </block>
+</view>

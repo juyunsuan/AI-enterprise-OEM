@@ -1,0 +1,33 @@
+.search {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 24rpx;
+  background: #fff;
+}
+
+.search-input {
+  flex: 1;
+  height: 72rpx;
+  padding: 0 20rpx;
+  border-radius: 36rpx;
+  background: #f5f6f8;
+  font-size: 26rpx;
+}
+
+.search-btn {
+  margin-left: 16rpx;
+  color: #1a73e8;
+  font-size: 28rpx;
+}
+
+.total {
+  margin-bottom: 8rpx;
+}
+
+.tag {
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+  background: #eef3ff;
+  color: #2b5bd7;
+  font-size: 22rpx;
+}

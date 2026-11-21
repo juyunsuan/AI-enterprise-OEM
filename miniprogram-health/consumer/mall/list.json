@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "医药商城",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark",
+  "usingComponents": {}
+}

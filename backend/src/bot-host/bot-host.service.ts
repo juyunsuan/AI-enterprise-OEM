@@ -1,4 +1,5 @@
 import { randomBytes, randomInt, createHash } from 'node:crypto';
+import QRCode from 'qrcode';
 import { Prisma } from '../../generated/prisma';
 import {
   BOT_COMMAND_DEFAULT_TIMEOUT_SEC,
@@ -9,7 +10,7 @@ import {
   BOT_HOST_TOKEN_PREFIX,
   BOT_CLIENT_KINDS,
   BOT_CLIENT_KIND_LABELS,
-  MOBOT_HOST_TOKEN_PREFIX,
+  AWBOT_HOST_TOKEN_PREFIX,
   type BotClientKind,
   BOT_PENDING_QUEUE_LIMIT,
   BOT_SCHEDULE_LAST_STATUS_LABELS,
@@ -32,6 +33,8 @@ import { text } from '../common/api';
 import { BusinessException } from '../common/business.exception';
 import { ErrorCode } from '../common/error-code';
 import { aipddApiKey, loadChannelCredentials } from '../ai/ai-channels';
+import { LOCALAPI_CHANNEL_ID } from '../model-plaza/localapi';
+import { platformModelFor } from '../model-plaza/platform-defaults.service';
 import { ContentCrypto } from '../content/content-crypto';
 import { aipddBaseUrl } from '../content/content-shared';
 import { parseId } from '../common/parse-id';
@@ -51,7 +54,7 @@ import {
 
 /**
  * Agent-Bot · Bot 主机（docs/Agent-Bot方案.md）：
- * 用户本机装 WorkBuddy（执行本体）+ BotBuddy 客户端（通信壳）。客户端与本站配对后
+ * 用户本机装 WorkBuddy（执行本体）+ AWBotDSH 客户端（通信壳）。客户端与本站配对后
  * 按心跳领取指令，调本机 WorkBuddy 的 ACP 网关串行执行，再流式回传。
  *
  * 与本地 Chrome 插件设备通道同一套口径：令牌只存 sha256（D3-A 的等价约束——目标机器的凭据
@@ -63,6 +66,12 @@ import {
 const TERMINAL_COMMAND = new Set<string>(BOT_TERMINAL_COMMAND_STATUSES);
 /** 配对码：6 位数字、单次有效、10 分钟过期。 */
 const PAIR_CODE_TTL_MS = 10 * 60_000;
+/** 扫码配对：平台生成的高熵一次性码，手机扫码后免登录兑换。 */
+const QR_PAIR_PREFIX = 'QR';
+const QR_PAIR_TTL_MS = 5 * 60_000;
+const QR_PAIR_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+/** 已派发但一直没回执的指令，隔这么久再投一次；客户端用 claim 幂等跳过重复执行。 */
+const REPEAT_DISPATCH_AFTER_MS = 30_000;
 const PROGRESS_MAX = 20_000;
 const INSTRUCTION_MAX = 4_000;
 /** 一次列表拉取的会话消息/指令上限：对话框不做无限滚动。 */
@@ -74,7 +83,7 @@ const PLATFORMS = ['win', 'mac', 'android', 'ios'];
 type GrantSource = 'default' | 'platform' | 'client';
 type GrantSummary = NonNullable<BotHostView['modelGrant']>;
 /** 客户端同步上来的渠道在平台「模型设置」里的名字前缀（按主机识别，重名即更新）。 */
-const CLIENT_CHANNEL_PREFIX = 'BotBuddy · ';
+const CLIENT_CHANNEL_PREFIX = 'AWBotDSH · ';
 
 function hashToken(token: string) {
   return createHash('sha256').update(token).digest('hex');
@@ -82,7 +91,7 @@ function hashToken(token: string) {
 
 function newHostToken(kind: BotClientKind = 'DESKTOP') {
   const prefix =
-    kind === 'MOBOT' ? MOBOT_HOST_TOKEN_PREFIX : BOT_HOST_TOKEN_PREFIX;
+    kind === 'AWBOT' ? AWBOT_HOST_TOKEN_PREFIX : BOT_HOST_TOKEN_PREFIX;
   return `${prefix}${randomBytes(24).toString('hex')}`;
 }
 
@@ -109,6 +118,15 @@ function newCommandCode() {
 
 function newPairCode() {
   return String(randomInt(100000, 1000000));
+}
+
+/** 12 位：QR + 10 位无歧义字符，与 6 位手输码区分，避免旧码被公开兑换接口爆破。 */
+function newQrPairCode() {
+  let code = QR_PAIR_PREFIX;
+  for (let index = 0; index < 10; index += 1) {
+    code += QR_PAIR_ALPHABET[randomInt(0, QR_PAIR_ALPHABET.length)];
+  }
+  return code;
 }
 
 function clip(value: unknown, max: number) {
@@ -305,8 +323,8 @@ export class BotHostService {
     );
     const hostname = clip(deviceInfo.hostname, 40);
     const fallback = hostname
-      ? `${clientKind === 'MOBOT' ? 'Mobot' : 'Workbuddy'} · ${hostname}`
-      : `${clientKind === 'MOBOT' ? 'Mobot 手机' : 'Bot 主机'} · ${randomBytes(2).toString('hex')}`;
+      ? `${clientKind === 'AWBOT' ? 'AWBot' : 'Workbuddy'} · ${hostname}`
+      : `${clientKind === 'AWBOT' ? 'AWBot 手机' : 'Bot 主机'} · ${randomBytes(2).toString('hex')}`;
     const name = clip(body.name, 80) || fallback;
     if (code) {
       return this.pairByCode(user, code, name, platform, clientKind);
@@ -324,10 +342,16 @@ export class BotHostService {
     const row = await this.prisma.workbuddyHostPairCode.findUnique({
       where: { code },
     });
-    if (!row || row.usedAt || row.expiresAt.getTime() < Date.now()) {
+    if (!row || row.expiresAt.getTime() < Date.now()) {
       throw new BusinessException(
         ErrorCode.BAD_REQUEST,
         '配对码无效或已过期，请在客户端重新申请',
+      );
+    }
+    if (row.usedAt) {
+      throw new BusinessException(
+        ErrorCode.CONFLICT,
+        '配对码已被使用，请在客户端重新申请',
       );
     }
     // 账号 + 连接码双重绑定：码在客户端登录后签发，只认同一个账号来认领。
@@ -340,35 +364,69 @@ export class BotHostService {
     if (normalizeClientKind(row.clientKind) !== clientKind) {
       throw new BusinessException(
         ErrorCode.CONFLICT,
-        clientKind === 'MOBOT'
+        clientKind === 'AWBOT'
           ? '该连接码来自 Bot 主机，请到「Bot 主机」页认领'
-          : '该连接码来自 Mobot 手机，请到「Mobot 手机」页认领',
+          : '该连接码来自 AWBot 手机，请到「AWBot 手机」页认领',
       );
     }
     const deviceInfo = toJsonObject(row.deviceInfo);
     const effectivePlatform =
       platform || normalizePlatform(deviceInfo.os ?? deviceInfo.platform);
-    const created = await this.createHost(
-      user,
-      name,
-      effectivePlatform,
-      clientKind,
-    );
-    await this.prisma.workbuddyHostPairCode.update({
-      where: { id: row.id },
-      data: { hostId: created.host.id, issuedToken: created.token },
-    });
-    return { host: created.host, token: created.token };
+    try {
+      const created = await this.prisma.$transaction(async (tx) => {
+        // 认领即占码：并发认领只有一次能拿到 count=1，其余直接 CONFLICT。
+        // 之前只在 pollPairCode 写 usedAt，同一码可被反复认领、每认一次多一台 host。
+        const claimed = await tx.workbuddyHostPairCode.updateMany({
+          where: { id: row.id, usedAt: null },
+          data: { usedAt: new Date() },
+        });
+        if (!claimed.count) {
+          throw new BusinessException(
+            ErrorCode.CONFLICT,
+            '配对码已被使用，请在客户端重新申请',
+          );
+        }
+        const host = await this.createHost(
+          user,
+          name,
+          effectivePlatform,
+          clientKind,
+          tx,
+        );
+        await tx.workbuddyHostPairCode.update({
+          where: { id: row.id },
+          data: { hostId: host.host.id, issuedToken: host.token },
+        });
+        return host;
+      });
+      return { host: created.host, token: created.token };
+    } catch (error) {
+      // 同名主机受 @@unique([userId, name]) 约束：转成可读提示，而不是 500。
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new BusinessException(
+          ErrorCode.CONFLICT,
+          `已有同名主机「${name}」，请换个名字再认领`,
+        );
+      }
+      throw error;
+    }
   }
 
   private async createHost(
-    user: CurrentUser,
+    user: Pick<CurrentUser, 'userId'>,
     name: string,
     platform: string,
     clientKind: BotClientKind = 'DESKTOP',
+    db: Pick<
+      Prisma.TransactionClient,
+      'workbuddyHost' | 'workbuddyHostChannel'
+    > = this.prisma,
   ) {
     const token = newHostToken(clientKind);
-    const row = await this.prisma.workbuddyHost.create({
+    const row = await db.workbuddyHost.create({
       data: {
         userId: user.userId,
         name,
@@ -379,7 +437,7 @@ export class BotHostService {
         status: 'NEVER',
       },
     });
-    await this.prisma.workbuddyHostChannel.create({
+    await db.workbuddyHostChannel.create({
       data: { hostId: row.id, userId: user.userId, name: `${name} · 通信` },
     });
     return { host: this.hostView(row, 0, 1), token };
@@ -432,7 +490,7 @@ export class BotHostService {
       // AI 调用账号的设备绑定是多态引用（无外键），删设备时同步清理
       this.prisma.aiCallAccountBinding.deleteMany({
         where: {
-          principalKind: { in: ['DESKTOP', 'MOBOT'] },
+          principalKind: { in: ['DESKTOP', 'AWBOT'] },
           principalId: row.id,
         },
       }),
@@ -488,7 +546,23 @@ export class BotHostService {
         where: { userId_mediaType: { userId, mediaType: 'text' } },
       })
       .catch(() => null);
-    if (!slot || !slot.model) return null;
+    if (!slot || !slot.model) {
+      // 个人没配默认模型时继承平台默认（与站内 AI 调用同口径）：
+      // 手机配对完成后第一次心跳就能拿到渠道与 Key，不必再人工授权。
+      const platform = await platformModelFor(
+        this.prisma,
+        userId,
+        'text',
+      ).catch(() => null);
+      if (!platform) return null;
+      return {
+        channelId: LOCALAPI_CHANNEL_ID,
+        channelName: this.channelLabel(LOCALAPI_CHANNEL_ID),
+        model: platform.modelKey,
+        available: true,
+        source: 'default',
+      };
+    }
     const channel =
       slot.channelId > 0
         ? await this.prisma.contentModelChannel.findFirst({
@@ -608,7 +682,7 @@ export class BotHostService {
 
   /**
    * 客户端改了本地模型设置后同步到平台：写一条该主机的专属渠道 + 覆盖授权。
-   * 渠道按「BotBuddy · 主机名」落在平台「模型设置」里，之后平台任意入口看到的都是这份设置。
+   * 渠道按「AWBotDSH · 主机名」落在平台「模型设置」里，之后平台任意入口看到的都是这份设置。
    */
   async syncModelFromClient(
     host: BotHostPrincipal,
@@ -636,6 +710,11 @@ export class BotHostService {
     });
     const channelName =
       `${CLIENT_CHANNEL_PREFIX}${host.name || `#${host.id}`}`.slice(0, 64);
+    // 改名前的旧渠道名：命中后更新为 AWBotDSH，避免用户侧出现两条同名渠道。
+    const legacyChannelNames = [
+      `BotBuddy · ${host.name || `#${host.id}`}`.slice(0, 64),
+      `AWBotBuddy · ${host.name || `#${host.id}`}`.slice(0, 64),
+    ];
     let channel =
       current && current.source === 'client' && current.channelId > 0
         ? await this.prisma.contentModelChannel.findFirst({
@@ -647,7 +726,9 @@ export class BotHostService {
         where: {
           userId: host.userId,
           provider: 'custom',
-          name: channelName,
+          name: {
+            in: Array.from(new Set([channelName, ...legacyChannelNames])),
+          },
         },
       });
     }
@@ -1268,6 +1349,165 @@ export class BotHostService {
     return { code, expiresAt: expiresAt.toISOString() };
   }
 
+  /**
+   * 站内生成扫码配对码：码绑当前账号，手机扫到后免登录兑换设备令牌。
+   * 与 6 位码共用一张表，用 QR 前缀区分，公开兑换接口只认该前缀。
+   */
+  async createPairQr(user: CurrentUser, body: Record<string, unknown>) {
+    const name = clip(body.name, 80);
+    const siteUrl = clip(body.siteUrl, 300).replace(/\/+$/, '');
+    if (siteUrl) {
+      let url: URL;
+      try {
+        url = new URL(siteUrl);
+      } catch {
+        throw new BusinessException(
+          ErrorCode.BAD_REQUEST,
+          '站点地址格式不正确',
+        );
+      }
+      if (!/^https?:$/.test(url.protocol)) {
+        throw new BusinessException(
+          ErrorCode.BAD_REQUEST,
+          '站点地址只支持 http/https',
+        );
+      }
+    }
+    // 桌面主机必须是当前账号自己的设备，避免把别人的主机写进二维码。
+    const hostId = Number(body.hostId) || 0;
+    const host =
+      hostId > 0
+        ? await this.prisma.workbuddyHost.findFirst({
+            where: { id: hostId, userId: user.userId, clientKind: 'DESKTOP' },
+            select: { id: true, name: true },
+          })
+        : null;
+    if (hostId > 0 && !host) {
+      throw new BusinessException(
+        ErrorCode.NOT_FOUND,
+        '主机不存在或不属于当前账号',
+      );
+    }
+    let code = newQrPairCode();
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const exists = await this.prisma.workbuddyHostPairCode.findUnique({
+        where: { code },
+        select: { id: true },
+      });
+      if (!exists) break;
+      code = newQrPairCode();
+    }
+    const expiresAt = new Date(Date.now() + QR_PAIR_TTL_MS);
+    await this.prisma.workbuddyHostPairCode.create({
+      data: {
+        code,
+        clientKind: 'AWBOT',
+        deviceInfo: name ? { name } : {},
+        expiresAt,
+        userId: user.userId,
+      },
+    });
+    const payload = JSON.stringify({
+      v: 1,
+      type: host ? 'awbotdsh-pair' : 'awbot-pair',
+      site: siteUrl,
+      code,
+      ...(host ? { host: { id: host.id, name: host.name } } : {}),
+    });
+    const image = await QRCode.toDataURL(payload, {
+      width: 360,
+      margin: 1,
+    });
+    return { code, expiresAt: expiresAt.toISOString(), payload, image };
+  }
+
+  /** 手机扫到码后免登录兑换：一次一码，成功后直接拿到设备令牌。 */
+  async redeemPairQr(body: Record<string, unknown>) {
+    const code = clip(body.code, 12).toUpperCase();
+    if (!code.startsWith(QR_PAIR_PREFIX)) {
+      throw new BusinessException(
+        ErrorCode.BAD_REQUEST,
+        '配对码无效或已过期，请在平台重新生成二维码',
+      );
+    }
+    const row = await this.prisma.workbuddyHostPairCode.findUnique({
+      where: { code },
+    });
+    if (
+      !row ||
+      row.expiresAt.getTime() < Date.now() ||
+      normalizeClientKind(row.clientKind) !== 'AWBOT'
+    ) {
+      throw new BusinessException(
+        ErrorCode.BAD_REQUEST,
+        '配对码无效或已过期，请在平台重新生成二维码',
+      );
+    }
+    if (row.usedAt) {
+      throw new BusinessException(
+        ErrorCode.CONFLICT,
+        '配对码已被使用，请在平台重新生成二维码',
+      );
+    }
+    const deviceInfo = toJsonObject(body.deviceInfo);
+    const stored = toJsonObject(row.deviceInfo);
+    const platform = normalizePlatform(
+      body.platform ?? deviceInfo.os ?? deviceInfo.platform,
+    );
+    const hostname =
+      clip(deviceInfo.hostname, 40) || clip(deviceInfo.model, 40);
+    const fallback = hostname
+      ? `AWBot · ${hostname}`
+      : `AWBot 手机 · ${randomBytes(2).toString('hex')}`;
+    const name = clip(stored.name, 80) || fallback;
+    try {
+      const created = await this.prisma.$transaction(async (tx) => {
+        // 认领即占码：并发扫码只有一次能拿到 count=1。
+        const claimed = await tx.workbuddyHostPairCode.updateMany({
+          where: { id: row.id, usedAt: null, expiresAt: { gt: new Date() } },
+          data: { usedAt: new Date() },
+        });
+        if (!claimed.count) {
+          throw new BusinessException(
+            ErrorCode.CONFLICT,
+            '配对码已被使用，请在平台重新生成二维码',
+          );
+        }
+        const host = await this.createHost(
+          { userId: row.userId },
+          name,
+          platform,
+          'AWBOT',
+          tx,
+        );
+        await tx.workbuddyHostPairCode.update({
+          where: { id: row.id },
+          data: { hostId: host.host.id },
+        });
+        return host;
+      });
+      // 新配对的手机多半刚清过本地数据：清指纹，下一次心跳按「变化」重发模型授权。
+      this.sentGrantPrints.delete(created.host.id);
+      return {
+        paired: true,
+        token: created.token,
+        hostName: created.host.name,
+        hostId: created.host.id,
+      };
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new BusinessException(
+          ErrorCode.CONFLICT,
+          `已有同名主机「${name}」，请换个名字后再配对`,
+        );
+      }
+      throw error;
+    }
+  }
+
   /** 客户端轮询配对结果：只认生成该码的账号，命中即取走一次性令牌并作废该码。 */
   async pollPairCode(user: CurrentUser, body: Record<string, unknown>) {
     const code = clip(body.code, 12);
@@ -1314,7 +1554,7 @@ export class BotHostService {
     // 更名前已配对的客户端手里是 wb_ 令牌，继续认；新签发的都是 bot_。
     if (
       !token.startsWith(BOT_HOST_TOKEN_PREFIX) &&
-      !token.startsWith(MOBOT_HOST_TOKEN_PREFIX) &&
+      !token.startsWith(AWBOT_HOST_TOKEN_PREFIX) &&
       !token.startsWith('wb_')
     ) {
       return null;
@@ -1365,11 +1605,28 @@ export class BotHostService {
         ...(clientVersion ? { clientVersion } : {}),
       },
     });
-    const commands = await this.prisma.workbuddyHostCommand.findMany({
+    const pending = await this.prisma.workbuddyHostCommand.findMany({
       where: { hostId: host.id, status: 'PENDING' },
       orderBy: { id: 'asc' },
       take: BOT_HEARTBEAT_BATCH,
     });
+    // 上一次心跳的应答可能丢在路上：没回执的派发过一会儿再给一次。
+    const stale =
+      pending.length < BOT_HEARTBEAT_BATCH
+        ? await this.prisma.workbuddyHostCommand.findMany({
+            where: {
+              hostId: host.id,
+              status: 'DISPATCHED',
+              cancelRequested: false,
+              dispatchedAt: {
+                lt: new Date(now.getTime() - REPEAT_DISPATCH_AFTER_MS),
+              },
+            },
+            orderBy: { id: 'asc' },
+            take: BOT_HEARTBEAT_BATCH - pending.length,
+          })
+        : [];
+    const commands = [...pending, ...stale];
     if (commands.length) {
       await this.prisma.workbuddyHostCommand.updateMany({
         where: { id: { in: commands.map((row) => row.id) } },
@@ -1387,7 +1644,11 @@ export class BotHostService {
     });
     const grant = await this.modelGrantForHost(host);
     const fingerprint = JSON.stringify(grant);
-    const unchanged = this.sentGrantPrints.get(host.id) === fingerprint;
+    // 客户端没写成功（常见：收到授权时引擎还没起来）会带 needGrant 来要一次，
+    // 否则平台只认「内容没变」，手机永远等不到第二次。
+    const unchanged =
+      body.needGrant !== true &&
+      this.sentGrantPrints.get(host.id) === fingerprint;
     this.sentGrantPrints.set(host.id, fingerprint);
     return {
       received: true,
@@ -1644,7 +1905,7 @@ export class BotHostService {
   }
 
   /**
-   * 单主机指纹窗口详情：客户端上报的窗口候选表，供 RPA「BotBuddy 浏览器」任务选执行位。
+   * 单主机指纹窗口详情：客户端上报的窗口候选表，供 RPA「AWBotDSH 浏览器」任务选执行位。
    * 与 workspaces 同一口径——只读心跳 caps，平台不建窗口也不改窗口。
    */
   async fingerprints(
@@ -1676,7 +1937,7 @@ export class BotHostService {
     },
     body: Record<string, unknown>,
   ): { cwd: string; mode: string } {
-    if (normalizeClientKind(host.clientKind) === 'MOBOT') {
+    if (normalizeClientKind(host.clientKind) === 'AWBOT') {
       // 手机侧没有桌面工作区概念：不向移动端下发路径或执行模式。
       return { cwd: '', mode: '' };
     }
@@ -1698,7 +1959,7 @@ export class BotHostService {
 
   /**
    * 群控派单/建计划共用的两道额外闸（界面手动下发不受约束）：
-   * 设备必须启用，且类型落在本轮勾选的群控范围（DESKTOP / MOBOT）之内。
+   * 设备必须启用，且类型落在本轮勾选的群控范围（DESKTOP / AWBOT）之内。
    */
   private assertDispatchable(
     host: { name: string; clientKind: string; enabled: boolean },
@@ -1768,7 +2029,7 @@ export class BotHostService {
       instruction: input.instruction,
       cwd:
         input.cwd ||
-        (normalizeClientKind(host.clientKind) === 'MOBOT'
+        (normalizeClientKind(host.clientKind) === 'AWBOT'
           ? ''
           : host.workingDir),
       timeoutSec: input.timeoutSec,
@@ -1923,11 +2184,11 @@ export class BotHostService {
       id: row.id,
       name:
         row.name ||
-        `${clientKind === 'MOBOT' ? 'Mobot 手机' : 'Bot 主机'} #${row.id}`,
+        `${clientKind === 'AWBOT' ? 'AWBot 手机' : 'Bot 主机'} #${row.id}`,
       platform: row.platform,
       clientKind,
-      mobot:
-        clientKind === 'MOBOT'
+      awbot:
+        clientKind === 'AWBOT'
           ? {
               battery: Number(rawCaps.battery) || 0,
               charging: rawCaps.charging === true,

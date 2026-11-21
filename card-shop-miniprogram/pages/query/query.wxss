@@ -1,0 +1,59 @@
+.hint {
+  margin-bottom: 20rpx;
+  line-height: 36rpx;
+}
+
+.field-label {
+  font-size: 26rpx;
+  font-weight: 500;
+  margin: 20rpx 0 12rpx;
+}
+
+.query-btn {
+  margin-top: 32rpx;
+}
+
+.link-row {
+  margin-top: 20rpx;
+  text-align: center;
+}
+
+.info-row {
+  padding: 8rpx 0;
+}
+
+.message {
+  margin-top: 16rpx;
+  line-height: 36rpx;
+}
+
+.pay-btn {
+  margin-top: 24rpx;
+}
+
+.card-item {
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid var(--line);
+}
+
+.card-item:last-child {
+  border-bottom: none;
+}
+
+.copy-all,
+.copy-link {
+  color: var(--primary);
+  font-size: 24rpx;
+}
+
+.secret-head {
+  margin-top: 12rpx;
+}
+
+.secret-line {
+  margin-top: 8rpx;
+  padding: 14rpx 18rpx;
+  background: #f7f8fa;
+  border-radius: 12rpx;
+  font-size: 26rpx;
+}

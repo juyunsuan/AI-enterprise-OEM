@@ -1,0 +1,41 @@
+<view class="diy-block">
+  <diy-search-bar wx:if="{{type === 'searchBar'}}" props="{{props}}" ctx="{{ctx}}" />
+  <diy-image-ads
+    wx:elif="{{type === 'imageAds'}}"
+    props="{{props}}"
+    ctx="{{ctx}}"
+  />
+  <diy-image-cube
+    wx:elif="{{type === 'imageCube'}}"
+    props="{{props}}"
+    ctx="{{ctx}}"
+  />
+  <diy-nav wx:elif="{{type === 'nav'}}" props="{{props}}" ctx="{{ctx}}" />
+  <diy-notice wx:elif="{{type === 'notice'}}" props="{{props}}" ctx="{{ctx}}" />
+  <diy-title wx:elif="{{type === 'title'}}" props="{{props}}" ctx="{{ctx}}" />
+  <diy-goods-list
+    wx:elif="{{type === 'goodsList'}}"
+    props="{{props}}"
+    ctx="{{ctx}}"
+  />
+  <diy-coupon wx:elif="{{type === 'coupon'}}" props="{{props}}" ctx="{{ctx}}" />
+  <diy-store-head
+    wx:elif="{{type === 'storeHead'}}"
+    props="{{props}}"
+    ctx="{{ctx}}"
+  />
+  <diy-category-line
+    wx:elif="{{type === 'categoryLine'}}"
+    props="{{props}}"
+    ctx="{{ctx}}"
+  />
+  <diy-rich-text wx:elif="{{type === 'richText'}}" props="{{props}}" ctx="{{ctx}}" />
+  <diy-assist wx:elif="{{type === 'assist'}}" props="{{props}}" ctx="{{ctx}}" />
+  <diy-spacer wx:elif="{{type === 'spacer'}}" props="{{props}}" ctx="{{ctx}}" />
+  <diy-page-foot
+    wx:elif="{{type === 'pageFoot'}}"
+    props="{{props}}"
+    ctx="{{ctx}}"
+  />
+  <view wx:else class="diy-unknown">未知组件：{{type}}</view>
+</view>

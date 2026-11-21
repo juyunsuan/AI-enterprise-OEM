@@ -1,0 +1,149 @@
+.diy-page {
+  min-height: 100vh;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.search-bar {
+  padding: 16rpx 24rpx;
+  background: #fff;
+}
+
+.search-box {
+  height: 72rpx;
+  line-height: 72rpx;
+  border-radius: 36rpx;
+  background: #f7f8fa;
+  color: #9aa0aa;
+  font-size: 26rpx;
+  padding: 0 24rpx;
+}
+
+.body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  height: calc(100vh - 104rpx);
+}
+
+.side {
+  width: 200rpx;
+  background: #f7f8fa;
+  height: 100%;
+}
+
+.side-item {
+  padding: 30rpx 16rpx;
+  font-size: 26rpx;
+  color: #4d5159;
+  text-align: center;
+}
+
+.side-item.on {
+  background: #fff;
+  color: #fa3534;
+  font-weight: 600;
+}
+
+.side-empty {
+  padding: 40rpx 16rpx;
+  font-size: 22rpx;
+  color: #adb2bb;
+  text-align: center;
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  background: #fff;
+  height: 100%;
+  padding: 16rpx 24rpx;
+  box-sizing: border-box;
+}
+
+.sub-row {
+  display: flex;
+  flex-wrap: wrap;
+  margin-bottom: 8rpx;
+}
+
+.sub-chip {
+  padding: 8rpx 22rpx;
+  border-radius: 999rpx;
+  background: #f2f3f5;
+  color: #4d5159;
+  font-size: 24rpx;
+  margin: 0 12rpx 12rpx 0;
+}
+
+.sub-chip.on {
+  background: rgba(250, 53, 52, 0.1);
+  color: #fa3534;
+}
+
+.goods {
+  display: flex;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #eaecef;
+}
+
+.pic {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 12rpx;
+  background: #f4f5f7;
+  flex-shrink: 0;
+}
+
+.info {
+  flex: 1;
+  min-width: 0;
+  margin-left: 16rpx;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.name {
+  font-size: 28rpx;
+  line-height: 40rpx;
+  color: #1f1f1f;
+}
+
+.sub {
+  font-size: 22rpx;
+  color: #9aa0aa;
+  margin-top: 4rpx;
+}
+
+.foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.price {
+  color: #fa3534;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.sales {
+  color: #b0b5bd;
+  font-size: 22rpx;
+}
+
+.empty {
+  padding: 100rpx 0;
+  text-align: center;
+  color: #8a8f99;
+  font-size: 24rpx;
+}
+
+.loading {
+  padding: 24rpx 0;
+  text-align: center;
+  color: #adb2bb;
+  font-size: 22rpx;
+}

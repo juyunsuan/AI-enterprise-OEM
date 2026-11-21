@@ -1,0 +1,135 @@
+<view class="page" style="{{themeStyle}}">
+  <view wx:if="{{statusNote}}" class="status-banner">{{statusNote}}</view>
+
+  <view class="hero">
+    <view class="hero-top">
+      <image wx:if="{{logo}}" class="hero-logo" src="{{logo}}" mode="aspectFill" />
+      <view class="hero-text">
+        <view class="hero-name">{{siteName}}</view>
+        <view wx:if="{{slogan}}" class="hero-slogan">{{slogan}}</view>
+      </view>
+    </view>
+    <view wx:if="{{giftText}}" class="hero-gift">{{giftText}}</view>
+    <view class="hero-cta" bindtap="goCreate">开始创作数字人视频</view>
+    <view wx:if="{{member}}" class="hero-assets" bindtap="goMember">
+      <text>{{pricing.pointTitle || '算力'}} {{member.point}}</text>
+      <text>形象点 {{member.bodyQuota}}</text>
+      <text>声音点 {{member.voiceQuota}}</text>
+      <text wx:if="{{member.isVip}}" class="hero-vip">会员</text>
+    </view>
+    <view wx:else class="hero-assets" bindtap="onLoginTap">
+      <text>登录后查看我的资产</text>
+    </view>
+  </view>
+
+  <block wx:for="{{diy}}" wx:key="id" wx:for-item="comp">
+    <swiper
+      wx:if="{{comp.type === 'swiper'}}"
+      class="diy-swiper"
+      style="height:{{comp.height || 320}}rpx"
+      autoplay
+      circular
+      indicator-dots
+      interval="4000"
+    >
+      <swiper-item wx:for="{{comp.cells}}" wx:key="index" wx:for-item="cell">
+        <image
+          class="diy-swiper-img"
+          src="{{cell.image}}"
+          mode="aspectFill"
+          data-link="{{cell.link}}"
+          bindtap="tapDiy"
+        />
+      </swiper-item>
+    </swiper>
+    <view wx:elif="{{comp.type === 'images'}}" class="diy-images">
+      <image
+        wx:for="{{comp.cells}}"
+        wx:key="index"
+        wx:for-item="cell"
+        class="diy-image"
+        style="border-radius:{{comp.radius}}rpx"
+        src="{{cell.image}}"
+        mode="widthFix"
+        data-link="{{cell.link}}"
+        bindtap="tapDiy"
+      />
+    </view>
+    <view wx:elif="{{comp.type === 'buttons'}}" class="diy-buttons">
+      <view
+        wx:for="{{comp.cells}}"
+        wx:key="index"
+        wx:for-item="cell"
+        class="diy-button"
+        style="border-radius:{{comp.radius}}rpx"
+        data-link="{{cell.link}}"
+        bindtap="tapDiy"
+      >
+        <image
+          wx:if="{{cell.image}}"
+          class="diy-button-img"
+          style="height:{{comp.height || 200}}rpx"
+          src="{{cell.image}}"
+          mode="aspectFill"
+        />
+        <view wx:if="{{cell.text}}" class="diy-button-text">{{cell.text}}</view>
+      </view>
+    </view>
+    <view wx:elif="{{comp.type === 'title' && comp.title}}" class="diy-title">{{comp.title}}</view>
+    <view wx:elif="{{comp.type === 'blank'}}" class="diy-blank" style="height:{{comp.height || 24}}rpx"></view>
+  </block>
+
+  <swiper
+    wx:if="{{showSwiper && banners.length}}"
+    class="banner"
+    autoplay
+    circular
+    indicator-dots
+    interval="4000"
+  >
+    <swiper-item wx:for="{{banners}}" wx:key="id">
+      <image
+        class="banner-img"
+        src="{{item.image}}"
+        mode="aspectFill"
+        data-link="{{item.link}}"
+        bindtap="tapBanner"
+      />
+    </swiper-item>
+  </swiper>
+
+  <view wx:if="{{showNotice && notices.length}}" class="card notice">
+    <view class="notice-label">公告</view>
+    <swiper class="notice-swiper" vertical autoplay circular interval="3500">
+      <swiper-item wx:for="{{notices}}" wx:key="id">
+        <view class="notice-text" data-id="{{item.id}}" bindtap="openNotice">{{item.title}}</view>
+      </swiper-item>
+    </swiper>
+  </view>
+
+  <view class="grid">
+    <view wx:for="{{grid}}" wx:key="key" class="grid-item" data-url="{{item.url}}" bindtap="tapGrid">
+      <view class="grid-icon">{{item.char}}</view>
+      <view class="grid-title">{{item.title}}</view>
+    </view>
+  </view>
+
+  <view wx:if="{{showWorks && feed.length}}" class="card">
+    <view class="row between">
+      <view class="card-title">大家都在创作</view>
+      <view class="muted" bindtap="goFeed">更多 ›</view>
+    </view>
+    <view class="feed-list">
+      <view wx:for="{{feed}}" wx:key="id" class="feed-item" data-id="{{item.id}}" bindtap="openWork">
+        <image wx:if="{{item.coverUrl}}" class="feed-cover" src="{{item.coverUrl}}" mode="aspectFill" />
+        <view wx:else class="feed-cover feed-cover-empty">视频</view>
+        <view class="feed-title">{{item.title || '数字人作品'}}</view>
+        <view class="feed-meta">{{item.nickname}} · {{item.createdAt}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{!loading && !feed.length && !grid.length}}" class="empty">
+    站点还没有开放功能，请联系站点管理员
+  </view>
+</view>

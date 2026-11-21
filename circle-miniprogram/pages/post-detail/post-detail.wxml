@@ -1,0 +1,58 @@
+<view class="container" wx:if="{{post}}">
+  <view class="card">
+    <view class="row" data-id="{{post.author.id}}" bindtap="openUser">
+      <image class="avatar" src="{{post.author.avatar}}" mode="aspectFill" />
+      <view class="name">{{post.author.nickname}}</view>
+      <view class="muted" style="margin-left:auto">{{post.timeText}}</view>
+    </view>
+    <view class="muted" style="margin-top:8rpx" data-id="{{post.groupId}}" bindtap="openGroup">圈子：{{post.groupName}}</view>
+    <view class="content">{{post.content}}</view>
+    <view class="images" wx:if="{{post.images.length}}">
+      <image class="image" wx:for="{{post.images}}" wx:key="*this" src="{{item}}" data-src="{{item}}" mode="aspectFill" bindtap="preview" />
+    </view>
+    <view class="tag" wx:for="{{post.topics}}" wx:key="id">#{{item.name}}</view>
+    <view class="actions">
+      <view class="action {{post.isLiked ? 'active' : ''}}" bindtap="toggleLike">赞 {{post.likeCount}}</view>
+      <view class="action {{post.isFavorited ? 'active' : ''}}" bindtap="toggleFavorite">收藏 {{post.favoriteCount}}</view>
+      <view class="action" bindtap="report">举报</view>
+      <view class="action" wx:if="{{post.author.id === viewerId}}" bindtap="deletePost">删除</view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="name" style="margin-left:0">评论 {{post.commentCount}}</view>
+    <view wx:for="{{comments}}" wx:key="id" style="margin-top:24rpx">
+      <view class="row" data-id="{{item.user.id}}" bindtap="openUser">
+        <image class="avatar-sm" src="{{item.user.avatar}}" mode="aspectFill" />
+        <view class="name">{{item.user.nickname}}</view>
+        <view class="muted" style="margin-left:auto">{{item.timeText}}</view>
+      </view>
+      <view class="content">{{item.content}}</view>
+      <view class="actions">
+        <view class="action" data-id="{{item.id}}" data-parent="{{item.id}}" data-userid="{{item.user.id}}" data-name="{{item.user.nickname}}" bindtap="reply">回复</view>
+        <view class="action" data-id="{{item.id}}" bindtap="likeComment">赞 {{item.likeCount}}</view>
+        <view class="action" wx:if="{{item.user.id === viewerId}}" data-id="{{item.id}}" bindtap="deleteComment">删除</view>
+        <view class="action" data-id="{{item.id}}" bindtap="reportComment">举报</view>
+      </view>
+
+      <view wx:for="{{item.children}}" wx:for-item="child" wx:key="id" style="margin:20rpx 0 0 60rpx">
+        <view class="row">
+          <image class="avatar-sm" src="{{child.user.avatar}}" mode="aspectFill" />
+          <view class="name">{{child.user.nickname}}</view>
+          <view class="muted" style="margin-left:auto">回复 {{child.replyToName}}</view>
+        </view>
+        <view class="content">{{child.content}}</view>
+        <view class="actions"><view class="action" data-id="{{child.id}}" bindtap="reportComment">举报</view><view class="action" wx:if="{{child.user.id === viewerId}}" data-id="{{child.id}}" bindtap="deleteComment">删除</view></view>
+      </view>
+    </view>
+    <view class="empty" wx:if="{{!comments.length}}">还没有评论</view>
+  </view>
+
+  <view class="card">
+    <view class="muted" wx:if="{{replyTo}}">回复 {{replyTo.name}} <text bindtap="cancelReply" style="color:#1677ff">取消</text></view>
+    <textarea class="textarea" value="{{content}}" bindinput="input" maxlength="1000" placeholder="说点什么…" />
+    <view class="btn" style="margin-top:16rpx" bindtap="send">发送</view>
+  </view>
+</view>
+
+<view class="empty" wx:if="{{loading}}">正在加载…</view>

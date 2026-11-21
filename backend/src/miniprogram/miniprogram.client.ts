@@ -165,14 +165,71 @@ export class MiniProgramClient {
     );
   }
 
+  /**
+   * 订阅消息下发（自营小程序主体共用）。
+   *
+   * 微信侧的字段名由模板决定，调用方必须传与所选模板一致的 key（thing1/date2…），
+   * 所以这里不做任何“猜测填充”：模板没配就跳过，配了字段不对由微信报错、由上层留痕。
+   */
+  async sendSubscribeMessage(
+    runtime: MiniProgramRuntime,
+    input: {
+      templateId: string;
+      openId: string;
+      page: string;
+      data: Record<string, { value: string }>;
+    },
+    retried = false,
+  ): Promise<{ sent: boolean; reason: string }> {
+    if (!input.templateId || !input.openId) {
+      return { sent: false, reason: '缺少模板 ID 或用户 openid' };
+    }
+    const token = await this.accessToken(runtime, retried);
+    const payload = await this.request<WxPayload & { msgid?: string }>(
+      `${API_BASE}/cgi-bin/message/subscribe/send?access_token=${encodeURIComponent(token)}`,
+      { operation: 'miniprogram-subscribe-send' },
+      {
+        template_id: input.templateId,
+        touser: input.openId,
+        page: input.page || 'pages/index/index',
+        data: input.data,
+      },
+    );
+    const code = Number(payload.errcode || 0);
+    if (!retried && [40001, 40014, 42001].includes(code)) {
+      this.tokens.delete(runtime.appId);
+      return this.sendSubscribeMessage(runtime, input, true);
+    }
+    if (code !== 0) {
+      return { sent: false, reason: `${code} ${payload.errmsg || ''}`.trim() };
+    }
+    return { sent: true, reason: '' };
+  }
+
   private async request<T>(
     url: string,
     options: { operation: string },
+  ): Promise<T>;
+  private async request<T>(
+    url: string,
+    options: { operation: string },
+    body: Record<string, unknown>,
+  ): Promise<T>;
+  private async request<T>(
+    url: string,
+    options: { operation: string },
+    body?: Record<string, unknown>,
   ): Promise<T> {
     let result;
     try {
       result = await httpRequest<T>(url, {
-        method: 'GET',
+        method: body ? 'POST' : 'GET',
+        ...(body
+          ? {
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify(body),
+            }
+          : {}),
         timeoutMs: API_TIMEOUT_MS,
         readAs: 'json',
         maxBytes: MAX_JSON_BYTES,

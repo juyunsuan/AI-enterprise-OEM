@@ -196,7 +196,12 @@ function setup(input: {
   const workbuddyHostScheduleRun = table(input.runs ?? []);
   const workbuddyHostConversation = table([]);
   const workbuddyHostChannel = table([]);
-  const workbuddyHostPairCode = table([]);
+  const workbuddyHostPairCode = table([], {
+    usedAt: null,
+    hostId: 0,
+    issuedToken: '',
+    deviceInfo: {},
+  });
   // 心跳会查平台模型授权；默认没有授权（各用例不关心时就是「没下发」）。
   const workbuddyHostModelGrant = table([]);
   // 没有独立授权时主机跟随平台「模型设置 → 文本」默认槽位；缺省就是「平台没配默认模型」。
@@ -221,6 +226,12 @@ function setup(input: {
     contentAgentConversation,
     contentAgentMessage,
   });
+  // 配对幂等用事务包住「占码 + 建主机」；单测里直接复用同一份内存替身。
+  (
+    prisma as unknown as {
+      $transaction: <T>(run: (tx: PrismaService) => Promise<T>) => Promise<T>;
+    }
+  ).$transaction = (run) => run(prisma);
   const scope = stub<HrmScopeService>({
     isStanding: () => Promise.resolve(input.standing !== false),
   });
@@ -669,6 +680,18 @@ describe('BotHostService', () => {
       );
       expect(again.modelGrant).toBeNull();
       expect(again.grantUnchanged).toBe(true);
+
+      // 客户端没写成功会带 needGrant：内容没变也要再发一次，否则手机永远配不上模型。
+      const retried = await withSlot.heartbeat(
+        { id: 1, userId: 'u1', name: '测试主机', clientKind: 'DESKTOP' },
+        { caps: {}, needGrant: true },
+        '127.0.0.1',
+      );
+      expect(retried.modelGrant).toMatchObject({
+        model: 'ap-deepseek-v4-flash',
+        apiKey: 'sk-platform-test',
+      });
+      expect(retried.grantUnchanged).toBe(false);
     } finally {
       if (env.platform === undefined) delete process.env.AIPDD_PLATFORM_KEY;
       else process.env.AIPDD_PLATFORM_KEY = env.platform;
@@ -729,6 +752,96 @@ describe('BotHostService', () => {
 
     const pending = await service.pollPairCode(user, { code: opened.code });
     expect(pending).toMatchObject({ paired: false, token: '' });
+  });
+
+  it('扫码配对：站内出码，手机免登录兑换，旧 6 位码不能走兑换', async () => {
+    const { service, workbuddyHostPairCode } = setup({ hosts: [] });
+
+    const created = await service.createPairQr(user, {
+      name: '工位机',
+      siteUrl: 'https://a.example.com',
+    });
+    expect(created.code).toMatch(/^QR[A-Z2-9]{10}$/);
+    expect(created.payload).toContain('"type":"awbot-pair"');
+    expect(created.image.startsWith('data:image/png;base64,')).toBe(true);
+    expect(workbuddyHostPairCode.rows[0]).toMatchObject({
+      code: created.code,
+      clientKind: 'AWBOT',
+      userId: 'u1',
+    });
+
+    const redeemed = await service.redeemPairQr({
+      code: created.code,
+      deviceInfo: { platform: 'android' },
+    });
+    expect(redeemed).toMatchObject({
+      paired: true,
+      hostName: '工位机',
+    });
+    expect(redeemed.token.startsWith('awb_')).toBe(true);
+
+    await expect(
+      service.redeemPairQr({ code: created.code }),
+    ).rejects.toMatchObject({ errorCode: ErrorCode.CONFLICT });
+
+    const legacy = await service.requestPairCode(user, {
+      clientKind: 'AWBOT',
+    });
+    await expect(
+      service.redeemPairQr({ code: legacy.code }),
+    ).rejects.toMatchObject({ errorCode: ErrorCode.BAD_REQUEST });
+  });
+
+  it('平台下发的指令能经心跳交给手机，并接收进度与结果', async () => {
+    const { service } = setup({ hosts: [] });
+    const created = await service.createPairQr(user, {
+      name: '手机',
+      siteUrl: 'https://a.example.com',
+    });
+    const paired = await service.redeemPairQr({ code: created.code });
+    const host = {
+      id: paired.hostId,
+      userId: 'u1',
+      name: paired.hostName,
+      clientKind: 'AWBOT' as const,
+    };
+
+    const sent = await service.send(user, String(host.id), {
+      text: '在手机上执行这件事',
+    });
+
+    const beat = await service.heartbeat(
+      host,
+      { caps: {}, platform: 'android' },
+      '127.0.0.1',
+    );
+    expect(beat.commands).toHaveLength(1);
+    expect(beat.commands[0]).toMatchObject({
+      commandCode: sent.command.commandCode,
+      instruction: '在手机上执行这件事',
+    });
+
+    await expect(
+      service.progress(host, {
+        commandCode: sent.command.commandCode,
+        text: '做到一半',
+      }),
+    ).resolves.toMatchObject({ cancelRequested: false });
+
+    await expect(
+      service.result(host, {
+        commandCode: sent.command.commandCode,
+        ok: true,
+        text: '做完了',
+      }),
+    ).resolves.toMatchObject({ received: true });
+
+    const after = await service.conversation(user, String(host.id));
+    expect(
+      after.commands.find(
+        (row) => row.commandCode === sent.command.commandCode,
+      ),
+    ).toMatchObject({ status: 'DONE', resultText: '做完了' });
   });
 
   it('模型设置来源：客户端同步的覆盖项可见，清掉后回到跟随平台默认文本模型', async () => {
@@ -809,71 +922,108 @@ describe('BotHostService', () => {
       tokenHash: '',
     });
   });
-  it('Mobot 与桌面主机按 clientKind 隔离，不互相串台', async () => {
-    const mobotRow = {
+  it('AWBot 与桌面主机按 clientKind 隔离，不互相串台', async () => {
+    const awbotRow = {
       ...hostRow,
       id: 2,
-      name: 'Mobot 手机',
+      name: 'AWBot 手机',
       platform: 'android',
-      clientKind: 'MOBOT',
-      tokenPrefix: 'mb_abc',
+      clientKind: 'AWBOT',
+      tokenPrefix: 'awb_abc',
     };
-    const { service } = setup({ hosts: [hostRow, mobotRow] });
+    const { service } = setup({ hosts: [hostRow, awbotRow] });
 
     const desktops = await service.list(user);
     expect(desktops.list.map((row) => row.id)).toEqual([1]);
     expect(desktops.list[0].clientKind).toBe('DESKTOP');
-    expect(desktops.list[0].mobot).toBeNull();
+    expect(desktops.list[0].awbot).toBeNull();
 
-    const mobots = await service.list(user, 'MOBOT');
-    expect(mobots.list.map((row) => row.id)).toEqual([2]);
-    expect(mobots.list[0].clientKind).toBe('MOBOT');
-    expect(mobots.list[0].mobot).toMatchObject({
+    const awbots = await service.list(user, 'AWBOT');
+    expect(awbots.list.map((row) => row.id)).toEqual([2]);
+    expect(awbots.list[0].clientKind).toBe('AWBOT');
+    expect(awbots.list[0].awbot).toMatchObject({
       battery: 0,
       charging: false,
     });
   });
 
-  it('Mobot 配对码：按 kind 申请与认领，签发 mb_ 令牌，桌面页不能认领', async () => {
+  it('AWBot 配对码：按 kind 申请与认领，签发 awb_ 令牌，桌面页不能认领', async () => {
     const { service, workbuddyHostPairCode, workbuddyHost } = setup({});
     const issued = await service.requestPairCode(user, {
-      clientKind: 'MOBOT',
+      clientKind: 'AWBOT',
       deviceInfo: { hostname: 'Pixel', os: 'android' },
     });
     expect(workbuddyHostPairCode.rows[0]).toMatchObject({
-      clientKind: 'MOBOT',
+      clientKind: 'AWBOT',
       userId: 'u1',
     });
 
     await expect(
       service.pair(user, { code: issued.code, clientKind: 'DESKTOP' }),
-    ).rejects.toThrow('Mobot 手机');
+    ).rejects.toThrow('AWBot 手机');
 
     const paired = await service.pair(user, {
       code: issued.code,
-      clientKind: 'MOBOT',
+      clientKind: 'AWBOT',
       name: '我的手机',
     });
-    expect(paired.token.startsWith('mb_')).toBe(true);
-    expect(paired.host.clientKind).toBe('MOBOT');
+    expect(paired.token.startsWith('awb_')).toBe(true);
+    expect(paired.host.clientKind).toBe('AWBOT');
     expect(workbuddyHost.rows[0]).toMatchObject({
-      clientKind: 'MOBOT',
+      clientKind: 'AWBOT',
       name: '我的手机',
       platform: 'android',
     });
 
     const polled = await service.pollPairCode(user, { code: issued.code });
     expect(polled).toMatchObject({ paired: true, hostId: paired.host.id });
-    expect(polled.token.startsWith('mb_')).toBe(true);
+    expect(polled.token.startsWith('awb_')).toBe(true);
   });
 
-  it('Mobot 向手机下发指令时不携带桌面工作区或执行模式', async () => {
+  it('配对码一次性：同一码第二次认领直接 CONFLICT，且不会多建主机', async () => {
+    const { service, workbuddyHost } = setup({});
+    const issued = await service.requestPairCode(user, {
+      clientKind: 'DESKTOP',
+    });
+    const first = await service.pair(user, {
+      code: issued.code,
+      name: '我的电脑',
+    });
+    expect(first.token.startsWith('bot_')).toBe(true);
+    expect(workbuddyHost.rows).toHaveLength(1);
+
+    await expect(
+      service.pair(user, { code: issued.code, name: '我的电脑 2' }),
+    ).rejects.toMatchObject({ errorCode: ErrorCode.CONFLICT });
+    expect(workbuddyHost.rows).toHaveLength(1);
+  });
+
+  it('认领后轮询仍能取回一次性令牌，第二次轮询不再重复签发', async () => {
+    const { service } = setup({});
+    const issued = await service.requestPairCode(user, {
+      clientKind: 'DESKTOP',
+    });
+    const paired = await service.pair(user, {
+      code: issued.code,
+      name: '我的电脑',
+    });
+    const firstPoll = await service.pollPairCode(user, { code: issued.code });
+    expect(firstPoll).toMatchObject({
+      paired: true,
+      hostId: paired.host.id,
+      token: paired.token,
+    });
+    const secondPoll = await service.pollPairCode(user, { code: issued.code });
+    expect(secondPoll).toMatchObject({ paired: false, token: '' });
+  });
+
+  it('AWBot 向手机下发指令时不携带桌面工作区或执行模式', async () => {
     const { service } = setup({
       hosts: [
         {
           ...hostRow,
           id: 2,
-          clientKind: 'MOBOT',
+          clientKind: 'AWBOT',
           platform: 'android',
           caps: {
             defaultPath: '/should-not-leak',
@@ -968,7 +1118,7 @@ describe('BotHostService 受控派单（Agent 群控）', () => {
 
   it('设备类型不在本轮勾选的群控范围内时拒派', async () => {
     const { service, workbuddyHostCommand } = setup({
-      hosts: [{ ...hostRow, id: 2, clientKind: 'MOBOT', platform: 'android' }],
+      hosts: [{ ...hostRow, id: 2, clientKind: 'AWBOT', platform: 'android' }],
     });
 
     await expect(

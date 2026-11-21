@@ -1,0 +1,33 @@
+<view class="page">
+  <scroll-view class="filter-bar" scroll-x="true" enable-flex="true">
+    <view
+      class="filter {{status === item.key ? 'active' : ''}}"
+      wx:for="{{filters}}"
+      wx:key="key"
+      data-key="{{item.key}}"
+      bindtap="changeFilter"
+    >{{item.label}}</view>
+  </scroll-view>
+
+  <view class="empty" wx:if="{{loading && !rows.length}}">正在加载租单…</view>
+  <view class="empty" wx:elif="{{error}}">
+    <view>{{error}}</view>
+    <view class="link" bindtap="load">重新加载</view>
+  </view>
+  <view class="empty" wx:elif="{{!rows.length}}">还没有租单，去首页选一件吧</view>
+
+  <view class="card" wx:for="{{rows}}" wx:key="id" data-id="{{item.id}}" bindtap="openDetail">
+    <view class="row">
+      <text class="item-title">{{item.itemName}}</text>
+      <text class="status">{{item.statusLabel}}</text>
+    </view>
+    <view class="muted" style="margin-top: 8rpx;">{{item.periodText}} · 共 {{item.days}} 天</view>
+    <view class="row" style="margin-top: 12rpx;">
+      <text class="muted">单号 {{item.orderNo}}</text>
+      <text class="price">{{item.payText}}</text>
+    </view>
+  </view>
+
+  <view class="empty" wx:if="{{rows.length && hasMore}}" bindtap="loadMore">加载更多</view>
+  <view class="empty" wx:elif="{{rows.length}}">— 已到底 —</view>
+</view>

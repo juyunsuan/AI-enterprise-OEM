@@ -1,0 +1,127 @@
+.promoter-page {
+  padding: 24rpx;
+  box-sizing: border-box;
+}
+
+.promoter-page .title {
+  font-size: 32rpx;
+  font-weight: 600;
+  margin-bottom: 12rpx;
+}
+
+.promoter-page .muted {
+  color: #6b7280;
+  font-size: 26rpx;
+  line-height: 1.6;
+}
+
+.promoter-page .card {
+  background: #ffffff;
+  border-radius: 20rpx;
+  padding: 28rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 4rpx 16rpx rgba(15, 23, 42, 0.04);
+}
+
+.promoter-page .btn {
+  margin-top: 24rpx;
+  padding: 20rpx 0;
+  border-radius: 12rpx;
+  background: #1a73e8;
+  color: #ffffff;
+  text-align: center;
+  font-size: 28rpx;
+}
+
+.promoter-page .btn.small {
+  margin-top: 16rpx;
+  padding: 12rpx 0;
+  font-size: 24rpx;
+}
+
+.promoter-page .btn.share {
+  width: 100%;
+}
+
+.promoter-page .field {
+  margin-top: 20rpx;
+}
+
+.promoter-page .input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 18rpx 20rpx;
+  border: 2rpx solid #e5e7eb;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  background: #f9fafb;
+}
+
+.promoter-page .code {
+  margin: 16rpx 0 8rpx;
+  font-size: 52rpx;
+  font-weight: 700;
+  letter-spacing: 6rpx;
+  color: #1a73e8;
+}
+
+.promoter-page .stats {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 20rpx;
+}
+
+.promoter-page .stat {
+  width: 50%;
+  padding: 12rpx 0;
+}
+
+.promoter-page .stat-value {
+  font-size: 32rpx;
+  font-weight: 600;
+}
+
+.promoter-page .stat-label {
+  margin-top: 4rpx;
+  color: #6b7280;
+  font-size: 24rpx;
+}
+
+.promoter-page .posters {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 16rpx;
+}
+
+.promoter-page .poster {
+  width: 48%;
+  margin: 0 4% 20rpx 0;
+}
+
+.promoter-page .poster:nth-child(2n) {
+  margin-right: 0;
+}
+
+.promoter-page .poster-image {
+  width: 100%;
+  border-radius: 12rpx;
+  background: #f3f4f6;
+}
+
+.promoter-page .poster-name {
+  margin-top: 10rpx;
+  font-size: 26rpx;
+}
+
+.promoter-page .poster-sub {
+  color: #6b7280;
+  font-size: 22rpx;
+  margin-top: 4rpx;
+}
+
+.promoter-page .empty {
+  padding: 60rpx 0;
+  text-align: center;
+  color: #6b7280;
+  font-size: 26rpx;
+}

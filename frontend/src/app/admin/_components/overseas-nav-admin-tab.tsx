@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 import {
   DeleteOutlined,
   EditOutlined,
@@ -103,11 +105,13 @@ function SiteLogo({ logoUrl, title }: { logoUrl: string; title: string }) {
     );
   }
   return (
-    <img
+    <Image
       className={styles.logo}
       src={logoUrl}
       alt=""
-      loading="lazy"
+      width={40}
+      height={40}
+      unoptimized
       referrerPolicy="no-referrer"
       onError={() => setFailed(true)}
     />

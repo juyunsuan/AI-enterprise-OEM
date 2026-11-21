@@ -1,0 +1,70 @@
+<view class="wrap" style="padding-bottom:180rpx">
+  <view wx:if="{{loading}}" class="empty">正在加载订单…</view>
+
+  <view wx:elif="{{error}}" class="card">
+    <view class="error-box">{{error}}</view>
+  </view>
+
+  <block wx:else>
+    <view class="card">
+      <view class="section-title">售后方式</view>
+      <view class="chips" style="margin-bottom:0">
+        <view
+          wx:for="{{types}}"
+          wx:key="value"
+          class="chip {{type === item.value ? 'active' : ''}}"
+          data-value="{{item.value}}"
+          bindtap="pickType"
+        >{{item.label}}</view>
+      </view>
+      <view class="muted" style="margin-top:12rpx">
+        仅退款不寄回商品；退货退款需要把商品寄回，商家确认收货后退款。
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="section-title">退哪几件</view>
+      <view
+        wx:for="{{items}}"
+        wx:key="id"
+        class="row order-line"
+        data-index="{{index}}"
+        bindtap="toggleItem"
+      >
+        <view class="check {{item.checked ? 'on' : ''}}"></view>
+        <image class="thumb small" src="{{item.image}}" mode="aspectFill" />
+        <view class="grow">
+          <view>{{item.title}}</view>
+          <view class="muted">{{item.skuName}}</view>
+        </view>
+        <view style="text-align:right">
+          <view class="money">¥{{item.priceText}}</view>
+          <view class="muted">×{{item.quantity}}</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="section-title">售后原因</view>
+      <picker range="{{reasons}}" value="{{reasonIndex}}" bindchange="pickReason">
+        <view class="field">
+          <view class="grow">{{reasons[reasonIndex]}}</view>
+          <text class="muted">›</text>
+        </view>
+      </picker>
+      <view class="section-title" style="margin-top:20rpx">补充说明</view>
+      <textarea
+        class="desc-input"
+        value="{{description}}"
+        maxlength="500"
+        placeholder="选填：说明一下具体情况，方便商家处理"
+        placeholder-class="placeholder"
+        bindinput="onDescription"
+      />
+    </view>
+  </block>
+</view>
+
+<view wx:if="{{!loading && !error}}" class="bottom-bar">
+  <view class="btn btn-primary grow" bindtap="submit">{{submitting ? '提交中…' : '提交售后申请'}}</view>
+</view>

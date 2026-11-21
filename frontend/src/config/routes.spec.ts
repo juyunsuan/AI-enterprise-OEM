@@ -35,7 +35,7 @@ describe("navigationFor 站点级菜单显隐", () => {
     // 「工作流」已收进 Agent 的「工作流」页签，不再是工作台独立菜单项
     expect(leaves(menu, "工作台")).not.toContain("/workflow");
     expect(leaves(menu, "业务服务")).toHaveLength(12);
-    expect(leaves(menu, "商务人脉")).toEqual(["/social", "/hiring"]);
+    expect(leaves(menu, "商务人脉")).toEqual(["/ai-social"]);
     expect(leaves(menu, "管理设置")).toContain("/points");
     expect(leaves(menu, "管理设置")).toContain("/developer/mechanisms");
     expect(leaves(menu, "模型服务")).toContain("/developer/api-mcp-skill");
@@ -74,7 +74,7 @@ describe("navigationFor 站点级菜单显隐", () => {
     const businessPaths = (enterpriseRoute.routes ?? [])
       .find((route) => route.name === "业务服务")!
       .routes!.map((child) => child.path!);
-    const menu = navigationFor(me, ["/", ...businessPaths, "/social", "/hiring"]);
+    const menu = navigationFor(me, ["/", ...businessPaths, "/ai-social"]);
     expect(topPaths(menu)).not.toContain("/dashboard");
     expect((menu.routes ?? []).some((route) => route.name === "业务服务")).toBe(false);
     expect((menu.routes ?? []).some((route) => route.name === "商务人脉")).toBe(false);

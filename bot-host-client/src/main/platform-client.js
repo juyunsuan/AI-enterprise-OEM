@@ -7,19 +7,20 @@
  * The client always initiates requests (poll model); the platform never calls in.
  *
  * Public device channel endpoints (see backend/src/bot-host/bot-host.public.ts):
- *   POST {baseUrl}/api/public/bot-host/login         (account password -> 30d bearer)
- *   POST {baseUrl}/api/public/bot-host/session       (bearer -> user/site/points)
- *   POST {baseUrl}/api/public/bot-host/pair          (bearer; get 6-digit code)
- *   POST {baseUrl}/api/public/bot-host/pair/poll     (bearer; take the one-time token)
- *   POST {baseUrl}/api/public/bot-host/heartbeat     (x-bot-token)
- *   POST {baseUrl}/api/public/bot-host/progress      (x-bot-token)
- *   POST {baseUrl}/api/public/bot-host/result        (x-bot-token)
- *   POST {baseUrl}/api/public/bot-host/model-settings (x-bot-token; local model -> platform)
- *   DELETE {baseUrl}/api/public/bot-host/model-settings (x-bot-token)
- *   POST {baseUrl}/api/public/bot-host/logout        (x-bot-token)
- *   GET  {baseUrl}/api/public/bot-host/skills          (x-bot-token; keyword/page/pageSize)
- *   GET  {baseUrl}/api/public/bot-host/skills/:slug     (x-bot-token)
- *   GET  {baseUrl}/api/public/bot-host/skills/:slug/download (x-bot-token; zip bytes)
+ *   新客户端默认 {baseUrl}/api/public/awbotdsh/**；旧平台回退 /api/public/bot-host/**。
+ *   POST {baseUrl}{apiBase}/login         (account password -> 30d bearer)
+ *   POST {baseUrl}{apiBase}/session       (bearer -> user/site/points)
+ *   POST {baseUrl}{apiBase}/pair          (bearer; get 6-digit code)
+ *   POST {baseUrl}{apiBase}/pair/poll     (bearer; take the one-time token)
+ *   POST {baseUrl}{apiBase}/heartbeat     (x-bot-token)
+ *   POST {baseUrl}{apiBase}/progress      (x-bot-token)
+ *   POST {baseUrl}{apiBase}/result        (x-bot-token)
+ *   POST {baseUrl}{apiBase}/model-settings (x-bot-token; legacy only)
+ *   DELETE {baseUrl}{apiBase}/model-settings (x-bot-token)
+ *   POST {baseUrl}{apiBase}/logout        (x-bot-token)
+ *   GET  {baseUrl}{apiBase}/skills          (x-bot-token; keyword/page/pageSize)
+ *   GET  {baseUrl}{apiBase}/skills/:slug     (x-bot-token)
+ *   GET  {baseUrl}{apiBase}/skills/:slug/download (x-bot-token; zip bytes)
  *   GET  {baseUrl}/health
  *
  * Zero third-party dependencies: Node http/https only.
@@ -29,8 +30,25 @@ const http = require('http');
 const https = require('https');
 const { URL } = require('url');
 
-const CLIENT_VERSION = '1.0.0';
+const CLIENT_VERSION = '1.8.0';
 const TOKEN_HEADER = 'x-bot-token';
+
+/** AWBotDSH 走独立通道；平台版本不支持时回退旧桌面通道。 */
+const API_CHANNEL = {
+  current: '/api/public/awbotdsh',
+  legacy: '/api/public/bot-host'
+};
+let apiBase = API_CHANNEL.current;
+
+function setApiBase(path) {
+  const value = typeof path === 'string' ? path.trim() : '';
+  if (!value) return;
+  apiBase = '/' + value.replace(/^\/+|\/+$/g, '');
+}
+
+function getApiBase() {
+  return apiBase;
+}
 
 /**
  * Low-level JSON request. Never throws on non-2xx; resolves with
@@ -55,7 +73,7 @@ function request(baseUrl, method, pathname, options) {
     const headers = Object.assign(
       {
         Accept: 'application/json',
-        'User-Agent': 'botbuddy/' + CLIENT_VERSION
+        'User-Agent': 'awbotdsh/' + CLIENT_VERSION
       },
       opts.headers || {}
     );
@@ -116,6 +134,17 @@ function request(baseUrl, method, pathname, options) {
 }
 
 /**
+ * 连接级请求（登录/会话/心跳）：新通道返回 404 说明平台还是旧版本，
+ * 自动回退到旧桌面通道并记住选择，避免用户手工改配置。
+ */
+async function requestWithFallback(baseUrl, method, suffix, options) {
+  const first = await request(baseUrl, method, apiBase + suffix, options);
+  if (first.httpStatus !== 404 || apiBase === API_CHANNEL.legacy) return first;
+  apiBase = API_CHANNEL.legacy;
+  return request(baseUrl, method, apiBase + suffix, options);
+}
+
+/**
  * 二进制 GET（技能包 zip）。与 request() 一样不抛异常：非 2xx 或 JSON 错误体
  * 统一回 { ok:false, error }，成功才回 { ok:true, bytes, filename }。
  */
@@ -136,7 +165,7 @@ function requestBytes(baseUrl, pathname, options) {
     const headers = Object.assign(
       {
         Accept: 'application/zip,application/octet-stream',
-        'User-Agent': 'botbuddy/' + CLIENT_VERSION
+        'User-Agent': 'awbotdsh/' + CLIENT_VERSION
       },
       opts.headers || {}
     );
@@ -227,14 +256,14 @@ function health(baseUrl) {
 }
 
 function login(baseUrl, username, password) {
-  return request(baseUrl, 'POST', '/api/public/bot-host/login', {
+  return requestWithFallback(baseUrl, 'POST', '/login', {
     body: { username, password },
     timeoutMs: 20000
   });
 }
 
 function session(baseUrl, userToken) {
-  return request(baseUrl, 'POST', '/api/public/bot-host/session', {
+  return requestWithFallback(baseUrl, 'POST', '/session', {
     userToken,
     body: {},
     timeoutMs: 15000
@@ -242,7 +271,7 @@ function session(baseUrl, userToken) {
 }
 
 function pairOpen(baseUrl, deviceInfo, userToken) {
-  return request(baseUrl, 'POST', '/api/public/bot-host/pair', {
+  return request(baseUrl, 'POST', apiBase + '/pair', {
     userToken,
     body: { deviceInfo },
     timeoutMs: 15000
@@ -250,15 +279,24 @@ function pairOpen(baseUrl, deviceInfo, userToken) {
 }
 
 function pairPoll(baseUrl, code, userToken) {
-  return request(baseUrl, 'POST', '/api/public/bot-host/pair/poll', {
+  return request(baseUrl, 'POST', apiBase + '/pair/poll', {
     userToken,
     body: { code },
     timeoutMs: 15000
   });
 }
 
+/** 手机扫码配对码：登录态业务接口，返回二维码原文与 PNG data URL。 */
+function createPairQr(baseUrl, userToken, body) {
+  return request(baseUrl, 'POST', '/enterprise/bot-hosts/pair-qr', {
+    userToken,
+    body,
+    timeoutMs: 20000
+  });
+}
+
 function heartbeat(baseUrl, token, payload) {
-  return request(baseUrl, 'POST', '/api/public/bot-host/heartbeat', {
+  return requestWithFallback(baseUrl, 'POST', '/heartbeat', {
     token,
     body: payload,
     timeoutMs: 15000
@@ -266,7 +304,7 @@ function heartbeat(baseUrl, token, payload) {
 }
 
 function progress(baseUrl, token, payload) {
-  return request(baseUrl, 'POST', '/api/public/bot-host/progress', {
+  return request(baseUrl, 'POST', apiBase + '/progress', {
     token,
     body: payload,
     timeoutMs: 15000
@@ -274,7 +312,7 @@ function progress(baseUrl, token, payload) {
 }
 
 function result(baseUrl, token, payload) {
-  return request(baseUrl, 'POST', '/api/public/bot-host/result', {
+  return request(baseUrl, 'POST', apiBase + '/result', {
     token,
     body: payload,
     timeoutMs: 20000
@@ -283,7 +321,7 @@ function result(baseUrl, token, payload) {
 
 /** 本机模型设置 -> 平台：平台落一条「BotBuddy · 主机名」渠道并授权给本机。 */
 function syncModel(baseUrl, token, payload) {
-  return request(baseUrl, 'POST', '/api/public/bot-host/model-settings', {
+  return request(baseUrl, 'POST', apiBase + '/model-settings', {
     token,
     body: payload,
     timeoutMs: 15000
@@ -292,7 +330,7 @@ function syncModel(baseUrl, token, payload) {
 
 /** 本机清空模型设置 -> 撤掉客户端同步的覆盖项。 */
 function clearModel(baseUrl, token) {
-  return request(baseUrl, 'DELETE', '/api/public/bot-host/model-settings', {
+  return request(baseUrl, 'DELETE', apiBase + '/model-settings', {
     token,
     body: {},
     timeoutMs: 10000
@@ -300,18 +338,18 @@ function clearModel(baseUrl, token) {
 }
 
 function logout(baseUrl, token) {
-  return request(baseUrl, 'POST', '/api/public/bot-host/logout', {
+  return request(baseUrl, 'POST', apiBase + '/logout', {
     token,
     body: {},
     timeoutMs: 10000
   });
 }
 
-// --- RPA（BotBuddy 浏览器设备）：主机令牌通道，与技能中心同一份令牌 ---
+// --- RPA（AWBotDSH 浏览器设备）：主机令牌通道，与技能中心同一份令牌 ---
 
 /** 这台主机可跑的待办清单（界面展示用；领取仍按 taskId 单条来）。 */
 function rpaTasks(baseUrl, token) {
-  return request(baseUrl, 'GET', '/api/public/bot-host/rpa/tasks', {
+  return request(baseUrl, 'GET', apiBase + '/rpa/tasks', {
     token,
     timeoutMs: 15000
   });
@@ -319,7 +357,7 @@ function rpaTasks(baseUrl, token) {
 
 /** 领取一条任务：不传 taskId＝让平台按队列派一条；报文里带回 Automa 工作流正文。 */
 function rpaClaim(baseUrl, token, taskId) {
-  return request(baseUrl, 'POST', '/api/public/bot-host/rpa/claim', {
+  return request(baseUrl, 'POST', apiBase + '/rpa/claim', {
     token,
     body: taskId ? { taskId: Number(taskId) } : {},
     timeoutMs: 20000
@@ -328,7 +366,7 @@ function rpaClaim(baseUrl, token, taskId) {
 
 /** 回传终态：executionId 由领取报文给出，重复回传由平台按 CAS 拒绝。 */
 function rpaFinish(baseUrl, token, payload) {
-  return request(baseUrl, 'POST', '/api/public/bot-host/rpa/finish', {
+  return request(baseUrl, 'POST', apiBase + '/rpa/finish', {
     token,
     body: payload,
     timeoutMs: 20000
@@ -337,7 +375,7 @@ function rpaFinish(baseUrl, token, payload) {
 
 /** 本机起不来窗口时把已抢到的任务退回待执行，别让它卡在「执行中」。 */
 function rpaRelease(baseUrl, token, taskId) {
-  return request(baseUrl, 'POST', '/api/public/bot-host/rpa/release', {
+  return request(baseUrl, 'POST', apiBase + '/rpa/release', {
     token,
     body: { taskId: Number(taskId) || 0 },
     timeoutMs: 15000
@@ -352,7 +390,7 @@ function skillList(baseUrl, token, query) {
   params.set('keyword', String(q.keyword || ''));
   params.set('page', String(q.page || 1));
   params.set('pageSize', String(q.pageSize || 16));
-  return request(baseUrl, 'GET', '/api/public/bot-host/skills?' + params.toString(), {
+  return request(baseUrl, 'GET', apiBase + '/skills?' + params.toString(), {
     token,
     timeoutMs: 30000
   });
@@ -362,7 +400,7 @@ function skillDetail(baseUrl, token, slug) {
   return request(
     baseUrl,
     'GET',
-    '/api/public/bot-host/skills/' + encodeURIComponent(slug),
+    apiBase + '/skills/' + encodeURIComponent(slug),
     { token, timeoutMs: 30000 }
   );
 }
@@ -370,7 +408,7 @@ function skillDetail(baseUrl, token, slug) {
 function skillDownload(baseUrl, token, slug) {
   return requestBytes(
     baseUrl,
-    '/api/public/bot-host/skills/' + encodeURIComponent(slug) + '/download',
+    apiBase + '/skills/' + encodeURIComponent(slug) + '/download',
     { token, timeoutMs: 60000 }
   );
 }
@@ -378,6 +416,8 @@ function skillDownload(baseUrl, token, slug) {
 module.exports = {
   CLIENT_VERSION,
   TOKEN_HEADER,
+  setApiBase,
+  getApiBase,
   request,
   requestBytes,
   normalizeBase,
@@ -387,6 +427,7 @@ module.exports = {
   session,
   pairOpen,
   pairPoll,
+  createPairQr,
   heartbeat,
   progress,
   result,

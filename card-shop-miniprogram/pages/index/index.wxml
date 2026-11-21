@@ -1,0 +1,104 @@
+<view class="page" style="{{themeStyle}}">
+  <view class="store-head card">
+    <view class="row">
+      <image wx:if="{{logo}}" class="logo" src="{{logo}}" mode="aspectFill" />
+      <view class="flex1 col">
+        <text class="store-name ellipsis">{{siteName}}</text>
+        <text class="muted ellipsis" wx:if="{{slogan}}">{{slogan}}</text>
+      </view>
+      <view class="head-action" bindtap="goService" wx:if="{{serviceReady}}">客服</view>
+    </view>
+    <view class="row quick-entry">
+      <view class="quick-btn" bindtap="goQuery">查单取卡</view>
+      <view class="quick-btn" bindtap="goMyOrders" wx:if="{{show.myOrders}}">我的订单</view>
+      <view class="quick-btn" bindtap="goSearch" wx:if="{{show.search}}">搜商品</view>
+    </view>
+  </view>
+
+  <view class="empty" wx:if="{{error}}">{{error}}</view>
+  <view class="empty" wx:elif="{{loading}}">正在加载…</view>
+
+  <block wx:else>
+    <swiper
+      class="banner"
+      wx:if="{{show.banner && banners.length}}"
+      indicator-dots="{{true}}"
+      indicator-active-color="#ffffff"
+      autoplay="{{true}}"
+      circular="{{true}}"
+      interval="4000"
+      duration="500"
+    >
+      <swiper-item wx:for="{{banners}}" wx:key="id">
+        <view class="banner-item" bindtap="openBanner" data-index="{{index}}">
+          <image class="banner-img" src="{{item.image}}" mode="aspectFill" />
+          <view class="banner-title ellipsis" wx:if="{{item.title}}">{{item.title}}</view>
+        </view>
+      </swiper-item>
+    </swiper>
+
+    <view class="card notice-bar" wx:if="{{show.notice && notices.length}}" bindtap="goNoticeList">
+      <text class="notice-flag">公告</text>
+      <swiper
+        class="notice-swiper"
+        vertical="{{true}}"
+        autoplay="{{true}}"
+        circular="{{true}}"
+        interval="3000"
+        duration="500"
+      >
+        <swiper-item wx:for="{{notices}}" wx:key="id">
+          <view class="notice-item ellipsis" bindtap="openNotice" data-id="{{item.id}}">{{item.title}}</view>
+        </swiper-item>
+      </swiper>
+      <text class="arrow">›</text>
+    </view>
+
+    <view class="card" wx:if="{{show.categories && categories.length}}">
+      <view class="row between">
+        <text class="section-title">商品分类</text>
+        <text class="muted" bindtap="goCategoryHome">全部 ›</text>
+      </view>
+      <view class="cat-grid">
+        <view class="cat-item" wx:for="{{categories}}" wx:key="id" bindtap="openCategory" data-id="{{item.id}}">
+          <image wx:if="{{item.icon}}" class="cat-icon" src="{{item.icon}}" mode="aspectFill" />
+          <view wx:else class="cat-icon cat-icon-text">{{item.name}}</view>
+          <text class="cat-name ellipsis">{{item.name}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{show.hot && hotGoods.length}}">
+      <view class="row between section-row">
+        <text class="section-title">热门卡密</text>
+        <text class="muted" bindtap="goCategoryHome">更多 ›</text>
+      </view>
+      <view class="goods-grid">
+        <view class="goods-card" wx:for="{{hotGoods}}" wx:key="id" bindtap="openGoods" data-id="{{item.id}}">
+          <image class="goods-cover" src="{{item.coverImage}}" mode="aspectFill" />
+          <view class="goods-name ellipsis-2">{{item.name}}</view>
+          <view class="goods-sub ellipsis" wx:if="{{item.subtitle}}">{{item.subtitle}}</view>
+          <view class="row between goods-foot">
+            <text class="price">¥{{item.priceText}}</text>
+            <text class="muted">{{item.stockText}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="empty" wx:if="{{!hotGoods.length && !categories.length && !banners.length && !notices.length}}">
+      店主还没有上架商品，过会儿再来看看。
+    </view>
+  </block>
+
+  <view class="popup-mask" wx:if="{{popup}}" bindtap="closePopup">
+    <view class="popup-card" catchtap="openPopupDetail">
+      <view class="popup-title">{{popup.title}}</view>
+      <scroll-view scroll-y class="popup-body">
+        <text class="muted" wx:if="{{popup.summary}}">{{popup.summary}}</text>
+      </scroll-view>
+      <view class="popup-btn" catchtap="openPopupDetail">查看详情</view>
+      <view class="popup-close" catchtap="closePopup">关闭</view>
+    </view>
+  </view>
+</view>

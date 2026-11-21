@@ -1,0 +1,13 @@
+<view class="page center">
+  <view class="title">{{appName}}</view>
+  <view class="muted tip">这部小程序属于店铺 {{shopCode || '（未注入店铺码）'}}</view>
+
+  <view class="warn card" wx:if="{{misconfigured}}">
+    接口地址还没注入。请在项目 config.js 填写 apiBase 后重新编译；正式包请让店铺方在后台「小程序发布」页下载最新源码包。
+  </view>
+
+  <view class="error card" wx:if="{{error}}">{{error}}</view>
+
+  <view class="btn main" bindtap="retry">{{busy ? '登录中…' : '微信一键登录'}}</view>
+  <view class="muted link" bindtap="back">先随便逛逛</view>
+</view>

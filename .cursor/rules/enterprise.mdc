@@ -1,0 +1,8 @@
+---
+description: aiworkin-enterprise 项目规则入口
+alwaysApply: true
+---
+
+唯一规则正文是 `docs/dev-kit/AGENTS.md`。开始改动前先读取，并按其索引只加载与任务相关的 `rules/*.md`。
+
+本文件不复制规则正文、接口清单或统计数字。

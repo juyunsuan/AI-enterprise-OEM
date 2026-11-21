@@ -91,7 +91,7 @@
       detail: null
     },
     baseUrlDirty: false,
-    // RPA（BotBuddy 浏览器设备）：待办清单、本机执行态、上次结果与自动领取开关。
+    // RPA（AWBotDSH 浏览器设备）：待办清单、本机执行态、上次结果与自动领取开关。
     rpa: {
       list: [],
       running: null,
@@ -310,6 +310,7 @@
     }
     const refresh = $('pairRefresh');
     refresh.disabled = !logged;
+    $('pairQrCreate').disabled = !logged;
     $('bindLockHint').textContent = logged
       ? '连接码只在本账号下认领，先在平台「Bot 主机」页输入该码'
       : '登录平台账号后自动生成连接码';
@@ -358,6 +359,32 @@
   }
 
   $('pairRefresh').addEventListener('click', () => void refreshPair());
+
+  $('pairQrCreate').addEventListener('click', async () => {
+    const box = $('pairQrBox');
+    const hint = $('pairQrHint');
+    $('pairQrCreate').disabled = true;
+    hint.textContent = '正在向平台申请…';
+    const res = await api.createPairQr();
+    $('pairQrCreate').disabled = false;
+    if (!res || !res.ok || !res.qr) {
+      box.classList.add('hidden');
+      hint.textContent = (res && res.error) || '生成二维码失败';
+      $('pairTitle').textContent = '扫码配对失败';
+      $('pairDesc').textContent = (res && res.error) || '检查平台登录与网络后重试';
+      return;
+    }
+    box.classList.remove('hidden');
+    $('pairQrImage').src = res.qr.image;
+    $('pairQrCode').textContent = String(res.qr.code || '').replace(/(.{4})/g, '$1 ').trim();
+    const expires = res.qr.expiresAt ? new Date(res.qr.expiresAt).toLocaleTimeString('zh-CN') : '';
+    const withHost = String(res.qr.payload || '').includes('"type":"awbotdsh-pair"');
+    hint.textContent =
+      (withHost
+        ? '已包含这台电脑；'
+        : '这台电脑还没有主机记录，本次只配对平台，先在下方完成绑定再来；') +
+      (expires ? '有效期至 ' + expires + '，用后即废' : '一次性有效，用后即废');
+  });
 
   $('saveBaseUrl').addEventListener('click', async () => {
     const url = $('baseUrl').value.trim();
@@ -1337,7 +1364,7 @@
     if (name === 'rpa') void loadRpaTasks();
   }
 
-  /* ------------------------------------------------ RPA（BotBuddy 浏览器设备） */
+  /* ------------------------------------------------ RPA（AWBotDSH 浏览器设备） */
 
   const RPA_STATUS_LABEL = { success: '执行完成', failed: '执行失败', cancelled: '已取消' };
   const RPA_STATUS_CLASS = { success: 'ok', failed: 'bad', cancelled: 'warn' };
@@ -1502,16 +1529,32 @@
       const label = el('label', 'chip manual');
       const input = document.createElement('input');
       input.type = 'checkbox';
-      // 内置插件不可取消：每个窗口都默认带上（如 Automa）。
-      input.checked = item.builtin ? true : ids.includes(item.id);
-      input.disabled = !!item.builtin;
+      // 内置插件不可取消：每个窗口都默认带上（如 Automa）；被禁用的内置项不勾。
+      input.checked = item.disabled ? false : item.builtin ? true : ids.includes(item.id);
+      input.disabled = !!item.builtin || !!item.disabled;
       input.dataset.extId = item.id;
-      if (item.builtin) label.title = '内置插件，随浏览器默认加载';
+      if (item.disabled) label.title = '已在「Chrome 插件」页禁用';
+      else if (item.builtin) label.title = '内置插件，随浏览器默认加载';
       label.appendChild(input);
       label.appendChild(document.createTextNode(' ' + item.name));
       if (item.builtin) label.appendChild(el('span', 'tag on', '内置'));
+      if (item.disabled) label.appendChild(el('span', 'tag', '已禁用'));
       box.appendChild(label);
     });
+  }
+
+  async function navigateFpWindow() {
+    const input = $('fpUrl');
+    const url = input ? input.value.trim() : '';
+    if (!url) return;
+    const res = await api.fpNavigate(url);
+    if (res && res.ok) {
+      input.value = '';
+      note($('fpHint'), '已打开：' + res.url, 'ok');
+      await loadFpState();
+    } else {
+      note($('fpHint'), (res && res.error) || '打开失败', 'bad');
+    }
   }
 
   async function loadFpState() {
@@ -1729,6 +1772,12 @@
   });
   $('fpNew').addEventListener('click', () => openFpEditor(null));
   $('fpReload').addEventListener('click', () => void loadFpState());
+  if ($('fpGo')) {
+    $('fpGo').addEventListener('click', () => void navigateFpWindow());
+    $('fpUrl').addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') void navigateFpWindow();
+    });
+  }
   $('fpCloseAll').addEventListener('click', async () => {
     const res = await api.fpCloseAll();
     if (!res || !res.ok) window.alert((res && res.error) || '关闭失败');
@@ -1759,13 +1808,25 @@
       const main = el('div', 'list-main');
       const title = el('span', 'list-title', item.name);
       title.appendChild(el('span', 'tag' + (item.builtin ? ' on' : ''), item.builtin ? '内置' : 'v' + item.version));
+      if (item.disabled) title.appendChild(el('span', 'tag', '已禁用'));
       main.appendChild(title);
       main.appendChild(
         el('span', 'muted', item.id)
       );
       row.appendChild(main);
+      const actions = el('div', 'list-actions');
+      const toggle = el('button', 'btn small ghost', item.disabled ? '启用' : '禁用');
+      toggle.addEventListener('click', async () => {
+        const res = await api.setChromeExtensionEnabled(item.id, !!item.disabled);
+        if (res && res.ok) {
+          note($('chromeExtHint'), (item.disabled ? '已启用：' : '已禁用：') + item.name, 'ok');
+          await loadChromeExts();
+        } else {
+          note($('chromeExtHint'), (res && res.error) || '操作失败', 'bad');
+        }
+      });
+      actions.appendChild(toggle);
       if (!item.builtin) {
-        const actions = el('div', 'list-actions');
         const remove = el('button', 'btn small ghost', '删除');
         remove.addEventListener('click', async () => {
           if (!window.confirm('删除插件包「' + item.name + '」？')) return;
@@ -1778,8 +1839,8 @@
           }
         });
         actions.appendChild(remove);
-        row.appendChild(actions);
       }
+      row.appendChild(actions);
       box.appendChild(row);
     });
   }
@@ -2219,7 +2280,7 @@
     const gid = globalPersonaId();
     const options = [
       { value: '', name: '跟随全局', sub: gid ? '全局正用「' + personaNameOf(gid) + '」' : '全局也没选分身' },
-      { value: 'none', name: '不启用分身', sub: '只用 BotBuddy 默认人设' }
+      { value: 'none', name: '不启用分身', sub: '只用 AWBotDSH 默认人设' }
     ];
     (state.personas || []).forEach((persona) => {
       options.push({
@@ -2683,7 +2744,7 @@
   });
 
   $('quit').addEventListener('click', () => {
-    if (window.confirm('退出 BotBuddy？退出后平台将无法向本机派活。')) api.quit();
+    if (window.confirm('退出 AWBotDSH？退出后平台将无法向本机派活。')) api.quit();
   });
 
   /* ---------------------------------------------------------------- 数据 */

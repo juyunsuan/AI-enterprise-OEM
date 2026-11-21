@@ -1,12 +1,12 @@
 'use strict';
 
 /**
- * db.js — BotBuddy 客户端的本地库（SQLite）。
+ * db.js — AWBotDSH 客户端的本地库（SQLite）。
  *
  * 一个文件装下所有本机状态：平台绑定、Agent 渠道、技能、数字分身、记忆、
  * 工作区、任务流水。全部只在本机，平台看不到内容。
  *
- * 位置：~/.botbuddy/botbuddy.db（测试可用 BOTBUDDY_HOME 指到临时目录）
+ * 位置：~/.awbotdsh/awbotdsh.db（测试可用 AWBOTDSH_HOME 指到临时目录）
  * 驱动：better-sqlite3（同步 API，主进程直接用，无需线程池）
  */
 
@@ -16,8 +16,9 @@ const path = require('path');
 
 const SCHEMA_VERSION = 5;
 
-const DATA_DIR = process.env.BOTBUDDY_HOME || path.join(os.homedir(), '.botbuddy');
-const DB_FILE = path.join(DATA_DIR, 'botbuddy.db');
+const DATA_DIR =
+  process.env.AWBOTDSH_HOME || path.join(os.homedir(), '.awbotdsh');
+const DB_FILE = path.join(DATA_DIR, 'awbotdsh.db');
 
 const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS settings (
@@ -75,6 +76,7 @@ const SCHEMA = [
      plugin_ids     TEXT NOT NULL DEFAULT '[]',
      channel_id     TEXT NOT NULL DEFAULT '',
      workspace_path TEXT NOT NULL DEFAULT '',
+     fp_profile_id  TEXT NOT NULL DEFAULT '',
      created_at     TEXT NOT NULL,
      updated_at     TEXT NOT NULL
    )`,
@@ -166,6 +168,7 @@ function open() {
   ensureColumn('chat_conversations', 'plugin_ids', "TEXT NOT NULL DEFAULT '[]'");
   ensureColumn('chat_conversations', 'channel_id', "TEXT NOT NULL DEFAULT ''");
   ensureColumn('chat_conversations', 'workspace_path', "TEXT NOT NULL DEFAULT ''");
+  ensureColumn('chat_conversations', 'fp_profile_id', "TEXT NOT NULL DEFAULT ''");
   ensureColumn('chat_messages', 'attachments', "TEXT NOT NULL DEFAULT '[]'");
   // 任务记录：平台原文与本机回复要能在重启后回看。
   ensureColumn('tasks', 'kind', "TEXT NOT NULL DEFAULT ''");

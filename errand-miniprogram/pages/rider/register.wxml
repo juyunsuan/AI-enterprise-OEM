@@ -1,0 +1,41 @@
+<view class="wrap">
+  <view class="card">
+    <view class="section-title">骑手报名</view>
+    <view class="muted">报名信息只用于店主审核；身份证号只存掩码，证件照存入平台数字资产。</view>
+    <input class="field" placeholder="真实姓名" value="{{name}}" data-field="name" bindinput="bind" />
+    <input class="field" type="number" placeholder="手机号" value="{{mobile}}" data-field="mobile" bindinput="bind" />
+    <input class="field" placeholder="身份证号（可留空）" value="{{idCardNo}}" data-field="idCardNo" bindinput="bind" />
+    <view class="field-row">
+      <text>服务城市</text>
+      <picker wx:if="{{cities.length}}" range="{{cities}}" range-key="name" value="{{cityIndex}}" bindchange="pickCity">
+        <view class="picker">{{cities[cityIndex].name}}</view>
+      </picker>
+      <text wx:else class="muted">店主还未开通城市</text>
+    </view>
+    <view class="field-row">
+      <text>交通工具</text>
+      <picker range="{{vehicles}}" range-key="label" value="{{vehicleIndex}}" bindchange="pickVehicle">
+        <view class="picker">{{vehicles[vehicleIndex].label}}</view>
+      </picker>
+    </view>
+    <checkbox-group bindchange="toggleService">
+      <label class="check"><checkbox value="SEND" checked="{{sendChecked}}" />接「帮我送」</label>
+      <label class="check"><checkbox value="BUY" checked="{{buyChecked}}" />接「帮我买」</label>
+    </checkbox-group>
+    <view class="photos">
+      <view class="photo" data-field="idCardFront" bindtap="choosePhoto">
+        <image wx:if="{{idCardFront}}" src="{{idCardFront}}" mode="aspectFill" />
+        <text wx:else>身份证正面</text>
+      </view>
+      <view class="photo" data-field="idCardBack" bindtap="choosePhoto">
+        <image wx:if="{{idCardBack}}" src="{{idCardBack}}" mode="aspectFill" />
+        <text wx:else>身份证反面</text>
+      </view>
+      <view class="photo" data-field="vehiclePhoto" bindtap="choosePhoto">
+        <image wx:if="{{vehiclePhoto}}" src="{{vehiclePhoto}}" mode="aspectFill" />
+        <text wx:else>车辆照片</text>
+      </view>
+    </view>
+  </view>
+  <view class="btn btn-primary" bindtap="submit">{{submitting ? '提交中…' : '提交报名'}}</view>
+</view>

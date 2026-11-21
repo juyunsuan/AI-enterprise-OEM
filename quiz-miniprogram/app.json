@@ -1,0 +1,35 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/rank/rank",
+    "pages/my/my",
+    "pages/profile/profile",
+    "pages/quiz/quiz",
+    "pages/result/result",
+    "pages/wrong/wrong",
+    "pages/record/record",
+    "pages/materials/materials",
+    "pages/service/service"
+  ],
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#1bd0ad",
+    "navigationBarTitleText": "智汇答题",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#f5f6f7"
+  },
+  "tabBar": {
+    "color": "#8a8f99",
+    "selectedColor": "#1bd0ad",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      { "pagePath": "pages/index/index", "text": "首页" },
+      { "pagePath": "pages/rank/rank", "text": "排行" },
+      { "pagePath": "pages/my/my", "text": "我的" }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

@@ -1,0 +1,54 @@
+<view class="container">
+  <view class="card" bindtap="goProfile">
+    <view class="row">
+      <view class="grid-icon" style="margin:0 18rpx 0 0;width:92rpx;height:92rpx;line-height:92rpx;font-size:38rpx;">{{initial}}</view>
+      <view style="flex:1;">
+        <view class="row">
+          <view class="strong" style="font-size:34rpx;">{{profile.nickname || '点击填写昵称'}}</view>
+          <view wx:if="{{site.settings.checkUser && viewerStatus}}" class="tag {{viewerStatus === '已通过' ? 'green' : (viewerStatus === '已驳回' ? 'red' : '')}}" style="margin-left:12rpx;">{{viewerStatus}}</view>
+        </view>
+        <view class="muted" style="margin-top:6rpx;">
+          {{profile.company || '未填写单位'}}<text wx:if="{{profile.department}}"> · {{profile.department}}</text>
+        </view>
+      </view>
+      <view class="menu-arrow">›</view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="menu-row" bindtap="goRecord">
+      <view>答题记录</view>
+      <view class="menu-arrow">›</view>
+    </view>
+    <view class="menu-row" bindtap="goWrong">
+      <view>错题本</view>
+      <view class="menu-arrow">›</view>
+    </view>
+    <view class="menu-row" bindtap="goMaterials">
+      <view>学习资料</view>
+      <view class="menu-arrow">›</view>
+    </view>
+    <view class="menu-row" bindtap="goService">
+      <view>AI 客服</view>
+      <view class="menu-arrow">›</view>
+    </view>
+    <view class="menu-row" bindtap="goHome">
+      <view>返回首页</view>
+      <view class="menu-arrow">›</view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="menu-row" bindtap="toggleAbout">
+      <view>关于</view>
+      <view class="menu-arrow">{{aboutOpen ? '收起' : '展开'}}</view>
+    </view>
+    <view wx:if="{{aboutOpen}}" style="padding-top:16rpx;">
+      <view class="muted">答题目录、交卷记录与错题数据由平台多维表格承载；AI 解析与复盘走平台模型网关；客服复用平台 AI 客服。</view>
+      <view class="muted" style="margin-top:10rpx;">站点码：{{siteCode || '未配置'}}</view>
+      <view class="muted" style="margin-top:6rpx;">服务器：{{apiBase || '未配置'}}</view>
+    </view>
+  </view>
+
+  <button class="ghost-btn" open-type="share" style="width:100%;">分享给同事</button>
+</view>

@@ -27,6 +27,7 @@ import { geoChatMulti, type ChatMessage } from '../geo/geo-llm.client';
 import { aipddBaseUrl } from './content-shared';
 import { ContentModelSettingService } from './model-setting.service';
 import { createZip } from './zip-write';
+import { meterChatCall } from '../ai/ai-gateway';
 
 /** 发布入口：SkillHub 公开技能目录对应的站点；环境变量可覆盖。 */
 function skillHubSiteUrl() {
@@ -385,6 +386,12 @@ export class SkillGeneratorService {
       timeoutMs: 120_000,
       userId: user.userId,
       purpose: 'batch',
+    });
+    // 直连模型也要留用量事实（只记录不扣费），否则成本报表永远看不到这条链路
+    await meterChatCall(user.userId, result, {
+      module: 'skillhub',
+      operation: 'generate-skill',
+      model: channel.model,
     });
     const body = cleanModelMarkdown(result.reply);
     if (body.length < 80) {

@@ -344,7 +344,11 @@ test('迁移 Comfy Cloud 工作流：验 Key 与存储渠道先行，作者挂�
   has(IMPORT_SERVICE, /await this\.comfy\.verifyKey\(apiKey\)/, '点击迁移时必须先验证 Key');
   has(IMPORT_SERVICE, /await this\.oss\.testConnection\(\)/, '媒体落库前必须验证后台存储渠道');
   has(IMPORT_SERVICE, /ownerUserId: user\.userId/, '作者挂在管理员账号名下');
-  has(IMPORT_SERVICE, /this\.oss\.upload\(/, '图片视频转存走后台上传渠道');
+  has(
+    IMPORT_SERVICE,
+    /this\.assets\.put\(/,
+    '图片视频转存走后台上传渠道（SystemAssetService.put 落数字资产台账）',
+  );
   has(IMPORT_SERVICE, /coverKeys: toJsonInput\(coverKeys\.slice\(0, 8\)\)/, '封面与示例图写进 coverKeys');
   has(IMPORT_SERVICE, /comfy-cloud:\/\/job\//, '历史任务来源可追溯（幂等键）');
   has(IMPORT_SERVICE, /comfy-cloud:\/\/workflow\//, '已保存工作流来源可追溯（幂等键）');

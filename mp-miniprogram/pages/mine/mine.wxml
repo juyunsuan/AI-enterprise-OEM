@@ -1,0 +1,72 @@
+<view class="wrap">
+  <view wx:if="{{loading}}" class="empty">正在加载个人信息…</view>
+
+  <view wx:elif="{{error}}" class="card">
+    <view class="error-box">{{error}}</view>
+    <view class="btn btn-primary" style="margin-top:20rpx" bindtap="load">重新加载</view>
+  </view>
+
+  <block wx:else>
+    <view class="card profile">
+      <image wx:if="{{customer.avatar}}" class="avatar" src="{{customer.avatar}}" mode="aspectFill" />
+      <view wx:else class="avatar avatar-empty">我</view>
+      <view class="grow">
+        <view class="nickname">{{customer.nickname || '微信用户'}}</view>
+        <view class="muted">{{customer.level || '普通会员'}}</view>
+      </view>
+      <view style="text-align:right">
+        <view class="muted">积分 {{customer.points}}</view>
+        <view class="muted">余额 ¥{{customer.balance}}</view>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="section-title">我的订单</view>
+      <view class="entries">
+        <view
+          wx:for="{{entries}}"
+          wx:key="key"
+          class="entry"
+          data-status="{{item.key}}"
+          bindtap="goOrders"
+        >
+          <view class="entry-label">{{item.label}}</view>
+        </view>
+        <view class="entry" bindtap="goOrders">
+          <view class="entry-label">全部订单</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="list-row" bindtap="goCoupons">
+        <text>优惠券</text>
+        <text class="muted">›</text>
+      </view>
+      <view class="list-row" bindtap="goFollows">
+        <text>关注店铺</text>
+        <text class="muted">›</text>
+      </view>
+      <view class="list-row" bindtap="goAddress">
+        <text>收货地址</text>
+        <text class="muted">›</text>
+      </view>
+      <view class="list-row" bindtap="goAfterSales">
+        <text>售后记录</text>
+        <text class="muted">›</text>
+      </view>
+      <view class="list-row" bindtap="goService">
+        <text>联系客服</text>
+        <text class="muted">›</text>
+      </view>
+      <view class="list-row" bindtap="goShopping">
+        <text>继续逛逛</text>
+        <text class="muted">›</text>
+      </view>
+    </view>
+
+    <view class="muted footer">
+      {{market.name}} · 本小程序由市场运营方独立运营
+    </view>
+  </block>
+</view>

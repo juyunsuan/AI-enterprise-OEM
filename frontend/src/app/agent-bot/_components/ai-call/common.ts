@@ -2,19 +2,19 @@ import { endpoints } from "@enterprise/contracts";
 import { endpoint } from "@/api/endpoint";
 
 /**
- * AI 调用账号界面层：给所有类型的 Agent-Bot（BotBuddy 主机 / MoBot 手机 /
+ * AI 调用账号界面层：给所有类型的 Agent-Bot（AWBotDSH 主机 / AWBot 手机 /
  * WorkBuddy 企业云）准备第三方平台凭据库；凭据按「设备主体」绑定授权，
  * 一台设备可绑多份凭据、一份凭据也可授权给多台设备，两个方向各有入口。
  * 后端：/enterprise/ai-call/*（登录态）与 /api/v1/ai-call/*（API Key 机器通道）；
- * 主机 / 手机还有 x-bot-token 设备通道 /api/public/{bot-host,mobot}/ai-call/*。
+ * 主机 / 手机还有 x-bot-token 设备通道 /api/public/{bot-host,awbot}/ai-call/*。
  */
 
 /** 绑定主体类型：与后端 AI_CALL_PRINCIPAL_KINDS 同口径。 */
-export type AiCallPrincipalKind = "DESKTOP" | "MOBOT" | "WORKBUDDY";
+export type AiCallPrincipalKind = "DESKTOP" | "AWBOT" | "WORKBUDDY";
 
 export const AI_CALL_PRINCIPAL_LABEL: Record<AiCallPrincipalKind, string> = {
-  DESKTOP: "BotBuddy 主机",
-  MOBOT: "MoBot 手机",
+  DESKTOP: "AWBotDSH 主机",
+  AWBOT: "AWBot 手机",
   WORKBUDDY: "WorkBuddy 企业账号",
 };
 

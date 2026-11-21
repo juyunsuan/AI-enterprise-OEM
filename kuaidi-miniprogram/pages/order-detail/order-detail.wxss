@@ -1,0 +1,88 @@
+.status-card {
+  background: #ffffff;
+}
+
+.status-text {
+  font-size: 36rpx;
+  font-weight: 600;
+}
+
+.status-fee {
+  font-size: 38rpx;
+}
+
+.kv {
+  display: flex;
+  justify-content: space-between;
+  padding: 10rpx 0;
+  font-size: 26rpx;
+}
+
+.kv.total {
+  font-weight: 600;
+  font-size: 30rpx;
+}
+
+.party-text {
+  margin-top: 4rpx;
+  white-space: pre-line;
+  font-size: 28rpx;
+}
+
+.timeline {
+  margin-top: 20rpx;
+  padding-top: 16rpx;
+  border-top: 1rpx solid #eef0f3;
+}
+
+.timeline-item {
+  display: flex;
+  position: relative;
+  padding-bottom: 22rpx;
+}
+
+.timeline-item:last-child {
+  padding-bottom: 0;
+}
+
+.timeline-dot {
+  width: 14rpx;
+  height: 14rpx;
+  border-radius: 50%;
+  background: #1f6feb;
+  margin: 12rpx 16rpx 0 0;
+  flex: none;
+}
+
+.timeline-label {
+  font-size: 26rpx;
+  font-weight: 500;
+}
+
+.footer {
+  text-align: center;
+  padding: 10rpx 0 140rpx;
+}
+
+.action-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  padding: 18rpx 24rpx calc(18rpx + env(safe-area-inset-bottom));
+  background: #ffffff;
+  box-shadow: 0 -2rpx 12rpx rgba(31, 35, 41, 0.06);
+}
+
+.action-btn {
+  flex: 1;
+}
+
+.action-btn + .action-btn {
+  margin-left: 20rpx;
+}
+
+.link {
+  color: #1f6feb;
+}

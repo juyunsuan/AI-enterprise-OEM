@@ -1,0 +1,87 @@
+<view class="wrap" style="padding-bottom:200rpx">
+  <view wx:if="{{loading}}" class="empty">正在核对金额…</view>
+
+  <view wx:elif="{{error}}" class="card">
+    <view class="error-box">{{error}}</view>
+    <view class="btn btn-primary" style="margin-top:20rpx" bindtap="load">重新加载</view>
+  </view>
+
+  <block wx:else>
+    <view class="card" bindtap="pickAddress">
+      <view wx:if="{{address}}" class="row">
+        <view class="grow">
+          <view style="font-weight:600">{{address.realName}} {{address.phone}}</view>
+          <view class="muted" style="margin-top:6rpx">{{addressText}}</view>
+        </view>
+        <text class="muted">修改 ›</text>
+      </view>
+      <view wx:else class="row">
+        <view class="grow muted">还没有收货地址，先添加一个再下单</view>
+        <text style="color:#3370ff">添加 ›</text>
+      </view>
+    </view>
+
+    <view wx:for="{{shops}}" wx:key="shopId" class="card">
+      <view class="section-title">{{item.shopName}}</view>
+      <view wx:for="{{item.items}}" wx:key="cartId" wx:for-item="line" class="row" style="padding:12rpx 0">
+        <image class="thumb small" src="{{line.image}}" mode="aspectFill" />
+        <view class="grow">
+          <view>{{line.title}}</view>
+          <view class="muted">{{line.skuName}}</view>
+        </view>
+        <view style="text-align:right">
+          <view class="money">¥{{line.priceText}}</view>
+          <view class="muted">×{{line.quantity}}</view>
+        </view>
+      </view>
+      <view class="divider"></view>
+      <view class="pay-row muted">
+        <text>商品小计</text>
+        <text>{{item.goodsText}}</text>
+      </view>
+      <view class="pay-row muted">
+        <text>运费</text>
+        <text>{{item.freightText}}</text>
+      </view>
+      <view class="pay-row">
+        <text>本店应付</text>
+        <text class="money">{{item.payText}}</text>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="field" style="border-bottom:none">
+        <view class="field-label">买家留言</view>
+        <input
+          value="{{remark}}"
+          maxlength="200"
+          placeholder="选填，给商家的话"
+          placeholder-class="placeholder"
+          bindinput="onRemark"
+        />
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="pay-row">
+        <text class="muted">商品合计</text>
+        <text>{{goodsText}}</text>
+      </view>
+      <view class="pay-row">
+        <text class="muted">运费合计</text>
+        <text>{{freightText}}</text>
+      </view>
+    </view>
+  </block>
+</view>
+
+<view wx:if="{{!loading && !error}}" class="bottom-bar">
+  <view class="grow">
+    <view class="muted">需付款</view>
+    <view class="money" style="font-size:36rpx">{{payText}}</view>
+  </view>
+  <view
+    class="btn btn-primary {{submitting ? 'disabled' : ''}}"
+    bindtap="submit"
+  >{{submitting ? '提交中…' : '提交订单'}}</view>
+</view>

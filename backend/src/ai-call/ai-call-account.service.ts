@@ -8,10 +8,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AiCallCrypto } from './ai-call-crypto';
 
 export const AI_CALL_STATUSES = ['active', 'disabled'] as const;
-export type AiCallPrincipalKind = 'DESKTOP' | 'MOBOT' | 'WORKBUDDY';
+export type AiCallPrincipalKind = 'DESKTOP' | 'AWBOT' | 'WORKBUDDY';
 export const AI_CALL_PRINCIPAL_KINDS: readonly AiCallPrincipalKind[] = [
   'DESKTOP',
-  'MOBOT',
+  'AWBOT',
   'WORKBUDDY',
 ];
 
@@ -28,7 +28,7 @@ const SECRET_LIKE_EXTRA_KEY =
  * 凭据（口令 / API Key / Cookie）只存密文，界面与列表一律只回「存过没有」；
  * 明文只在机器通道读取时解密一次并记审计。
  *
- * 取用按「Agent 绑定」放行：每条凭据绑定到若干设备主体（BotBuddy 主机 / MoBot 手机 /
+ * 取用按「Agent 绑定」放行：每条凭据绑定到若干设备主体（AWBotDSH 主机 / AWBot 手机 /
  * WorkBuddy 企业账号，设备粒度，设备内的细分 Agent 不再单独管理）。客户端带着自己的
  * 主体类型 + 设备 ID 来取，只拿得到绑定给该设备的凭据；未绑定的取不到。
  */
@@ -262,7 +262,7 @@ export class AiCallAccountService {
       if (!AI_CALL_PRINCIPAL_KINDS.includes(item.kind)) {
         throw new BusinessException(
           ErrorCode.BAD_REQUEST,
-          'Agent 类型只能是 DESKTOP / MOBOT / WORKBUDDY',
+          'Agent 类型只能是 DESKTOP / AWBOT / WORKBUDDY',
         );
       }
       if (!Number.isInteger(item.principalId) || item.principalId <= 0) {
@@ -453,9 +453,9 @@ export class AiCallAccountService {
     if (row.clientKind !== kind) {
       throw new BusinessException(
         ErrorCode.BAD_REQUEST,
-        kind === 'MOBOT'
-          ? '这台设备不是 MoBot 手机'
-          : '这台设备不是 BotBuddy 主机',
+        kind === 'AWBOT'
+          ? '这台设备不是 AWBot 手机'
+          : '这台设备不是 AWBotDSH 主机',
       );
     }
     if (requireActive && (!row.enabled || row.status === 'DISABLED')) {
@@ -482,7 +482,7 @@ export class AiCallAccountService {
     const names = new Map<string, string>();
     const hostIds = [
       ...(wanted.get('DESKTOP') ?? []),
-      ...(wanted.get('MOBOT') ?? []),
+      ...(wanted.get('AWBOT') ?? []),
     ];
     if (hostIds.length) {
       const hosts = await this.prisma.workbuddyHost.findMany({

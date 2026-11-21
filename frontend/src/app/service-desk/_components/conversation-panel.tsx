@@ -39,6 +39,12 @@ const AGENT_STATUS_LABEL: Record<string, string> = {
   OFFLINE: "离线",
 };
 
+/** 接待方：AI 客服员工显示「AI：名字」，真人坐席沿用原有姓名展示。 */
+function assigneeText(row: ServiceDeskConversationRow) {
+  if (row.assigneeType === "AI") return `AI：${row.aiAgentName || "AI 客服"}`;
+  return row.assigneeName || "待接入";
+}
+
 type Overview = Awaited<ReturnType<typeof serviceDeskApi.overview>>;
 
 export function ConversationPanel({
@@ -465,6 +471,7 @@ export function ConversationPanel({
                   </div>
                   <div className="sd-conv-meta">
                     <span>{row.siteName}</span>
+                    <span>{assigneeText(row)}</span>
                     <span>{row.lastMessageAt.replace("T", " ").slice(5, 16)}</span>
                     {row.unread ? <b>{row.unread}</b> : null}
                   </div>
@@ -480,7 +487,7 @@ export function ConversationPanel({
         titleExtra={
           detail ? (
             <span className="muted">
-              {detail.conversation.siteName} · {detail.conversation.statusLabel}
+              {detail.conversation.siteName} · {detail.conversation.statusLabel} · 接待方 {assigneeText(detail.conversation)}
               {detail.visitor.contact ? ` · ${detail.visitor.contact}` : ""}
               {detail.conversation.crmLeadId
                 ? ` · CRM 线索 #${detail.conversation.crmLeadId}`

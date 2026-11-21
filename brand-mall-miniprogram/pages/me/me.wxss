@@ -1,0 +1,143 @@
+.diy-page {
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  padding: 40rpx 24rpx;
+  background: #fff;
+}
+
+.avatar {
+  width: 104rpx;
+  height: 104rpx;
+  border-radius: 50%;
+  background: #f2f3f5;
+  flex-shrink: 0;
+}
+
+.ph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+  color: #8a8f99;
+}
+
+.head-main {
+  flex: 1;
+  min-width: 0;
+  margin-left: 20rpx;
+}
+
+.name {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1f1f1f;
+}
+
+.sub {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: #7b8089;
+}
+
+.dot {
+  margin-left: 20rpx;
+}
+
+.head-more {
+  font-size: 24rpx;
+  color: #7b8089;
+}
+
+.card {
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 24rpx;
+  margin: 24rpx;
+  box-sizing: border-box;
+}
+
+.card-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  margin-bottom: 16rpx;
+}
+
+.orders {
+  display: flex;
+}
+
+.order-item {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.order-icon {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  background: rgba(250, 53, 52, 0.08);
+  color: #fa3534;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26rpx;
+}
+
+.order-text {
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  color: #4d5159;
+}
+
+.badge {
+  position: absolute;
+  top: -6rpx;
+  right: 12rpx;
+  min-width: 32rpx;
+  height: 32rpx;
+  line-height: 32rpx;
+  padding: 0 6rpx;
+  border-radius: 999rpx;
+  background: #fa3534;
+  color: #fff;
+  font-size: 20rpx;
+  text-align: center;
+}
+
+.cell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 26rpx 0;
+  border-bottom: 1rpx solid #eaecef;
+  font-size: 28rpx;
+}
+
+.cell:last-child {
+  border-bottom: none;
+}
+
+.arrow {
+  color: #8a8f99;
+}
+
+.muted {
+  color: #8a8f99;
+  font-size: 22rpx;
+}
+
+.debug {
+  margin-top: 0;
+}
+
+.footer-gap {
+  height: 40rpx;
+}

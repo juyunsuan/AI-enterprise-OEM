@@ -1,4 +1,4 @@
-/* BotBuddy 客户端外壳
+/* AWBotDSH 客户端外壳
  * 版式：WorkBuddy 设置窗口（左侧分组导航 208px + 右侧内容面板）
  * 外观：平台设计令牌（深色侧栏 / 白卡片 / #1677ff 主色 / 6–8px 圆角）
  */
@@ -1054,7 +1054,7 @@ select.fill { flex: 1; }
 }
 .chat-hint.bad { color: var(--danger); }
 .chat-hint.ok { color: var(--success); }
-/* ------------------------------------------------------------------ RPA（BotBuddy 浏览器设备） */
+/* ------------------------------------------------------------------ RPA（AWBotDSH 浏览器设备） */
 .switch-line {
   display: inline-flex;
   align-items: center;

@@ -1,0 +1,105 @@
+<view class="page" style="{{themeStyle}}">
+  <view class="empty" wx:if="{{error}}">{{error}}</view>
+
+  <block wx:elif="{{needVisitPassword}}">
+    <view class="card lock-card">
+      <view class="section-title">该商品需要访问密码</view>
+      <text class="muted">{{message || '请输入店主提供的访问密码后查看'}}</text>
+      <input
+        class="input lock-input"
+        password
+        maxlength="64"
+        placeholder="访问密码"
+        value="{{visitPassword}}"
+        bindinput="onPasswordInput"
+      />
+      <view class="btn" bindtap="unlock">解锁查看</view>
+    </view>
+  </block>
+
+  <view class="empty" wx:elif="{{loading}}">正在加载…</view>
+
+  <block wx:elif="{{goods}}">
+    <swiper
+      class="gallery"
+      wx:if="{{goods.images.length}}"
+      indicator-dots="{{true}}"
+      circular="{{true}}"
+      indicator-active-color="#ffffff"
+    >
+      <swiper-item wx:for="{{goods.images}}" wx:key="*this">
+        <image class="gallery-img" src="{{item}}" mode="aspectFill" bindtap="previewImage" data-url="{{item}}" />
+      </swiper-item>
+    </swiper>
+    <image
+      wx:else
+      class="gallery gallery-img"
+      src="{{goods.coverImage}}"
+      mode="aspectFill"
+      bindtap="previewImage"
+      data-url="{{goods.coverImage}}"
+    />
+
+    <view class="card">
+      <view class="row between">
+        <text class="price price-lg">¥{{priceText}}</text>
+        <text class="muted">{{stockText}}</text>
+      </view>
+      <view class="title goods-title">{{goods.name}}</view>
+      <view class="muted" wx:if="{{goods.subtitle}}">{{goods.subtitle}}</view>
+      <view class="row tags">
+        <text class="tag" wx:if="{{goods.takeCardMode === 'REQUIRED'}}">取卡需密码</text>
+        <text class="tag" wx:if="{{goods.takeCardMode === 'OPTIONAL'}}">可取卡密码</text>
+        <text class="tag" wx:if="{{goods.cardFormat === 'PAIR'}}">卡号 + 卡密</text>
+        <text class="tag" wx:if="{{goods.couponEnabled}}">可用券</text>
+        <text class="tag" wx:if="{{goods.limitQuantity > 0}}">{{goods.limitQuantity}} 张起购</text>
+        <text class="tag" wx:if="{{goods.maxQuantity > 0}}">单笔最多 {{goods.maxQuantity}} 张</text>
+      </view>
+    </view>
+
+    <view class="card" wx:if="{{tiers.length}}">
+      <view class="section-title">批发价</view>
+      <view class="row between tier-row" wx:for="{{tiers}}" wx:key="min">
+        <text class="muted">满 {{item.min}} 张</text>
+        <text class="price">¥{{item.priceText}} / 张</text>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="section-title">购买数量</view>
+      <view class="row between">
+        <view class="stepper">
+          <view class="step-btn" bindtap="changeQuantity" data-delta="-1">−</view>
+          <text class="step-value">{{quantity}}</text>
+          <view class="step-btn" bindtap="changeQuantity" data-delta="1">+</view>
+        </view>
+        <text class="muted">下单后按此数量发货</text>
+      </view>
+    </view>
+
+    <view class="card" wx:if="{{goods.intro}}">
+      <view class="section-title">商品介绍</view>
+      <view class="rich"><rich-text nodes="{{goods.intro}}"></rich-text></view>
+    </view>
+
+    <view class="card" wx:if="{{goods.detail}}">
+      <view class="section-title">详情</view>
+      <view class="rich"><rich-text nodes="{{goods.detail}}"></rich-text></view>
+    </view>
+
+    <view class="card" wx:if="{{goods.remark}}">
+      <view class="section-title">使用说明</view>
+      <view class="rich"><rich-text nodes="{{goods.remark}}"></rich-text></view>
+    </view>
+
+    <view class="bottom-space"></view>
+
+    <view class="fixed-bottom">
+      <view class="foot-action" bindtap="goService">客服</view>
+      <view class="foot-action" bindtap="goQuery">查单</view>
+      <view class="btn flex1 buy-btn {{canBuy ? '' : 'btn-disabled'}}" bindtap="buy">
+        {{canBuy ? '立即购买' : '已售罄'}}
+      </view>
+    </view>
+  </block>
+</view>

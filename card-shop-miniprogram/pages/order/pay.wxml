@@ -1,0 +1,35 @@
+<view class="page" style="{{themeStyle}}">
+  <view class="empty" wx:if="{{error}}">{{error}}</view>
+
+  <block wx:else>
+    <view class="card pay-card">
+      <view class="muted">应付金额</view>
+      <view class="price amount">¥{{totalText}}</view>
+      <view class="muted" wx:if="{{quantity}}">共 {{quantity}} 张</view>
+      <view class="goods-name ellipsis-2" wx:if="{{goodsName}}">{{goodsName}}</view>
+      <view class="muted order-no">订单号 {{orderNo}}</view>
+    </view>
+
+    <view class="card tips" wx:if="{{!payEnabled}}">
+      <view class="section-title">暂未开通在线收款</view>
+      <text class="muted small">{{message || '请把订单号发给店主完成付款，付款后凭单号与联系方式取卡。'}}</text>
+    </view>
+
+    <view class="card tips" wx:if="{{checking}}">
+      <view class="muted">微信已扣款，正在确认支付结果并生成卡密…</view>
+    </view>
+
+    <view class="safe-bottom">
+      <view
+        class="btn pay-btn {{!payEnabled || paying || checking ? 'btn-disabled' : ''}}"
+        bindtap="pay"
+      >
+        {{paying ? '拉起支付中…' : checking ? '确认中…' : payEnabled ? '微信支付' : '店主暂未开通在线收款'}}
+      </view>
+      <view class="row link-row">
+        <text class="copy-link" bindtap="goCard">查看卡密</text>
+        <text class="copy-link" bindtap="goQuery">查单取卡</text>
+      </view>
+    </view>
+  </block>
+</view>

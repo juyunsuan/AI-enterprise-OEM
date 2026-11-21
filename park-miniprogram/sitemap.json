@@ -1,0 +1,9 @@
+{
+  "description": "园区小程序公开页：园区码或 AppID 反查站点后展示服务入口。",
+  "rules": [
+    {
+      "action": "allow",
+      "page": "*"
+    }
+  ]
+}

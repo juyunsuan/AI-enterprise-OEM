@@ -27,8 +27,8 @@ import {
 } from './identity-snapshot';
 import { UserLookupService } from '../directory/user-lookup.service';
 import { AccountCrypto } from '../account/account-crypto';
-import { OssService } from '../oss/oss.service';
 import { parseAttachmentFiles } from '../oss/attachment-files';
+import type { SystemAssetService } from '../system-asset/system-asset.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ContactSide, contactSideOf } from '../shared/contacts';
 import { requireLocation, resolveLocation } from '../shared/locations';
@@ -319,10 +319,17 @@ export type Qualifications = Awaited<
   ReturnType<IdentityService['loadQualifications']>
 >;
 export class IdentityService {
+  /**
+   * 系统资产层写入槽位（后置注入）：装配顺序上 DigitalAssetService 需要本服务，
+   * 本服务又需要台账写入能力，构造函数里拿不到 SystemAssetService，
+   * 故沿用 `bigdataQueryService.deliverableSink` 的既有口径，由 http/services.ts 回填。
+   * 缺失时直接拒绝上传——宁可报错，也不写不落账的字节。
+   */
+  systemAsset?: SystemAssetService;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly users: UserLookupService,
-    private readonly oss: OssService,
   ) {}
 
   /** API Key 明文密文列（AES-256-GCM）的加解密：延后构造，避免未配 EXTERNAL_CRED_KEY 的单测在构造期抛错。 */
@@ -474,6 +481,12 @@ export class IdentityService {
       email: directory.email,
       avatarUrl: directory.avatarUrl,
       javaRole: user.role,
+      // 子账号：数据归属主账号，前端按 scopes 过滤菜单并隐藏主账号专属入口。
+      isSubAccount: user.isSubAccount(),
+      ownerUserId: user.userId,
+      subAccountId: user.subAccountId ?? null,
+      subAccountName: user.subAccountName || '',
+      scopes: user.isSubAccount() ? (user.scopes ?? []) : null,
       roles,
       // 管理员可切换全部业务身份；未选择时默认平台管理员。
       currentIdentity: this.resolveCurrentIdentity(user, q),
@@ -1147,13 +1160,24 @@ export class IdentityService {
     }[],
   ) {
     const validated = parseAttachmentFiles(files);
+    const assets = this.systemAsset;
+    if (!assets) {
+      throw new BusinessException(
+        ErrorCode.SERVICE_UNAVAILABLE,
+        '系统资产层未装配，资质材料暂时无法上传，请稍后重试',
+      );
+    }
     const ts = Date.now();
     const uploaded: Attachment[] = [];
     for (const [index, { name, safe, content }] of validated.entries()) {
-      const result = await this.oss.upload(
-        `provider-qualifications/${user.userId}/${ts}-${index + 1}-${safe}`,
-        content,
-      );
+      // 资质材料归上传者账号入账，存储用量与费用才可见
+      const result = await assets.put({
+        ownerUserId: user.userId,
+        path: `provider-qualifications/${user.userId}/${ts}-${index + 1}-${safe}`,
+        bytes: content,
+        name,
+        bizRef: `provider-qualification:${index + 1}`,
+      });
       uploaded.push({
         id: `att-${ts}-${index + 1}`,
         name,

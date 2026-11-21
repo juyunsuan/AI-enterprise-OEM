@@ -1,0 +1,148 @@
+.learn-page {
+  padding-bottom: 160rpx;
+}
+
+.head-card {
+  margin-bottom: 20rpx;
+}
+
+.lesson-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 8rpx;
+}
+
+.lesson-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 32rpx;
+  font-weight: 600;
+  line-height: 44rpx;
+}
+
+.lesson-index {
+  margin-left: 16rpx;
+  flex-shrink: 0;
+}
+
+.meta {
+  margin-top: 8rpx;
+}
+
+.done-flag {
+  color: var(--primary);
+}
+
+.progress-line {
+  margin-top: 16rpx;
+}
+
+.player {
+  width: 100%;
+  height: 420rpx;
+  border-radius: 16rpx;
+  background: #000;
+  margin-bottom: 24rpx;
+}
+
+.audio-box {
+  display: flex;
+  align-items: center;
+}
+
+.audio-btn {
+  width: 110rpx;
+  height: 110rpx;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26rpx;
+  flex-shrink: 0;
+}
+
+.audio-on {
+  opacity: 0.85;
+}
+
+.audio-main {
+  flex: 1;
+  margin-left: 20rpx;
+}
+
+.audio-title {
+  font-size: 26rpx;
+  margin-bottom: 10rpx;
+}
+
+.image-full {
+  width: 100%;
+  display: block;
+  border-radius: 16rpx;
+  margin-bottom: 24rpx;
+}
+
+.section-title.small {
+  font-size: 28rpx;
+  margin-bottom: 12rpx;
+}
+
+.rich-body {
+  font-size: 28rpx;
+  line-height: 48rpx;
+  word-break: break-all;
+}
+
+.tip-line {
+  margin-top: 12rpx;
+}
+
+.bottom-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  padding: 12rpx 24rpx calc(12rpx + env(safe-area-inset-bottom));
+  background: #fff;
+  border-top: 1rpx solid var(--line);
+  box-sizing: border-box;
+}
+
+.nav-btn {
+  width: 140rpx;
+  text-align: center;
+  font-size: 26rpx;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.nav-disabled {
+  color: #c4c8cf;
+}
+
+.complete-btn {
+  flex: 1;
+  margin: 0 16rpx;
+}
+
+.empty {
+  padding: 80rpx 40rpx;
+  text-align: center;
+  color: var(--muted);
+  font-size: 26rpx;
+}
+
+.empty-btn {
+  width: 280rpx;
+  margin: 28rpx auto 0;
+}
+
+.chapter-title {
+  margin-top: 6rpx;
+  font-size: 24rpx;
+}

@@ -1,7 +1,6 @@
 import { CurrentUser } from '../auth/current-user';
 import { UserLookupService } from '../directory/user-lookup.service';
 import { IdentityService } from '../identity/identity.service';
-import { OssService } from '../oss/oss.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { QxyService } from '../qixiangyun/qxy.service';
 import { ContactResolver } from '../shared/contacts.service';
@@ -199,7 +198,6 @@ describe('provider assignment', () => {
     const identity = new IdentityService(
       stub<PrismaService>(prisma),
       stub<UserLookupService>(),
-      stub<OssService>(),
     );
     jest
       .spyOn(identity, 'requireRoles')

@@ -1,0 +1,108 @@
+.day-bar {
+  padding-bottom: 20rpx;
+}
+
+.day-btn {
+  color: #3370ff;
+  font-size: 26rpx;
+  padding: 8rpx 12rpx;
+}
+
+.day-value {
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.tip {
+  margin-top: 14rpx;
+  line-height: 1.6;
+}
+
+.summary {
+  margin-top: 12rpx;
+  line-height: 1.6;
+}
+
+.error {
+  margin: 24rpx;
+  padding: 16rpx;
+  border-radius: 12rpx;
+  background: #fdecec;
+  color: #c62828;
+  font-size: 24rpx;
+  line-height: 1.6;
+}
+
+.slots {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 16rpx;
+}
+
+.slot {
+  width: 31%;
+  margin: 8rpx 1%;
+  padding: 12rpx 0;
+  border-radius: 10rpx;
+  text-align: center;
+  font-size: 22rpx;
+  display: flex;
+  flex-direction: column;
+}
+
+.slot-free {
+  background: #eaf6ee;
+  color: #1f9d55;
+}
+
+.slot-busy {
+  background: #f4f5f7;
+  color: #8a8f99;
+}
+
+.slot-label {
+  font-size: 24rpx;
+}
+
+.slot-reason {
+  margin-top: 4rpx;
+}
+
+.order {
+  margin-top: 16rpx;
+  padding: 16rpx;
+  border-radius: 12rpx;
+  background: #f7f9ff;
+}
+
+.order-time {
+  font-size: 27rpx;
+  font-weight: 600;
+}
+
+.order-service {
+  margin: 8rpx 0;
+  font-size: 27rpx;
+}
+
+.badge {
+  padding: 4rpx 12rpx;
+  border-radius: 16rpx;
+  background: #eef3ff;
+  color: #3370ff;
+  font-size: 22rpx;
+}
+
+.rest {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 14rpx;
+  padding: 12rpx 0;
+  border-bottom: 1rpx solid #eef0f3;
+  font-size: 27rpx;
+}
+
+.action {
+  color: #3370ff;
+  font-size: 26rpx;
+}

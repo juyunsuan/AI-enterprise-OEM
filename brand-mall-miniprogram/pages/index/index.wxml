@@ -1,0 +1,11 @@
+<view class="diy-page" style="{{pageStyle}}">
+  <view wx:if="{{error}}" class="tip card">
+    <view>{{error}}</view>
+    <view class="muted tip-sub">首页还没有装修内容，可下拉刷新重试。</view>
+    <view class="btn mini" bindtap="retryLogin">重新加载</view>
+  </view>
+
+  <diy-block wx:for="{{blocks}}" wx:key="key" type="{{item.type}}" props="{{item.props}}" ctx="{{ctx}}" />
+
+  <view class="footer-gap"></view>
+</view>

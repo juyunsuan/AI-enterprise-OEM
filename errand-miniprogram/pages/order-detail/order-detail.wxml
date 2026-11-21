@@ -1,0 +1,74 @@
+<view class="wrap">
+  <view wx:if="{{loading}}" class="card muted">正在加载…</view>
+  <view wx:elif="{{error}}" class="card muted">{{error}}</view>
+  <block wx:elif="{{order}}">
+    <view class="card">
+      <view class="row">
+        <text class="section-title">{{order.serviceType === 'BUY' ? '帮我买' : '帮我送'}}</text>
+        <text class="status">{{statusText}}</text>
+      </view>
+      <view class="muted">{{order.orderNo}}</view>
+      <view class="line">{{order.fromParty.address}}</view>
+      <view class="muted">↓</view>
+      <view class="line">{{order.toParty.address}}</view>
+      <view class="divider"></view>
+      <view class="fee-row"><text>联系方式</text><text>{{order.contactName}} {{order.contactMobile}}</text></view>
+      <view class="fee-row"><text>距离 / 重量</text><text>{{order.distanceKm}} 公里 / {{order.weightKg}} 公斤</text></view>
+      <view class="fee-row"><text>骑手</text><text>{{order.riderName || '待分配'}}</text></view>
+      <view wx:if="{{order.serviceType === 'BUY'}}" class="fee-row">
+        <text>实付 / 差额</text>
+        <text>实付 ¥{{order.purchaseAmount}}{{order.changeAmount > 0 ? ' · 已退/应退 ¥' + order.changeAmount : ''}}{{order.extraAmount > 0 ? ' · 补收 ¥' + order.extraAmount + (order.extraPaidAt ? '（已补）' : '（待补）') : ''}}</text>
+      </view>
+      <view class="fee-total"><text>合计</text><text>¥{{order.totalAmount}}</text></view>
+      <view wx:if="{{order.photos.length}}" class="photos">
+        <image wx:for="{{order.photos}}" wx:key="*this" src="{{item}}" mode="aspectFill" data-url="{{item}}" bindtap="previewPhoto" />
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="section-title">费用明细</view>
+      <view class="fee-row"><text>起步价</text><text>¥{{order.baseFee}}</text></view>
+      <view class="fee-row"><text>超距</text><text>¥{{order.distanceFee}}</text></view>
+      <view class="fee-row"><text>超重</text><text>¥{{order.weightFee}}</text></view>
+      <view class="fee-row" wx:if="{{order.timeFee > 0}}"><text>夜间加价</text><text>¥{{order.timeFee}}</text></view>
+      <view class="fee-row" wx:if="{{order.goodsFee > 0}}"><text>帮买服务费</text><text>¥{{order.goodsFee}}</text></view>
+      <view class="fee-row" wx:if="{{order.couponDiscount > 0}}"><text>优惠券</text><text>-¥{{order.couponDiscount}}</text></view>
+      <view class="fee-row" wx:if="{{order.pointsDiscount > 0}}"><text>积分抵扣（{{order.pointsUsed}} 分）</text><text>-¥{{order.pointsDiscount}}</text></view>
+      <view class="fee-row" wx:if="{{order.tip > 0}}"><text>小费</text><text>¥{{order.tip}}</text></view>
+    </view>
+
+    <view class="card">
+      <view class="section-title">订单进度</view>
+      <view wx:for="{{events}}" wx:key="id" class="event">
+        <text class="event-time">{{item.createdAt}}</text>
+        <text class="event-note">{{item.note}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{order.status === 'COMPLETED' && !order.rating}}" class="card">
+      <view class="section-title">评价骑手</view>
+      <view class="stars">
+        <text wx:for="{{stars}}" wx:key="*this" class="star {{rating >= item ? 'active' : ''}}" data-value="{{item}}" bindtap="pickRating">★</text>
+      </view>
+      <textarea class="field" placeholder="说说这次跑腿体验（可选）" value="{{comment}}" bindinput="bindComment" auto-height />
+      <view class="btn btn-primary" style="margin-top: 16rpx;" bindtap="saveRating">提交评价</view>
+    </view>
+    <view
+      wx:if="{{order.serviceType === 'BUY' && order.extraAmount > 0 && !order.extraPaidAt && order.payState === 'PAID'}}"
+      class="card"
+    >
+      <view class="section-title">帮买补款</view>
+      <view class="muted">实际采购金额超出预估，需要补付 ¥{{order.extraAmount}}</view>
+      <view class="btn btn-primary" style="margin-top: 16rpx;" bindtap="payExtra">
+        {{paying ? '发起支付…' : '补付差额'}}
+      </view>
+    </view>
+    <view class="actions">
+      <view wx:if="{{order.payState === 'PENDING'}}" class="btn btn-primary" bindtap="repay">
+        {{paying ? '发起支付…' : '去支付'}}
+      </view>
+      <view wx:if="{{order.status === 'PENDING_PAY' || order.status === 'PENDING_ACCEPT'}}" class="btn" bindtap="cancel">取消订单</view>
+      <view class="btn btn-ghost" bindtap="goService">联系客服</view>
+    </view>
+  </block>
+</view>

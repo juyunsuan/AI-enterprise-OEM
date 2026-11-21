@@ -1,0 +1,55 @@
+<view class="page">
+  <view class="card">
+    <view class="title">{{id ? '编辑投稿' : '新建投稿'}}</view>
+    <view class="notice" wx:if="{{auditReason}}">上次审核意见：{{auditReason}}</view>
+    <view class="muted">提交后由店主审核；审核通过才会在顾客端展示。每次修改都会重新进入待审核。</view>
+
+    <view class="field">
+      <view class="field-label">标题 <text class="required">*</text></view>
+      <input class="input" maxlength="120" placeholder="例如：高血压患者的秋季饮食注意" value="{{form.title}}" data-key="title" bindinput="onForm" />
+    </view>
+
+    <view class="field">
+      <view class="field-label">类型</view>
+      <picker mode="selector" range="{{kindOptions}}" range-key="label" value="{{kindIndex}}" bindchange="onKind">
+        <view class="picker-field">{{kindOptions[kindIndex].label}}</view>
+      </picker>
+    </view>
+
+    <view class="field">
+      <view class="field-label">摘要</view>
+      <input class="input" maxlength="300" placeholder="一句话说明这篇内容" value="{{form.summary}}" data-key="summary" bindinput="onForm" />
+    </view>
+
+    <view class="field">
+      <view class="field-label">封面图地址</view>
+      <input class="input" maxlength="500" placeholder="https://..." value="{{form.coverImage}}" data-key="coverImage" bindinput="onForm" />
+    </view>
+
+    <view class="field" wx:if="{{kindOptions[kindIndex].key !== 'ARTICLE'}}">
+      <view class="field-label">媒体地址 <text class="required">*</text></view>
+      <input class="input" maxlength="1000" placeholder="视频/音频/直播地址" value="{{form.mediaUrl}}" data-key="mediaUrl" bindinput="onForm" />
+    </view>
+
+    <view class="field" wx:if="{{kindOptions[kindIndex].key === 'ARTICLE'}}">
+      <view class="field-label">正文（支持 HTML）<text class="required">*</text></view>
+      <textarea class="textarea" maxlength="60000" placeholder="填写正文内容" value="{{form.contentHtml}}" data-key="contentHtml" bindinput="onForm"></textarea>
+    </view>
+
+    <view class="field">
+      <view class="field-label">标签</view>
+      <input class="input" maxlength="100" placeholder="用逗号分隔，最多 8 个" value="{{form.tags}}" data-key="tags" bindinput="onForm" />
+    </view>
+
+    <view class="field">
+      <view class="field-label">可见范围</view>
+      <picker mode="selector" range="{{visibilityOptions}}" range-key="label" value="{{visibilityIndex}}" bindchange="onVisibility">
+        <view class="picker-field">{{visibilityOptions[visibilityIndex].label}}</view>
+      </picker>
+    </view>
+
+    <button class="button-primary" disabled="{{submitting}}" bindtap="onSubmit">
+      {{submitting ? '提交中…' : '提交审核'}}
+    </button>
+  </view>
+</view>

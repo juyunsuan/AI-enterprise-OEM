@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "project": "aiworkin-enterprise",
+  "license": "AGPL-3.0-only",
+  "directories": {
+    "backend": "backend/src",
+    "frontend": "frontend/src",
+    "contracts": "packages/contracts/src",
+    "docs": "docs/dev-kit"
+  },
+  "applications": [
+    { "id": "api", "port": 1690, "command": "pnpm dev:api" },
+    { "id": "web", "port": 1695, "command": "pnpm dev:web" },
+    { "id": "worker", "command": "pnpm dev:worker" }
+  ],
+  "sources": {
+    "endpoints": "packages/contracts/src/endpoints.ts",
+    "openapi": "docs/api/openapi.json",
+    "guard": "scripts/check-architecture.mjs",
+    "thirdParty": "docs/dev-kit/THIRD_PARTY.md"
+  },
+  "commands": {
+    "install": "pnpm install",
+    "setup": "pnpm install && pnpm setup",
+    "dev": "pnpm dev",
+    "typecheck": "pnpm typecheck",
+    "lint": "pnpm lint",
+    "check": "pnpm check:architecture",
+    "build": "pnpm build",
+    "apiDocs": "pnpm api:docs",
+    "apiIndex": "pnpm api:index",
+    "devkit": "pnpm setup:dev-kit",
+    "devkitCheck": "pnpm devkit:check",
+    "devkitPack": "pnpm pack:dev-kit"
+  },
+  "generated": [
+    "packages/contracts/dist/**",
+    "docs/api/openapi.json",
+    "docs/dev-kit/api/*",
+    "frontend/public/downloads/*.zip",
+    ".agents/skills/**",
+    ".claude/skills/**"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "description": "答题小程序（平台统一源码包）",
+  "packOptions": {
+    "ignore": [
+      { "type": "file", "value": "project.private.config.json" },
+      { "type": "folder", "value": ".DS_Store" }
+    ]
+  },
+  "setting": {
+    "urlCheck": true,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true,
+    "newFeature": true
+  },
+  "compileType": "miniprogram",
+  "libVersion": "3.4.0",
+  "appid": "",
+  "projectname": "quiz-miniprogram",
+  "srcMiniprogramRoot": "./",
+  "miniprogramRoot": "./",
+  "condition": {}
+}

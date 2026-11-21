@@ -1,0 +1,13 @@
+<view class="diy-store-head">
+  <view class="head">
+    <image wx:if="{{showLogo && shop.logo}}" class="logo" src="{{shop.logo}}" mode="aspectFill" />
+    <view class="info">
+      <view class="name ellipsis">{{shop.name}}</view>
+      <view class="slogan ellipsis" wx:if="{{showSlogan && shop.slogan}}">{{shop.slogan}}</view>
+    </view>
+  </view>
+  <view class="phone" wx:if="{{showPhone && shop.servicePhone}}" bindtap="callShop">
+    <text class="phone-icon">电话</text>
+    <text class="phone-text">{{shop.servicePhone}}</text>
+  </view>
+</view>

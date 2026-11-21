@@ -1,0 +1,35 @@
+<view wx:if="{{loading}}" class="empty">正在接通客服…</view>
+
+<view wx:elif="{{error}}" class="container">
+  <view class="empty">{{error}}</view>
+</view>
+
+<block wx:else>
+  <scroll-view scroll-y class="chat-list" scroll-into-view="{{scrollTo}}" scroll-with-animation>
+    <view wx:if="{{notice}}" class="chat-row">
+      <view class="chat-bubble">
+        <view class="chat-meta">系统</view>
+        <view>{{notice}}</view>
+      </view>
+    </view>
+    <view wx:for="{{messages}}" wx:key="id" id="m{{item.id}}" class="chat-row {{item.mine ? 'mine' : ''}}">
+      <view class="chat-bubble">
+        <view class="chat-meta">{{item.senderName}} · {{item.timeText}}</view>
+        <view>{{item.content}}</view>
+      </view>
+    </view>
+    <view wx:if="{{!messages.length}}" class="empty">有什么问题，直接发消息吧。</view>
+  </scroll-view>
+
+  <view class="chat-input-bar">
+    <input
+      class="chat-input"
+      value="{{input}}"
+      bindinput="onInput"
+      bindconfirm="onSend"
+      confirm-type="send"
+      placeholder="输入问题…"
+    />
+    <button class="primary-btn" bindtap="onSend" loading="{{sending}}">发送</button>
+  </view>
+</block>

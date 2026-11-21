@@ -1,0 +1,101 @@
+<view class="page">
+  <view class="empty" wx:if="{{loading}}">正在读取店铺配置…</view>
+
+  <view class="card closed" wx:elif="{{!shop.shopCode}}">
+    <view class="title">店铺暂未开通</view>
+    <view class="muted closed-reason">{{error || '请联系店铺方完成开通后再试'}}</view>
+    <button class="button-primary closed-btn" bindtap="retry">重新加载</button>
+  </view>
+
+  <block wx:else>
+    <view class="card shop">
+      <image class="shop-logo" src="{{shop.logo}}" mode="aspectFill" wx:if="{{shop.logo}}"></image>
+      <view class="shop-main">
+        <view class="title">{{shop.shopName}}</view>
+        <view class="muted shop-slogan" wx:if="{{shop.slogan}}">{{shop.slogan}}</view>
+        <view class="shop-phone" bindtap="callPhone" wx:if="{{shop.servicePhone}}">电话咨询 {{shop.servicePhone}}</view>
+      </view>
+    </view>
+
+    <view class="quick">
+      <view class="quick-item" bindtap="openAllServices">
+        <view class="quick-title">全部服务</view>
+        <view class="muted" wx:if="{{serviceTotal}}">{{serviceTotal}} 项</view>
+        <view class="muted" wx:else>浏览服务</view>
+      </view>
+      <view class="quick-item" bindtap="openDesk" wx:if="{{deskKey}}">
+        <view class="quick-title">在线客服</view>
+        <view class="muted">立即咨询</view>
+      </view>
+    </view>
+
+    <view class="section">
+      <view class="section-head">
+        <text class="title">推荐服务</text>
+        <text class="muted link" bindtap="openAllServices">查看全部</text>
+      </view>
+      <view class="muted section-note" wx:if="{{!bookingEnabled}}">当前暂未开放预约，可先浏览服务详情</view>
+
+      <view class="empty" wx:if="{{contentLoading && !services.length}}">正在加载服务…</view>
+      <view class="empty" wx:elif="{{servicesError}}">
+        <view>{{servicesError}}</view>
+        <view class="link" bindtap="reloadContent">重新加载</view>
+      </view>
+      <view class="empty" wx:elif="{{!services.length}}">该店铺暂未上架服务</view>
+
+      <view class="card svc" wx:for="{{services}}" wx:key="id" data-id="{{item.id}}" bindtap="openService">
+        <image class="svc-cover" src="{{item.cover}}" mode="aspectFill" wx:if="{{item.cover}}"></image>
+        <view class="svc-main">
+          <view class="svc-title">{{item.title}}</view>
+          <view class="muted svc-subtitle" wx:if="{{item.subtitle}}">{{item.subtitle}}</view>
+          <view class="tags" wx:if="{{item.highlights.length}}">
+            <text class="tag" wx:for="{{item.highlights}}" wx:for-item="tag" wx:key="*this">{{tag}}</text>
+          </view>
+          <view class="svc-foot">
+            <text class="price">{{item.priceText}}<text class="price-unit"> 起</text></text>
+            <text class="muted">{{item.durationText}}</text>
+            <text class="muted" wx:if="{{item.salesText}}">{{item.salesText}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="section" wx:if="{{staff.length}}">
+      <view class="section-head">
+        <text class="title">推荐技师</text>
+        <text class="muted link" bindtap="openStaffList">全部技师</text>
+      </view>
+      <scroll-view class="staff-scroll" scroll-x="true" enable-flex="true">
+        <view class="staff" wx:for="{{staff}}" wx:key="id" data-id="{{item.id}}" bindtap="openStaff">
+          <image class="staff-avatar" src="{{item.avatar}}" mode="aspectFill" wx:if="{{item.avatar}}"></image>
+          <view class="staff-avatar staff-placeholder" wx:else>技师</view>
+          <view class="staff-name">{{item.name}}</view>
+          <view class="muted staff-meta" wx:if="{{item.ratingText}}">评分 {{item.ratingText}}</view>
+          <view class="muted staff-meta" wx:if="{{item.levelName}}">{{item.levelName}}</view>
+        </view>
+      </scroll-view>
+    </view>
+
+    <view class="card scrm" wx:if="{{scrmQr}}" bindtap="previewScrm">
+      <view class="scrm-main">
+        <view class="title">{{scrmName || '私域顾问'}}</view>
+        <view class="muted scrm-tip">扫码添加顾问，点击可放大二维码</view>
+      </view>
+      <image class="scrm-qr" src="{{scrmQr}}" mode="aspectFit"></image>
+    </view>
+
+    <view class="section" wx:if="{{articles.length}}">
+      <view class="section-head">
+        <text class="title">店铺资讯</text>
+      </view>
+      <view class="card">
+        <view class="article" wx:for="{{articles}}" wx:key="id" data-id="{{item.id}}" bindtap="openArticle">
+          <text class="article-title">{{item.title}}</text>
+          <text class="muted article-time">{{item.timeText}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="foot muted">上门服务 · 如需帮助请联系店铺客服</view>
+  </block>
+</view>

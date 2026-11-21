@@ -1,0 +1,46 @@
+<view class="page search-page" style="{{themeStyle}}">
+  <view class="search-head">
+    <view class="search-input-wrap">
+      <input
+        class="search-input"
+        type="text"
+        confirm-type="search"
+        focus="{{true}}"
+        placeholder="搜索内容标题"
+        value="{{keyword}}"
+        bindinput="onInput"
+        bindconfirm="onConfirm"
+      />
+      <text class="search-clear" wx:if="{{keyword}}" bindtap="onClear">清除</text>
+    </view>
+    <view class="search-btn" bindtap="search">搜索</view>
+  </view>
+
+  <view class="card" wx:if="{{!searched}}">
+    <view class="section-title small">热门搜索</view>
+    <view class="words" wx:if="{{hotWords.length}}">
+      <text
+        class="word"
+        wx:for="{{hotWords}}"
+        wx:key="*this"
+        bindtap="onHotWord"
+        data-word="{{item}}"
+      >{{item}}</text>
+    </view>
+    <view class="muted" wx:else>站点暂未配置热门搜索词</view>
+  </view>
+
+  <block wx:else>
+    <view class="muted result-tip" wx:if="{{!loading && list.length}}">找到 {{total}} 条相关内容</view>
+    <resource-card
+      wx:for="{{list}}"
+      wx:key="id"
+      item="{{item}}"
+      bindtap="openResource"
+      data-id="{{item.id}}"
+    />
+    <view class="empty" wx:if="{{!loading && !list.length}}">{{error || '没有找到相关内容'}}</view>
+    <view class="load-tip" wx:if="{{loading}}">搜索中…</view>
+    <view class="load-tip" wx:elif="{{loadingMore}}">加载中…</view>
+  </block>
+</view>

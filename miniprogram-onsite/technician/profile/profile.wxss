@@ -1,0 +1,92 @@
+.who {
+  display: flex;
+  align-items: center;
+}
+
+.avatar {
+  width: 104rpx;
+  height: 104rpx;
+  border-radius: 52rpx;
+  margin-right: 20rpx;
+  background: #eef1f6;
+}
+
+.avatar-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26rpx;
+  color: #8a8f99;
+  overflow: hidden;
+}
+
+.who-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.badge {
+  padding: 6rpx 16rpx;
+  border-radius: 18rpx;
+  background: #e9f7ef;
+  color: #1f9d55;
+  font-size: 24rpx;
+}
+
+.line {
+  display: flex;
+  margin-top: 18rpx;
+  font-size: 27rpx;
+}
+
+.label {
+  width: 180rpx;
+  color: #8a8f99;
+  flex-shrink: 0;
+}
+
+.value {
+  flex: 1;
+  line-height: 1.6;
+}
+
+.tip {
+  margin-top: 16rpx;
+  line-height: 1.6;
+}
+
+.notice {
+  margin-top: 16rpx;
+  padding: 16rpx;
+  border-radius: 12rpx;
+  background: #fff7e8;
+  color: #b26a00;
+  font-size: 24rpx;
+  line-height: 1.6;
+}
+
+.action {
+  color: #3370ff;
+  font-size: 26rpx;
+}
+
+.entry {
+  padding: 22rpx 0;
+  border-bottom: 1rpx solid #eef0f3;
+  font-size: 28rpx;
+}
+
+.entry:last-child {
+  border-bottom: none;
+}
+
+.arrow {
+  color: #c9cdd4;
+}
+
+.button-ghost {
+  background: #fdecec;
+  color: #c62828;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+}

@@ -1,0 +1,57 @@
+<view class="page" style="{{themeStyle}}">
+  <view class="empty" wx:if="{{!enabled}}">店主未开启搜索功能，可回首页按分类浏览。</view>
+
+  <block wx:else>
+    <view class="row search-row">
+      <input
+        class="input flex1"
+        confirm-type="search"
+        placeholder="搜索卡密商品"
+        value="{{keyword}}"
+        bindinput="onKeywordInput"
+        bindconfirm="onConfirm"
+      />
+      <view class="search-btn" bindtap="submit">搜索</view>
+    </view>
+
+    <view class="card" wx:if="{{history.length && !searched}}">
+      <view class="row between">
+        <text class="section-title">最近搜索</text>
+        <text class="muted small" bindtap="clearHistory">清空</text>
+      </view>
+      <view class="tag-row">
+        <text
+          class="tag history-tag"
+          wx:for="{{history}}"
+          wx:key="*this"
+          bindtap="useHistory"
+          data-keyword="{{item}}"
+        >{{item}}</text>
+      </view>
+    </view>
+
+    <view class="empty" wx:if="{{error}}">{{error}}</view>
+    <view class="empty" wx:elif="{{searched && !list.length && !loading}}">没有找到相关商品，换个关键词试试</view>
+
+    <view
+      class="goods-row"
+      wx:for="{{list}}"
+      wx:key="id"
+      bindtap="openGoods"
+      data-id="{{item.id}}"
+    >
+      <image class="goods-thumb" src="{{item.coverImage}}" mode="aspectFill" />
+      <view class="flex1 col goods-info">
+        <text class="goods-name ellipsis-2">{{item.name}}</text>
+        <text class="goods-sub ellipsis" wx:if="{{item.subtitle}}">{{item.subtitle}}</text>
+        <view class="row between goods-foot">
+          <text class="price">¥{{item.priceText}}</text>
+          <text class="muted">{{item.stockText}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="muted loading-text" wx:if="{{loading}}">搜索中…</view>
+    <view class="muted loading-text" wx:elif="{{list.length && finished}}">没有更多了</view>
+  </block>
+</view>

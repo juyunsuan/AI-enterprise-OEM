@@ -1,0 +1,5 @@
+.content {
+  font-size: 28rpx;
+  line-height: 46rpx;
+  word-break: break-all;
+}

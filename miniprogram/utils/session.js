@@ -1,55 +1,33 @@
 const { apiBase } = require("../config");
+const core = require("./core");
 
 const KEY = "aiworkin:miniprogram:session";
-
-function state() {
-  try {
-    const raw = wx.getStorageSync(KEY);
-    return raw && typeof raw === "object" ? raw : {};
-  } catch (e) {
-    return {};
-  }
-}
-
-function save(patch) {
-  const next = Object.assign({}, state(), patch);
-  try {
-    wx.setStorageSync(KEY, next);
-  } catch (e) {
-    // 存储写入失败时不影响本次会话（token 仍在内存态下一次请求前会被重取）。
-  }
-  return next;
-}
+const store = core.createSession(KEY);
 
 module.exports = {
+  /** utils/request.js 用同一个槽位取令牌、清会话，避免两处各写一遍 key。 */
+  storageKey: KEY,
   getToken() {
-    return state().token || "";
+    return store.get("token") || "";
   },
   setToken(token) {
-    save({ token: token || "" });
+    store.set({ token: token || "" });
   },
   getProfile() {
-    return state().profile || null;
+    return store.get("profile") || null;
   },
   setProfile(profile) {
-    save({ profile: profile || null });
+    store.set({ profile: profile || null });
   },
   /** 服务器地址：本地保存值优先，其次打包时注入的 config.apiBase。 */
   getApiBase() {
-    const value = state().apiBase || apiBase || "";
+    const value = store.get("apiBase") || apiBase || "";
     return String(value).trim().replace(/\/+$/, "");
   },
   setApiBase(value) {
-    save({ apiBase: String(value || "").trim() });
+    store.set({ apiBase: String(value || "").trim() });
   },
   clearToken() {
-    const next = state();
-    delete next.token;
-    delete next.profile;
-    try {
-      wx.setStorageSync(KEY, next);
-    } catch (e) {
-      /* 忽略 */
-    }
+    store.clear(["token", "profile"]);
   },
 };

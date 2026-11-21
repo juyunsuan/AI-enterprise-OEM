@@ -1,0 +1,56 @@
+<view class="page" style="{{themeStyle}}">
+  <view class="empty" wx:if="{{!enabled}}">站点暂未开启发现页。</view>
+  <view class="empty" wx:elif="{{loading}}">加载中…</view>
+
+  <block wx:elif="{{enabled}}">
+    <view class="search-bar" bindtap="goSearch">
+      <view class="search-box">
+        <text class="search-icon">搜索</text>
+        <text class="search-ph">搜索感兴趣的课程</text>
+      </view>
+    </view>
+
+    <view class="card nav-card" wx:if="{{navs.length}}">
+      <view class="section-title small">运营精选</view>
+      <view class="nav-grid">
+        <view
+          class="nav-item"
+          wx:for="{{navs}}"
+          wx:key="id"
+          bindtap="onNavTap"
+          data-index="{{index}}"
+        >
+          <image wx:if="{{item.icon}}" class="nav-icon" src="{{item.icon}}" mode="aspectFill" />
+          <view wx:else class="nav-icon nav-ph">{{item.initial}}</view>
+          <view class="nav-title ellipsis">{{item.title}}</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="card" wx:if="{{teachers.length}}">
+      <view class="section-title small">讲师团队</view>
+      <view
+        class="teacher-row"
+        wx:for="{{teachers}}"
+        wx:key="id"
+        bindtap="openTeacher"
+        data-index="{{index}}"
+      >
+        <image wx:if="{{item.avatar}}" class="teacher-avatar" src="{{item.avatar}}" mode="aspectFill" />
+        <view wx:else class="teacher-avatar teacher-ph">{{item.initial}}</view>
+        <view class="teacher-main">
+          <view class="teacher-name">
+            {{item.name}}
+            <text class="teacher-title" wx:if="{{item.title}}">{{item.title}}</text>
+          </view>
+          <view class="muted ellipsis" wx:if="{{item.intro}}">{{item.intro}}</view>
+        </view>
+        <text class="arrow">›</text>
+      </view>
+    </view>
+
+    <view class="empty" wx:if="{{!navs.length && !teachers.length}}">
+      站点还没有配置发现页内容。
+    </view>
+  </block>
+</view>

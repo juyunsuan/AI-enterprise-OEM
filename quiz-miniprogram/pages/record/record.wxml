@@ -1,0 +1,28 @@
+<view class="container">
+  <view class="picker-row" wx:if="{{banks.length}}">
+    <picker class="picker" mode="selector" range="{{bankTitles}}" value="{{bankIndex}}" bindchange="onBankChange">
+      <view class="between">
+        <text>{{bankTitle || '选择题库'}}</text>
+        <text class="muted">切换</text>
+      </view>
+    </picker>
+  </view>
+
+  <view wx:if="{{loading}}" class="empty">正在加载记录…</view>
+  <view wx:elif="{{error}}" class="empty">{{error}}</view>
+  <view wx:elif="{{!list.length}}" class="empty">还没有答题记录，先去练习或考试。</view>
+
+  <view wx:for="{{list}}" wx:key="id" class="list-row">
+    <view class="between">
+      <view class="row">
+        <text class="strong" style="font-size:36rpx;color:#0f9b80;">{{item.score}}</text>
+        <text class="muted" style="margin-left:4rpx;">分</text>
+        <text class="tag" style="margin-left:14rpx;">{{item.mode}}</text>
+      </view>
+      <text class="muted">{{item.time}}</text>
+    </view>
+    <view class="muted" style="margin-top:8rpx;">
+      答对 {{item.correct}}/{{item.total}} · 用时 {{item.duration}}
+    </view>
+  </view>
+</view>

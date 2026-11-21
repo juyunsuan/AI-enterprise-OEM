@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "佣金台账",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark",
+  "usingComponents": {}
+}

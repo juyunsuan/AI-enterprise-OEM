@@ -1,0 +1,45 @@
+.diy-notice {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 24rpx;
+  background: #fffbe6;
+  color: #8a6d1b;
+  font-size: 24rpx;
+  box-sizing: border-box;
+}
+
+.icon {
+  width: 32rpx;
+  height: 32rpx;
+  margin-right: 12rpx;
+  flex-shrink: 0;
+}
+
+.icon-text {
+  margin-right: 12rpx;
+  flex-shrink: 0;
+  font-weight: 600;
+}
+
+.track {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.roll {
+  display: inline-block;
+  white-space: nowrap;
+  animation-name: diy-notice-roll;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@keyframes diy-notice-roll {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}

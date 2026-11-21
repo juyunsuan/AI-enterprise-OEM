@@ -13,38 +13,14 @@ export const miniProgramApi = {
   bind: endpoint(endpoints.MiniProgram_bind),
 };
 
-/** 用户版小程序·平台管理端：配置、代码包台账、小程序码与内置包。 */
+/** 用户版小程序·平台管理端：配置、小程序码与内置包。 */
 export const miniProgramAdminApi = {
   settings: endpoint(endpoints.MiniProgramAdmin_settings),
   saveSettings: endpoint(endpoints.MiniProgramAdmin_saveSettings),
   test: endpoint(endpoints.MiniProgramAdmin_test),
-  releases: endpoint(endpoints.MiniProgramAdmin_releases),
-  saveRelease: endpoint(endpoints.MiniProgramAdmin_saveRelease),
-  updateRelease: endpoint(endpoints.MiniProgramAdmin_updateRelease),
-  removeRelease: endpoint(endpoints.MiniProgramAdmin_removeRelease),
-  downloadRelease: endpoint(endpoints.MiniProgramAdmin_downloadRelease),
   qrcode: endpoint(endpoints.MiniProgramAdmin_qrcode),
   builtin: endpoint(endpoints.MiniProgramAdmin_builtin),
-  uploadCode: endpoint(endpoints.MiniProgramAdmin_uploadCode),
 };
-
-/**
- * 代码包二进制直传本站 OSS（multipart，不进 JSON 契约）：
- * 后端算 SHA-256 并返回元数据，再由 saveRelease 带版本号落库。
- */
-export async function uploadMiniProgramRelease(
-  file: File,
-): Promise<MiniprogramPackageFile> {
-  const form = new FormData();
-  form.append("file", file);
-  const result = await http(
-    "/api/backend/enterprise/admin/miniprogram/releases/upload",
-    apiEnvelope(miniprogramPackageFileSchema),
-    { method: "POST", body: form, timeoutMs: 300000 },
-  );
-  if (!result.data.data) throw new Error("代码包上传没有返回结果");
-  return result.data.data;
-}
 
 /** 小程序码图片上传（UPLOAD 模式）：返回 OSS 元数据，再交给 qrcode 写回设置。 */
 export async function uploadMiniProgramQrcode(

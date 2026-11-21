@@ -73,14 +73,14 @@ describe('normalizeBoardTabs', () => {
  */
 describe('normalizeDownloadUrl', () => {
   it('保留 http(s) 与站内路径', () => {
-    expect(normalizeDownloadUrl('https://cdn.example.com/BotBuddy.exe')).toBe(
-      'https://cdn.example.com/BotBuddy.exe',
+    expect(normalizeDownloadUrl('https://cdn.example.com/AWBotDSH.exe')).toBe(
+      'https://cdn.example.com/AWBotDSH.exe',
     );
     expect(normalizeDownloadUrl('http://127.0.0.1:1690/downloads/a.exe')).toBe(
       'http://127.0.0.1:1690/downloads/a.exe',
     );
-    expect(normalizeDownloadUrl('/downloads/BotBuddy.exe')).toBe(
-      '/downloads/BotBuddy.exe',
+    expect(normalizeDownloadUrl('/downloads/AWBotDSH.exe')).toBe(
+      '/downloads/AWBotDSH.exe',
     );
   });
 

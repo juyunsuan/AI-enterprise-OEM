@@ -1,0 +1,16 @@
+<view class="diy-nav" wx:if="{{items.length}}">
+  <view class="wrap">
+    <view
+      class="cell"
+      wx:for="{{items}}"
+      wx:key="key"
+      style="{{item.style}}"
+      data-index="{{index}}"
+      bindtap="onTap"
+    >
+      <image wx:if="{{item.icon}}" class="icon" src="{{item.icon}}" mode="aspectFit" />
+      <view wx:else class="icon icon-empty"></view>
+      <view class="text ellipsis">{{item.text}}</view>
+    </view>
+  </view>
+</view>

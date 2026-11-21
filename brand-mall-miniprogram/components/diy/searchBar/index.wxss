@@ -1,0 +1,27 @@
+.diy-search-bar {
+  padding: 16rpx 24rpx;
+  box-sizing: border-box;
+}
+
+.bar {
+  height: 72rpx;
+  display: flex;
+  align-items: center;
+  background: #f7f8fa;
+  color: #9aa0aa;
+  font-size: 26rpx;
+  padding: 0 24rpx;
+  box-sizing: border-box;
+}
+
+.icon {
+  margin-right: 12rpx;
+  font-size: 24rpx;
+}
+
+.ph {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}

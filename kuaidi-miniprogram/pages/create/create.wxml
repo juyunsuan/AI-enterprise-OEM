@@ -1,0 +1,166 @@
+<view class="wrap">
+  <view wx:if="{{error}}" class="card">
+    <view class="error-box">{{error}}</view>
+    <view wx:if="{{needSite}}" class="btn btn-primary" style="margin-top:20rpx" bindtap="goPickSite">回首页选寄件点</view>
+    <view wx:else class="btn btn-primary" style="margin-top:20rpx" bindtap="retry">重新加载</view>
+  </view>
+
+  <view wx:elif="{{!ready}}" class="empty">正在加载…</view>
+
+  <block wx:else>
+    <!-- 寄件人 -->
+    <view class="card">
+      <view class="row" style="margin-bottom:8rpx">
+        <view class="section-title">寄件人</view>
+        <view wx:if="{{addressBook}}" class="link" data-type="SENDER" bindtap="chooseAddress">地址簿</view>
+      </view>
+      <view class="field">
+        <text class="field-label">姓名</text>
+        <input placeholder="寄件人姓名" placeholder-class="placeholder" value="{{sender.name}}" data-party="sender" data-field="name" bindinput="onPartyInput" />
+      </view>
+      <view class="field">
+        <text class="field-label">手机号</text>
+        <input type="number" maxlength="11" placeholder="11 位手机号" placeholder-class="placeholder" value="{{sender.mobile}}" data-party="sender" data-field="mobile" bindinput="onPartyInput" />
+      </view>
+      <view class="field">
+        <text class="field-label">省 / 市 / 区</text>
+        <input class="triple" placeholder="省" placeholder-class="placeholder" value="{{sender.province}}" data-party="sender" data-field="province" bindinput="onPartyInput" />
+        <input class="triple" placeholder="市" placeholder-class="placeholder" value="{{sender.city}}" data-party="sender" data-field="city" bindinput="onPartyInput" />
+        <input class="triple" placeholder="区" placeholder-class="placeholder" value="{{sender.district}}" data-party="sender" data-field="district" bindinput="onPartyInput" />
+      </view>
+      <view class="field last">
+        <text class="field-label">详细地址</text>
+        <input placeholder="街道、门牌号等" placeholder-class="placeholder" value="{{sender.address}}" data-party="sender" data-field="address" bindinput="onPartyInput" />
+      </view>
+    </view>
+
+    <!-- 收件人 -->
+    <view class="card">
+      <view class="row" style="margin-bottom:8rpx">
+        <view class="section-title">收件人</view>
+        <view wx:if="{{addressBook}}" class="link" data-type="RECEIVER" bindtap="chooseAddress">地址簿</view>
+      </view>
+      <view class="field">
+        <text class="field-label">姓名</text>
+        <input placeholder="收件人姓名" placeholder-class="placeholder" value="{{receiver.name}}" data-party="receiver" data-field="name" bindinput="onPartyInput" />
+      </view>
+      <view class="field">
+        <text class="field-label">手机号</text>
+        <input type="number" maxlength="11" placeholder="11 位手机号" placeholder-class="placeholder" value="{{receiver.mobile}}" data-party="receiver" data-field="mobile" bindinput="onPartyInput" />
+      </view>
+      <view class="field">
+        <text class="field-label">省 / 市 / 区</text>
+        <input class="triple" placeholder="省（用于算运费）" placeholder-class="placeholder" value="{{receiver.province}}" data-party="receiver" data-field="province" bindinput="onPartyInput" />
+        <input class="triple" placeholder="市" placeholder-class="placeholder" value="{{receiver.city}}" data-party="receiver" data-field="city" bindinput="onPartyInput" />
+        <input class="triple" placeholder="区" placeholder-class="placeholder" value="{{receiver.district}}" data-party="receiver" data-field="district" bindinput="onPartyInput" />
+      </view>
+      <view class="field last">
+        <text class="field-label">详细地址</text>
+        <input placeholder="街道、门牌号等" placeholder-class="placeholder" value="{{receiver.address}}" data-party="receiver" data-field="address" bindinput="onPartyInput" />
+      </view>
+    </view>
+
+    <!-- 包裹 -->
+    <view class="card">
+      <view class="section-title">包裹信息</view>
+      <view class="field">
+        <text class="field-label">物品名称</text>
+        <input placeholder="如：衣服、文件、日用品" placeholder-class="placeholder" value="{{itemName}}" data-field="itemName" bindinput="onFieldInput" />
+      </view>
+      <view class="field">
+        <text class="field-label">重量(kg)</text>
+        <input type="digit" placeholder="必填，用于计费" placeholder-class="placeholder" value="{{weight}}" data-field="weight" bindinput="onFieldInput" />
+        <text class="field-label small">件数</text>
+        <input type="number" class="count-input" value="{{count}}" bindinput="onCountInput" />
+      </view>
+      <view class="field">
+        <text class="field-label">长宽高(cm)</text>
+        <input class="triple" type="digit" placeholder="长" placeholder-class="placeholder" value="{{length}}" data-field="length" bindinput="onFieldInput" />
+        <input class="triple" type="digit" placeholder="宽" placeholder-class="placeholder" value="{{width}}" data-field="width" bindinput="onFieldInput" />
+        <input class="triple" type="digit" placeholder="高" placeholder-class="placeholder" value="{{height}}" data-field="height" bindinput="onFieldInput" />
+      </view>
+      <view wx:if="{{insuranceEnabled}}" class="field last">
+        <text class="field-label">保价(元)</text>
+        <input type="digit" placeholder="声明价值，0 为不保价" placeholder-class="placeholder" value="{{insuredValue}}" data-field="insuredValue" bindinput="onFieldInput" />
+      </view>
+      <view wx:if="{{insuranceEnabled && insuranceRateText}}" class="muted" style="margin-top:10rpx">{{insuranceRateText}}；单件保价上限以店方规则为准。</view>
+    </view>
+
+    <!-- 报价 -->
+    <view class="card">
+      <view class="row" style="margin-bottom:12rpx">
+        <view class="section-title">选择快递</view>
+        <view class="muted">{{chargeWeightText}}</view>
+      </view>
+
+      <view wx:if="{{!quotes.length}}" class="muted">填写重量和收件省份后点「获取报价」，多家快递的运费会列在这里。</view>
+
+      <view wx:for="{{quotes}}" wx:key="companyId" class="quote {{item.companyId === companyId ? 'active' : ''}}" data-id="{{item.companyId}}" bindtap="selectCompany">
+        <view class="quote-main">
+          <view class="row">
+            <text class="quote-name">{{item.name}}</text>
+            <text class="money">{{item.feeText}}</text>
+          </view>
+          <view class="muted">{{item.deliveryDays || "时效以实际为准"}}<text wx:if="{{item.remote}}"> · 偏远地区</text></view>
+          <view wx:if="{{item.remark}}" class="muted">{{item.remark}}</view>
+        </view>
+        <view class="quote-check">{{item.companyId === companyId ? "已选" : ""}}</view>
+      </view>
+
+      <view wx:if="{{quoteStale}}" class="muted stale">包裹信息已修改，请重新报价后再下单。</view>
+      <view wx:if="{{quoteError}}" class="error-box" style="margin-top:12rpx">{{quoteError}}</view>
+
+      <view class="btn btn-ghost" style="margin-top:16rpx" bindtap="quote">
+        {{quoting ? "报价中…" : (quotes.length ? "重新报价" : "获取报价")}}
+      </view>
+    </view>
+
+    <!-- 取件与备注 -->
+    <view wx:if="{{pickupTime && pickupSlots.length}}" class="card">
+      <view class="section-title">取件时段</view>
+      <picker mode="selector" range="{{pickupSlots}}" value="{{pickupSlotIndex}}" bindchange="onSlotChange">
+        <view class="field last">
+          <text class="field-label">期望时段</text>
+          <text class="{{pickupSlot ? '' : 'placeholder'}}">{{pickupSlot || "请选择（可不选，由店方联系确认）"}}</text>
+        </view>
+      </picker>
+    </view>
+
+    <view class="card">
+      <view class="section-title">备注</view>
+      <textarea class="remark" placeholder="如：放门口、电话联系等（选填）" placeholder-class="placeholder" maxlength="300" value="{{remark}}" data-field="remark" bindinput="onFieldInput" />
+    </view>
+
+    <view wx:if="{{protocolEnabled}}" class="card">
+      <checkbox-group bindchange="onAgreeChange">
+        <label class="agree-row">
+          <checkbox value="1" checked="{{agreed}}" color="#1f6feb" />
+          <text>我已阅读并同意</text>
+          <text class="link" catchtap="openProtocol">《寄件协议》</text>
+        </label>
+      </checkbox-group>
+    </view>
+
+    <view class="submit-placeholder"></view>
+    <view class="submit-bar">
+      <view class="grow">
+        <view wx:if="{{selectedQuote}}" class="muted">合计</view>
+        <view wx:if="{{selectedQuote}}" class="submit-total">{{selectedQuote.feeText}}</view>
+        <view wx:else class="muted">请先获取报价</view>
+      </view>
+      <view class="btn btn-primary submit-btn {{submitting ? 'disabled' : ''}}" bindtap="submit">
+        {{submitting ? "提交中…" : "提交订单"}}
+      </view>
+    </view>
+  </block>
+
+  <view wx:if="{{protocolOpen}}" class="mask" bindtap="closeProtocol">
+    <view class="sheet" catchtap="noop">
+      <view class="section-title">寄件协议</view>
+      <scroll-view scroll-y class="protocol-body">
+        <text>{{protocolText || "店方未配置协议正文，勾选即表示同意本单由店方承运并按页面报价支付运费。"}}</text>
+      </scroll-view>
+      <view class="btn btn-primary" style="margin-top:20rpx" bindtap="closeProtocol">我已知晓</view>
+    </view>
+  </view>
+</view>

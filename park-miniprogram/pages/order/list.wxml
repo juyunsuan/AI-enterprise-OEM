@@ -1,0 +1,18 @@
+<view class="wrap">
+  <view wx:if="{{!list.length && !loading}}" class="empty">暂无园区订单。</view>
+  <view wx:for="{{list}}" wx:key="id" class="card">
+    <view class="row">
+      <view class="section-title">{{item.title}}</view>
+      <text class="tag">{{item.statusLabel}}</text>
+    </view>
+    <view class="muted">{{item.orderNo}} · {{item.bizLabel}}</view>
+    <view class="row" style="margin-top: 12rpx;">
+      <view class="muted">{{item.createdAt}}</view>
+      <view class="section-title">¥{{item.amount}}</view>
+    </view>
+    <view wx:if="{{item.status === 'PENDING'}}" class="row" style="margin-top: 12rpx;">
+      <text class="tag orange">待支付</text>
+      <text class="btn small" data-id="{{item.id}}" bindtap="pay">去支付</text>
+    </view>
+  </view>
+</view>

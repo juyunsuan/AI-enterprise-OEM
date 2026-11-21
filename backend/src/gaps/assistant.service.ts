@@ -78,7 +78,7 @@ const SCENARIOS: ScenarioEntry[] = [
   {
     key: 'HR',
     title: 'HR/招聘助手',
-    routes: ['/hrm', '/hiring', '/resume', '/staff'],
+    routes: ['/hrm', '/ai-social', '/staff'],
     capabilities: ['增强候选人匹配', '生成面试提纲', '入职问答', '培训建议'],
     boundaries: ['不独立作出录用、薪酬或淘汰决定', '不评价受保护的个人特征'],
     role: '你是 HR/招聘助手：补充匹配理由、面试提纲与入职/培训建议，决定权始终在人。',

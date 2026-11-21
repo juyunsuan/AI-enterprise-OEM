@@ -1,0 +1,45 @@
+<view class="card">
+  <view class="title">紧急情况求助</view>
+  <view class="muted tip">点击下方按钮会把你的当前定位与联系方式上报给店主与平台，用于紧急求助。请先确保自身安全，不要与对方发生冲突。</view>
+  <view class="notice" wx:if="{{!alertEnabled}}">店主尚未开启一键报警，提交会被拒绝。请直接拨打下方店主电话或 110。</view>
+  <view class="notice notice-ok" wx:if="{{reportedAt}}">
+    <view>已上报，上报时间（本机时间）{{reportedAt}}，当前状态：{{statusText}}。</view>
+    <view wx:if="{{duplicated}}">检测到你已有未处理的求救记录，本次没有重复创建，请勿重复上报。</view>
+    <view>请保持电话畅通，留意店主来电。</view>
+  </view>
+  <view class="error" wx:if="{{errorText}}">{{errorText}}</view>
+  <button class="button-danger" bindtap="send" loading="{{sending}}" disabled="{{sending}}">一键求救（上报定位）</button>
+</view>
+
+<view class="card">
+  <view class="field">
+    <text class="label">关联订单</text>
+    <picker range="{{orderOptions}}" value="{{orderPickIndex}}" bindchange="onOrderChange">
+      <view class="picker-value">{{orderOptions[orderPickIndex]}}</view>
+    </picker>
+  </view>
+  <view class="field">
+    <text class="label">补充说明</text>
+    <input class="input" maxlength="300" value="{{remark}}" bindinput="onRemarkInput" placeholder="选填，例如 顾客情绪激动、地址有风险" />
+  </view>
+  <view class="muted tip">取不到定位时也会如实上报求救（不带坐标），请不要因为定位失败而放弃求助。</view>
+</view>
+
+<view class="card">
+  <view class="title">电话求助</view>
+  <view class="line">
+    <text class="label">店主电话</text>
+    <view class="value">
+      <text>{{shopPhone || '店铺未配置客服电话'}}</text>
+      <text class="action" wx:if="{{shopPhone}}" bindtap="callShop">拨打</text>
+    </view>
+  </view>
+  <view class="line">
+    <text class="label">报警电话</text>
+    <view class="value">
+      <text>110</text>
+      <text class="action action-danger" bindtap="callPolice">拨打</text>
+    </view>
+  </view>
+  <view class="muted tip">110 需要你自行拨打确认；本页不会代拨，也不会声称已通知警方。</view>
+</view>

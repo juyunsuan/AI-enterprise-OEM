@@ -8,6 +8,11 @@ import { requestMemo } from './request-context';
  * 业务代码不再直接把「本系统会话令牌」当上游凭证，而是经这里换成用户绑定的
  * AIPDD APIKey（解密后即用即弃）；未绑定用户触发上游动作时给出引导性 403。
  * 解析结果按请求缓存（requestMemo），同一请求多次消费只查一次库。
+ *
+ * 【不迁到 `auth/mini-token-factory` 的原因】本文件名字带 token，但它不签发也不验签
+ * 任何 JWT——没有 issuer、没有 HMAC 派生密钥、没有 TTL，只是「会话用户 id → 上游 APIKey」
+ * 的解析与缓存入口，与小程序令牌（顾客/技师/代理/医护/商户）不是同一类东西，
+ * 套工厂反而会引入错误语义（HS256 验签、401 文案），故保持原实现。
  */
 type Resolver = (userId: string) => Promise<string>;
 let resolver: Resolver | null = null;

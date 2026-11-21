@@ -1,0 +1,30 @@
+<view class="page">
+  <scroll-view class="filter-bar" scroll-x="true" enable-flex="true">
+    <view
+      class="filter {{status === item.key ? 'active' : ''}}"
+      wx:for="{{filters}}"
+      wx:key="key"
+      data-key="{{item.key}}"
+      bindtap="changeFilter"
+    >{{item.label}}</view>
+  </scroll-view>
+
+  <view class="empty" wx:if="{{loading && !rows.length}}">正在加载租单…</view>
+  <view class="empty" wx:elif="{{error}}">{{error}}</view>
+  <view class="empty" wx:elif="{{!rows.length}}">当前筛选下没有租单</view>
+
+  <view class="card" wx:for="{{rows}}" wx:key="id" data-id="{{item.id}}" bindtap="openDetail">
+    <view class="row">
+      <text class="item-title">{{item.itemName}}</text>
+      <text class="status">{{item.statusLabel}}</text>
+    </view>
+    <view class="muted" style="margin-top: 8rpx;">{{item.periodText}} · 共 {{item.days}} 天</view>
+    <view class="row" style="margin-top: 10rpx;">
+      <text class="muted">{{item.customerName}}</text>
+      <text class="price">{{item.payText}}</text>
+    </view>
+    <view class="muted" style="margin-top: 6rpx;" data-phone="{{item.customerPhone}}" catchtap="callCustomer" wx:if="{{item.customerPhone}}">
+      电话 {{item.customerPhone}}（点击拨打）
+    </view>
+  </view>
+</view>

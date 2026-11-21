@@ -1,0 +1,76 @@
+<view class="page">
+  <view class="card">
+    <view class="field">
+      <view class="field-label">收货人 <text class="field-required">*</text></view>
+      <input
+        class="input"
+        maxlength="60"
+        placeholder="收货人姓名"
+        value="{{form.receiver}}"
+        data-field="receiver"
+        bindinput="onInput"
+      />
+    </view>
+
+    <view class="field">
+      <view class="field-label">手机号 <text class="field-required" wx:if="{{!id}}">*</text></view>
+      <input
+        class="input"
+        type="number"
+        maxlength="11"
+        placeholder="用于收货联系"
+        value="{{form.phone}}"
+        data-field="phone"
+        bindinput="onInput"
+      />
+      <view class="item-meta" wx:if="{{phoneHint}}">{{phoneHint}}</view>
+    </view>
+
+    <view class="field">
+      <view class="field-label">所在地区</view>
+      <picker mode="region" value="{{form.region}}" bindchange="onRegion">
+        <view class="picker-field {{regionText ? '' : 'picker-placeholder'}}">
+          {{regionText || '请选择省 / 市 / 区'}}
+        </view>
+      </picker>
+    </view>
+
+    <view class="field">
+      <view class="field-label">详细地址 <text class="field-required">*</text></view>
+      <textarea
+        class="textarea"
+        maxlength="200"
+        placeholder="街道、门牌号、楼栋与房间号"
+        value="{{form.detail}}"
+        data-field="detail"
+        bindinput="onInput"
+      ></textarea>
+    </view>
+
+    <view class="field">
+      <view class="field-label">地址标签</view>
+      <view class="pills">
+        <view
+          class="pill {{form.tag === item ? 'pill-active' : ''}}"
+          wx:for="{{tags}}"
+          wx:key="*this"
+          data-tag="{{item}}"
+          bindtap="onTag"
+        >{{item}}</view>
+      </view>
+    </view>
+
+    <view class="default-row">
+      <text class="kv-label">设为默认地址</text>
+      <switch checked="{{form.isDefault}}" color="#1a73e8" bindchange="onDefault" />
+    </view>
+  </view>
+
+  <view class="footer">
+    <button
+      class="button-primary"
+      disabled="{{saving}}"
+      bindtap="onSubmit"
+    >{{saving ? '保存中…' : '保存'}}</button>
+  </view>
+</view>

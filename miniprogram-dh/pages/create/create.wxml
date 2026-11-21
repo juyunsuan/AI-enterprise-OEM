@@ -1,0 +1,196 @@
+<view class="page" style="{{themeStyle}}">
+  <view class="card">
+    <view class="row between">
+      <view class="card-title">选择形象</view>
+      <view class="muted" bindtap="goBodies">管理形象 ›</view>
+    </view>
+    <scroll-view class="hscroll" scroll-x>
+      <view
+        class="hscroll-item body-chip {{bodyId === 0 ? 'on' : ''}}"
+        data-id="0"
+        bindtap="selectBody"
+      >
+        <view class="body-thumb body-thumb-empty">音</view>
+        <view class="body-thumb-name">纯音频</view>
+      </view>
+      <view
+        wx:for="{{bodies}}"
+        wx:key="id"
+        class="hscroll-item body-chip {{bodyId === item.id ? 'on' : ''}}"
+        data-id="{{item.id}}"
+        data-name="{{item.name}}"
+        bindtap="selectBody"
+      >
+        <image wx:if="{{item.coverUrl}}" class="body-thumb" src="{{item.coverUrl}}" mode="aspectFill" />
+        <view wx:else class="body-thumb body-thumb-empty">形</view>
+        <view class="body-thumb-name">{{item.name}}</view>
+      </view>
+    </scroll-view>
+    <view wx:if="{{!bodies.length}}" class="muted hint">
+      还没有可用形象，先去「形象克隆」训练一个，或直接选纯音频。
+    </view>
+  </view>
+
+  <view class="card">
+    <view wx:if="{{toggles.ttsAudio}}" class="chips">
+      <view class="chip {{audioType === 'tts' ? 'on' : ''}}" data-type="tts" bindtap="switchAudio">文字转语音</view>
+      <view class="chip {{audioType === 'audio' ? 'on' : ''}}" data-type="audio" bindtap="switchAudio">上传音频</view>
+    </view>
+
+    <block wx:if="{{audioType === 'tts'}}">
+      <view class="line" bindtap="openVoicePicker">
+        <text>音色</text>
+        <view class="row">
+          <text class="muted">{{voiceLabel || '请选择'}}</text>
+          <text class="arrow">›</text>
+        </view>
+      </view>
+
+      <view class="row between script-head">
+        <text>文案</text>
+        <view class="row">
+          <text wx:if="{{toggles.aiWrite}}" class="primary ai-link" bindtap="goWrite">AI 写作</text>
+          <text class="muted count">{{script.length}}/{{scriptMaxLen}}</text>
+        </view>
+      </view>
+      <textarea
+        class="textarea"
+        value="{{script}}"
+        maxlength="{{scriptMaxLen}}"
+        placeholder="输入要说的文案，建议 50-300 字，口语化更自然"
+        bindinput="onScript"
+      />
+
+      <view class="line">
+        <text>语速 {{speed / 100}}x</text>
+        <slider
+          class="slider"
+          min="50"
+          max="200"
+          step="10"
+          value="{{speed}}"
+          activeColor="#3370ff"
+          bindchange="onSpeed"
+        />
+      </view>
+
+      <view class="line" bindtap="openBgmPicker">
+        <text>背景音乐</text>
+        <view class="row">
+          <text class="muted">{{bgmLabel}}</text>
+          <text class="arrow">›</text>
+        </view>
+      </view>
+      <view wx:if="{{bgmId}}" class="line">
+        <text>音乐音量 {{bgmVolume}}%</text>
+        <slider
+          class="slider"
+          min="0"
+          max="100"
+          step="5"
+          value="{{bgmVolume}}"
+          activeColor="#3370ff"
+          bindchange="onBgmVolume"
+        />
+      </view>
+
+      <view class="line">
+        <text>显示字幕</text>
+        <switch checked="{{subtitleOn}}" color="#3370ff" bindchange="onSubtitle" />
+      </view>
+    </block>
+
+    <block wx:else>
+      <view class="upload-box" bindtap="chooseAudio">
+        <view wx:if="{{busy}}" class="muted">上传中 {{progress}}%</view>
+        <view wx:elif="{{sourceAudioName}}" class="primary">{{sourceAudioName}}</view>
+        <view wx:else class="muted">选择 mp3 / wav / m4a / aac 音频</view>
+      </view>
+      <view class="muted hint">上传音频后，系统会对口型合成到所选形象；不选形象则直接输出音频。</view>
+    </block>
+  </view>
+
+  <view class="cost-bar">
+    <view class="cost">
+      <view class="cost-value">{{pointCost}}</view>
+      <view class="cost-label">{{pricing.pointTitle || '算力'}}</view>
+    </view>
+    <view class="balance">当前 {{member.point || 0}}</view>
+    <view class="submit {{busy ? 'disabled' : ''}}" bindtap="submit">{{busy ? '处理中…' : '开始合成'}}</view>
+  </view>
+
+  <view wx:if="{{picker === 'voice'}}" class="mask" bindtap="closePicker">
+    <view class="sheet" catchtap="noop">
+      <view class="sheet-title">选择音色</view>
+      <view class="chips">
+        <view class="chip {{pickerTab === 'mine' ? 'on' : ''}}" data-tab="mine" bindtap="setPickerTab">我的声音</view>
+        <view class="chip {{pickerTab === 'preset' ? 'on' : ''}}" data-tab="preset" bindtap="setPickerTab">预设音色</view>
+      </view>
+
+      <scroll-view class="sheet-body" scroll-y>
+        <block wx:if="{{pickerTab === 'mine'}}">
+          <view wx:if="{{!mineVoices.length}}" class="empty">
+            还没有克隆声音
+            <view class="link" bindtap="goVoices">去克隆声音</view>
+          </view>
+          <view
+            wx:for="{{mineVoices}}"
+            wx:key="id"
+            class="voice-row"
+            data-source="clone"
+            data-id="{{item.id}}"
+            data-name="{{item.name}}"
+            data-demo="{{item.demoUrl}}"
+            bindtap="pickVoice"
+          >
+            <text>{{item.name}}</text>
+            <text wx:if="{{voiceId === item.id}}" class="primary">已选</text>
+          </view>
+        </block>
+        <block wx:else>
+          <view wx:if="{{!presetGroups.length}}" class="empty">站点暂未配置预设音色</view>
+          <view wx:for="{{presetGroups}}" wx:key="id" class="group">
+            <view class="group-name">{{item.name}}</view>
+            <view
+              wx:for="{{item.voices}}"
+              wx:for-item="voice"
+              wx:key="id"
+              class="voice-row"
+              data-source="preset"
+              data-id="{{voice.id}}"
+              data-name="{{voice.name}}"
+              data-demo="{{voice.demoUrl}}"
+              bindtap="pickVoice"
+            >
+              <text>{{voice.name}}</text>
+              <text wx:if="{{voiceId === voice.id}}" class="primary">已选</text>
+            </view>
+          </view>
+        </block>
+      </scroll-view>
+    </view>
+  </view>
+
+  <view wx:if="{{picker === 'bgm'}}" class="mask" bindtap="closePicker">
+    <view class="sheet" catchtap="noop">
+      <view class="sheet-title">背景音乐</view>
+      <scroll-view class="sheet-body" scroll-y>
+        <view class="voice-row" data-id="0" data-name="无" bindtap="pickBgm">
+          <text>不使用背景音乐</text>
+          <text wx:if="{{bgmId === 0}}" class="primary">已选</text>
+        </view>
+        <view
+          wx:for="{{bgms}}"
+          wx:key="id"
+          class="voice-row"
+          data-id="{{item.id}}"
+          data-name="{{item.name}}"
+          bindtap="pickBgm"
+        >
+          <text>{{item.name}}</text>
+          <text wx:if="{{bgmId === item.id}}" class="primary">已选</text>
+        </view>
+      </scroll-view>
+    </view>
+  </view>
+</view>

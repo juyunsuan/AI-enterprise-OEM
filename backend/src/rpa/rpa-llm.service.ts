@@ -325,7 +325,7 @@ function buildPrompt(
     deviceType === 'pc'
       ? '运行环境：本地比特浏览器（PC 客户端）里打开窗口跑网页，用 Automa 或浏览器内 JS / Python 操作页面。'
       : deviceType === 'botbuddy'
-        ? '运行环境：BotBuddy 客户端自带的内核级指纹窗口（改造版 Chromium），窗口里默认装了 Automa 浏览器扩展；执行端把这份工作流原样交给 Automa 触发，所以只写 Automa 认得的节点，不要写只能靠外部驱动（Playwright / Appium）实现的步骤，也不要假设能读本机文件系统的凭据。'
+        ? '运行环境：AWBotDSH 客户端自带的内核级指纹窗口（改造版 Chromium），窗口里默认装了 Automa 浏览器扩展；执行端把这份工作流原样交给 Automa 触发，所以只写 Automa 认得的节点，不要写只能靠外部驱动（Playwright / Appium）实现的步骤，也不要假设能读本机文件系统的凭据。'
         : deviceType === 'android'
           ? '运行环境：本地执行端通过比特浏览器云手机接口（POST /phone/openphone、/phone/running、/phone/installApp、/phone/launchApp、/phone/uploadFile 等）操作一台安卓云手机，脚本要用 HTTP 接口驱动设备，不要写只能在本机浏览器里跑的 DOM 代码。'
           : '运行环境：iPhone 云手机。比特浏览器对 iOS 只开放环境管理，没有控制接口也没有 RPA，脚本要写成能被执行端自己的 iOS 工具链（Appium / WebDriverAgent）调用的通用步骤，所有对外交互走 HTTP。';

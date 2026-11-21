@@ -1,46 +1,46 @@
 {
   "tool": "escape-audit",
   "version": 2,
-  "commit": "48a317b",
-  "date": "2026-11-14",
+  "commit": "afe4402",
+  "date": "2026-11-21",
   "root": "E:\\wwwroot\\oem-enterprise",
-  "files": 1815,
-  "candidates": 2503,
-  "untracked": 127,
+  "files": 3079,
+  "candidates": 13565,
+  "untracked": 1157,
   "missing": [
-    "frontend/src/app/workbuddy/_components/model-setting.tsx"
+    "backend/src/miniprogram/miniprogram-ci.service.ts"
   ],
   "excluded": {
-    "dir": 0,
+    "dir": 1018,
     "instrument": 2
   },
-  "loc": 658248,
-  "prodLoc": 586121,
-  "total": 6,
-  "prodTotal": 4,
-  "unallowlisted": 0,
+  "loc": 1047983,
+  "prodLoc": 889443,
+  "total": 309,
+  "prodTotal": 274,
+  "unallowlisted": 303,
   "allowMatched": 6,
   "allowStale": [],
-  "density": 0.01,
+  "density": 0.31,
   "byCat": {
     "asNever": {
-      "total": 0,
-      "prod": 0,
-      "test": 0,
+      "total": 99,
+      "prod": 77,
+      "test": 22,
       "script": 0,
       "dts": 0
     },
     "asAny": {
-      "total": 0,
-      "prod": 0,
+      "total": 8,
+      "prod": 8,
       "test": 0,
       "script": 0,
       "dts": 0
     },
     "asUnknownAs": {
-      "total": 3,
-      "prod": 1,
-      "test": 0,
+      "total": 179,
+      "prod": 167,
+      "test": 10,
       "script": 2,
       "dts": 0
     },
@@ -59,17 +59,17 @@
       "dts": 0
     },
     "eslintDisable": {
-      "total": 3,
-      "prod": 3,
+      "total": 17,
+      "prod": 17,
       "test": 0,
       "script": 0,
       "dts": 0
     },
     "explicitAny": {
-      "total": 0,
-      "prod": 0,
+      "total": 6,
+      "prod": 5,
       "test": 0,
-      "script": 0,
+      "script": 1,
       "dts": 0
     },
     "tsNocheck": {
@@ -81,39 +81,159 @@
     }
   },
   "byRole": {
+    "script": {
+      "files": 681,
+      "loc": 109066,
+      "total": 3
+    },
     "prod": {
-      "files": 1494,
-      "loc": 586121,
-      "total": 4
+      "files": 2146,
+      "loc": 889443,
+      "total": 274
     },
     "test": {
-      "files": 172,
-      "loc": 33149,
-      "total": 0
-    },
-    "script": {
-      "files": 149,
-      "loc": 38978,
-      "total": 2
+      "files": 252,
+      "loc": 49474,
+      "total": 32
     }
   },
   "workspaces": [
     {
+      "ws": "backend",
+      "files": 1287,
+      "loc": 497204,
+      "prodFiles": 1037,
+      "prodLoc": 447985,
+      "total": 259,
+      "prodTotal": 226,
+      "density": 0.5,
+      "cats": {
+        "asNever": 98,
+        "asAny": 0,
+        "asUnknownAs": 160,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 1,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      },
+      "prodCats": {
+        "asNever": 76,
+        "asAny": 0,
+        "asUnknownAs": 149,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 1,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      }
+    },
+    {
       "ws": "frontend",
-      "files": 687,
-      "loc": 222943,
-      "prodFiles": 677,
-      "prodLoc": 222315,
-      "total": 4,
-      "prodTotal": 3,
-      "density": 0.01,
+      "files": 981,
+      "loc": 337336,
+      "prodFiles": 970,
+      "prodLoc": 336575,
+      "total": 32,
+      "prodTotal": 31,
+      "density": 0.09,
+      "cats": {
+        "asNever": 1,
+        "asAny": 0,
+        "asUnknownAs": 15,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 16,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      },
+      "prodCats": {
+        "asNever": 1,
+        "asAny": 0,
+        "asUnknownAs": 14,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 16,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      }
+    },
+    {
+      "ws": "services",
+      "files": 29,
+      "loc": 5977,
+      "prodFiles": 15,
+      "prodLoc": 3874,
+      "total": 17,
+      "prodTotal": 17,
+      "density": 4.39,
+      "cats": {
+        "asNever": 0,
+        "asAny": 8,
+        "asUnknownAs": 4,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 5,
+        "tsNocheck": 0
+      },
+      "prodCats": {
+        "asNever": 0,
+        "asAny": 8,
+        "asUnknownAs": 4,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 5,
+        "tsNocheck": 0
+      }
+    },
+    {
+      "ws": "bot-host-client",
+      "files": 133,
+      "loc": 31151,
+      "prodFiles": 36,
+      "prodLoc": 13502,
+      "total": 1,
+      "prodTotal": 0,
+      "density": 0,
       "cats": {
         "asNever": 0,
         "asAny": 0,
-        "asUnknownAs": 1,
+        "asUnknownAs": 0,
         "tsIgnore": 0,
         "tsExpectError": 0,
-        "eslintDisable": 3,
+        "eslintDisable": 0,
+        "explicitAny": 1,
+        "tsNocheck": 0
+      },
+      "prodCats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      }
+    },
+    {
+      "ws": ".tmp-fde-smoke.mjs",
+      "files": 1,
+      "loc": 86,
+      "prodFiles": 0,
+      "prodLoc": 0,
+      "total": 0,
+      "prodTotal": 0,
+      "density": 0,
+      "cats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
         "explicitAny": 0,
         "tsNocheck": 0
       },
@@ -123,24 +243,24 @@
         "asUnknownAs": 0,
         "tsIgnore": 0,
         "tsExpectError": 0,
-        "eslintDisable": 3,
+        "eslintDisable": 0,
         "explicitAny": 0,
         "tsNocheck": 0
       }
     },
     {
-      "ws": "backend",
-      "files": 914,
-      "loc": 333059,
-      "prodFiles": 733,
-      "prodLoc": 298143,
-      "total": 2,
-      "prodTotal": 1,
+      "ws": "brand-mall-miniprogram",
+      "files": 46,
+      "loc": 4741,
+      "prodFiles": 0,
+      "prodLoc": 0,
+      "total": 0,
+      "prodTotal": 0,
       "density": 0,
       "cats": {
         "asNever": 0,
         "asAny": 0,
-        "asUnknownAs": 2,
+        "asUnknownAs": 0,
         "tsIgnore": 0,
         "tsExpectError": 0,
         "eslintDisable": 0,
@@ -150,7 +270,7 @@
       "prodCats": {
         "asNever": 0,
         "asAny": 0,
-        "asUnknownAs": 1,
+        "asUnknownAs": 0,
         "tsIgnore": 0,
         "tsExpectError": 0,
         "eslintDisable": 0,
@@ -159,11 +279,71 @@
       }
     },
     {
-      "ws": "bot-host-client",
-      "files": 25,
-      "loc": 7934,
-      "prodFiles": 19,
-      "prodLoc": 6590,
+      "ws": "card-shop-miniprogram",
+      "files": 23,
+      "loc": 2630,
+      "prodFiles": 0,
+      "prodLoc": 0,
+      "total": 0,
+      "prodTotal": 0,
+      "density": 0,
+      "cats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      },
+      "prodCats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      }
+    },
+    {
+      "ws": "circle-miniprogram",
+      "files": 23,
+      "loc": 2171,
+      "prodFiles": 0,
+      "prodLoc": 0,
+      "total": 0,
+      "prodTotal": 0,
+      "density": 0,
+      "cats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      },
+      "prodCats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      }
+    },
+    {
+      "ws": "errand-miniprogram",
+      "files": 20,
+      "loc": 2345,
+      "prodFiles": 0,
+      "prodLoc": 0,
       "total": 0,
       "prodTotal": 0,
       "density": 0,
@@ -191,7 +371,7 @@
     {
       "ws": "extensions",
       "files": 11,
-      "loc": 9158,
+      "loc": 9160,
       "prodFiles": 0,
       "prodLoc": 0,
       "total": 0,
@@ -249,9 +429,219 @@
       }
     },
     {
+      "ws": "kuaidi-miniprogram",
+      "files": 17,
+      "loc": 2047,
+      "prodFiles": 0,
+      "prodLoc": 0,
+      "total": 0,
+      "prodTotal": 0,
+      "density": 0,
+      "cats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      },
+      "prodCats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      }
+    },
+    {
       "ws": "miniprogram",
-      "files": 18,
-      "loc": 1535,
+      "files": 23,
+      "loc": 2468,
+      "prodFiles": 0,
+      "prodLoc": 0,
+      "total": 0,
+      "prodTotal": 0,
+      "density": 0,
+      "cats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      },
+      "prodCats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      }
+    },
+    {
+      "ws": "miniprogram-dh",
+      "files": 28,
+      "loc": 3400,
+      "prodFiles": 0,
+      "prodLoc": 0,
+      "total": 0,
+      "prodTotal": 0,
+      "density": 0,
+      "cats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      },
+      "prodCats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      }
+    },
+    {
+      "ws": "miniprogram-health",
+      "files": 64,
+      "loc": 8090,
+      "prodFiles": 0,
+      "prodLoc": 0,
+      "total": 0,
+      "prodTotal": 0,
+      "density": 0,
+      "cats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      },
+      "prodCats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      }
+    },
+    {
+      "ws": "miniprogram-kp",
+      "files": 29,
+      "loc": 3345,
+      "prodFiles": 0,
+      "prodLoc": 0,
+      "total": 0,
+      "prodTotal": 0,
+      "density": 0,
+      "cats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      },
+      "prodCats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      }
+    },
+    {
+      "ws": "miniprogram-onsite",
+      "files": 57,
+      "loc": 9221,
+      "prodFiles": 0,
+      "prodLoc": 0,
+      "total": 0,
+      "prodTotal": 0,
+      "density": 0,
+      "cats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      },
+      "prodCats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      }
+    },
+    {
+      "ws": "miniprogram-rental",
+      "files": 23,
+      "loc": 1873,
+      "prodFiles": 0,
+      "prodLoc": 0,
+      "total": 0,
+      "prodTotal": 0,
+      "density": 0,
+      "cats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      },
+      "prodCats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      }
+    },
+    {
+      "ws": "mp-miniprogram",
+      "files": 27,
+      "loc": 3487,
       "prodFiles": 0,
       "prodLoc": 0,
       "total": 0,
@@ -280,10 +670,70 @@
     },
     {
       "ws": "packages/contracts",
-      "files": 65,
-      "loc": 59073,
-      "prodFiles": 65,
-      "prodLoc": 59073,
+      "files": 88,
+      "loc": 87507,
+      "prodFiles": 88,
+      "prodLoc": 87507,
+      "total": 0,
+      "prodTotal": 0,
+      "density": 0,
+      "cats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      },
+      "prodCats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      }
+    },
+    {
+      "ws": "park-miniprogram",
+      "files": 27,
+      "loc": 2422,
+      "prodFiles": 0,
+      "prodLoc": 0,
+      "total": 0,
+      "prodTotal": 0,
+      "density": 0,
+      "cats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      },
+      "prodCats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      }
+    },
+    {
+      "ws": "quiz-miniprogram",
+      "files": 17,
+      "loc": 2199,
+      "prodFiles": 0,
+      "prodLoc": 0,
       "total": 0,
       "prodTotal": 0,
       "density": 0,
@@ -310,8 +760,128 @@
     },
     {
       "ws": "scripts",
-      "files": 94,
-      "loc": 24443,
+      "files": 101,
+      "loc": 25946,
+      "prodFiles": 0,
+      "prodLoc": 0,
+      "total": 0,
+      "prodTotal": 0,
+      "density": 0,
+      "cats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      },
+      "prodCats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      }
+    },
+    {
+      "ws": "shared",
+      "files": 2,
+      "loc": 479,
+      "prodFiles": 0,
+      "prodLoc": 0,
+      "total": 0,
+      "prodTotal": 0,
+      "density": 0,
+      "cats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      },
+      "prodCats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      }
+    },
+    {
+      "ws": "takeout-miniprogram",
+      "files": 19,
+      "loc": 2502,
+      "prodFiles": 0,
+      "prodLoc": 0,
+      "total": 0,
+      "prodTotal": 0,
+      "density": 0,
+      "cats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      },
+      "prodCats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      }
+    },
+    {
+      "ws": "tmp-onsite-cov.mjs",
+      "files": 1,
+      "loc": 17,
+      "prodFiles": 0,
+      "prodLoc": 0,
+      "total": 0,
+      "prodTotal": 0,
+      "density": 0,
+      "cats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      },
+      "prodCats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      }
+    },
+    {
+      "ws": "tmp-p2-ddl-check.mjs",
+      "files": 1,
+      "loc": 76,
       "prodFiles": 0,
       "prodLoc": 0,
       "total": 0,
@@ -341,12 +911,28 @@
   ],
   "topFiles": [
     {
-      "file": "backend/src/http/automation-routes.ts",
+      "file": "backend/src/knowledge-pay/kp.service.ts",
       "role": "prod",
-      "loc": 2182,
-      "total": 1,
+      "loc": 2401,
+      "total": 19,
       "cats": {
-        "asNever": 0,
+        "asNever": 19,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      }
+    },
+    {
+      "file": "backend/src/bot-host/agent-dispatch.service.spec.ts",
+      "role": "test",
+      "loc": 1212,
+      "total": 18,
+      "cats": {
+        "asNever": 17,
         "asAny": 0,
         "asUnknownAs": 1,
         "tsIgnore": 0,
@@ -357,14 +943,14 @@
       }
     },
     {
-      "file": "backend/test/doubles.ts",
-      "role": "script",
-      "loc": 9,
-      "total": 1,
+      "file": "backend/src/errand/errand.order.service.ts",
+      "role": "prod",
+      "loc": 1821,
+      "total": 14,
       "cats": {
         "asNever": 0,
         "asAny": 0,
-        "asUnknownAs": 1,
+        "asUnknownAs": 14,
         "tsIgnore": 0,
         "tsExpectError": 0,
         "eslintDisable": 0,
@@ -373,62 +959,270 @@
       }
     },
     {
-      "file": "frontend/src/app/agent/_components/chat-panel.tsx",
+      "file": "backend/src/card-shop/card-shop.order.service.ts",
       "role": "prod",
-      "loc": 2408,
-      "total": 1,
+      "loc": 1582,
+      "total": 13,
       "cats": {
         "asNever": 0,
         "asAny": 0,
-        "asUnknownAs": 0,
+        "asUnknownAs": 13,
         "tsIgnore": 0,
         "tsExpectError": 0,
-        "eslintDisable": 1,
+        "eslintDisable": 0,
         "explicitAny": 0,
         "tsNocheck": 0
       }
     },
     {
-      "file": "frontend/src/components/ui/raw-img.tsx",
+      "file": "backend/src/park/park.controller.ts",
       "role": "prod",
-      "loc": 13,
-      "total": 1,
+      "loc": 441,
+      "total": 12,
       "cats": {
-        "asNever": 0,
+        "asNever": 12,
         "asAny": 0,
         "asUnknownAs": 0,
         "tsIgnore": 0,
         "tsExpectError": 0,
-        "eslintDisable": 1,
+        "eslintDisable": 0,
         "explicitAny": 0,
         "tsNocheck": 0
       }
     },
     {
-      "file": "frontend/src/lib/session.tsx",
+      "file": "backend/src/marketplace/mp.coupon.service.ts",
       "role": "prod",
-      "loc": 123,
-      "total": 1,
+      "loc": 856,
+      "total": 10,
       "cats": {
         "asNever": 0,
         "asAny": 0,
-        "asUnknownAs": 0,
+        "asUnknownAs": 10,
         "tsIgnore": 0,
         "tsExpectError": 0,
-        "eslintDisable": 1,
+        "eslintDisable": 0,
         "explicitAny": 0,
         "tsNocheck": 0
       }
     },
     {
-      "file": "frontend/src/test/doubles.ts",
-      "role": "script",
-      "loc": 9,
-      "total": 1,
+      "file": "services/awbot-remote/src/server.ts",
+      "role": "prod",
+      "loc": 461,
+      "total": 9,
+      "cats": {
+        "asNever": 0,
+        "asAny": 7,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 2,
+        "tsNocheck": 0
+      }
+    },
+    {
+      "file": "backend/src/errand/errand.rider.service.ts",
+      "role": "prod",
+      "loc": 645,
+      "total": 8,
       "cats": {
         "asNever": 0,
         "asAny": 0,
-        "asUnknownAs": 1,
+        "asUnknownAs": 8,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      }
+    },
+    {
+      "file": "backend/src/errand/errand.site.service.ts",
+      "role": "prod",
+      "loc": 955,
+      "total": 8,
+      "cats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 8,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      }
+    },
+    {
+      "file": "backend/src/errand/errand.agent.service.ts",
+      "role": "prod",
+      "loc": 741,
+      "total": 7,
+      "cats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 7,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      }
+    },
+    {
+      "file": "backend/src/health/health.order.service.ts",
+      "role": "prod",
+      "loc": 1000,
+      "total": 7,
+      "cats": {
+        "asNever": 7,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      }
+    },
+    {
+      "file": "backend/src/marketplace/mp.merchant.routes.ts",
+      "role": "prod",
+      "loc": 390,
+      "total": 7,
+      "cats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 7,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      }
+    },
+    {
+      "file": "backend/src/brand-mall/brand.coupon.service.ts",
+      "role": "prod",
+      "loc": 558,
+      "total": 6,
+      "cats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 6,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      }
+    },
+    {
+      "file": "backend/src/health/health.content.service.ts",
+      "role": "prod",
+      "loc": 1899,
+      "total": 6,
+      "cats": {
+        "asNever": 6,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      }
+    },
+    {
+      "file": "backend/src/health/health.finance.service.ts",
+      "role": "prod",
+      "loc": 798,
+      "total": 6,
+      "cats": {
+        "asNever": 6,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      }
+    },
+    {
+      "file": "backend/src/health/health.marketing.service.ts",
+      "role": "prod",
+      "loc": 1034,
+      "total": 6,
+      "cats": {
+        "asNever": 6,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      }
+    },
+    {
+      "file": "backend/src/health/health.shop.service.ts",
+      "role": "prod",
+      "loc": 1143,
+      "total": 6,
+      "cats": {
+        "asNever": 6,
+        "asAny": 0,
+        "asUnknownAs": 0,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      }
+    },
+    {
+      "file": "backend/src/takeout/takeout.coupon.service.ts",
+      "role": "prod",
+      "loc": 357,
+      "total": 6,
+      "cats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 6,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      }
+    },
+    {
+      "file": "backend/src/brand-mall/brand.customer.service.ts",
+      "role": "prod",
+      "loc": 856,
+      "total": 5,
+      "cats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 5,
+        "tsIgnore": 0,
+        "tsExpectError": 0,
+        "eslintDisable": 0,
+        "explicitAny": 0,
+        "tsNocheck": 0
+      }
+    },
+    {
+      "file": "backend/src/marketplace/mp.diy.service.ts",
+      "role": "prod",
+      "loc": 307,
+      "total": 5,
+      "cats": {
+        "asNever": 0,
+        "asAny": 0,
+        "asUnknownAs": 5,
         "tsIgnore": 0,
         "tsExpectError": 0,
         "eslintDisable": 0,
@@ -440,27 +1234,31 @@
   "eslintRules": [
     {
       "rule": "react-hooks/exhaustive-deps",
-      "n": 2
+      "n": 11
     },
     {
       "rule": "@next/next/no-img-element",
+      "n": 5
+    },
+    {
+      "rule": "no-control-regex",
       "n": 1
     }
   ],
   "budget": {
-    "total": 6,
+    "total": 309,
     "byCat": {
-      "asNever": 0,
-      "asAny": 0,
-      "asUnknownAs": 3,
+      "asNever": 99,
+      "asAny": 8,
+      "asUnknownAs": 179,
       "tsIgnore": 0,
       "tsExpectError": 0,
-      "eslintDisable": 3,
-      "explicitAny": 0,
+      "eslintDisable": 17,
+      "explicitAny": 6,
       "tsNocheck": 0
     },
     "allowlisted": 6,
-    "commit": "5e152c3",
-    "date": "2026-11-09"
+    "commit": "afe4402",
+    "date": "2026-11-21"
   }
 }

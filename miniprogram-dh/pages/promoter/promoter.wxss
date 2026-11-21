@@ -1,0 +1,131 @@
+.join {
+  margin-top: 32rpx;
+}
+
+.join-title {
+  font-size: 36rpx;
+  font-weight: 600;
+}
+
+.join-desc {
+  margin-top: 12rpx;
+  font-size: 26rpx;
+  color: #8a8f99;
+  line-height: 1.6;
+}
+
+.join-rates {
+  display: flex;
+  margin-top: 28rpx;
+}
+
+.rate-item {
+  flex: 1;
+  text-align: center;
+}
+
+.rate-value {
+  font-size: 44rpx;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.rate-label {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: #8a8f99;
+}
+
+.join-status {
+  margin-top: 28rpx;
+  text-align: center;
+  font-size: 26rpx;
+  color: #ad6800;
+}
+
+.join-btn {
+  margin-top: 28rpx;
+  height: 88rpx;
+  line-height: 88rpx;
+  text-align: center;
+  border-radius: 44rpx;
+  background: var(--primary);
+  color: #ffffff;
+  font-size: 30rpx;
+}
+
+.join-btn.disabled {
+  opacity: 0.6;
+}
+
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 24rpx;
+  padding: 24rpx 0;
+  background: #ffffff;
+  border-radius: 20rpx;
+}
+
+.stat {
+  width: 50%;
+  text-align: center;
+  padding: 16rpx 0;
+}
+
+.stat-value {
+  font-size: 38rpx;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.stat-label {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: #8a8f99;
+}
+
+.actions {
+  display: flex;
+  margin: 0 24rpx;
+}
+
+.action-btn {
+  flex: 1;
+  height: 80rpx;
+  line-height: 80rpx;
+  margin-right: 16rpx;
+  text-align: center;
+  border-radius: 40rpx;
+  background: var(--primary);
+  color: #ffffff;
+  font-size: 26rpx;
+}
+
+.action-btn:last-child {
+  margin-right: 0;
+}
+
+.action-btn.ghost {
+  background: #ffffff;
+  color: var(--primary);
+  border: 1rpx solid var(--primary);
+  box-sizing: border-box;
+}
+
+.small {
+  font-size: 22rpx;
+}
+
+.amount {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #e5484d;
+}
+
+.tip {
+  margin: 24rpx;
+  font-size: 22rpx;
+  color: #8a8f99;
+  text-align: center;
+}

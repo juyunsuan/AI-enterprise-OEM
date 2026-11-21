@@ -1,0 +1,14 @@
+<view class="wrap">
+  <view class="card">
+    <view class="row">
+      <text class="section-title">头像</text>
+      <view class="avatar" bindtap="chooseAvatar">
+        <image wx:if="{{avatar}}" src="{{avatar}}" mode="aspectFill" />
+        <text wx:else>选择图片</text>
+      </view>
+    </view>
+    <input class="field" placeholder="昵称" value="{{nickname}}" maxlength="60" bindinput="bindNickname" />
+    <view class="muted">昵称与头像会展示给店主，用于订单沟通与评价记录。</view>
+  </view>
+  <view class="btn btn-primary" bindtap="save">{{saving ? '保存中…' : '保存资料'}}</view>
+</view>

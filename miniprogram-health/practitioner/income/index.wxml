@@ -1,0 +1,93 @@
+<view class="page">
+  <view class="summary" wx:if="{{summary}}">
+    <view class="summary-main">
+      <view class="summary-label">可提现金额</view>
+      <view class="summary-value">{{summary.settleableText}}</view>
+    </view>
+    <view class="summary-row">
+      <view class="summary-cell">
+        <view class="summary-num">{{summary.totalText}}</view>
+        <view class="summary-sub">累计分成</view>
+      </view>
+      <view class="summary-cell">
+        <view class="summary-num">{{summary.withdrawingText}}</view>
+        <view class="summary-sub">提现处理中</view>
+      </view>
+      <view class="summary-cell">
+        <view class="summary-num">{{summary.withdrawnText}}</view>
+        <view class="summary-sub">已到账</view>
+      </view>
+      <view class="summary-cell">
+        <view class="summary-num">{{summary.orderCount}}</view>
+        <view class="summary-sub">分成订单</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="title">提现</view>
+    <view class="muted" wx:if="{{!cards.length}}">先添加一张收款银行卡才能提现</view>
+    <picker
+      wx:if="{{cards.length}}"
+      mode="selector"
+      range="{{cardNames}}"
+      value="{{cardIndex}}"
+      bindchange="onPickCard"
+    >
+      <view class="picker-field">{{cardNames[cardIndex]}}</view>
+    </picker>
+    <view class="amount-row" wx:if="{{cards.length}}">
+      <text class="unit">¥</text>
+      <input class="amount-input" type="digit" placeholder="0.00" value="{{amount}}" bindinput="onAmount" />
+    </view>
+    <button class="button-primary" disabled="{{submitting}}" bindtap="onApply">
+      {{submitting ? '提交中…' : '申请提现'}}
+    </button>
+    <view class="link-line" bindtap="onToggleCardForm">{{showCardForm ? '收起银行卡表单' : '＋ 添加收款银行卡'}}</view>
+
+    <view class="card-form" wx:if="{{showCardForm}}">
+      <input class="input" placeholder="开户人姓名" data-key="accountName" value="{{form.accountName}}" bindinput="onForm" />
+      <input class="input" placeholder="开户银行" data-key="bankName" value="{{form.bankName}}" bindinput="onForm" />
+      <input class="input" placeholder="开户支行（选填）" data-key="branchName" value="{{form.branchName}}" bindinput="onForm" />
+      <input class="input" type="number" placeholder="银行卡号" data-key="cardNo" value="{{form.cardNo}}" bindinput="onForm" />
+      <input class="input" type="number" placeholder="银行预留手机号（选填）" data-key="phone" value="{{form.phone}}" bindinput="onForm" />
+      <button class="button-primary" bindtap="onSaveCard">保存银行卡</button>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{cards.length}}">
+    <view class="title">已绑银行卡</view>
+    <view class="list-item" wx:for="{{cards}}" wx:key="id">
+      <view class="item-head">
+        <view class="item-title">{{item.bankName}} 尾号{{item.cardTail}}</view>
+        <text class="tag" wx:if="{{item.isDefault}}">默认</text>
+      </view>
+      <view class="item-meta">{{item.accountName}}{{item.branchName ? ' · ' + item.branchName : ''}}</view>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{withdrawals.length}}">
+    <view class="title">提现记录</view>
+    <view class="list-item" wx:for="{{withdrawals}}" wx:key="id">
+      <view class="item-head">
+        <view class="item-title">{{item.amountText}}</view>
+        <text class="tag">{{item.statusLabel}}</text>
+      </view>
+      <view class="item-meta">{{item.no}} · {{item.timeText}}</view>
+      <view class="item-meta" wx:if="{{item.auditNote}}">审核意见：{{item.auditNote}}</view>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{shares.length}}">
+    <view class="title">分成明细</view>
+    <view class="list-item" wx:for="{{shares}}" wx:key="id">
+      <view class="item-head">
+        <view class="item-title">{{item.orderNo}}</view>
+        <text class="amount">{{item.amountText}}</text>
+      </view>
+      <view class="item-meta">{{item.orderType}} · 比例 {{item.ratePercent}}% · {{item.timeText}}</view>
+    </view>
+  </view>
+
+  <view class="empty" wx:if="{{loading}}">正在加载…</view>
+</view>

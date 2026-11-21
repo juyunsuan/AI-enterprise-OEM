@@ -1,0 +1,33 @@
+<view class="page" style="{{themeStyle}}">
+  <view class="empty" wx:if="{{loading}}">加载中…</view>
+  <view class="empty" wx:elif="{{error}}">{{error}}</view>
+
+  <block wx:else>
+    <view class="card header">
+      <image wx:if="{{teacher.avatar}}" class="avatar" src="{{teacher.avatar}}" mode="aspectFill" />
+      <view wx:else class="avatar avatar-ph">{{initial}}</view>
+      <view class="main">
+        <view class="name">{{teacher.name}}</view>
+        <view class="muted" wx:if="{{teacher.title}}">{{teacher.title}}</view>
+      </view>
+    </view>
+
+    <view class="card" wx:if="{{teacher.intro}}">
+      <view class="section-title small">讲师介绍</view>
+      <view class="intro">{{teacher.intro}}</view>
+    </view>
+
+    <view class="section-head">
+      <view class="section-title">TA 的课程</view>
+      <view class="muted">{{courses.length}} 门</view>
+    </view>
+    <resource-card
+      wx:for="{{courses}}"
+      wx:key="id"
+      item="{{item}}"
+      bindtap="openCourse"
+      data-index="{{index}}"
+    />
+    <view class="empty" wx:if="{{!courses.length}}">讲师还没有上架课程。</view>
+  </block>
+</view>

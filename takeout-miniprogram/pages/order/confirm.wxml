@@ -1,0 +1,175 @@
+<view class="page safe-bottom">
+  <view wx:if="{{loading}}" class="empty">正在计算订单...</view>
+
+  <view wx:elif="{{error}}" class="card error-card">
+    <view class="error-title">无法结算</view>
+    <view class="muted text-12">{{error}}</view>
+    <view class="btn btn-primary retry" bindtap="prepare">重新加载</view>
+  </view>
+
+  <block wx:else>
+    <view class="mode-tabs">
+      <view
+        wx:for="{{modes}}"
+        wx:key="key"
+        class="mode-tab {{mode === item.key ? 'mode-tab-active' : ''}}"
+        data-mode="{{item.key}}"
+        bindtap="setMode"
+      >{{item.label}}</view>
+    </view>
+
+    <view class="card block" wx:if="{{mode === 'DELIVERY'}}">
+      <view class="block-head">收货地址</view>
+      <view wx:if="{{address}}" class="address" bindtap="chooseAddress">
+        <view class="address-main">
+          <text class="address-name">{{address.realName || address.name}}</text>
+          <text class="address-phone">{{address.phone}}</text>
+        </view>
+        <view class="address-detail">{{address.province}}{{address.city}}{{address.district}}{{address.detail}}</view>
+        <view class="address-change">更换</view>
+      </view>
+      <view wx:else class="address-empty" bindtap="chooseAddress">
+        <view>请选择收货地址</view>
+        <view class="muted text-12">外卖配送需要地址</view>
+      </view>
+    </view>
+
+    <view class="card block" wx:elif="{{mode === 'PICKUP'}}">
+      <view class="block-head">到店自取</view>
+      <view class="pickup-shop">{{shop.name}}</view>
+      <view class="muted text-12">{{shop.slogan || '到店后凭取餐号取餐'}}</view>
+      <view wx:if="{{shop.servicePhone}}" class="pickup-phone">{{shop.servicePhone}}</view>
+    </view>
+
+    <view class="card block" wx:else>
+      <view class="block-head">堂食信息</view>
+      <view class="field-row">
+        <view class="field-label">桌号</view>
+        <input
+          class="field-input"
+          placeholder="例如 A12"
+          value="{{tableNo}}"
+          bindinput="onTableInput"
+        />
+      </view>
+      <view class="muted text-12">堂食订单会直接进入后厨，出餐后请凭取餐号取餐</view>
+    </view>
+
+    <view class="card block">
+      <view class="block-head">时间</view>
+      <view class="time-row">
+        <view class="time-chip {{!expectedAt ? 'time-chip-active' : ''}}" bindtap="clearTime">尽快</view>
+        <picker mode="time" value="12:00" bindchange="pickTime">
+          <view class="time-chip {{expectedAt ? 'time-chip-active' : ''}}">选择时间</view>
+        </picker>
+        <view class="time-label">{{expectedLabel}}</view>
+      </view>
+      <view wx:if="{{shop.estimatedMinutes}}" class="muted text-12">预计制作 {{shop.estimatedMinutes}} 分钟</view>
+    </view>
+
+    <view class="card block">
+      <view class="block-head">已选菜品</view>
+      <view wx:for="{{lines}}" wx:key="key" class="line">
+        <image wx:if="{{item.image}}" src="{{item.image}}" mode="aspectFill" class="line-img" />
+        <view wx:else class="line-img line-placeholder">菜</view>
+        <view class="flex-1">
+          <view class="line-title ellipsis">{{item.title}}</view>
+          <view wx:if="{{item.skuName}}" class="muted text-12">{{item.skuName}}</view>
+          <view class="line-price">¥{{item.priceText}} × {{item.quantity}}</view>
+        </view>
+        <view class="line-total">¥{{item.totalText}}</view>
+      </view>
+    </view>
+
+    <view class="card block">
+      <view class="row-between row-pad" bindtap="showCoupons">
+        <view>优惠券</view>
+        <view class="{{couponTicketId ? 'value-active' : 'muted'}}">{{couponLabel}} ›</view>
+      </view>
+      <view wx:if="{{pointsEnabled}}" class="row-between row-pad">
+        <view>
+          <view>积分抵扣</view>
+          <view class="muted text-12">最多可用 {{maxUsablePoints}} 积分</view>
+        </view>
+        <switch checked="{{usePoints}}" color="#e64340" bindchange="togglePoints" />
+      </view>
+      <view class="divider"></view>
+      <view class="amount-row">
+        <text>商品金额</text>
+        <text>¥{{amounts.goods}}</text>
+      </view>
+      <view class="amount-row" wx:if="{{mode === 'DELIVERY'}}">
+        <text>配送费</text>
+        <text>¥{{amounts.delivery}}</text>
+      </view>
+      <view class="amount-row" wx:if="{{preview.discountAmount > 0}}">
+        <text>优惠券</text>
+        <text class="minus">-¥{{amounts.discount}}</text>
+      </view>
+      <view class="amount-row" wx:if="{{preview.pointsDeductAmount > 0}}">
+        <text>积分抵扣</text>
+        <text class="minus">-¥{{amounts.points}}</text>
+      </view>
+      <view class="amount-row total">
+        <text>合计</text>
+        <text class="price">¥{{amounts.pay}}</text>
+      </view>
+    </view>
+
+    <view class="card block">
+      <view class="block-head">备注</view>
+      <textarea
+        class="remark"
+        maxlength="200"
+        placeholder="口味、忌口、餐具等要求"
+        value="{{remark}}"
+        bindinput="onRemarkInput"
+      />
+      <view class="muted text-12">支付方式：微信支付</view>
+    </view>
+
+    <view wx:if="{{!payEnabled}}" class="block-reason">
+      门店未开通在线收款，暂不支持小程序下单，请联系门店
+    </view>
+    <view wx:if="{{blockReason}}" class="block-reason">{{blockReason}}</view>
+
+    <view class="submit-bar safe-bottom">
+      <view class="submit-total">
+        <view class="muted text-12">应付</view>
+        <view class="price submit-price"><text class="price-symbol">¥</text>{{amounts.pay}}</view>
+      </view>
+      <view class="btn btn-primary submit-btn {{blockReason || submitting || !payEnabled ? 'submit-off' : ''}}" bindtap="submit">
+        {{submitting ? '提交中...' : '提交订单'}}
+      </view>
+    </view>
+  </block>
+
+  <view wx:if="{{showCoupon}}" class="mask" bindtap="closeCoupons"></view>
+  <view wx:if="{{showCoupon}}" class="coupon-panel safe-bottom" catchtap="noop">
+    <view class="coupon-head">
+      <view class="coupon-head-title">选择优惠券</view>
+      <view class="muted" bindtap="closeCoupons">关闭</view>
+    </view>
+    <scroll-view scroll-y class="coupon-list">
+      <view class="coupon-item {{couponTicketId === 0 ? 'coupon-active' : ''}}" data-id="0" bindtap="chooseCoupon">
+        <view class="flex-1">不使用优惠券</view>
+        <view wx:if="{{couponTicketId === 0}}" class="coupon-check">已选</view>
+      </view>
+      <view
+        wx:for="{{coupons}}"
+        wx:key="ticketId"
+        class="coupon-item {{couponTicketId === item.ticketId ? 'coupon-active' : ''}} {{item.usable === false ? 'coupon-disabled' : ''}}"
+        data-id="{{item.ticketId}}"
+        bindtap="chooseCoupon"
+      >
+        <view class="flex-1">
+          <view class="coupon-name">{{item.name}}</view>
+          <view class="muted text-12">{{item.title}}</view>
+          <view wx:if="{{item.usable === false}}" class="coupon-reason">{{item.reason}}</view>
+        </view>
+        <view wx:if="{{couponTicketId === item.ticketId}}" class="coupon-check">已选</view>
+      </view>
+      <view wx:if="{{!coupons.length}}" class="empty">暂无可用优惠券</view>
+    </scroll-view>
+  </view>
+</view>

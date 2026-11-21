@@ -5,6 +5,7 @@ import {
   App,
   Alert,
   Button,
+  Image,
   Input,
   Modal,
   Select,
@@ -16,7 +17,7 @@ import {
   Typography,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePasswordConfirm } from "@/components/confirm-with-password";
 import { EmptyState, Panel } from "@/components/ui/panel";
 import { useI18n } from "@/lib/i18n/i18n";
@@ -31,7 +32,7 @@ import {
 } from "./common";
 
 /**
- * Bot 主机台账：一台主机＝本人机器上跑着的 BotBuddy 客户端。
+ * Bot 主机台账：一台主机＝本人机器上跑着的 AWBotDSH 客户端。
  * 配对成功后令牌明文只回一次，库内只存 sha256；界面只显前缀，丢了就「重置令牌」重新粘。
  */
 export function HostPanel({
@@ -45,13 +46,23 @@ export function HostPanel({
   onOpenChat: (hostId: number) => void;
   kind?: BotClientKind;
 }) {
-  const isMobile = kind === "MOBOT";
+  const isMobile = kind === "AWBOT";
   const { message } = App.useApp();
   const { t } = useI18n();
   const { request, modal } = usePasswordConfirm();
   const [pairOpen, setPairOpen] = useState(false);
   const [pairForm, setPairForm] = useState({ name: "", code: "" });
   const [busy, setBusy] = useState(false);
+  /** 扫码配对：一次性二维码与手输码同源，5 分钟内有效。 */
+  const [qrOpen, setQrOpen] = useState(false);
+  const [qrBusy, setQrBusy] = useState(false);
+  const [qrName, setQrName] = useState("");
+  const [qr, setQr] = useState<{
+    code: string;
+    expiresAt: string;
+    image: string;
+  } | null>(null);
+  const qrStartIds = useRef<number[]>([]);
   /** 一次性令牌：只在这次配对响应里存在，关掉弹窗即丢。 */
   const [issued, setIssued] = useState<{ name: string; token: string } | null>(
     null,
@@ -141,7 +152,7 @@ export function HostPanel({
       return;
     }
     if (isMobile && !code) {
-      message.warning("请填写 Mobot 手机「连接平台」页显示的 6 位连接码");
+      message.warning("请填写 AWBot 手机「连接平台」页显示的 6 位连接码");
       return;
     }
     setBusy(true);
@@ -162,6 +173,56 @@ export function HostPanel({
       setBusy(false);
     }
   };
+
+  const generateQr = useCallback(
+    async (name: string) => {
+      setQrBusy(true);
+      try {
+        const result = await botHostApi.createPairQr({
+          name: name.trim() || undefined,
+          siteUrl: window.location.origin,
+        });
+        setQr({
+          code: result.code,
+          expiresAt: result.expiresAt,
+          image: result.image,
+        });
+      } catch (error) {
+        message.error((error as Error).message);
+      } finally {
+        setQrBusy(false);
+      }
+    },
+    [message],
+  );
+
+  const openQrDialog = () => {
+    qrStartIds.current = hosts.map((row) => row.id);
+    setQrName("");
+    setQr(null);
+    setQrOpen(true);
+    void generateQr("");
+  };
+
+  // 手机扫码兑换后，设备台账会多出一台 AWBOT；看到新机就收掉二维码。
+  useEffect(() => {
+    if (!qrOpen) return;
+    const fresh = hosts.find(
+      (row) =>
+        row.clientKind === "AWBOT" && !qrStartIds.current.includes(row.id),
+    );
+    if (!fresh) return;
+    setQrOpen(false);
+    setQr(null);
+    message.success(`已配对「${fresh.name}」`);
+  }, [hosts, qrOpen, message]);
+
+  // 二维码有效期内轻量轮询台账，配对成功由上一段收口。
+  useEffect(() => {
+    if (!qrOpen) return;
+    const timer = window.setInterval(() => void reload(), 3000);
+    return () => window.clearInterval(timer);
+  }, [qrOpen, reload]);
 
   const copyToken = async () => {
     if (!issued) return;
@@ -185,7 +246,7 @@ export function HostPanel({
 
   const rotate = (row: BotHostView) => {
     request({
-      title: isMobile ? "重置 Mobot 配对（需密码）" : "重置主机令牌（需密码）",
+      title: isMobile ? "重置 AWBot 配对（需密码）" : "重置主机令牌（需密码）",
       content: (
         <div>
           {isMobile
@@ -200,7 +261,7 @@ export function HostPanel({
         const result = await botHostApi.rotateToken(row.id);
         // 手机令牌由 App 自行取走；平台只提示重新配对，不显示明文。
         if (isMobile) {
-          message.success("已重置配对，请在 Mobot 重新申请连接码");
+          message.success("已重置配对，请在 AWBot 重新申请连接码");
         } else {
           setIssued({ name: row.name, token: result.token });
         }
@@ -266,22 +327,22 @@ export function HostPanel({
       ? [
           {
             title: "手机状态",
-            key: "mobot",
+            key: "awbot",
             width: 200,
             render: (_: unknown, row: BotHostView) => {
-              const mobot = row.mobot;
+              const awbot = row.awbot;
               return (
                 <Space orientation="vertical" size={0}>
                   <span className="text-12">
-                    {mobot && mobot.battery
-                      ? `电量 ${mobot.battery}%${mobot.charging ? " · 充电中" : ""}`
+                    {awbot && awbot.battery
+                      ? `电量 ${awbot.battery}%${awbot.charging ? " · 充电中" : ""}`
                       : "电量未上报"}
                   </span>
                   <span className="text-12 muted">
                     {[
-                      mobot?.network ? `网络 ${mobot.network}` : "",
-                      mobot?.engine ? `引擎 ${mobot.engine}` : "引擎未上报",
-                      mobot?.modelSyncedAt ? "模型已同步" : "模型未同步",
+                      awbot?.network ? `网络 ${awbot.network}` : "",
+                      awbot?.engine ? `引擎 ${awbot.engine}` : "引擎未上报",
+                      awbot?.modelSyncedAt ? "模型已同步" : "模型未同步",
                     ]
                       .filter(Boolean)
                       .join(" · ")}
@@ -414,18 +475,34 @@ export function HostPanel({
 
   return (
     <Panel
-      title={isMobile ? "Mobot 手机" : "Bot 主机"}
+      title={isMobile ? "AWBot 手机" : "Bot 主机"}
       titleBadge={`${hosts.length} 台`}
       extra={
-        <Button
-          type="primary"
-          onClick={() => {
-            setPairForm({ name: "", code: "" });
-            setPairOpen(true);
-          }}
-        >
-          {isMobile ? "配对 Mobot" : "配对主机"}
-        </Button>
+        isMobile ? (
+          <Space>
+            <Button type="primary" onClick={openQrDialog}>
+              扫码配对
+            </Button>
+            <Button
+              onClick={() => {
+                setPairForm({ name: "", code: "" });
+                setPairOpen(true);
+              }}
+            >
+              6 位码
+            </Button>
+          </Space>
+        ) : (
+          <Button
+            type="primary"
+            onClick={() => {
+              setPairForm({ name: "", code: "" });
+              setPairOpen(true);
+            }}
+          >
+            配对主机
+          </Button>
+        )
       }
     >
       {hosts.length ? (
@@ -441,26 +518,42 @@ export function HostPanel({
         <EmptyState
           text={
             isMobile
-              ? "还没有 Mobot 手机：在手机 Mobot 里登录平台账号并申请 6 位连接码，然后在下方输入连接码完成配对"
-              : "还没有 Bot 主机：在本机装好 BotBuddy 客户端（自带 Agent），在客户端里配好模型后用配对码完成配对，或直接粘贴令牌"
+              ? "还没有 AWBot 手机：点「扫码配对」出二维码，用手机 AWBot 扫一下即可；旧版 App 仍可用 6 位连接码。"
+              : "还没有 Bot 主机：在本机装好 AWBotDSH 客户端（自带 Agent），在客户端里配好模型后用配对码完成配对，或直接粘贴令牌"
           }
           action={
-            <Button
-              type="primary"
-              onClick={() => {
-                setPairForm({ name: "", code: "" });
-                setPairOpen(true);
-              }}
-            >
-              {isMobile ? "配对 Mobot" : "配对主机"}
-            </Button>
+            isMobile ? (
+              <Space>
+                <Button type="primary" onClick={openQrDialog}>
+                  扫码配对
+                </Button>
+                <Button
+                  onClick={() => {
+                    setPairForm({ name: "", code: "" });
+                    setPairOpen(true);
+                  }}
+                >
+                  6 位码
+                </Button>
+              </Space>
+            ) : (
+              <Button
+                type="primary"
+                onClick={() => {
+                  setPairForm({ name: "", code: "" });
+                  setPairOpen(true);
+                }}
+              >
+                配对主机
+              </Button>
+            )
           }
         />
       )}
 
       <Modal
         open={pairOpen}
-        title={isMobile ? "配对 Mobot 手机" : "配对 Bot 主机"}
+        title={isMobile ? "配对 AWBot 手机" : "配对 Bot 主机"}
         onCancel={() => setPairOpen(false)}
         onOk={() => void submitPair()}
         okText={busy ? "配对中" : "配对"}
@@ -477,8 +570,8 @@ export function HostPanel({
               maxLength={12}
               placeholder={
                 isMobile
-                  ? "Mobot「连接平台」页里的 6 位码"
-                  : "BotBuddy「配对」页里的 6 位码（推荐）"
+                  ? "AWBot「连接平台」页里的 6 位码"
+                  : "AWBotDSH「配对」页里的 6 位码（推荐）"
               }
               onChange={(event) =>
                 setPairForm((prev) => ({ ...prev, code: event.target.value }))
@@ -498,10 +591,69 @@ export function HostPanel({
           </label>
           <div className="text-12 muted" style={{ gridColumn: "1 / -1" }}>
             {isMobile
-              ? "只在 Mobot 手机「连接平台」页申请并展示 6 位码，再用同一账号在本页认领；令牌由手机直接取走，平台不再显示明文，库内只保存 sha256。"
+              ? "只在 AWBot 手机「连接平台」页申请并展示 6 位码，再用同一账号在本页认领；令牌由手机直接取走，平台不再显示明文，库内只保存 sha256。"
               : "填配对码：客户端登录的平台账号与这个 6 位码双重校验，码只能由生成它的那个账号在本页认领；客户端拿回令牌后本站不再显示明文。留空只填主机名：本站直接生成一把令牌，你在下一个弹窗里复制并粘贴进客户端的「已有令牌」框。两种方式都只在库内保存令牌的 sha256。"}
           </div>
         </div>
+      </Modal>
+
+      <Modal
+        open={qrOpen}
+        title="扫码配对 AWBot 手机"
+        onCancel={() => setQrOpen(false)}
+        footer={
+          <Space>
+            <Button onClick={() => void generateQr(qrName)} loading={qrBusy}>
+              用上面的设备名重新生成
+            </Button>
+            <Button type="primary" onClick={() => setQrOpen(false)}>
+              完成
+            </Button>
+          </Space>
+        }
+        destroyOnHidden
+        width={560}
+      >
+        <Space orientation="vertical" size={12} style={{ width: "100%" }}>
+          <label className="data-table-form-item">
+            <span className="data-table-form-label">设备名（可选）</span>
+            <Input
+              value={qrName}
+              maxLength={80}
+              placeholder="留空＝用手机自报的机型"
+              onChange={(event) => setQrName(event.target.value)}
+            />
+          </label>
+          {qr ? (
+            <>
+              <Alert
+                type="info"
+                showIcon
+                title="在 AWBot 手机 →「连接平台」→「扫码配对」，扫描下面的二维码即可；手机不需要登录平台账号。"
+              />
+              <div style={{ display: "flex", justifyContent: "center" }}>
+                <Image
+                  src={qr.image}
+                  alt="AWBot 扫码配对二维码"
+                  width={240}
+                  height={240}
+                  preview={false}
+                />
+              </div>
+              <div className="text-12 muted" style={{ textAlign: "center" }}>
+                扫不了码时可手动输入配对码：
+                <Typography.Text code>
+                  {qr.code.replace(/(.{4})/g, "$1 ").trim()}
+                </Typography.Text>
+              </div>
+              <div className="text-12 muted" style={{ textAlign: "center" }}>
+                有效期至 {fmtTime(qr.expiresAt)}，用后即废；重新生成不会作废上一张，等它自然过期即可。
+              </div>
+            </>
+          ) : (
+            <div className="text-12 muted">正在生成二维码…</div>
+          )}
+        </Space>
       </Modal>
 
       <Modal
@@ -532,7 +684,7 @@ export function HostPanel({
               复制令牌
             </Button>
             <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              到 BotBuddy 客户端 →「配对」→ 选「粘贴令牌」，粘进来保存后客户端即开始心跳；
+              到 AWBotDSH 客户端 →「配对」→ 选「粘贴令牌」，粘进来保存后客户端即开始心跳；
               平台 BaseURL 要在客户端设置里填成本站地址，再在「Agent」页配好模型渠道与模型。
             </Typography.Text>
           </Space>
@@ -554,7 +706,7 @@ export function HostPanel({
           type="info"
           showIcon
           style={{ marginBottom: 12 }}
-          title="授权后平台会在心跳里把这个渠道的真实密钥交给这台主机的客户端，客户端据此调模型；撤销后客户端清掉平台渠道。客户端改了自己的模型设置时，会在「模型设置」里落一条「BotBuddy · 主机名」渠道并同步到这里。"
+          title="授权后平台会在心跳里把这个渠道的真实密钥交给这台主机的客户端，客户端据此调模型；撤销后客户端清掉平台渠道。客户端改了自己的模型设置时，会在「模型设置」里落一条「AWBotDSH · 主机名」渠道并同步到这里。"
         />
         <div className="data-table-form">
           <label className="data-table-form-item">

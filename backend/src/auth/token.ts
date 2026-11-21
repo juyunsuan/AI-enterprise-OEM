@@ -20,13 +20,32 @@ export function issueSsoSession(
   tokenVersion = 0,
   /** 显式会话时长（秒）；省略时用 SSO_SESSION_TTL_SECONDS 默认。 */
   ttlSeconds?: number,
+  /** 子账号附加声明：实际操作人、子账号 id、可访问模块。 */
+  extra?: {
+    actorUserId?: string;
+    subAccountId?: number;
+    scopes?: string[];
+    subAccountName?: string;
+  },
 ): string {
   const ttl =
     ttlSeconds && ttlSeconds > 0
       ? ttlSeconds
       : Number(process.env.SSO_SESSION_TTL_SECONDS || 172800);
   return jwt.sign(
-    { userId, username, role, tokenVersion, type: 'access' },
+    {
+      userId,
+      username,
+      role,
+      tokenVersion,
+      type: 'access',
+      ...(extra?.actorUserId ? { actorUserId: extra.actorUserId } : {}),
+      ...(extra?.subAccountId ? { subAccountId: extra.subAccountId } : {}),
+      ...(extra?.scopes ? { scopes: extra.scopes } : {}),
+      ...(extra?.subAccountName
+        ? { subAccountName: extra.subAccountName }
+        : {}),
+    },
     ssoSecret(),
     {
       algorithm: 'HS256',
@@ -129,6 +148,23 @@ export function parseAccessToken(token?: string): CurrentUser {
       String(payload.userId),
       String(payload.username || payload.sub || ''),
       String(payload.role || 'user'),
+      typeof payload.actorUserId === 'string'
+        ? payload.actorUserId
+        : String(payload.userId),
+      typeof payload.subAccountId === 'number'
+        ? payload.subAccountId
+        : undefined,
+      Array.isArray(payload.scopes)
+        ? payload.scopes.filter(
+            (item): item is string => typeof item === 'string',
+          )
+        : undefined,
+      typeof payload.subAccountName === 'string'
+        ? payload.subAccountName
+        : undefined,
+      typeof payload.tokenVersion === 'number'
+        ? payload.tokenVersion
+        : undefined,
     );
   } catch (error) {
     if (error instanceof BusinessException) {

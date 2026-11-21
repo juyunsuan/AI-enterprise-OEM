@@ -1,0 +1,19 @@
+<view class="container">
+  <view class="row">
+    <input class="input" style="flex:1" value="{{keyword}}" bindinput="input" placeholder="搜索帖子或圈子" />
+    <view class="btn" style="margin-left:16rpx" bindtap="search">搜索</view>
+  </view>
+
+  <view class="card" wx:if="{{groups.length}}" style="margin-top:20rpx">
+    <view class="name" style="margin-left:0">圈子</view>
+    <view wx:for="{{groups}}" wx:key="id" data-id="{{item.id}}" bindtap="openGroup" style="margin-top:16rpx">{{item.name}} · {{item.memberCount}} 人</view>
+  </view>
+
+  <view class="card" wx:for="{{posts}}" wx:key="id" data-id="{{item.id}}" bindtap="openPost">
+    <view class="muted">{{item.groupName}} · {{item.author.nickname}}</view>
+    <view class="content">{{item.content}}</view>
+  </view>
+
+  <view class="empty" wx:if="{{searched && !loading && !posts.length && !groups.length}}">没有找到相关内容</view>
+  <view class="empty" wx:if="{{loading}}">正在搜索…</view>
+</view>

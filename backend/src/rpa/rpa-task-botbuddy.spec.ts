@@ -10,8 +10,8 @@ import type { RpaSettingService } from './rpa-setting.service';
 import { RpaTaskService } from './rpa-task.service';
 
 /**
- * RPA「BotBuddy 浏览器」设备：这条链路上最容易出错的是三条口径——
- *   1) PC 与 BotBuddy 共用同一份 Automa JSON，但别的脚本类型不能互换（否则执行端拿到跑不了的正文）；
+ * RPA「AWBotDSH 浏览器」设备：这条链路上最容易出错的是三条口径——
+ *   1) PC 与 AWBotDSH 共用同一份 Automa JSON，但别的脚本类型不能互换（否则执行端拿到跑不了的正文）；
  *   2) 任务必须落到一台在线主机上，窗口只认客户端上报的候选（平台不替用户建窗口）；
  *   3) 领取要么原子抢单成功、要么把任务原样退回待执行，不能留下永远「执行中」的任务。
  */
@@ -237,7 +237,7 @@ async function expectMessage(work: Promise<unknown>, fragment: string) {
 }
 
 describe('RPA 设备与脚本的可执行组合', () => {
-  it('PC 的 Automa 脚本可以建成 BotBuddy 浏览器任务，并落主机与窗口', async () => {
+  it('PC 的 Automa 脚本可以建成 AWBotDSH 浏览器任务，并落主机与窗口', async () => {
     const { service, prisma } = setup();
     const created = await service.create(user, {
       name: '每早采集竞品价格',
@@ -250,11 +250,11 @@ describe('RPA 设备与脚本的可执行组合', () => {
     const data = prisma.rpaTask.create.mock.calls[0][0];
     expect(data.data.botHostId).toBe(HOST_ID);
     expect(data.data.fpProfileId).toBe('fpB');
-    // BotBuddy 跑在用户自己机器、本人登录态下：不要求 RPA 账号
+    // AWBotDSH 跑在用户自己机器、本人登录态下：不要求 RPA 账号
     expect(data.data.accountIds).toEqual([]);
   });
 
-  it('反向也成立：BotBuddy 的 Automa 脚本可以建成 PC 任务', async () => {
+  it('反向也成立：AWBotDSH 的 Automa 脚本可以建成 PC 任务', async () => {
     const { service } = setup({
       scripts: [script({ deviceType: 'botbuddy', name: '窗口流程' })],
     });
@@ -267,7 +267,7 @@ describe('RPA 设备与脚本的可执行组合', () => {
     expect(created.deviceType).toBe('pc');
   });
 
-  it('云手机脚本不能声明成 BotBuddy 浏览器', async () => {
+  it('云手机脚本不能声明成 AWBotDSH 浏览器', async () => {
     const { service } = setup({
       scripts: [script({ deviceType: 'android', fileType: 'bitphone_json' })],
     });
@@ -277,7 +277,7 @@ describe('RPA 设备与脚本的可执行组合', () => {
     );
   });
 
-  it('PC 的 JS 脚本换到 BotBuddy 浏览器时要按脚本类型拒绝', async () => {
+  it('PC 的 JS 脚本换到 AWBotDSH 浏览器时要按脚本类型拒绝', async () => {
     const { service } = setup({
       scripts: [script({ fileType: 'javascript' })],
     });
@@ -289,12 +289,12 @@ describe('RPA 设备与脚本的可执行组合', () => {
   });
 });
 
-describe('RPA BotBuddy 任务的设备位校验', () => {
+describe('RPA AWBotDSH 任务的设备位校验', () => {
   it('没选主机时给出可操作的下一步', async () => {
     const { service } = setup();
     const message = await expectMessage(
       service.create(user, { name: 'x', scriptId: 11, deviceType: 'botbuddy' }),
-      'BotBuddy 浏览器任务要选定一台 BotBuddy 主机',
+      'AWBotDSH 浏览器任务要选定一台 AWBotDSH 主机',
     );
     expect(message).toContain('配对');
   });
@@ -328,8 +328,8 @@ describe('RPA BotBuddy 任务的设备位校验', () => {
     expect(message).toContain('店铺 B');
   });
 
-  it('Mobot 手机不是浏览器设备：按 clientKind 拒绝', async () => {
-    const { service } = setup({ hosts: [host({ clientKind: 'MOBOT' })] });
+  it('AWBot 手机不是浏览器设备：按 clientKind 拒绝', async () => {
+    const { service } = setup({ hosts: [host({ clientKind: 'AWBOT' })] });
     await expectMessage(
       service.create(user, {
         name: 'x',
@@ -337,12 +337,12 @@ describe('RPA BotBuddy 任务的设备位校验', () => {
         deviceType: 'botbuddy',
         botHostId: HOST_ID,
       }),
-      '不是 BotBuddy 浏览器',
+      '不是 AWBotDSH 浏览器',
     );
   });
 });
 
-describe('RPA BotBuddy 主机通道的领取与回传', () => {
+describe('RPA AWBotDSH 主机通道的领取与回传', () => {
   async function createdTask(service: RpaTaskService, over: Row = {}) {
     const created = await service.create(user, {
       name: '每早采集竞品价格',
@@ -407,7 +407,7 @@ describe('RPA BotBuddy 主机通道的领取与回传', () => {
     expect(tasks.find((row) => row.id === taskId)?.status).toBe('pending');
   });
 
-  it('非 BotBuddy 任务不能从主机通道领', async () => {
+  it('非 AWBotDSH 任务不能从主机通道领', async () => {
     const { service } = setup();
     const taskId = await createdTask(service, {
       deviceType: 'pc',
@@ -415,7 +415,7 @@ describe('RPA BotBuddy 主机通道的领取与回传', () => {
     });
     await expectMessage(
       service.claimBotBuddy(user.userId, HOST_ID, taskId),
-      '不是 BotBuddy 浏览器任务',
+      '不是 AWBotDSH 浏览器任务',
     );
   });
 
@@ -427,7 +427,7 @@ describe('RPA BotBuddy 主机通道的领取与回传', () => {
     );
   });
 
-  it('比特浏览器机器通道不派 BotBuddy 任务（各走自己的通道）', async () => {
+  it('比特浏览器机器通道不派 AWBotDSH 任务（各走自己的通道）', async () => {
     const { service, prisma, tasks } = setup();
     const taskId = await createdTask(service);
     // 声明 botbuddy 的执行端（拿 API Key 的比特浏览器侧）直接被拒

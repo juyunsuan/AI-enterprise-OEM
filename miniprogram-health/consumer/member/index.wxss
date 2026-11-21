@@ -1,0 +1,150 @@
+.tab-scroll {
+  white-space: nowrap;
+}
+
+.tab-scroll .pills {
+  padding: 20rpx 24rpx 4rpx;
+}
+
+.member-card {
+  background: linear-gradient(135deg, #1a73e8, #3f8ef5);
+  color: #fff;
+}
+
+.member-level {
+  font-size: 38rpx;
+  font-weight: 600;
+}
+
+.member-discount {
+  margin-top: 8rpx;
+  font-size: 26rpx;
+  opacity: 0.9;
+}
+
+.member-stats {
+  display: flex;
+  margin-top: 28rpx;
+}
+
+.member-stat {
+  flex: 1;
+  text-align: center;
+}
+
+.member-stat-value {
+  font-size: 34rpx;
+  font-weight: 600;
+}
+
+.member-stat-label {
+  margin-top: 4rpx;
+  font-size: 22rpx;
+  opacity: 0.85;
+}
+
+.block-title {
+  margin-bottom: 12rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.code-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #f0f1f5;
+}
+
+.code-row:last-child {
+  border-bottom: none;
+}
+
+.code-text {
+  font-size: 34rpx;
+  font-weight: 600;
+  letter-spacing: 4rpx;
+  color: #1a73e8;
+}
+
+.coupon {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #f0f1f5;
+}
+
+.coupon:last-child {
+  border-bottom: none;
+}
+
+.coupon-value {
+  width: 180rpx;
+  text-align: center;
+  border-right: 1rpx dashed #dcdfe6;
+}
+
+.coupon-amount {
+  color: #f5413d;
+  font-size: 34rpx;
+  font-weight: 600;
+}
+
+.coupon-kind {
+  margin-top: 4rpx;
+  color: #8a8f99;
+  font-size: 22rpx;
+}
+
+.coupon-body {
+  flex: 1;
+  padding: 0 20rpx;
+}
+
+.coupon-name {
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.balance-card {
+  text-align: center;
+}
+
+.balance-label {
+  color: #8a8f99;
+  font-size: 24rpx;
+}
+
+.balance-value {
+  margin-top: 8rpx;
+  color: #1a73e8;
+  font-size: 64rpx;
+  font-weight: 600;
+}
+
+.log-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #f0f1f5;
+}
+
+.log-row:last-child {
+  border-bottom: none;
+}
+
+.log-value {
+  color: #5c6068;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.log-in {
+  color: #12a150;
+}
+
+.tip {
+  margin: 0 24rpx;
+}

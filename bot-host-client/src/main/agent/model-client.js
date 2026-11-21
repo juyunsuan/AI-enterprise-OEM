@@ -125,7 +125,7 @@ function post(url, headers, body, handlers) {
             'Content-Type': 'application/json',
             'Content-Length': Buffer.byteLength(payload),
             Accept: 'text/event-stream',
-            'User-Agent': 'botbuddy-agent/1.0'
+            'User-Agent': 'awbotdsh-agent/1.0'
           },
           headers
         ),

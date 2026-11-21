@@ -95,9 +95,9 @@ export function AccountPanel({
     setAgentGroups([]);
     setAgentLoading(true);
     try {
-      const [desktop, mobot, cloud] = await Promise.all([
+      const [desktop, awbot, cloud] = await Promise.all([
         botHostApi.hosts("DESKTOP"),
-        botHostApi.hosts("MOBOT"),
+        botHostApi.hosts("AWBOT"),
         workbuddyApi.accounts(),
       ]);
       const groups = [
@@ -109,9 +109,9 @@ export function AccountPanel({
           })),
         },
         {
-          label: AI_CALL_PRINCIPAL_LABEL.MOBOT,
-          options: (mobot.data?.list ?? []).map((host) => ({
-            value: agentKey("MOBOT", host.id),
+          label: AI_CALL_PRINCIPAL_LABEL.AWBOT,
+          options: (awbot.data?.list ?? []).map((host) => ({
+            value: agentKey("AWBOT", host.id),
             label: `${host.name}（${host.statusLabel}）`,
           })),
         },
@@ -123,7 +123,7 @@ export function AccountPanel({
           })),
         },
       ];
-      const errors = [desktop.message, mobot.message, cloud.message].filter(Boolean);
+      const errors = [desktop.message, awbot.message, cloud.message].filter(Boolean);
       if (errors.length) message.error(errors.join("；"));
       setAgentGroups(groups.filter((group) => group.options.length));
     } finally {
@@ -514,7 +514,7 @@ export function AccountPanel({
         width={620}
       >
         <div style={{ marginBottom: 10, color: "var(--muted)" }}>
-          一份凭据可以同时授权给多台 Agent：勾选的 BotBuddy 主机 / MoBot 手机 /
+          一份凭据可以同时授权给多台 Agent：勾选的 AWBotDSH 主机 / AWBot 手机 /
           WorkBuddy 企业账号取凭据时都能看到并解密这份凭据，不勾＝一个都取不到。
         </div>
         {agentLoading ? null : agentGroups.length ? (
@@ -528,7 +528,7 @@ export function AccountPanel({
             onChange={setAgentSelected}
           />
         ) : (
-          <EmptyState text="还没有可授权的 Agent：先在「BotBuddy 主机」「MoBot 手机」页签配对设备，或在「WorkBuddy 企业云」登记企业账号" />
+          <EmptyState text="还没有可授权的 Agent：先在「AWBotDSH 主机」「AWBot 手机」页签配对设备，或在「WorkBuddy 企业云」登记企业账号" />
         )}
       </Modal>
       {modal}

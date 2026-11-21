@@ -1,0 +1,26 @@
+{
+  "description": "租赁管理小程序（租客端 + 员工端，AppID 由门店自行填写）",
+  "packOptions": {
+    "ignore": [
+      { "type": "file", "value": "project.private.config.json" },
+      { "type": "folder", "value": ".DS_Store" }
+    ]
+  },
+  "setting": {
+    "urlCheck": true,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true,
+    "bigPackageSizeSupport": false,
+    "coverView": false,
+    "packNpmManually": false,
+    "packNpmRelationList": []
+  },
+  "compileType": "miniprogram",
+  "libVersion": "3.5.5",
+  "appid": "touristappid",
+  "projectname": "rental-miniprogram",
+  "srcMiniprogramRoot": "./",
+  "miniprogramRoot": "./"
+}

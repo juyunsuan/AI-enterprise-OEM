@@ -57,13 +57,13 @@ test("驾驶舱独立置顶，分组为工作台/业务服务/商务人脉/模�
     );
     assert.ok(!workspace.routes.some((route) => route.path === "/content"), "/content 不能再平铺在工作台下");
     assert.ok(!workspace.routes.some((route) => route.path === "/community"), "/community 不能平铺在工作台下");
-    // 展开板块后的叶节点顺序：BotBuddy 主机 / MoBot 手机 / WorkBuddy 企业云 已合并成单条「Agent-Bot」菜单（页内四页签）
+    // 展开板块后的叶节点顺序：BotBuddy 主机 / AWBot 手机 / WorkBuddy 企业云 已合并成单条「Agent-Bot」菜单（页内四页签）
     assert.deepEqual(leaves(workspace).map((route) => route.path),
       ["/tasks", "/agent", "/agent-bot", "/rpa", "/kb", "/mail", "/data-table", "/content", "/content/canvas", "/community", "/content/video-templates", "/marketing-tools", "/assets", "/crm", "/bi", "/oa", "/okr", "/service-desk", "/hrm", "/project", "/erp", "/app-center", "/question-hall"]);
     assert.deepEqual(leaves(workspace).map((route) => route.name),
       ["我的任务", "Agent", "Agent-Bot", "RPA自动化", "知识库", "AI邮箱服务", "多维表格", "内容创作小工具", "AI 画布", "创意社区", "视频模版", "营销工具", "数字资产管理", "CRM", "BI智能分析", "OA", "OKR计划", "AI客服", "HR工作台", "项目管理", "进销存", "应用中心", "专题大厅"]);
     // 三个旧菜单地址不再出现在导航里（页面只做跳转）
-    assert.ok(!paths(me).some((path) => ["/workbuddy", "/bot/hosts", "/bot/mobots"].includes(path)));
+    assert.ok(!paths(me).some((path) => ["/workbuddy", "/bot/hosts", "/bot/awbots"].includes(path)));
     assert.deepEqual(nav.routes.find((route) => route.name === "管理设置").routes.map((route) => route.path),
       ["/identity", ...(identity === "ENTERPRISE_USER" ? [] : ["/staff"]), "/contracts", "/my-packages", "/points", "/invite", "/developer/mechanisms"]);
     // AIPDD 算力平台外链固定挂在「模型服务」最后

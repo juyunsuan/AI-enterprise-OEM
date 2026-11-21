@@ -1,0 +1,22 @@
+<view class="error" wx:if="{{errorText}}">{{errorText}}</view>
+
+<view class="list" wx:if="{{list.length}}">
+  <view class="card item" wx:for="{{list}}" wx:key="id">
+    <view class="row">
+      <text class="order-no" data-no="{{item.orderNo}}" bindtap="copyOrderNo">{{item.orderNo}}</text>
+      <text class="tag tag-blue">{{item.statusLabel}}</text>
+    </view>
+    <view class="muted meta">{{item.timeText}} · 服务人员 {{item.staffText}}</view>
+    <view class="muted meta" wx:if="{{item.customerText}}">顾客 {{item.customerText}}</view>
+    <view class="row bottom">
+      <text class="muted">实付 {{item.payText}} · 我的佣金</text>
+      <text class="amount">{{item.commissionText}}</text>
+    </view>
+    <view class="muted hint" wx:if="{{item.reversedText}}">{{item.reversedText}}</view>
+  </view>
+  <view class="muted footer" wx:if="{{finished}}">共 {{total}} 单，已全部加载</view>
+  <view class="muted footer" wx:else>上拉加载更多</view>
+</view>
+
+<view class="empty" wx:elif="{{loading}}">正在加载…</view>
+<view class="empty" wx:else>名下还没有产生佣金的订单。顾客通过你的绑定关系下单并支付后，这里会出现记录。</view>

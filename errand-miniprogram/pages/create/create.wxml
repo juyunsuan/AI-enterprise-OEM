@@ -1,0 +1,117 @@
+<view class="wrap">
+  <view class="tabline">
+    <view class="tab {{type === 'SEND' ? 'active' : ''}}" data-type="SEND" bindtap="switchType">帮我送</view>
+    <view class="tab {{type === 'BUY' ? 'active' : ''}}" data-type="BUY" bindtap="switchType">帮我买</view>
+  </view>
+
+  <view class="card">
+    <view class="row">
+      <text class="section-title">{{type === 'BUY' ? '购买 / 取货地点' : '取货地址'}}</text>
+      <view><text class="link" data-type="FROM" bindtap="pickAddress">地址簿</text> <text class="link" data-target="fromParty" bindtap="chooseLocation">地图选点</text></view>
+    </view>
+    <input class="field" placeholder="联系人姓名" value="{{fromParty.name}}" data-target="fromParty" data-field="name" bindinput="bindParty" />
+    <input class="field" type="number" placeholder="联系人手机号" value="{{fromParty.mobile}}" data-target="fromParty" data-field="mobile" bindinput="bindParty" />
+    <textarea class="field" placeholder="详细地址（小区/楼栋/门牌）" value="{{fromParty.address}}" data-target="fromParty" data-field="address" bindinput="bindParty" auto-height />
+  </view>
+
+  <view class="card">
+    <view class="row">
+      <text class="section-title">送达地址</text>
+      <view><text class="link" data-type="TO" bindtap="pickAddress">地址簿</text> <text class="link" data-target="toParty" bindtap="chooseLocation">地图选点</text></view>
+    </view>
+    <input class="field" placeholder="收件人姓名" value="{{toParty.name}}" data-target="toParty" data-field="name" bindinput="bindParty" />
+    <input class="field" type="number" placeholder="收件人手机号" value="{{toParty.mobile}}" data-target="toParty" data-field="mobile" bindinput="bindParty" />
+    <textarea class="field" placeholder="详细地址（小区/楼栋/门牌）" value="{{toParty.address}}" data-target="toParty" data-field="address" bindinput="bindParty" auto-height />
+  </view>
+
+  <view class="card">
+    <view class="section-title">物品与距离</view>
+    <input class="field" placeholder="{{type === 'BUY' ? '想买什么（商品描述）' : '物品描述'}}" value="{{goodsDesc}}" data-field="goodsDesc" bindinput="bindField" />
+    <view wx:if="{{type === 'BUY'}}" class="field-row">
+      <text>预估商品金额（元）</text>
+      <input class="short" type="digit" value="{{goodsAmount}}" data-field="goodsAmount" bindinput="bindField" />
+    </view>
+    <view class="field-row">
+      <text>重量（公斤）</text>
+      <input class="short" type="digit" value="{{weightKg}}" data-field="weightKg" bindinput="bindField" />
+    </view>
+    <view class="field-row">
+      <text>配送距离（公里）</text>
+      <input class="short" type="digit" value="{{distanceKm}}" data-field="distanceKm" bindinput="bindField" />
+    </view>
+    <view class="muted">距离按你填写的公里数计价；平台不代算地图路线。</view>
+  </view>
+
+  <view class="card" wx:if="{{site.toggles.tip !== false && tipPresets.length}}">
+    <view class="section-title">给骑手小费（可选）</view>
+    <view class="chips">
+      <view wx:for="{{tipPresets}}" wx:key="*this" class="chip {{tip === item ? 'active' : ''}}" data-value="{{item}}" bindtap="pickTip">
+        {{item > 0 ? item + ' 元' : '不加小费'}}
+      </view>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{points > 0}}">
+    <view class="field-row">
+      <text>积分抵扣（可用 {{points}} 分）</text>
+      <input class="short" type="number" value="{{pointsUsed}}" bindinput="bindPoints" />
+    </view>
+    <view class="muted">积分抵扣比例与上限按当前城市规则计算</view>
+  </view>
+
+  <view class="card" wx:if="{{site.toggles.coupon !== false && coupons.length}}">
+    <view class="field-row">
+      <text>优惠券</text>
+      <picker range="{{coupons}}" range-key="name" bindchange="pickCoupon">
+        <view class="picker">{{couponName || '不使用优惠券'}}</view>
+      </picker>
+    </view>
+    <view class="muted">下单时按服务费门槛校验，券在「我的券」里查看。</view>
+  </view>
+
+  <view class="card">
+    <textarea class="field" placeholder="备注（可选）" value="{{remark}}" data-field="remark" bindinput="bindField" auto-height />
+  </view>
+
+  <view class="card">
+    <view class="row">
+      <text class="section-title">物品照片</text>
+      <text class="link" bindtap="choosePhoto">上传</text>
+    </view>
+    <view class="photos">
+      <view wx:for="{{photos}}" wx:key="*this" class="photo">
+        <image src="{{item}}" mode="aspectFill" />
+        <text class="remove" data-index="{{index}}" bindtap="removePhoto">×</text>
+      </view>
+    </view>
+    <view wx:if="{{!photos.length}}" class="muted">选填，最多 6 张，便于骑手识别物品</view>
+  </view>
+
+  <view class="card">
+    <view class="row">
+      <text class="section-title">费用预估</text>
+      <text class="muted" wx:if="{{quoteError}}">{{quoteError}}</text>
+    </view>
+    <block wx:if="{{quote}}">
+      <view class="fee-row"><text>起步价</text><text>¥{{quote.baseFee}}</text></view>
+      <view class="fee-row"><text>超距</text><text>¥{{quote.distanceFee}}</text></view>
+      <view class="fee-row"><text>超重</text><text>¥{{quote.weightFee}}</text></view>
+      <view class="fee-row" wx:if="{{quote.timeFee > 0}}"><text>夜间加价</text><text>¥{{quote.timeFee}}</text></view>
+      <view class="fee-row" wx:if="{{quote.goodsFee > 0}}"><text>帮买服务费</text><text>¥{{quote.goodsFee}}</text></view>
+      <view class="fee-row" wx:if="{{quote.couponDiscount > 0}}"><text>优惠券</text><text>-¥{{quote.couponDiscount}}</text></view>
+      <view class="fee-row" wx:if="{{quote.tip > 0}}"><text>小费</text><text>¥{{quote.tip}}</text></view>
+      <view class="fee-total"><text>合计</text><text>¥{{quote.totalAmount}}</text></view>
+    </block>
+    <view wx:else class="muted">填写距离与重量后自动报价</view>
+  </view>
+
+  <label wx:if="{{site.protocolText}}" class="protocol-line">
+    <checkbox-group bindchange="toggleProtocol">
+      <label><checkbox value="1" checked="{{protocolAccepted}}" />我已阅读并同意《下单须知》</label>
+    </checkbox-group>
+  </label>
+
+  <view class="btn btn-primary submit" bindtap="submit">
+    {{submitting ? '提交中…' : '提交订单'}}
+  </view>
+</view>

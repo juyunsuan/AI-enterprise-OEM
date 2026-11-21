@@ -2,7 +2,7 @@
   "entries": [
     {
       "file": "backend/src/http/automation-routes.ts",
-      "line": 69,
+      "line": 70,
       "pattern": "asUnknownAs",
       "reason": "动态端点注册：endpoints 由契约聚合成运行时注册表，这里集中重建一次索引签名。"
     },
@@ -20,7 +20,7 @@
     },
     {
       "file": "frontend/src/app/agent/_components/chat-panel.tsx",
-      "line": 780,
+      "line": 797,
       "pattern": "eslintDisable",
       "reason": "react-hooks/exhaustive-deps：输入区高度每次渲染对一次且写回有等值守卫，空依赖数组会丢掉逐次同步。"
     },

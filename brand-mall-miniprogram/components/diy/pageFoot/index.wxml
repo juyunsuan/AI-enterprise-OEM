@@ -1,0 +1,20 @@
+<view class="diy-page-foot">
+  <view
+    class="cell"
+    wx:for="{{items}}"
+    wx:key="key"
+    data-index="{{index}}"
+    bindtap="onTap"
+  >
+    <image
+      wx:if="{{item.icon}}"
+      class="icon"
+      src="{{index === active ? item.activeIcon : item.icon}}"
+      mode="aspectFit"
+    />
+    <view wx:else class="icon dot" style="background: {{index === active ? ctx.themeColor : '#f2f3f5'}}"></view>
+    <view class="text {{index === active ? 'on' : ''}}" style="{{index === active ? 'color:' + ctx.themeColor : ''}}">
+      {{item.text}}
+    </view>
+  </view>
+</view>

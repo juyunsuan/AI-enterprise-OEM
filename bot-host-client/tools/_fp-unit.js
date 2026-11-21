@@ -14,7 +14,7 @@ const os = require('node:os');
 const path = require('node:path');
 
 const HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'bb-fp-home-'));
-process.env.BOTBUDDY_HOME = HOME;
+process.env.AWBOTDSH_HOME = HOME;
 
 const fingerprint = require('../src/main/fp/fingerprint');
 const kernels = require('../src/main/fp/kernels');
@@ -335,7 +335,7 @@ function relayConnect(relayPort, host, port, payload) {
       })
       .on('error', reject);
   });
-  assert.match(html, /BotBuddy 指纹窗口已就绪/);
+  assert.match(html, /AWBotDSH 指纹窗口已就绪/);
   assert.equal(await startPage.ensure(), startUrl);
   await startPage.close();
   ok('起始页：回环地址 + 单例 + 页面内容');

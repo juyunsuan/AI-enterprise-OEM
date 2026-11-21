@@ -1,0 +1,58 @@
+<view class="page" wx:if="{{task}}">
+  <view class="card">
+    <view class="task-title">{{task.title}}</view>
+    <view class="item-meta">{{task.patientName}} · {{task.wayLabel}} · 截止 {{task.dueText}}</view>
+    <view class="detail-text" wx:if="{{task.content}}">{{task.content}}</view>
+  </view>
+
+  <view class="card">
+    <view class="block-title">随访结果 <text class="field-required">*</text></view>
+    <textarea
+      class="textarea"
+      maxlength="500"
+      placeholder="填写症状变化、用药情况、生活状态等"
+      value="{{note}}"
+      bindinput="onNote"
+    ></textarea>
+  </view>
+
+  <view class="card">
+    <view class="head-row">
+      <view class="block-title">顺带记录指标</view>
+      <text class="link" bindtap="onAddRow">＋ 添加</text>
+    </view>
+    <view class="metric-row" wx:for="{{rows}}" wx:key="index">
+      <picker
+        class="metric-picker"
+        mode="selector"
+        range="{{metricNames}}"
+        value="{{item.metricIndex}}"
+        data-index="{{index}}"
+        bindchange="onRowMetric"
+      >
+        <view class="picker-field">{{metricNames[item.metricIndex] || '选择指标'}}</view>
+      </picker>
+      <input
+        class="input metric-input"
+        type="digit"
+        placeholder="数值"
+        value="{{item.value}}"
+        data-index="{{index}}"
+        bindinput="onRowValue"
+      />
+      <text class="remove" data-index="{{index}}" bindtap="onRemoveRow">删除</text>
+    </view>
+    <view class="item-meta" wx:if="{{!rows.length}}">选填：可同时录入血压、血糖等指标</view>
+  </view>
+
+  <view class="footer">
+    <button
+      class="button-primary"
+      disabled="{{submitting}}"
+      bindtap="onSubmit"
+    >{{submitting ? '提交中…' : '提交随访'}}</button>
+  </view>
+</view>
+
+<view class="empty" wx:elif="{{!loading}}">该随访任务已完成或已取消</view>
+<view class="empty" wx:else>正在加载…</view>

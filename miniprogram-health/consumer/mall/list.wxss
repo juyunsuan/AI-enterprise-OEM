@@ -1,0 +1,78 @@
+.cart-link {
+  margin-left: 20rpx;
+  color: #1a73e8;
+  font-size: 26rpx;
+  white-space: nowrap;
+}
+
+.category-scroll {
+  white-space: nowrap;
+}
+
+.category-scroll .pills {
+  padding: 8rpx 24rpx 16rpx;
+}
+
+.goods-grid {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 0 16rpx;
+}
+
+.goods {
+  width: 50%;
+  padding: 8rpx;
+  box-sizing: border-box;
+}
+
+.goods-cover {
+  width: 100%;
+  height: 320rpx;
+  border-radius: 12rpx;
+  background: #f0f1f5;
+}
+
+.goods-body {
+  padding: 12rpx 4rpx 8rpx;
+}
+
+.goods-name {
+  font-size: 28rpx;
+  font-weight: 600;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.goods-sub {
+  margin-top: 4rpx;
+  color: #8a8f99;
+  font-size: 22rpx;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.goods-tags {
+  margin-top: 6rpx;
+}
+
+.goods-price-row {
+  margin-top: 8rpx;
+}
+
+.origin {
+  margin-left: 8rpx;
+  color: #a6abb3;
+  font-size: 20rpx;
+  text-decoration: line-through;
+}
+
+.list-tip {
+  padding: 24rpx;
+  text-align: center;
+  color: #8a8f99;
+  font-size: 24rpx;
+}

@@ -134,7 +134,7 @@ function ipCheckUrl() {
 }
 
 /**
- * 心跳上报的窗口候选：平台 RPA「BotBuddy 浏览器」任务按这张表选执行位，
+ * 心跳上报的窗口候选：平台 RPA「AWBotDSH 浏览器」任务按这张表选执行位，
  * 只带界面选人用得上的字段（名称、分组、内核、最近打开），代理与种子一律不出本机。
  */
 function profileCandidates() {
@@ -158,6 +158,8 @@ module.exports = {
   closeAll,
   shutdown,
   pages,
+  navigateAgent: launch.navigateAgent,
+  evaluateAgent: launch.evaluateAgent,
   checkProxy,
   setAgentProfile,
   setMaxOpen,

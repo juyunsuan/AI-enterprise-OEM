@@ -1,0 +1,18 @@
+<view class="container">
+  <view class="card" wx:for="{{groups}}" wx:key="id">
+    <view class="row" data-id="{{item.id}}" bindtap="openGroup">
+      <image class="avatar" src="{{item.cover}}" mode="aspectFill" />
+      <view class="name">{{item.name}}</view>
+      <view class="muted" style="margin-left:auto">{{item.memberCount}} 人</view>
+    </view>
+    <view class="muted" style="margin-top:8rpx">{{item.categoryName}} · {{item.role === 'OWNER' ? '圈主' : item.role === 'ADMIN' ? '圈管' : '成员'}}</view>
+    <view class="actions">
+      <view class="btn ghost" data-id="{{item.id}}" bindtap="manage" wx:if="{{item.role === 'OWNER' || item.role === 'ADMIN'}}">管理圈子</view>
+    </view>
+  </view>
+
+  <view class="empty" wx:if="{{!loading && !groups.length}}">还没有加入任何圈子</view>
+  <view class="empty" wx:if="{{loading}}">正在加载…</view>
+</view>
+
+<view class="floating" bindtap="applyGroup">+</view>

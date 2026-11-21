@@ -2,7 +2,7 @@ import { text } from '../common/api';
 
 /**
  * 群控任务终态的站内信口径（方案 §4.4、§4.7）。
- * BotBuddy 主机 / Mobot 手机与 WorkBuddy 企业云共用这一份文案与闸门，
+ * AWBotDSH 主机 / AWBot 手机与 WorkBuddy 企业云共用这一份文案与闸门，
  * 否则用户在同一个铃铛下拉里会看到两套写法。
  */
 
@@ -87,7 +87,7 @@ export function composeTerminalNotice(
       : input.status === 'TIMEOUT'
         ? fromCloud
           ? '云端超时未回传结果，可在「Agent-Bot → 企云账号」里看这段云端对话；确认账号凭据可用后可重新派单。'
-          : '主机超时未回传结果，请检查 BotBuddy 客户端是否还在跑；确认设备在线后可重新派单。'
+          : '主机超时未回传结果，请检查 AWBotDSH 客户端是否还在跑；确认设备在线后可重新派单。'
         : `${
             noticeSummary(input.detail) ||
             clip(input.detail, 200) ||

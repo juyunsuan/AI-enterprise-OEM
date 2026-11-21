@@ -1,0 +1,46 @@
+<view class="page">
+  <scroll-view class="tab-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+    <view class="pills tab-pills">
+      <view
+        class="pill {{status === item.key ? 'pill-active' : ''}}"
+        wx:for="{{tabs}}"
+        wx:key="key"
+        data-key="{{item.key}}"
+        bindtap="onTab"
+      >{{item.label}}</view>
+    </view>
+  </scroll-view>
+
+  <view class="card order-card" wx:if="{{list.length}}">
+    <view
+      class="order"
+      wx:for="{{list}}"
+      wx:key="id"
+      data-id="{{item.id}}"
+      bindtap="onOrder"
+    >
+      <view class="order-head">
+        <text class="item-meta">{{item.orderNo}}</text>
+        <text class="tag tag-blue">{{item.statusLabel}}</text>
+      </view>
+      <view class="order-body">
+        <view class="order-name">{{item.bizTypeLabel}}</view>
+        <view class="item-meta">下单时间 {{item.timeText}}</view>
+      </view>
+      <view class="order-foot">
+        <text class="amount">{{item.amountText}}</text>
+        <button
+          wx:if="{{item.canPay}}"
+          class="button-sm primary"
+          data-id="{{item.id}}"
+          catchtap="onPay"
+        >去支付</button>
+        <text class="tag tag-green" wx:elif="{{item.payLabel === '已支付'}}">{{item.payLabel}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="empty" wx:elif="{{!loading}}">暂无此类订单</view>
+  <view class="list-tip" wx:if="{{loading}}">正在加载…</view>
+  <view class="list-tip" wx:elif="{{list.length && !hasMore}}">没有更多了</view>
+</view>

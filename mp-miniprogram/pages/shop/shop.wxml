@@ -1,0 +1,85 @@
+<import src="../../templates/diy.wxml" />
+
+<view class="wrap">
+  <view wx:if="{{loading}}" class="empty">正在加载店铺…</view>
+
+  <view wx:elif="{{error}}" class="card">
+    <view class="error-box">{{error}}</view>
+    <view class="btn btn-primary" style="margin-top:20rpx" bindtap="load">重新加载</view>
+  </view>
+
+  <block wx:else>
+    <view class="card shop-head">
+      <image wx:if="{{shop.logo}}" class="shop-head-logo" src="{{shop.logo}}" mode="aspectFill" />
+      <view class="grow">
+        <view class="shop-head-name">{{shop.name}}</view>
+        <view class="muted">{{shop.intro || '市场入驻店铺'}}</view>
+      </view>
+      <view class="shop-head-actions">
+        <view
+          class="btn btn-small {{followed ? '' : 'btn-primary'}}"
+          bindtap="toggleFollow"
+        >{{followed ? '已关注' : '关注'}}</view>
+        <view class="btn btn-small btn-ghost" bindtap="goService">客服</view>
+      </view>
+    </view>
+
+    <view class="search-bar">
+      <input
+        class="search-input"
+        value="{{keyword}}"
+        placeholder="搜索本店商品"
+        placeholder-class="placeholder"
+        confirm-type="search"
+        bindinput="onKeyword"
+        bindconfirm="search"
+      />
+      <view class="search-btn" style="color:{{themeColor}}" bindtap="search">搜索</view>
+    </view>
+
+    <view wx:if="{{hasDiy}}" style="{{diyStyle}}">
+      <block wx:for="{{blocks}}" wx:key="key">
+        <template
+          is="diy-block"
+          data="{{block: item, themeColor: diyTheme, diyKeyword: diyKeyword}}"
+        />
+      </block>
+    </view>
+
+    <view id="shop-goods" class="row" style="margin:8rpx 0 20rpx">
+      <view class="section-title" style="margin-bottom:0">
+        {{keyword ? '“' + keyword + '”的搜索结果' : '本店商品'}}
+      </view>
+      <view class="muted">共 {{total}} 件</view>
+    </view>
+
+    <view wx:if="{{!products.length}}" class="card">
+      <view class="empty" style="padding:60rpx 0">
+        {{keyword ? '没有找到相关商品' : '店铺还没有上架商品'}}
+      </view>
+    </view>
+
+    <view wx:else class="goods-grid">
+      <view
+        wx:for="{{products}}"
+        wx:key="id"
+        class="goods-card"
+        data-id="{{item.id}}"
+        bindtap="goProduct"
+      >
+        <image class="goods-cover" src="{{item.coverImage}}" mode="aspectFill" lazy-load />
+        <view class="goods-body">
+          <view class="goods-title">{{item.title}}</view>
+          <view class="goods-meta">
+            <text class="money">¥{{item.priceText}}</text>
+            <text class="muted">已售 {{item.sales}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{products.length}}" class="muted footer">
+      {{hasMore ? '上拉加载更多' : '已经到底了'}}
+    </view>
+  </block>
+</view>

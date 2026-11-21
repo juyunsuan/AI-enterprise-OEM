@@ -2,7 +2,7 @@
 
 /**
  * Chrome 插件包管理：上传 ZIP / 文件夹 → 校验 manifest.json → 落到受管目录
- * `~/.botbuddy/chrome-extensions/<id>/`，列表展示与删除都在客户端内完成。
+ * `~/.awbotdsh/chrome-extensions/<id>/`，列表展示与删除都在客户端内完成。
  *
  * 真正加载发生在「客户端自带浏览器」里：启动指纹窗口时按勾选加载。
  * 全程不需要打开 chrome://extensions，也不会启动或扫描本机 Chrome / Edge。

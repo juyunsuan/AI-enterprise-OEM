@@ -33,6 +33,16 @@ verification-screenshots/
 scripts/tmp/
 packages/tmp/
 .tmp-analysis/
+.tmp-ref/
+# 根目录与各子目录的一次性调试文件（.tmp-* / tmp-*），不属于发布内容
+.tmp-*
+tmp-*
+
+# 本地 Agent / 工作流笔记
+.workbuddy/
+
+# 第三方参考源码的本地研读目录（只读业务口径，严禁入库）
+.scratch/
 
 # PostgreSQL schema 为派生产物（由 scripts/gen-prisma-schema.mjs 从 schema.prisma 生成），不入库以免与事实源漂移
 backend/prisma/schema.postgres.prisma

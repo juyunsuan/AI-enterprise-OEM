@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 import { GlobalOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
 import { Alert, Button, Empty, Input, Spin } from "antd";
 import { useEffect, useMemo, useState } from "react";
@@ -28,11 +30,13 @@ function SiteLogo({
     );
   }
   return (
-    <img
+    <Image
       className={styles.logo}
       src={logoUrl}
       alt=""
-      loading="lazy"
+      width={40}
+      height={40}
+      unoptimized
       referrerPolicy="no-referrer"
       onError={() => setFailed(true)}
     />

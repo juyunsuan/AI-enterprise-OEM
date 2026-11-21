@@ -10,6 +10,16 @@ import { WorkbuddyPlanScheduler } from './workbuddy/workbuddy-plan.scheduler';
 import { WorkbuddyCloudScheduler } from './workbuddy/workbuddy-cloud.scheduler';
 import { ContentAgentScheduleScheduler } from './content/agent-schedule.scheduler';
 import { OkrDailyScheduler } from './okr/okr.scheduler';
+import { OnsiteScheduler } from './onsite/onsite.scheduler';
+import { RentalScheduler } from './rental/rental.scheduler';
+import { ParkBillingScheduler } from './park/park.scheduler';
+import { BrandScheduler } from './brand-mall/brand.scheduler';
+import { TakeoutScheduler } from './takeout/takeout.scheduler';
+import { MpScheduler } from './marketplace/mp.scheduler';
+import { CardShopScheduler } from './card-shop/card-shop.scheduler';
+import { KuaidiScheduler } from './kuaidi/kuaidi.scheduler';
+import { CircleScheduler } from './circle/circle.scheduler';
+import { ErrandScheduler } from './errand/errand.scheduler';
 import { OaReminderScheduler } from './oa/oa.scheduler';
 import { TencentQidianScheduler } from './tencent-qidian/tp.scheduler';
 import { PointsDailyScheduler } from './points/points-daily.scheduler';
@@ -69,10 +79,42 @@ async function bootstrap() {
     services.taskRouter,
     services.taskCenter,
   );
-  // 商务社交：AIworkin 同步任务出站投递与重试
-  const socialSyncScheduler = services.socialSync.scheduler;
   // GEO 独立站：每月 1 日出账、欠费宽限停服与复活、域名到期复检
   const geoSiteScheduler = services.geoSite.scheduler;
+  // 建站工具启动账期：过渡期转首期、到期续扣、欠费超宽限停服与充值后复活
+  const toolLaunchScheduler = services.toolLaunch.scheduler;
+  // 上门服务：待支付订单也占档期，所以超时未付必须准时回收，否则档期会被僵尸单堆满
+  const onsiteScheduler = new OnsiteScheduler(services.onsite.orders);
+  // 租赁：超时未付款关单 + 企微事件外发
+  const rentalScheduler = new RentalScheduler(
+    services.rental.orders,
+    services.rental.scrm,
+  );
+  const parkBillingScheduler = new ParkBillingScheduler(services.park.leases);
+  // 电商小程序：下单即扣库存，超时未付必须回收；券票到期要翻状态，否则端上显示成可用
+  const brandScheduler = new BrandScheduler(
+    services.brand.orders,
+    services.brand.coupons,
+    services.brand.scrm,
+  );
+  // 外卖：独立数据域的订单回收与 SCRM 外发，不与商城调度混用
+  const takeoutScheduler = new TakeoutScheduler(
+    services.takeout.orders,
+    services.takeout.scrm,
+  );
+  // 多店铺商城：企微事件外发箱（与品牌商城同端口，按商户记账）
+  const mpScheduler = new MpScheduler(services.marketplace.scrm);
+  // 卡密商城：下单即锁卡，超时未付必须关单并把卡密放回库存
+  const cardShopScheduler = new CardShopScheduler(services.cardShop.orders);
+  // 快递寄件：超时未付订单要关掉，否则「待支付」会一直占着用户的下单位
+  const kuaidiScheduler = new KuaidiScheduler(services.kuaidi.orders);
+  // 圈子社区：推荐位热度按时间衰减重算，避免老帖长期霸榜
+  const circleScheduler = new CircleScheduler(services.circle.prisma);
+  // 跑腿：超时未付关单 + 过期优惠券翻状态
+  const errandScheduler = new ErrandScheduler(
+    services.errand.prisma,
+    services.errand.orders,
+  );
   // 智慧分析：有启用订阅的账号按间隔重算热点（幂等，先清自动热点再重建）
   const insightScheduler = services.insight.scheduler;
   try {
@@ -100,9 +142,19 @@ async function bootstrap() {
     wechatMpScheduler.onModuleInit();
     workflowScheduler.onModuleInit();
     taskAssignmentScheduler.onModuleInit();
-    socialSyncScheduler.onModuleInit();
     geoSiteScheduler.onModuleInit();
+    toolLaunchScheduler.onModuleInit();
     insightScheduler.onModuleInit();
+    onsiteScheduler.onModuleInit();
+    rentalScheduler.onModuleInit();
+    parkBillingScheduler.onModuleInit();
+    brandScheduler.onModuleInit();
+    takeoutScheduler.onModuleInit();
+    mpScheduler.onModuleInit();
+    cardShopScheduler.onModuleInit();
+    kuaidiScheduler.onModuleInit();
+    circleScheduler.onModuleInit();
+    errandScheduler.onModuleInit();
   } catch (error) {
     rpaScheduler.onModuleDestroy();
     chromeScheduleScheduler.onModuleDestroy();
@@ -124,9 +176,19 @@ async function bootstrap() {
     wechatMpScheduler.onModuleDestroy();
     workflowScheduler.onModuleDestroy();
     taskAssignmentScheduler.onModuleDestroy();
-    socialSyncScheduler.onModuleDestroy();
     geoSiteScheduler.onModuleDestroy();
+    toolLaunchScheduler.onModuleDestroy();
     insightScheduler.onModuleDestroy();
+    onsiteScheduler.onModuleDestroy();
+    rentalScheduler.onModuleDestroy();
+    parkBillingScheduler.onModuleDestroy();
+    brandScheduler.onModuleDestroy();
+    takeoutScheduler.onModuleDestroy();
+    mpScheduler.onModuleDestroy();
+    cardShopScheduler.onModuleDestroy();
+    kuaidiScheduler.onModuleDestroy();
+    circleScheduler.onModuleDestroy();
+    errandScheduler.onModuleDestroy();
     await services.prisma.$disconnect();
     throw error;
   }
@@ -160,9 +222,19 @@ async function bootstrap() {
     wechatMpScheduler.onModuleDestroy();
     workflowScheduler.onModuleDestroy();
     taskAssignmentScheduler.onModuleDestroy();
-    socialSyncScheduler.onModuleDestroy();
     geoSiteScheduler.onModuleDestroy();
+    toolLaunchScheduler.onModuleDestroy();
     insightScheduler.onModuleDestroy();
+    onsiteScheduler.onModuleDestroy();
+    rentalScheduler.onModuleDestroy();
+    parkBillingScheduler.onModuleDestroy();
+    brandScheduler.onModuleDestroy();
+    takeoutScheduler.onModuleDestroy();
+    mpScheduler.onModuleDestroy();
+    cardShopScheduler.onModuleDestroy();
+    kuaidiScheduler.onModuleDestroy();
+    circleScheduler.onModuleDestroy();
+    errandScheduler.onModuleDestroy();
     server.close(() => {
       void services.prisma.$disconnect().finally(() => process.exit(0));
     });

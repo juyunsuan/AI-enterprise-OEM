@@ -1,0 +1,60 @@
+<view class="page">
+  <view class="search-bar">
+    <input
+      class="search-input"
+      placeholder="搜商品、药品"
+      value="{{keyword}}"
+      confirm-type="search"
+      bindinput="onKeyword"
+      bindconfirm="onSearch"
+    />
+    <view class="cart-link" bindtap="onCart">购物车</view>
+  </view>
+
+  <scroll-view class="category-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+    <view class="pills">
+      <view
+        class="pill {{categoryId === 0 ? 'pill-active' : ''}}"
+        data-id="0"
+        bindtap="onCategory"
+      >全部</view>
+      <view
+        class="pill {{categoryId === item.id ? 'pill-active' : ''}}"
+        wx:for="{{categories}}"
+        wx:key="id"
+        data-id="{{item.id}}"
+        bindtap="onCategory"
+      >{{item.name}}</view>
+    </view>
+  </scroll-view>
+
+  <view class="goods-grid" wx:if="{{list.length}}">
+    <view
+      class="goods"
+      wx:for="{{list}}"
+      wx:key="id"
+      data-id="{{item.id}}"
+      bindtap="onGoods"
+    >
+      <image wx:if="{{item.coverImage}}" class="goods-cover" src="{{item.coverImage}}" mode="aspectFill" />
+      <view wx:else class="goods-cover"></view>
+      <view class="goods-body">
+        <view class="goods-name">{{item.name}}</view>
+        <view class="goods-sub" wx:if="{{item.subtitle}}">{{item.subtitle}}</view>
+        <view class="goods-tags">
+          <text class="tag tag-red" wx:if="{{item.isRx}}">处方药</text>
+          <text class="tag tag-orange" wx:if="{{item.soldOut}}">缺货</text>
+        </view>
+        <view class="goods-price-row">
+          <text class="amount">{{item.priceText}}</text>
+          <text class="origin" wx:if="{{item.originText}}">{{item.originText}}</text>
+        </view>
+        <view class="item-meta">已售 {{item.sales}}{{item.unit ? ' ' + item.unit : ''}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="empty" wx:elif="{{!loading}}">该分类下暂无商品</view>
+  <view class="list-tip" wx:if="{{loading}}">正在加载…</view>
+  <view class="list-tip" wx:elif="{{list.length && !hasMore}}">没有更多了</view>
+</view>

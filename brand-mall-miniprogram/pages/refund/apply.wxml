@@ -1,0 +1,78 @@
+<view class="apply-page" wx:if="{{refundEnabled}}">
+  <view class="card" wx:if="{{items.length}}">
+    <view class="section-title">选择退款商品</view>
+    <view
+      class="item-row {{itemId === row.id ? 'on' : ''}}"
+      wx:for="{{items}}"
+      wx:for-item="row"
+      wx:key="id"
+      data-id="{{row.id}}"
+      bindtap="pickItem"
+    >
+      <image class="pic" src="{{row.image}}" mode="aspectFill" />
+      <view class="item-info">
+        <view class="ellipsis-2">{{row.title}}</view>
+        <view class="muted">{{row.skuName}} ×{{row.quantity}}</view>
+        <view class="muted">可退 ¥{{row.refundableText}}</view>
+      </view>
+      <text class="radio">{{itemId === row.id ? '✓' : ''}}</text>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="section-title">售后类型</view>
+    <view class="types">
+      <view class="type {{type === 'REFUND_ONLY' ? 'on' : ''}}" data-type="REFUND_ONLY" bindtap="pickType">仅退款</view>
+      <view class="type {{type === 'RETURN_REFUND' ? 'on' : ''}}" data-type="RETURN_REFUND" bindtap="pickType">退货退款</view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="section-title">退款原因</view>
+    <view class="reasons">
+      <view
+        class="reason {{reason === item ? 'on' : ''}}"
+        wx:for="{{reasons}}"
+        wx:key="*this"
+        data-reason="{{item}}"
+        bindtap="pickReason"
+      >
+        {{item}}
+      </view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="cell">
+      <text class="cell-label">退款金额</text>
+      <input class="cell-input" type="digit" value="{{amount}}" bindblur="onAmount" />
+      <text class="muted">最多 ¥{{maxAmountText}}</text>
+    </view>
+    <view class="field">
+      <view class="field-label">问题描述（选填）</view>
+      <textarea class="desc" value="{{desc}}" maxlength="500" placeholder="补充说明有助于商家更快处理" bindinput="onDesc" />
+    </view>
+    <view class="field">
+      <view class="field-label">凭证图片（最多 9 张）</view>
+      <view class="thumbs">
+        <view class="thumb" wx:for="{{images}}" wx:key="*this">
+          <image class="thumb-img" src="{{item}}" mode="aspectFill" data-url="{{item}}" bindtap="previewImage" />
+          <view class="thumb-del" data-index="{{index}}" catchtap="removeImage">×</view>
+        </view>
+        <view class="thumb thumb-add" wx:if="{{images.length < 9}}" bindtap="chooseImages">{{uploading ? '上传中' : '+'}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="footer-gap"></view>
+
+  <view class="bar">
+    <view class="bar-main {{submitting ? 'dis' : ''}}" bindtap="submit">{{submitting ? '提交中…' : '提交申请'}}</view>
+  </view>
+</view>
+
+<view class="empty" wx:elif="{{!loading}}">
+  <view>{{error || '商家未开启售后申请'}}</view>
+  <view class="link" bindtap="goOrders">返回订单列表 ›</view>
+</view>
+<view class="empty" wx:else>加载中…</view>

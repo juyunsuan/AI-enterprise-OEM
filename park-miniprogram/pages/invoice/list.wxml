@@ -1,0 +1,14 @@
+<view class="wrap">
+  <view wx:if="{{!list.length && !loading}}" class="empty">暂无发票记录。</view>
+  <view wx:for="{{list}}" wx:key="id" class="card">
+    <view class="row">
+      <view class="section-title">{{item.title}}</view>
+      <text class="tag">{{item.statusLabel}}</text>
+    </view>
+    <view class="muted">{{item.bizLabel}} · 税号 {{item.taxNo || '-'}}</view>
+    <view class="row" style="margin-top: 12rpx;">
+      <view class="muted">{{item.issuedAt || item.createdAt}}</view>
+      <view class="section-title">¥{{item.amount}}</view>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,11 @@
+.contact {
+  padding: 18rpx 0;
+}
+
+.contact + .contact {
+  border-top: 1rpx solid #f0f1f3;
+}
+
+.link {
+  color: #1f6feb;
+}

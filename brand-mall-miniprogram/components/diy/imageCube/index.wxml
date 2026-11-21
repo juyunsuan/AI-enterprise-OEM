@@ -1,0 +1,17 @@
+<view class="diy-image-cube" style="padding: {{gutter}}rpx">
+  <view class="cube-row" wx:for="{{rows}}" wx:for-item="row" wx:for-index="rowIndex" wx:key="key" style="{{row.style}}">
+    <view
+      class="cube-cell"
+      wx:for="{{row.cells}}"
+      wx:for-item="cell"
+      wx:for-index="cellIndex"
+      wx:key="key"
+      style="{{cell.style}}"
+      data-row="{{rowIndex}}"
+      data-cell="{{cellIndex}}"
+      bindtap="onTap"
+    >
+      <image wx:if="{{cell.image}}" class="pic" src="{{cell.image}}" mode="aspectFill" />
+    </view>
+  </view>
+</view>

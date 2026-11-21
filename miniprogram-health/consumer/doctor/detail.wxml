@@ -1,0 +1,100 @@
+<view class="page" wx:if="{{doctor}}">
+  <view class="card profile">
+    <image wx:if="{{doctor.avatar}}" class="avatar-lg" src="{{doctor.avatar}}" mode="aspectFill" />
+    <view wx:else class="avatar-lg"></view>
+    <view class="profile-body">
+      <view class="profile-line">
+        <text class="profile-name">{{doctor.name}}</text>
+        <text class="tag tag-blue">{{doctor.roleLabel}}</text>
+      </view>
+      <view class="item-meta">{{doctor.title || '认证医护'}}<text wx:if="{{doctor.city}}"> · {{doctor.city}}</text></view>
+      <view class="item-meta" wx:if="{{doctor.score}}">
+        评分 {{doctor.score}}（{{doctor.scoreCount}} 条）
+      </view>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{doctor.goodAt.length}}">
+    <view class="block-title">擅长方向</view>
+    <view class="tags">
+      <text class="tag tag-green" wx:for="{{doctor.goodAt}}" wx:key="*this">{{item}}</text>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{doctor.intro}}">
+    <view class="block-title">个人简介</view>
+    <view class="detail-text">{{doctor.intro}}</view>
+  </view>
+
+  <view class="card">
+    <view class="block-title">问诊方式</view>
+    <view class="ways">
+      <view
+        class="way"
+        wx:for="{{wayServices}}"
+        wx:key="key"
+        data-biz="{{item.bizType}}"
+        bindtap="onQuickWay"
+      >
+        <view class="way-label">{{item.label}}</view>
+        <view class="way-desc">去预约</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="section" wx:if="{{services.length}}">
+    <view class="section-head">
+      <view class="title">可预约服务</view>
+    </view>
+    <view class="card section-card">
+      <view
+        class="service"
+        wx:for="{{services}}"
+        wx:key="serviceId"
+        data-id="{{item.serviceId}}"
+        bindtap="onService"
+      >
+        <image wx:if="{{item.coverImage}}" class="thumb" src="{{item.coverImage}}" mode="aspectFill" />
+        <view class="service-body">
+          <view class="service-name">{{item.name}}</view>
+          <view class="service-meta">
+            <text class="tag tag-blue">{{item.bizLabel}}</text>
+            <text class="tag tag-green" wx:if="{{item.instant}}">可即时接诊</text>
+          </view>
+          <view class="service-price">
+            <text class="amount">{{item.priceText}}</text>
+          </view>
+        </view>
+        <button
+          class="button-sm primary"
+          data-service-id="{{item.serviceId}}"
+          data-practitioner-id="{{doctor.id}}"
+          catchtap="onBook"
+        >预约</button>
+      </view>
+    </view>
+  </view>
+
+  <view class="section" wx:if="{{reviews.length}}">
+    <view class="section-head">
+      <view class="title">最近评价</view>
+    </view>
+    <view class="card section-card">
+      <view class="review" wx:for="{{reviews}}" wx:key="index">
+        <view class="review-head">
+          <text class="review-stars">{{item.stars}}</text>
+          <text class="item-meta">{{item.timeText}}</text>
+        </view>
+        <view class="detail-text">{{item.content}}</view>
+        <view class="tags" wx:if="{{item.tags.length}}">
+          <text class="tag" wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this">{{tag}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="footer-tip">问诊内容仅供参考，不构成诊断结论；急危重症请拨打 120。</view>
+</view>
+
+<view class="empty" wx:elif="{{!loading}}">该医护已下架</view>
+<view class="empty" wx:else>正在加载…</view>

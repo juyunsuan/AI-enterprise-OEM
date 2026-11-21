@@ -1,0 +1,20 @@
+<view class="page" style="{{themeStyle}}">
+  <view wx:if="{{error}}" class="status-banner">{{error}}</view>
+
+  <view wx:if="{{list.length}}" class="masonry">
+    <view wx:for="{{list}}" wx:key="id" class="masonry-item" data-id="{{item.id}}" bindtap="openWork">
+      <image wx:if="{{item.coverUrl}}" class="masonry-cover" src="{{item.coverUrl}}" mode="aspectFill" />
+      <view wx:else class="masonry-cover masonry-empty">数字人视频</view>
+      <view class="masonry-title">{{item.title}}</view>
+      <view class="masonry-meta">{{item.nickname}} · 播放 {{item.playCount}}</view>
+    </view>
+  </view>
+
+  <view wx:if="{{!loading && !list.length}}" class="empty">
+    还没有作品，去创作一个吧
+    <view class="empty-btn" bindtap="goCreate">开始创作</view>
+  </view>
+
+  <view wx:if="{{loading}}" class="empty">加载中…</view>
+  <view wx:if="{{!hasMore && list.length}}" class="empty">没有更多了</view>
+</view>

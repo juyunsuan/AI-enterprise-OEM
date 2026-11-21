@@ -1,0 +1,16 @@
+<view class="container" wx:if="{{activity}}">
+  <view class="card">
+    <image wx:if="{{activity.cover}}" class="image" style="width:100%;height:320rpx" src="{{activity.cover}}" mode="aspectFill" />
+    <view class="name" style="margin-left:0;font-size:36rpx">{{activity.title}}</view>
+    <view class="muted" style="margin-top:8rpx">{{activity.startAt}}{{activity.endAt ? ' 至 ' + activity.endAt : ''}}</view>
+    <view class="muted" style="margin-top:8rpx">{{activity.address || '地点待定'}}</view>
+    <view class="muted" style="margin-top:8rpx">{{activity.groupName ? '圈子：' + activity.groupName : '全社区活动'}} · 已报名 {{activity.joinCount}}{{activity.capacity ? ' / ' + activity.capacity : ''}}</view>
+    <view class="content">{{activity.description}}</view>
+    <view class="btn" style="margin-top:20rpx" wx:if="{{activity.status === 'ACTIVE'}}" bindtap="toggle">
+      {{activity.isJoined ? '取消报名' : '立即报名'}}
+    </view>
+    <view class="empty" wx:elif="{{activity.status !== 'ACTIVE'}}">活动当前不可报名</view>
+  </view>
+</view>
+
+<view class="empty" wx:if="{{loading}}">正在加载…</view>

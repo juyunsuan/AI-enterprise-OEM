@@ -11,6 +11,7 @@ import { ScrmComplianceService } from './scrm-compliance';
 import { ScrmStatsService } from './scrm-stats.service';
 import { ScrmMaterialService } from './scrm-material.service';
 import { ScrmSidebarService } from './scrm-sidebar.service';
+import { TerminalScrmService } from './terminal-scrm.service';
 
 /**
  * 企业微信 SCRM（营销工具）：接入 / 客户 / 资料卡 / 标签 / 活码 / 客户群 /
@@ -31,12 +32,30 @@ export class ScrmController {
     private readonly stats: ScrmStatsService,
     private readonly materialService: ScrmMaterialService,
     private readonly sidebarService: ScrmSidebarService,
+    private readonly terminalScrm: TerminalScrmService,
   ) {}
 
   // ---------- 接入与概览 ----------
 
   async settings(user: CurrentUser) {
     return this.settingsService.settings(user);
+  }
+
+  async terminalSettings(user: CurrentUser) {
+    return this.terminalScrm.list(user);
+  }
+
+  async terminalToggle(
+    user: CurrentUser,
+    body: { scene: string; sourceId: number; enabled: boolean },
+  ) {
+    await this.terminalScrm.toggle(
+      user,
+      body.scene,
+      Number(body.sourceId),
+      body.enabled === true,
+    );
+    return { ok: true };
   }
 
   async saveSettings(user: CurrentUser, body: Record<string, unknown>) {

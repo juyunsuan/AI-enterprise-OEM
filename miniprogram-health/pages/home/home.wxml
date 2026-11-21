@@ -1,0 +1,222 @@
+<view class="page home">
+  <!-- 未开通 / 网络失败：保留店铺名与原因，按店主后台的引导口径提示 -->
+  <view class="card state-card" wx:if="{{disabled}}">
+    <view class="state-title">{{bootstrap.shopName || '健康管理'}}</view>
+    <view class="state-reason">{{reason}}</view>
+    <button class="button-primary state-btn" bindtap="onRetry">重新加载</button>
+    <view class="state-phone" wx:if="{{bootstrap.servicePhone}}" bindtap="onCall">
+      客服电话 {{bootstrap.servicePhone}}
+    </view>
+  </view>
+
+  <view class="card state-card" wx:elif="{{loading}}">
+    <view class="state-title">正在加载店铺信息…</view>
+    <view class="state-reason">首次打开会慢一点，请稍候</view>
+  </view>
+
+  <block wx:else>
+    <!-- 品牌区 -->
+    <view class="hero" wx:if="{{bootstrap.logo || bootstrap.slogan}}">
+      <image wx:if="{{bootstrap.logo}}" class="hero-logo" src="{{bootstrap.logo}}" mode="aspectFill" />
+      <view class="hero-text">
+        <view class="hero-name">{{bootstrap.shopName}}</view>
+        <view class="hero-slogan" wx:if="{{bootstrap.slogan}}">{{bootstrap.slogan}}</view>
+        <view class="hero-city" wx:if="{{bootstrap.city}}">{{bootstrap.city}}</view>
+      </view>
+    </view>
+
+    <!-- 搜索 -->
+    <view class="search-bar" bindtap="onSearch">
+      <view class="search-input">搜服务、医生、文章</view>
+    </view>
+
+    <!-- 轮播 -->
+    <swiper
+      wx:if="{{banners.length}}"
+      class="banner"
+      indicator-dots="{{banners.length > 1}}"
+      autoplay="{{banners.length > 1}}"
+      circular
+      interval="4000"
+      indicator-color="rgba(255,255,255,0.5)"
+      indicator-active-color="#ffffff"
+    >
+      <swiper-item
+        wx:for="{{banners}}"
+        wx:key="id"
+        data-link-type="{{item.linkType}}"
+        data-link-value="{{item.linkValue}}"
+        bindtap="onBanner"
+      >
+        <image class="banner-image" src="{{item.image}}" mode="aspectFill" />
+      </swiper-item>
+    </swiper>
+
+    <!-- 热搜词 -->
+    <view class="keywords" wx:if="{{hotKeywords.length}}">
+      <view
+        class="pill keyword"
+        wx:for="{{hotKeywords}}"
+        wx:key="*this"
+        data-word="{{item}}"
+        bindtap="onKeyword"
+      >{{item}}</view>
+    </view>
+
+    <!-- 服务入口：勾没勾、什么顺序，全由店主在「装修与协议 → 服务入口」决定 -->
+    <view class="card entries-card" wx:if="{{entries.length}}">
+      <view class="grid">
+        <view
+          class="grid-item entry"
+          wx:for="{{entries}}"
+          wx:key="key"
+          data-key="{{item.key}}"
+          bindtap="onEntry"
+        >
+          <view class="entry-badge tone-{{index % 8}}">{{item.badge}}</view>
+          <view class="grid-text entry-label">{{item.label}}</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 快捷动作 -->
+    <view class="card quick-card">
+      <view class="quick" bindtap="onFollowups">
+        <view class="quick-value">随访</view>
+        <view class="quick-label">我的疗程</view>
+      </view>
+      <view class="quick" bindtap="onOrders">
+        <view class="quick-value">订单</view>
+        <view class="quick-label">我的订单</view>
+      </view>
+      <view class="quick" bindtap="onMetrics">
+        <view class="quick-value">指标</view>
+        <view class="quick-label">健康打卡</view>
+      </view>
+    </view>
+
+    <!-- 公告 -->
+    <view class="card notice-card" wx:if="{{notices.length}}">
+      <view class="notice-badge">公告</view>
+      <swiper class="notice-swiper" vertical autoplay circular interval="3500">
+        <swiper-item
+          wx:for="{{notices}}"
+          wx:key="id"
+          data-content="{{item.lineText}}"
+          bindtap="onNotice"
+        >
+          <view class="notice-line">{{item.lineText}}</view>
+        </swiper-item>
+      </swiper>
+    </view>
+
+    <!-- 推荐服务 -->
+    <view class="section" wx:if="{{services.length}}">
+      <view class="section-head">
+        <view class="title">精选服务</view>
+        <view class="link" bindtap="onMoreServices">全部服务</view>
+      </view>
+      <view class="card section-card">
+        <view
+          class="service"
+          wx:for="{{services}}"
+          wx:key="id"
+          data-id="{{item.id}}"
+          bindtap="onService"
+        >
+          <image wx:if="{{item.coverImage}}" class="thumb" src="{{item.coverImage}}" mode="aspectFill" />
+          <view wx:else class="thumb"></view>
+          <view class="service-body">
+            <view class="service-name">{{item.name}}</view>
+            <view class="service-meta">
+              <text class="tag tag-blue">{{item.bizLabel}}</text>
+              <text class="tag" wx:if="{{item.durationMinutes}}">{{item.durationMinutes}} 分钟</text>
+            </view>
+            <view class="service-price">
+              <text class="amount">{{item.priceText}}</text>
+              <text class="origin" wx:if="{{item.originText}}">{{item.originText}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 医护团队 -->
+    <view class="section" wx:if="{{doctors.length}}">
+      <view class="section-head">
+        <view class="title">医护团队</view>
+        <view class="link" bindtap="onMoreDoctors">全部医护</view>
+      </view>
+      <scroll-view class="doctor-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+        <view
+          class="doctor"
+          wx:for="{{doctors}}"
+          wx:key="id"
+          data-id="{{item.id}}"
+          bindtap="onDoctor"
+        >
+          <image wx:if="{{item.avatar}}" class="doctor-avatar" src="{{item.avatar}}" mode="aspectFill" />
+          <view wx:else class="doctor-avatar doctor-avatar-empty"></view>
+          <view class="doctor-name">{{item.name}}</view>
+          <view class="doctor-title">{{item.title || item.roleLabel}}</view>
+          <view class="doctor-score" wx:if="{{item.scoreText}}">{{item.scoreText}} 分</view>
+        </view>
+      </scroll-view>
+    </view>
+
+    <!-- 问诊方式 -->
+    <view class="section">
+      <view class="section-head">
+        <view class="title">在线问诊</view>
+      </view>
+      <view class="card consult-card">
+        <view
+          class="consult-way"
+          wx:for="{{consultWays}}"
+          wx:key="key"
+          data-way="{{item.key}}"
+          bindtap="onConsultWay"
+        >
+          <view class="consult-label">{{item.label}}</view>
+          <view class="consult-desc">{{item.desc}}</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 健康资讯 -->
+    <view class="section" wx:if="{{articles.length}}">
+      <view class="section-head">
+        <view class="title">健康科普</view>
+        <view class="link" bindtap="onMoreArticles">更多文章</view>
+      </view>
+      <view class="card section-card">
+        <view
+          class="article"
+          wx:for="{{articles}}"
+          wx:key="id"
+          data-id="{{item.id}}"
+          bindtap="onArticle"
+        >
+          <view class="article-body">
+            <view class="article-title">{{item.title}}</view>
+            <view class="article-summary" wx:if="{{item.summary}}">{{item.summary}}</view>
+            <view class="item-meta">{{item.authorLine}}</view>
+          </view>
+          <image wx:if="{{item.coverImage}}" class="article-cover" src="{{item.coverImage}}" mode="aspectFill" />
+        </view>
+      </view>
+    </view>
+
+    <view class="empty" wx:if="{{!services.length && !doctors.length && !articles.length}}">
+      店铺正在准备服务与内容，晚点再来看看
+    </view>
+
+    <view class="home-footer">
+      <view class="footer-phone" wx:if="{{bootstrap.servicePhone}}" bindtap="onCall">
+        客服电话 {{bootstrap.servicePhone}}
+      </view>
+      <view class="footer-brand">健康管理服务由 {{bootstrap.shopName}} 提供</view>
+      <view class="footer-tip" wx:if="{{bootstrap.emergencyTip}}">{{bootstrap.emergencyTip}}</view>
+    </view>
+  </block>
+</view>

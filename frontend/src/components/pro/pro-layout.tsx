@@ -3,6 +3,7 @@
 import {
   AimOutlined,
   ApartmentOutlined,
+  CarOutlined,
   CarryOutOutlined,
   FolderOpenOutlined,
   GiftOutlined,
@@ -32,6 +33,7 @@ import {
   PayCircleOutlined,
   PlayCircleOutlined,
   QuestionCircleOutlined,
+  ReadOutlined,
   RocketOutlined,
   RobotOutlined,
   SafetyCertificateOutlined,
@@ -51,7 +53,7 @@ import { App, Button, Dropdown, Result, Spin, Tooltip } from "antd";
 import Link from "next/link";
 import { NotificationBell } from "@/components/notification-bell";
 import { WechatMpBindingEntry } from "@/components/wechat-mp-binding";
-import { ClientDownloadEntry } from "@/components/client-download-entry";
+import { ClientDownloadEntries } from "@/components/client-download-entry";
 import { ExtensionEntry } from "@/components/extension-entry";
 import { OrgContextSwitcher } from "@/components/org-context-switcher";
 import { PageAssistant } from "@/components/page-assistant";
@@ -100,6 +102,7 @@ export const ROUTE_ICONS = {
   asset: <HomeOutlined />,
   key: <KeyOutlined />,
   book: <BookOutlined />,
+  read: <ReadOutlined />,
   bolt: <ThunderboltOutlined />,
   link: <LinkOutlined />,
   network: <ClusterOutlined />,
@@ -115,6 +118,7 @@ export const ROUTE_ICONS = {
   gift: <GiftOutlined />,
   "pay-circle": <PayCircleOutlined />,
   tasks: <CarryOutOutlined />,
+  car: <CarOutlined />,
   workflow: <ApartmentOutlined />,
 } as const;
 
@@ -146,7 +150,8 @@ function withRouteIcons(
     syntheticGroup: route.type === "group",
     hideInMenu: route.hideInMenu,
     icon: route.icon
-      ? ROUTE_ICONS[route.icon as keyof typeof ROUTE_ICONS]
+      ? // 图标名写错时回落通用图标，避免出现没有图标的菜单项（口径与「功能存在但不可达＝没交付」一致）。
+        (ROUTE_ICONS[route.icon as keyof typeof ROUTE_ICONS] ?? ROUTE_ICONS.apps)
       : undefined,
     routes: route.routes
       ?.map((child) => withRouteIcons(child, t))
@@ -356,7 +361,7 @@ export function EnterpriseProLayout({ children }: { children: ReactNode }) {
           <NotificationBell key="notifications" />,
           <WechatMpBindingEntry key="wechat-mp" />,
           <ExtensionEntry key="extension" />,
-          <ClientDownloadEntry key="client-download" />,
+          <ClientDownloadEntries key="client-download" />,
           <Tooltip title={t("帮助中心")} key="help">
             <Button
               type="text"

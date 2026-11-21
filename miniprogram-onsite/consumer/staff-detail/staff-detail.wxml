@@ -1,0 +1,56 @@
+<view class="empty" wx:if="{{loading}}">正在加载服务人员…</view>
+
+<view class="card" wx:elif="{{notReady}}">
+  <view class="title">店铺暂未开通</view>
+  <view class="muted detail-text">{{readyReason}}</view>
+</view>
+
+<view class="empty" wx:elif="{{error}}">
+  <view>{{error}}</view>
+  <view class="link" bindtap="onRetry">重新加载</view>
+</view>
+
+<block wx:elif="{{staff}}">
+  <view class="card">
+    <view class="head">
+      <image class="avatar big" src="{{staff.avatar}}" mode="aspectFill" wx:if="{{staff.avatar}}"></image>
+      <view class="avatar-fallback" wx:else>{{staff.name[0]}}</view>
+      <view class="head-main">
+        <view class="title">
+          {{staff.name}}
+          <text class="tag tag-blue" wx:if="{{staff.levelName}}">{{staff.levelName}}</text>
+        </view>
+        <view class="muted" wx:if="{{staff.serviceCity}}">服务城市 {{staff.serviceCity}}</view>
+        <view class="muted" wx:if="{{staff.ratingText}}">
+          评分 {{staff.ratingText}}<text wx:if="{{staff.reviewText}}"> · {{staff.reviewText}}</text><text wx:if="{{staff.orderText}}"> · {{staff.orderText}}</text>
+        </view>
+        <view class="muted" wx:if="{{staff.workYearsText}}">{{staff.workYearsText}}</view>
+      </view>
+    </view>
+    <view class="kv" wx:if="{{staff.windowText}}">
+      <text class="kv-label">可服务时段</text>
+      <text class="kv-value">{{staff.windowText}}</text>
+    </view>
+    <view class="muted detail-text" wx:if="{{staff.intro}}">{{staff.intro}}</view>
+  </view>
+
+  <view class="card" wx:if="{{images.length}}">
+    <view class="title">工作照</view>
+    <view class="images">
+      <image
+        class="shot"
+        wx:for="{{images}}"
+        wx:key="*this"
+        src="{{item}}"
+        mode="aspectFill"
+        data-src="{{item}}"
+        bindtap="previewImage"
+      ></image>
+    </view>
+  </view>
+
+  <view class="footer">
+    <button class="button-primary" bindtap="book">看 TA 的档期</button>
+    <button class="button-ghost" bindtap="openServices">先挑服务项目</button>
+  </view>
+</block>

@@ -8,7 +8,6 @@ import { IdentityService } from './identity.service';
 import { readIdentitySnapshot } from './identity-snapshot';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { UserLookupService } from '../directory/user-lookup.service';
-import type { OssService } from '../oss/oss.service';
 import { stub } from '../../test/doubles';
 
 jest.mock('./identity-snapshot', () => ({ readIdentitySnapshot: jest.fn() }));
@@ -40,7 +39,6 @@ function setup(role = 'user', userId = 'identity-test') {
   const service = new IdentityService(
     stub<PrismaService>(prisma),
     stub<UserLookupService>(users),
-    stub<OssService>(),
   );
   jest.mocked(readIdentitySnapshot).mockImplementation(async (_, id) => {
     const [

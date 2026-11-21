@@ -16,8 +16,7 @@ import {
 import { stub } from '../../test/doubles';
 
 /**
- * P0-4 单测：业务动作工具的参数映射 / 红线拒止 / manifest 归一注册。
- * 红线（Recruit_updateApplicationStatus）复用 MCP 永久排除清单，注册表可见但绝不执行。
+ * P0-4 单测：业务动作工具的参数映射与 manifest 归一注册。
  */
 
 const user = stub<CurrentUser>({ userId: 'u1', username: '测试用户' });
@@ -37,9 +36,6 @@ function makeBusiness(overrides: Partial<AgentBusinessContext> = {}) {
   const flowSubmit = jest
     .fn()
     .mockResolvedValue({ id: 901, status: 'APPROVING' });
-  const statusUpdate = jest
-    .fn()
-    .mockResolvedValue({ id: 5, status: 'REJECTED' });
   const chromeDevices = jest.fn().mockResolvedValue({
     devices: [
       {
@@ -73,7 +69,6 @@ function makeBusiness(overrides: Partial<AgentBusinessContext> = {}) {
     dataTable: { list: tableList, createRow: rowCreate },
     erp: { listStock: stockList },
     oa: { saveDraft: draftSave, submit: flowSubmit },
-    recruit: { updateApplicationStatus: statusUpdate },
     rpaChrome: {
       listDevices: chromeDevices,
       startSession: chromeStart,
@@ -93,7 +88,6 @@ function makeBusiness(overrides: Partial<AgentBusinessContext> = {}) {
     stockList,
     draftSave,
     flowSubmit,
-    statusUpdate,
     chromeDevices,
     chromeStart,
     chromeSession,
@@ -184,18 +178,6 @@ describe('agent-business-tools 业务动作工具', () => {
     });
     expect(flowSubmit).toHaveBeenCalledWith(user, '901');
     expect(result?.text).toContain('审批已提交');
-  });
-
-  it('红线动作 recruit_update_application：注册表可见但拒绝执行', async () => {
-    const { business, statusUpdate } = makeBusiness();
-    const result = await runBusinessTool(
-      'recruit_update_application',
-      { id: 5, status: 'REJECTED' },
-      business,
-      actor,
-    );
-    expect(statusUpdate).not.toHaveBeenCalled();
-    expect(result?.text).toContain('投递状态变更需要本人确认');
   });
 
   it('未知工具名返回 null，交回内置工具分流', async () => {
@@ -364,7 +346,7 @@ describe('agent-tool-manifest 统一工具清单', () => {
     expect(connector?.write).toBe(true);
   });
 
-  it('业务工具带 operationId/权限人话/计量口径；红线可见', () => {
+  it('业务工具带 operationId/权限人话/计量口径', () => {
     const rows = buildAgentToolManifest({
       connectorTools: [],
       skills: [],
@@ -375,10 +357,6 @@ describe('agent-tool-manifest 统一工具清单', () => {
     expect(lead?.permission).toBeTruthy();
     const stock = rows.find((row) => row.name === 'erp_check_stock');
     expect(stock?.write).toBe(false);
-    const recruit = rows.find(
-      (row) => row.name === 'recruit_update_application',
-    );
-    expect(recruit?.forbiddenReason).toBe('投递状态变更需要本人确认');
     const chromeStart = rows.find((row) => row.name === 'chrome_start_session');
     expect(chromeStart?.operationId).toBe('RpaChrome_startSession');
     expect(chromeStart?.permission).toBe('发起浏览器自动操作');
@@ -387,10 +365,9 @@ describe('agent-tool-manifest 统一工具清单', () => {
     expect(chromeList?.write).toBe(false);
   });
 
-  it('模型工具面排除红线动作；其余业务工具全部可调用', () => {
+  it('模型工具面保留全部业务工具', () => {
     const specs = businessToolSpecs();
     const names = specs.map((spec) => String(spec.function.name));
-    expect(names).not.toContain('recruit_update_application');
     expect(names).toContain('crm_create_lead');
     expect(names).toContain('data_table_add_row');
     expect(names).toContain('erp_check_stock');
@@ -398,11 +375,10 @@ describe('agent-tool-manifest 统一工具清单', () => {
     expect(names).toContain('chrome_list_devices');
     expect(names).toContain('chrome_start_session');
     expect(names).toContain('chrome_stop_session');
-    expect(names).toHaveLength(BUSINESS_TOOLS.length - 1);
+    expect(names).toHaveLength(BUSINESS_TOOLS.length);
   });
 
-  it('businessToolOf 能按名取回规格（含红线项）', () => {
-    expect(businessToolOf('recruit_update_application')?.callable).toBe(false);
+  it('businessToolOf 能按名取回规格', () => {
     expect(businessToolOf('oa_start_flow')?.operationId).toBe('Oa_submit');
     expect(businessToolOf('nope')).toBeUndefined();
   });

@@ -1,0 +1,59 @@
+<view class="card">
+  <view class="title">新增休息段</view>
+  <view class="field">
+    <text class="label">日期</text>
+    <picker mode="date" value="{{day}}" bindchange="pickDay">
+      <view class="picker-value">{{day}}</view>
+    </picker>
+  </view>
+  <view class="field">
+    <text class="label">整天</text>
+    <switch checked="{{allDay}}" bindchange="toggleAllDay" />
+  </view>
+  <view class="field" wx:if="{{!allDay}}">
+    <text class="label">开始时间</text>
+    <picker mode="time" value="{{startAt}}" bindchange="pickStart">
+      <view class="picker-value">{{startAt}}</view>
+    </picker>
+  </view>
+  <view class="field" wx:if="{{!allDay}}">
+    <text class="label">结束时间</text>
+    <picker mode="time" value="{{endAt}}" bindchange="pickEnd">
+      <view class="picker-value">{{endAt}}</view>
+    </picker>
+  </view>
+  <view class="field">
+    <text class="label">事由</text>
+    <input
+      class="input"
+      maxlength="200"
+      value="{{reason}}"
+      bindinput="onReasonInput"
+      placeholder="选填，例如 午休、临时有事"
+    />
+  </view>
+  <view class="muted tip" wx:if="{{allDay}}">「整天」会按 00:00 - 23:59 记一段休息，商店后台显示为普通休息段。</view>
+  <view class="muted tip">休息段会盖住当天的可约时段；已成交的订单不受影响，如与已排订单冲突请先处理订单。</view>
+  <view class="error" wx:if="{{errorText}}">{{errorText}}</view>
+  <button class="button-primary submit" bindtap="save" loading="{{submitting}}" disabled="{{submitting}}">保存休息段</button>
+</view>
+
+<view class="card">
+  <view class="row">
+    <text class="title">已设置的休息段</text>
+    <text class="muted">{{list.length}} 段</text>
+  </view>
+  <view class="rest" wx:for="{{list}}" wx:key="id">
+    <view class="rest-main">
+      <view class="rest-time">
+        <text class="day">{{item.dayText}}</text>
+        <text>{{item.rangeText}}</text>
+      </view>
+      <view class="muted" wx:if="{{item.reason}}">事由：{{item.reason}}</view>
+      <view class="muted" wx:if="{{item.roleText}}">{{item.roleText}}</view>
+    </view>
+    <text class="delete" data-id="{{item.id}}" bindtap="remove">删除</text>
+  </view>
+  <view class="empty" wx:if="{{!list.length && !loading}}">还没有设置休息段。</view>
+  <view class="empty" wx:if="{{loading}}">正在加载…</view>
+</view>

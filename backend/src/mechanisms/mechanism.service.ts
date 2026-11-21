@@ -236,6 +236,14 @@ export class MechanismService extends MechanismBase {
     return this.exports.registerExportModule(definition, rows);
   }
 
+  /** 导入模块注册点：主数据导入由数据所属域自己实现，见 `MechanismImportService`。 */
+  registerImportModule(
+    definition: { module: string; label: string; columns: string[] },
+    importRow: (org: HrmOrg, row: Row) => Promise<string>,
+  ) {
+    return this.imports.registerImportModule(definition, importRow);
+  }
+
   modules() {
     return this.exports.modules();
   }

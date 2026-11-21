@@ -1,0 +1,12 @@
+.tabs { display: flex; background: #fff; }
+.tab { flex: 1; text-align: center; padding: 24rpx 0; font-size: 28rpx; color: #666; }
+.tab.on { color: #fa3534; font-weight: 600; border-bottom: 4rpx solid #fa3534; }
+.ticket { display: flex; align-items: center; background: #fff; margin: 20rpx; border-radius: 16rpx; overflow: hidden; }
+.ticket.dead { opacity: .5; }
+.ticket-left { width: 200rpx; padding: 24rpx 12rpx; color: #fa3534; text-align: center; }
+.ticket-value { font-size: 36rpx; font-weight: 600; }
+.ticket-rule { font-size: 22rpx; margin-top: 6rpx; }
+.ticket-body { flex: 1; min-width: 0; padding: 20rpx 0; }
+.ticket-name { font-size: 28rpx; }
+.ticket-op { width: 160rpx; text-align: center; }
+.btn.mini.plain { color: #999; background: #f2f3f5; }

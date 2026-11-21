@@ -1,0 +1,26 @@
+<view class="page" style="{{themeStyle}}">
+  <view class="empty" wx:if="{{loading}}">加载中…</view>
+  <view class="empty" wx:elif="{{loginFailed}}">
+    <view>登录状态不可用，请重新登录后查看支付订单。</view>
+    <view class="btn empty-btn" bindtap="retryLogin">重新登录</view>
+  </view>
+  <view class="empty" wx:elif="{{!list.length}}">
+    还没有微信支付订单。
+    <view class="btn empty-btn" bindtap="goHome">去逛逛</view>
+  </view>
+
+  <block wx:else>
+    <view class="card order-card" wx:for="{{list}}" wx:key="id">
+      <view class="order-main">
+        <view class="order-title ellipsis">{{item.title}}</view>
+        <view class="muted order-meta">
+          {{item.kind === 'vip' ? item.plan + ' 个月会员' : '课程购买'}} · {{item.timeText}}
+        </view>
+      </view>
+      <view class="order-side">
+        <view class="amount">{{item.amountText}}</view>
+        <view class="status {{item.status}}">{{item.statusText}}</view>
+      </view>
+    </view>
+  </block>
+</view>

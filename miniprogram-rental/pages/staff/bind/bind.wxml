@@ -1,0 +1,20 @@
+<view class="page">
+  <view class="card">
+    <view class="title">员工身份绑定</view>
+    <view class="muted" style="margin-top: 8rpx; line-height: 1.7;">
+      员工档案由店长在后台维护。首次进入先用手机号 + 工号核对，绑定成功后只在本店生效。
+    </view>
+    <view class="form-row">
+      <view class="form-label">手机号</view>
+      <input class="form-input" type="number" value="{{phone}}" placeholder="员工档案里的手机号" bindinput="onPhone" />
+    </view>
+    <view class="form-row">
+      <view class="form-label">工号</view>
+      <input class="form-input" value="{{staffCode}}" placeholder="店长设置的工号" bindinput="onCode" />
+    </view>
+    <button class="button-primary" style="margin-top: 28rpx;" bindtap="submit" disabled="{{submitting}}">
+      {{submitting ? '绑定中…' : '绑定并进入工作台'}}
+    </button>
+    <button class="button-ghost" style="margin-top: 16rpx;" bindtap="back">返回顾客端</button>
+  </view>
+</view>

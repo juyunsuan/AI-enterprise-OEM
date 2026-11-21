@@ -67,7 +67,7 @@ type TaskForm = {
   accountIds: number[];
   /** 本地 Chrome 任务绑定的设备（deviceType='chrome' 时必填）。 */
   chromeClientId: string;
-  /** BotBuddy 浏览器任务绑定的主机与指纹窗口（deviceType='botbuddy' 时主机必填、窗口可选）。 */
+  /** AWBotDSH 浏览器任务绑定的主机与指纹窗口（deviceType='botbuddy' 时主机必填、窗口可选）。 */
   botHostId: number | null;
   fpProfileId: string;
   schedule: ScheduleDraft;
@@ -95,8 +95,8 @@ const EMPTY: TaskForm = {
 /**
  * RPA 任务：云端建任务时就绑定「脚本 + 运行参数 + RPA 账号」，本地比特浏览器凭 API Key
  * 认领后拿脚本正文与账号口令执行，再把结果回传；界面这边看状态与执行记录。
- * 设备类型默认跟着绑定脚本走，只有 PC 与 BotBuddy 浏览器这一组可以互换（同一份 Automa JSON）；
- * 本地 Chrome 与 BotBuddy 浏览器都跑在用户自己机器上，不绑 RPA 账号、不回传口令。
+ * 设备类型默认跟着绑定脚本走，只有 PC 与 AWBotDSH 浏览器这一组可以互换（同一份 Automa JSON）；
+ * 本地 Chrome 与 AWBotDSH 浏览器都跑在用户自己机器上，不绑 RPA 账号、不回传口令。
  */
 export function TaskPanel({
   tasks,
@@ -222,7 +222,7 @@ export function TaskPanel({
       }
     } else if (isBotBuddyDevice(form.deviceType)) {
       if (!form.botHostId) {
-        message.warning("请选择要执行的 BotBuddy 主机（需在线）：先在客户端里配对本站");
+        message.warning("请选择要执行的 AWBotDSH 主机（需在线）：先在客户端里配对本站");
         return;
       }
     } else if (!form.accountIds.length) {
@@ -378,7 +378,7 @@ export function TaskPanel({
         isChromeDevice(row.deviceType)
           ? `本地 Chrome 设备 ${row.chromeClientId ? row.chromeClientId.slice(0, 10) : "（未绑定）"}`
           : isBotBuddyDevice(row.deviceType)
-            ? `BotBuddy 主机 #${row.botHostId ?? "（未绑定）"}${row.fpProfileId ? ` · 窗口 ${row.fpProfileId}` : " · 默认窗口"}`
+            ? `AWBotDSH 主机 #${row.botHostId ?? "（未绑定）"}${row.fpProfileId ? ` · 窗口 ${row.fpProfileId}` : " · 默认窗口"}`
             : row.accounts.length
               ? row.accounts
                   .map((item) => `${item.platform}/${item.username}`)
@@ -626,7 +626,7 @@ export function TaskPanel({
               {isChromeDevice(form.deviceType)
                 ? "由你在下面指定的那台本地 Chrome（已登录本系统）执行；不需要 RPA 账号"
                 : isBotBuddyDevice(form.deviceType)
-                  ? "由你在下面指定的那台 BotBuddy 客户端打开指纹窗口跑 Automa 工作流；不需要 RPA 账号，与 PC 共用同一份 Automa 脚本"
+                  ? "由你在下面指定的那台 AWBotDSH 客户端打开指纹窗口跑 Automa 工作流；不需要 RPA 账号，与 PC 共用同一份 Automa 脚本"
                   : "本地执行端按该设备类型认领；下方只列出该设备类型的脚本与账号"}
             </span>
           </div>
@@ -900,7 +900,7 @@ function ChromeDevicePicker({
 }
 
 /**
- * BotBuddy 浏览器执行位：一台已配对且在线的 BotBuddy 主机 +（可选）那台主机上报的指纹窗口。
+ * AWBotDSH 浏览器执行位：一台已配对且在线的 AWBotDSH 主机 +（可选）那台主机上报的指纹窗口。
  *
  * 与本地 Chrome 的 ChromeDevicePicker 同一套规则：离线主机不进候选（领不到任务），
  * 只有一台在线主机时不渲染主机下拉，直接把机器名写出来。
@@ -965,15 +965,15 @@ function BotBuddyTargetPicker({
     <>
       <label className="data-table-form-item" style={{ gridColumn: "1 / -1" }}>
         <span className="data-table-form-label">
-          BotBuddy 主机<b style={{ color: "var(--danger)" }}> *</b>
+          AWBotDSH 主机<b style={{ color: "var(--danger)" }}> *</b>
         </span>
         {error ? (
-          <Notice variant="error">{`BotBuddy 主机读取失败：${error}`}</Notice>
+          <Notice variant="error">{`AWBotDSH 主机读取失败：${error}`}</Notice>
         ) : loading ? (
           <span className="text-12 muted">正在读取在线主机…</span>
         ) : !hosts.length ? (
           <Notice>
-            当前没有在线的 BotBuddy 主机：请到「Agent-Bot → Bot 主机」页下载客户端，
+            当前没有在线的 AWBotDSH 主机：请到「Agent-Bot → Bot 主机」页下载客户端，
             填本站地址并完成配对，主机在线后回到这里新建任务。
           </Notice>
         ) : hosts.length === 1 ? (
@@ -986,7 +986,7 @@ function BotBuddyTargetPicker({
         ) : (
           <Select
             value={hostId ?? undefined}
-            placeholder="选择一台在线的 BotBuddy 主机"
+            placeholder="选择一台在线的 AWBotDSH 主机"
             options={hosts.map((item) => ({ value: item.id, label: item.name }))}
             onChange={(next) => onChange({ botHostId: next, fpProfileId: "" })}
           />

@@ -1,0 +1,103 @@
+<view class="page">
+  <view class="card" wx:if="{{!enabled}}">
+    <view class="empty">本店暂未开通舌象分析增值服务</view>
+    <button class="button-ghost" bindtap="onCall">联系店铺客服</button>
+  </view>
+
+  <block wx:else>
+    <view class="hero">
+      <view class="hero-title">中医舌象分析</view>
+      <view class="hero-desc">拍摄或上传一张清晰的舌部照片，AI 从舌质、舌苔、舌形等维度给出健康参考。</view>
+      <view class="hero-tip">分析结果仅作日常健康参考，不构成诊断，也不能替代医生面诊。</view>
+    </view>
+
+    <view class="card">
+      <view class="pick-area" wx:if="{{!imagePath}}" bindtap="onChooseImage">
+        <view class="pick-plus">+</view>
+        <view class="pick-title">拍照 / 从相册选择</view>
+        <view class="pick-desc">自然光下、舌头自然伸出，避免美颜与逆光</view>
+      </view>
+
+      <block wx:else>
+        <image class="preview" src="{{imagePath}}" mode="aspectFill" bindtap="onPreview"></image>
+        <view class="preview-actions">
+          <button class="button-ghost" bindtap="onChooseImage">重新选择</button>
+          <button class="button-ghost" bindtap="onReset">清除</button>
+        </view>
+        <button
+          wx:if="{{localPath}}"
+          class="button-primary analyze-btn"
+          loading="{{analyzing}}"
+          disabled="{{analyzing}}"
+          bindtap="onAnalyze"
+        >
+          {{analyzing ? '正在分析舌象…' : '开始分析'}}
+        </button>
+        <button wx:else class="button-primary analyze-btn" bindtap="onChooseImage">
+          选择新照片分析
+        </button>
+        <view class="analyze-tip">单次分析约需 10-30 秒，请保持网络畅通</view>
+      </block>
+    </view>
+
+    <view class="card result-card" wx:if="{{result}}">
+      <view class="row">
+        <text class="title">分析结果</text>
+        <text class="confidence">把握度 {{confidenceText}}</text>
+      </view>
+
+      <view class="tag-row" wx:if="{{featureTags.length}}">
+        <text class="tag {{item.cls}}" wx:for="{{featureTags}}" wx:key="text">{{item.text}}</text>
+      </view>
+
+      <view class="result-block" wx:if="{{result.constitution}}">
+        <view class="result-label">体质倾向</view>
+        <view class="result-text">{{result.constitution}}</view>
+      </view>
+
+      <view class="result-block" wx:if="{{result.interpretation}}">
+        <view class="result-label">中医解读</view>
+        <view class="result-text">{{result.interpretation}}</view>
+      </view>
+
+      <view class="result-block" wx:if="{{result.suggestions.length}}">
+        <view class="result-label">生活建议</view>
+        <view class="bullet" wx:for="{{result.suggestions}}" wx:key="*this">· {{item}}</view>
+      </view>
+
+      <view class="result-block" wx:if="{{result.cautions.length}}">
+        <view class="result-label">就医提醒</view>
+        <view class="bullet bullet-warn" wx:for="{{result.cautions}}" wx:key="*this">· {{item}}</view>
+      </view>
+
+      <view class="result-foot">本结果由 AI 生成，仅作健康参考；如有不适请及时就医。</view>
+    </view>
+
+    <view class="card">
+      <view class="row">
+        <text class="title">历史记录</text>
+        <text class="muted">{{history.length}} 次</text>
+      </view>
+
+      <view class="empty" wx:if="{{!loading && !history.length}}">还没有分析记录，先拍一张试试吧</view>
+
+      <view
+        class="history-item"
+        wx:for="{{history}}"
+        wx:key="id"
+        data-id="{{item.id}}"
+        bindtap="onHistory"
+      >
+        <image class="history-thumb" src="{{item.imageUrl}}" mode="aspectFill"></image>
+        <view class="history-main">
+          <view class="history-title">{{item.constitution || '舌象分析'}}</view>
+          <view class="history-tags" wx:if="{{item.tags.length}}">
+            <text class="tag tag-blue" wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this">{{tag}}</text>
+          </view>
+          <view class="history-time">{{item.timeText}}</view>
+        </view>
+        <text class="history-arrow">›</text>
+      </view>
+    </view>
+  </block>
+</view>

@@ -1,0 +1,36 @@
+<view class="diy-image-ads" wx:if="{{items.length}}">
+  <swiper
+    wx:if="{{swiper}}"
+    class="swiper"
+    style="{{boxStyle}}"
+    indicator-dots="{{items.length > 1}}"
+    indicator-active-color="#ffffff"
+    autoplay="{{items.length > 1}}"
+    circular="{{items.length > 1}}"
+    interval="{{interval}}"
+    duration="500"
+  >
+    <swiper-item wx:for="{{items}}" wx:key="key">
+      <image
+        class="pic"
+        src="{{item.image}}"
+        mode="aspectFill"
+        style="{{item.style}}"
+        data-index="{{index}}"
+        bindtap="onTap"
+      />
+    </swiper-item>
+  </swiper>
+  <view wx:else style="padding: {{gutter}}rpx">
+    <image
+      wx:for="{{items}}"
+      wx:key="key"
+      class="stack"
+      src="{{item.image}}"
+      mode="aspectFill"
+      style="{{item.style}};margin-bottom: {{gutter}}rpx"
+      data-index="{{index}}"
+      bindtap="onTap"
+    />
+  </view>
+</view>

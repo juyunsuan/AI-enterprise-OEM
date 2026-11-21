@@ -1,0 +1,58 @@
+.pills.wrap {
+  flex-wrap: wrap;
+  white-space: normal;
+}
+
+.pills.wrap .pill {
+  margin-bottom: 16rpx;
+}
+
+.images {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 12rpx;
+}
+
+.image-item {
+  position: relative;
+  width: 160rpx;
+  height: 160rpx;
+  margin: 0 16rpx 16rpx 0;
+}
+
+.image {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 12rpx;
+  background: #f0f1f5;
+}
+
+.history-image {
+  width: 140rpx;
+  height: 140rpx;
+  margin: 12rpx 12rpx 0 0;
+  border-radius: 12rpx;
+  background: #f0f1f5;
+}
+
+.image-remove {
+  position: absolute;
+  right: 8rpx;
+  bottom: 8rpx;
+  padding: 2rpx 10rpx;
+  border-radius: 8rpx;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 20rpx;
+}
+
+.image-add {
+  width: 160rpx;
+  height: 160rpx;
+  line-height: 160rpx;
+  text-align: center;
+  border: 1rpx dashed #dcdfe6;
+  border-radius: 12rpx;
+  color: #8a8f99;
+  font-size: 24rpx;
+}

@@ -1,0 +1,32 @@
+<view class="wrap">
+  <view wx:if="{{loading}}" class="card muted">正在加载…</view>
+  <view wx:elif="{{error}}" class="card muted">{{error}}</view>
+  <block wx:else>
+    <view class="card">
+      <view class="section-title">可领取</view>
+      <view wx:if="{{!available.length}}" class="muted">暂无可领取的优惠券</view>
+      <view wx:for="{{available}}" wx:key="id" class="coupon">
+        <view class="grow">
+          <view class="coupon-name">{{item.name}}</view>
+          <view class="muted">
+            {{item.type === 'PERCENT' ? item.discountValue + '% 折扣' : '¥' + item.discountValue}}
+            · {{item.minAmount > 0 ? '满 ¥' + item.minAmount + ' 可用' : '无门槛'}}
+          </view>
+        </view>
+        <view class="btn btn-ghost small" data-id="{{item.id}}" bindtap="claim">领取</view>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="section-title">我的券</view>
+      <view wx:if="{{!mine.length}}" class="muted">还没有领过券</view>
+      <view wx:for="{{mine}}" wx:key="id" class="coupon">
+        <view class="grow">
+          <view class="coupon-name">{{item.name}}</view>
+          <view class="muted">{{item.valueText}} · {{item.minText}}</view>
+          <view class="muted">{{item.used ? '已使用' : '未使用'}}{{item.expiresAt ? ' · 到期 ' + item.expiresAt : ''}}</view>
+        </view>
+      </view>
+    </view>
+  </block>
+</view>

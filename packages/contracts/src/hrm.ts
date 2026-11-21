@@ -624,14 +624,6 @@ export const hrmEndpoints = {
     body: generateHrmJdBodySchema,
     response: envelope(z.object({ jd: z.string(), mode: z.enum(["llm", "rule"]) })),
   },
-  Hrm_publishJob: {
-    method: "post" as const,
-    path: "/enterprise/hrm/jobs/publish",
-    params: z.object({}),
-    query: emptyQuery,
-    body: z.object({ id: z.number().int().positive() }),
-    response: envelope(hrmJobSchema),
-  },
   // ---------- 招聘：候选人 / 投递 / 评估 ----------
   Hrm_listCandidates: {
     method: "get" as const,

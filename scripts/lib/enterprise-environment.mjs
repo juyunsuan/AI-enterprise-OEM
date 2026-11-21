@@ -33,7 +33,11 @@ export function loadEnvironment({ environment, backendDir, envFile, inherited = 
   if (!selected.length) throw new Error('缺少所选环境文件；生产禁止回退到开发 .env');
   let fileValues = {};
   for (const file of selected) {
-    if (production && (statSync(file).mode & 0o777) !== 0o600) throw new Error('生产环境文件权限必须为 600');
+    // Windows 没有 POSIX 权限位（chmod 只映射只读位），生产部署按平台文档用 ACL 控权；
+    // 在 POSIX 上仍强制 600，避免生产密钥文件被同组/其他用户读取。
+    if (production && process.platform !== 'win32' && (statSync(file).mode & 0o777) !== 0o600) {
+      throw new Error('生产环境文件权限必须为 600');
+    }
     fileValues = { ...parseEnv(readFileSync(file, 'utf8')), ...fileValues };
   }
   if (fileValues.ENTERPRISE_ENV !== environment) throw new Error('ENTERPRISE_ENV 与所选环境不一致');

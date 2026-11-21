@@ -1,0 +1,115 @@
+<view class="page safe-bottom">
+  <view wx:if="{{loading}}" class="empty">正在加载订单...</view>
+
+  <view wx:elif="{{error}}" class="card error-card">
+    <view class="muted">{{error}}</view>
+    <view class="btn btn-primary retry" bindtap="load">重试</view>
+  </view>
+
+  <block wx:else>
+    <view class="hero hero-{{order.status}}">
+      <view class="hero-status">{{order.statusText}}</view>
+      <view class="hero-hint">{{order.statusHint}}</view>
+      <view wx:if="{{order.canPay && order.countdownText}}" class="hero-count">
+        {{order.countdownText}} 后自动取消
+      </view>
+      <view wx:if="{{order.pickupCode}}" class="pickup">
+        <view class="pickup-label">取餐号</view>
+        <view class="pickup-code">{{order.pickupCode}}</view>
+        <view class="pickup-tip">{{order.modeText}} · 凭号取餐</view>
+      </view>
+      <view wx:if="{{order.tableNo}}" class="table-no">桌号 {{order.tableNo}}</view>
+    </view>
+
+    <view class="card info">
+      <view class="info-row">
+        <view class="muted">订单编号</view>
+        <view>{{order.orderNo}}</view>
+      </view>
+      <view class="info-row">
+        <view class="muted">下单时间</view>
+        <view>{{order.createdText}}</view>
+      </view>
+      <view class="info-row">
+        <view class="muted">履约方式</view>
+        <view>{{order.modeText}}</view>
+      </view>
+      <view class="info-row">
+        <view class="muted">期望时间</view>
+        <view>{{order.expectedText}}</view>
+      </view>
+    </view>
+
+    <view class="card" wx:if="{{order.orderMode === 'DELIVERY'}}">
+      <view class="block-head">配送信息</view>
+      <view class="receiver-name">{{receiver.name}} <text class="muted text-12">{{receiver.phone}}</text></view>
+      <view class="receiver-address">{{order.receiverText}}</view>
+    </view>
+
+    <view class="card" wx:else>
+      <view class="block-head">{{order.orderMode === 'PICKUP' ? '到店自取' : '堂食门店'}}</view>
+      <view class="store-name">{{order.shopName || '本店'}}</view>
+      <view class="muted text-12">到店后请向店员出示取餐号</view>
+    </view>
+
+    <view class="card">
+      <view class="block-head">菜品明细</view>
+      <view wx:for="{{items}}" wx:key="id" class="line">
+        <image wx:if="{{item.image}}" src="{{item.image}}" mode="aspectFill" class="line-img" />
+        <view wx:else class="line-img line-placeholder">菜</view>
+        <view class="flex-1">
+          <view class="line-title ellipsis">{{item.title}}</view>
+          <view wx:if="{{item.skuName}}" class="muted text-12">{{item.skuName}}</view>
+          <view class="line-price">¥{{item.priceText}} × {{item.quantity}}</view>
+        </view>
+        <view class="line-total">¥{{item.totalText}}</view>
+      </view>
+      <view class="divider"></view>
+      <view class="amount-row">
+        <text>商品金额</text>
+        <text>¥{{order.goodsAmountText}}</text>
+      </view>
+      <view class="amount-row" wx:if="{{order.orderMode === 'DELIVERY'}}">
+        <text>配送费</text>
+        <text>¥{{order.freightAmountText}}</text>
+      </view>
+      <view class="amount-row" wx:if="{{order.discountAmount > 0}}">
+        <text>优惠券 {{order.couponName}}</text>
+        <text class="minus">-¥{{order.discountAmountText}}</text>
+      </view>
+      <view class="amount-row total">
+        <text>实付</text>
+        <text class="price">¥{{order.payAmountText}}</text>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="block-head">订单进度</view>
+      <view class="timeline">
+        <view wx:for="{{logs}}" wx:key="id" class="timeline-item">
+          <view class="timeline-dot"></view>
+          <view class="timeline-body">
+            <view class="timeline-content">{{item.content}}</view>
+            <view class="timeline-time">{{item.timeText}} · {{item.operatorText}}</view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="card" wx:if="{{order.buyerRemark}}">
+      <view class="block-head">订单备注</view>
+      <view class="remark-text">{{order.buyerRemark}}</view>
+    </view>
+
+    <view class="bottom-space"></view>
+    <view class="action-bar safe-bottom">
+      <view class="action-btn" bindtap="callShop">联系门店</view>
+      <view wx:if="{{order.canCancel}}" class="action-btn" bindtap="cancel">取消订单</view>
+      <view wx:if="{{order.canPay}}" class="action-btn action-primary" bindtap="pay">
+        {{paying ? '支付中...' : '去支付'}}
+      </view>
+      <view wx:if="{{order.canReceive}}" class="action-btn action-primary" bindtap="receive">确认完成</view>
+      <view wx:if="{{order.canAgain}}" class="action-btn action-primary" bindtap="again">再来一单</view>
+    </view>
+  </block>
+</view>

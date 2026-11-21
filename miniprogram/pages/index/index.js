@@ -22,6 +22,12 @@ const ENTRY_DEFS = [
     desc: "六类事件通知",
     url: "/pages/notifications/notifications",
   },
+  {
+    key: "annualReport",
+    name: "工商年报",
+    desc: "年度报告填报与记录回看",
+    url: "/pages/annual-report/annual-report",
+  },
 ];
 
 function greeting() {

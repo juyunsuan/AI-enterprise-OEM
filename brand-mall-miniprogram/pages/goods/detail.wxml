@@ -1,0 +1,108 @@
+<view class="detail-page" wx:if="{{product}}">
+  <swiper
+    class="gallery"
+    indicator-dots="{{images.length > 1}}"
+    indicator-active-color="#fa3534"
+    circular="{{images.length > 1}}"
+    duration="400"
+  >
+    <swiper-item wx:for="{{images}}" wx:key="index">
+      <image class="gallery-pic" src="{{item}}" mode="aspectFill" data-src="{{item}}" bindtap="previewImage" />
+    </swiper-item>
+  </swiper>
+
+  <view class="block price-block">
+    <view class="row">
+      <text class="price price-lg">¥{{priceText}}</text>
+      <text class="origin" wx:if="{{originText}}">¥{{originText}}</text>
+      <text class="sales muted">销量 {{product.sales}}</text>
+    </view>
+    <view class="title">{{product.title}}</view>
+    <view class="subtitle" wx:if="{{product.subtitle}}">{{product.subtitle}}</view>
+    <view class="tags" wx:if="{{product.guaranteeTags && product.guaranteeTags.length}}">
+      <text class="tag" wx:for="{{product.guaranteeTags}}" wx:key="index">{{item}}</text>
+    </view>
+  </view>
+
+  <view class="block sku-row" bindtap="openSku" data-mode="Cart">
+    <view class="label">规格</view>
+    <view class="value ellipsis">{{skuText || (specs.length ? '请选择规格' : '无规格')}}</view>
+    <text class="arrow">›</text>
+  </view>
+
+  <view class="block review-head">
+    <view class="label">评价 {{product.reviewCount || 0}}</view>
+    <view class="muted">评分 {{product.avgRating || 5}}</view>
+  </view>
+  <view class="block review" wx:for="{{reviews}}" wx:key="id">
+    <view class="review-top">
+      <text class="review-name">{{item.nickname}}</text>
+      <text class="review-stars">★ {{item.stars}}</text>
+      <text class="muted review-date">{{item.dateText}}</text>
+    </view>
+    <view class="review-text">{{item.content}}</view>
+  </view>
+  <view class="block muted" wx:if="{{reviews.length}}">没有更多评价了</view>
+
+  <view class="block detail-block">
+    <view class="label">商品详情</view>
+    <rich-text wx:if="{{product.detail}}" class="rich" nodes="{{product.detail}}" />
+    <view wx:else class="muted">商家还没填写图文详情</view>
+  </view>
+
+  <view class="footer-gap"></view>
+
+  <view class="bar">
+    <view class="bar-icon" bindtap="goShop">店铺</view>
+    <view class="bar-icon" bindtap="cartNow">购物车</view>
+    <view class="bar-btn add" bindtap="openSku" data-mode="Cart">加入购物车</view>
+    <view class="bar-btn buy" bindtap="openSku" data-mode="Buy">立即购买</view>
+  </view>
+
+  <view class="mask" wx:if="{{showSku}}" bindtap="closeSku">
+    <view class="sheet" catchtap="stopBubble">
+      <view class="sku-head">
+        <image class="sku-pic" src="{{product.coverImage}}" mode="aspectFill" />
+        <view class="sku-info">
+          <view class="price">¥{{priceText}}</view>
+          <view class="muted">{{stockText}}</view>
+          <view class="muted" wx:if="{{skuText}}">已选：{{skuText}}</view>
+        </view>
+        <text class="sku-close" bindtap="closeSku">×</text>
+      </view>
+
+      <view class="spec" wx:for="{{specs}}" wx:key="name" wx:for-item="spec">
+        <view class="spec-name">{{spec.name}}</view>
+        <view class="spec-values">
+          <view
+            class="spec-value {{picked[spec.name] === value.value ? 'on' : ''}} {{value.empty ? 'dis' : ''}}"
+            wx:for="{{spec.values}}"
+            wx:for-item="value"
+            wx:key="value"
+            data-name="{{spec.name}}"
+            data-value="{{value.value}}"
+            bindtap="pickValue"
+          >
+            {{value.value}}<text class="sold-out" wx:if="{{value.soldOut}}">(缺货)</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="qty">
+        <text class="spec-name">数量</text>
+        <view class="stepper">
+          <text class="step" data-delta="-1" bindtap="step">-</text>
+          <text class="qty-num">{{quantity}}</text>
+          <text class="step" data-delta="1" bindtap="step">+</text>
+        </view>
+      </view>
+
+      <view class="sku-confirm {{skuMode === 'Buy' ? 'buy' : ''}}" bindtap="confirmSku">
+        {{skuMode === 'Buy' ? '立即购买' : '加入购物车'}}
+      </view>
+    </view>
+  </view>
+</view>
+
+<view class="empty" wx:elif="{{!loading}}">{{error || '商品不存在或已下架'}}</view>
+<view class="empty" wx:else>加载中…</view>

@@ -1,33 +1,51 @@
 "use client";
 
-import { DownloadOutlined } from "@ant-design/icons";
+import { DesktopOutlined, MobileOutlined } from "@ant-design/icons";
 import { Button, Tooltip } from "antd";
 import { useSiteBrand } from "@/lib/site-brand";
 import { useI18n } from "@/lib/i18n/i18n";
 
 /**
- * 顶栏「下载客户端」入口：只在管理员配了下载地址时出现，点击直接打开那个地址。
- * 地址由「站点设置 → 客户端下载地址」维护，未配置时整个图标不渲染。
+ * 顶栏下载入口：手机端（AWBot）与 PC 端（AWBotDSH）各一个图标，管理员配了地址才出现，点击新窗口打开。
+ * 地址由「站点设置 → 手机端下载地址 / PC 端下载地址」维护，未配置的那一项不渲染。
  */
-export function ClientDownloadEntry() {
+export function ClientDownloadEntries() {
   const { t } = useI18n();
-  const { clientDownloadUrl } = useSiteBrand();
-  const url = (clientDownloadUrl || "").trim();
-  if (!url) return null;
+  const { mobileDownloadUrl, pcDownloadUrl } = useSiteBrand();
+  const entries = [
+    {
+      key: "download-mobile",
+      label: t("下载 AWBot 手机端"),
+      url: (mobileDownloadUrl || "").trim(),
+      icon: <MobileOutlined />,
+    },
+    {
+      key: "download-pc",
+      label: t("下载 AWBotDSH PC 端"),
+      url: (pcDownloadUrl || "").trim(),
+      icon: <DesktopOutlined />,
+    },
+  ];
+
   return (
-    <Tooltip title={t("下载客户端")} key="client-download">
-      <Button
-        type="text"
-        size="small"
-        icon={<DownloadOutlined />}
-        style={{ opacity: 0.65 }}
-        aria-label={t("下载客户端")}
-        onClick={() => {
-          // 站内路径同窗口信任跳转；外链一律新标签打开，避免把本站页面顶掉。
-          if (url.startsWith("/")) window.location.href = url;
-          else window.open(url, "_blank", "noopener,noreferrer");
-        }}
-      />
-    </Tooltip>
+    <>
+      {entries
+        .filter((entry) => entry.url)
+        .map((entry) => (
+          <Tooltip title={entry.label} key={entry.key}>
+            <Button
+              type="text"
+              size="small"
+              icon={entry.icon}
+              style={{ opacity: 0.65 }}
+              aria-label={entry.label}
+              onClick={() =>
+                // 管理员填的是下载页或安装包地址：一律新窗口打开，避免把本站页面顶掉。
+                window.open(entry.url, "_blank", "noopener,noreferrer")
+              }
+            />
+          </Tooltip>
+        ))}
+    </>
   );
 }

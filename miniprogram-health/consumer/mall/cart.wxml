@@ -1,0 +1,44 @@
+<view class="page page-with-bar" wx:if="{{rows.length}}">
+  <view class="card cart-card">
+    <view class="cart-row" wx:for="{{rows}}" wx:key="id">
+      <view
+        class="check {{item.checked ? 'check-on' : ''}} {{item.available ? '' : 'check-off'}}"
+        data-index="{{index}}"
+        bindtap="onToggle"
+      ></view>
+      <image wx:if="{{item.coverImage}}" class="thumb" src="{{item.coverImage}}" mode="aspectFill" data-id="{{item.goodsId}}" bindtap="onGoods" />
+      <view class="cart-body">
+        <view class="cart-name" data-id="{{item.goodsId}}" bindtap="onGoods">{{item.name}}</view>
+        <view class="item-meta" wx:if="{{item.specText}}">{{item.specText}}</view>
+        <view class="cart-bottom">
+          <text class="amount">{{item.priceText}}</text>
+          <view class="stepper" wx:if="{{item.available}}">
+            <view class="step" data-index="{{index}}" data-delta="-1" bindtap="onQty">-</view>
+            <view class="step-value">{{item.quantity}}</view>
+            <view class="step" data-index="{{index}}" data-delta="1" bindtap="onQty">+</view>
+          </view>
+          <text class="tag tag-orange" wx:else>已下架</text>
+        </view>
+        <view class="cart-ops">
+          <text class="link" data-index="{{index}}" bindtap="onRemove">移除</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="action-bar">
+    <view class="check {{allChecked ? 'check-on' : ''}}" bindtap="onToggleAll"></view>
+    <text class="all-label">全选</text>
+    <view class="bar-price">
+      <text class="bar-label">合计</text>
+      <text class="amount">{{totalText}}</text>
+    </view>
+    <button class="button-primary bar-button" bindtap="onCheckout">结算（{{checkedCount}}）</button>
+  </view>
+</view>
+
+<view class="empty" wx:elif="{{!loading}}">
+  购物车还是空的
+  <view class="empty-link" bindtap="onMall">去商城逛逛</view>
+</view>
+<view class="empty" wx:else>正在加载…</view>

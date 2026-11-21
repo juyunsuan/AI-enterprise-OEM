@@ -1,0 +1,50 @@
+<view class="page">
+  <view class="notice">
+    只有「待付款 / 待接单」的订单可以改派；已接单后的订单请让店主在后台处理。改派会按新技师位置重算车费，差额记入订单。
+  </view>
+
+  <view class="error" wx:if="{{errorText}}">{{errorText}}</view>
+
+  <view class="section-title">1. 选择订单</view>
+  <view class="list" wx:if="{{orders.length}}">
+    <view
+      class="card item {{item.canChange ? '' : 'disabled'}} {{selectedId === item.id ? 'active' : ''}}"
+      wx:for="{{orders}}"
+      wx:key="id"
+      data-id="{{item.id}}"
+      bindtap="selectOrder"
+    >
+      <view class="row">
+        <text class="item-title">{{item.orderNo}}</text>
+        <text class="tag">{{item.statusLabel}}</text>
+      </view>
+      <view class="muted">{{item.timeText}} · 顾客 {{item.customerName || '未留名'}}</view>
+      <view class="muted">当前服务人员：{{item.staffName}}</view>
+      <view class="muted hint" wx:if="{{!item.canChange}}">已接单或已结束，代理侧不可改派</view>
+    </view>
+  </view>
+  <view class="empty" wx:elif="{{loading}}">正在加载…</view>
+  <view class="empty" wx:else>暂无带佣金的订单。</view>
+
+  <block wx:if="{{selectedId}}">
+    <view class="section-title">2. 选择新服务人员</view>
+    <view class="list" wx:if="{{technicians.length}}">
+      <view
+        class="card item staff"
+        wx:for="{{technicians}}"
+        wx:key="id"
+        data-id="{{item.id}}"
+        bindtap="chooseStaff"
+      >
+        <view class="row">
+          <text class="item-title">{{item.name}}</text>
+          <text class="muted">★ {{item.rating}}</text>
+        </view>
+        <view class="muted">{{item.city}} · {{item.orderText}}</view>
+      </view>
+    </view>
+    <view class="empty" wx:else>本店暂无可派单的服务人员。</view>
+  </block>
+
+  <view class="muted footer" wx:if="{{submitting}}">正在提交改派…</view>
+</view>

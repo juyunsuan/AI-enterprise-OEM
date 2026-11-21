@@ -34,9 +34,6 @@ export const MCP_ERROR = {
  * 命中这些动作的请求仍可由用户本人在界面上手工发起，锁的只是「无人值守自动执行」。
  */
 export const MCP_FORBIDDEN_ACTIONS: Record<string, string> = {
-  // 招聘 AI：确认投递会以本人名义向外部招聘渠道提交简历，必须由本人在界面上确认。
-  Recruit_confirmApplication: "对外投递需要本人确认",
-  Recruit_updateApplicationStatus: "投递状态变更需要本人确认",
   Im_saveConnector: "IM 连接写操作只允许在站内完成",
   Im_deleteConnector: "IM 连接写操作只允许在站内完成",
   Im_syncNow: "IM 同步写操作只允许在站内完成",

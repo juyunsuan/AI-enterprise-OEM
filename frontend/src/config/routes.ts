@@ -144,6 +144,13 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     group: "operation",
   },
   {
+    key: "circle-admin",
+    name: "圈子社区管理",
+    icon: "peoples",
+    desc: "圈子社区平台侧：板块开放、默认审核口径、建圈/发帖上限与社区停服；社区内容由账号负责人（社区管理员）自治。",
+    group: "operation",
+  },
+  {
     key: "points",
     name: "积分与充值",
     icon: "pay-circle",
@@ -235,6 +242,13 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     group: "system",
   },
   {
+    key: "dev-guide",
+    name: "二次开发指引",
+    icon: "code",
+    desc: "架构说明、接口说明、外部引入代码包与开发原则；渲染仓库 docs/dev-kit 真源，并提供开发套件与技能包下载、一键命令与本站补充说明。",
+    group: "system",
+  },
+  {
     key: "ai-code",
     name: "AI 编程",
     icon: "code",
@@ -283,7 +297,7 @@ export const adminRoute: EnterpriseRoute = {
 
 /**
  * 驾驶舱独立置顶，菜单按当前身份筛选。
- * 顺序：工作台 → 业务服务 → 商务人脉（商务社交 / 招聘） → 模型服务（含 AIPDD 算力平台外链） → 管理设置（含平台机制） → 智能硬件。
+ * 顺序：工作台 → 业务服务 → 商务人脉（AI社交） → 模型服务（含 AIPDD 算力平台外链） → 管理设置（含平台机制） → 智能硬件。
  */
 export const enterpriseRoute: EnterpriseRoute = {
   path: "/",
@@ -319,9 +333,15 @@ export const enterpriseRoute: EnterpriseRoute = {
           ],
         },
         { path: "/marketing-tools", name: "营销工具", icon: "horn" },
+        // 「建站管理」卡片页（一个菜单，页内两板块：小程序 / Web建站）；新增建站类工具继续往卡片页加卡并在功能目录挂子码。
+        { path: "/site-builder", name: "建站管理", icon: "mobile" },
+        { path: "/rental", name: "租赁管理", icon: "car" },
+        { path: "/park", name: "园区管理", icon: "shop" },
+        // 小程序开发与发布：源码包下载 + AI 客户端开发建议 + 微信侧发布步骤（原发布说明抽屉的独立页）。
+        { path: "/site-builder/mini-dev-guide", name: "小程序开发与发布", icon: "code" },
         /**
-         * 「智慧分析」营销工具同款卡片页（一个菜单，页内两张工具卡：
-         * 全域内容热点分析在前、流行趋势分析在后；点卡片进各自带页签的工具页 /insight/hotspot、/insight/trends）。
+         * 「智慧分析」营销工具同款卡片页（一个菜单，页内四张工具卡：
+         * 全域内容热点分析、流行趋势分析、AI-FDE实施分析、企业咨询；点卡片进各自工具页）。
          */
         { path: "/insight", name: "智慧分析", icon: "chart" },
         { path: "/assets", name: "数字资产管理", icon: "folder" },
@@ -335,6 +355,7 @@ export const enterpriseRoute: EnterpriseRoute = {
         { path: "/erp", name: "进销存", icon: "shop" },
         { path: "/app-center", name: "应用中心", icon: "appstore" },
         { path: "/question-hall", name: "专题大厅", icon: "peoples" },
+        { path: "/quiz", name: "答题小程序", icon: "file-done" },
       ],
     },
     {
@@ -356,15 +377,12 @@ export const enterpriseRoute: EnterpriseRoute = {
         { path: "/market", name: "供需市场", icon: "shop" },
       ],
     },
-    /** 商务人脉成组（紧靠业务服务之后、模型服务之前）：商务社交与招聘各自一个入口。 */
+    /** 商务人脉成组（紧靠业务服务之后、模型服务之前）：社交与招聘统一收进 AIworkin 的 DSH 插件入口。 */
     {
       type: "group",
       name: "商务人脉",
       icon: "peoples",
-      routes: [
-        { path: "/social", name: "商务社交", icon: "peoples" },
-        { path: "/hiring", name: "招聘", icon: "team" },
-      ],
+      routes: [{ path: "/ai-social", name: "AI社交", icon: "peoples" }],
     },
     {
       type: "group",
@@ -377,6 +395,8 @@ export const enterpriseRoute: EnterpriseRoute = {
         { path: "/developer/api-mcp-skill", name: "API-MCP-Skill", icon: "book" },
         // AIPDD 算力平台外链固定挂在「模型服务」最后
         { path: "https://app.aipdd.work", name: "AIPDD算力平台", icon: "bolt" },
+        // A2A 供需平台外链：功能目录里的 ai-a2a 此前没有对应菜单项，关掉它什么也不会发生，这里补上入口。
+        { path: "https://www.aiworkin.com", name: "A2A供需平台", icon: "link" },
       ],
     },
     {
@@ -391,6 +411,7 @@ export const enterpriseRoute: EnterpriseRoute = {
         // 账户级自助：积分充值与流水、邀请码与邀请记录，统一挂在「管理设置」下
         { path: "/points", name: "积分中心", icon: "pay-circle" },
         { path: "/invite", name: "我的邀请", icon: "gift" },
+        { path: "/account/team", name: "子账号与操作日志", icon: "team" },
         { path: "/developer/mechanisms", name: "平台机制", icon: "api" },
       ],
     },
@@ -443,6 +464,86 @@ function applyHiddenMenuPaths(
 }
 
 /**
+ * 子账号菜单：模块 key → 前端路径前缀。未列出的路径（驾驶舱、通知等基础页）不限制；
+ * 列出的路径只有在子账号 scopes 里才显示（与后端 `/enterprise/**` 模块守卫同口径）。
+ */
+const SUB_ACCOUNT_MODULE_PATHS: Record<string, string[]> = {
+  tasks: ["/tasks"],
+  agent: ["/agent", "/agent-bot", "/rpa"],
+  kb: ["/kb"],
+  content: ["/content"],
+  community: ["/community"],
+  mkt: ["/marketing-tools"],
+  insight: ["/insight"],
+  crm: ["/crm"],
+  bi: ["/bi"],
+  oa: ["/oa"],
+  okr: ["/okr"],
+  hrm: ["/hrm"],
+  project: ["/project"],
+  erp: ["/erp"],
+  onsite: ["/onsite"],
+  rental: ["/rental"],
+  park: ["/park"],
+  "brand-mall": ["/brand-mall"],
+  // 与 contracts/rbac.ts 新增模块同步：这些板块此前子账号无论授权都可见可用。
+  "service-desk": ["/service-desk"],
+  "data-table": ["/data-table"],
+  mail: ["/mail"],
+  "question-hall": ["/question-hall"],
+  quiz: ["/quiz"],
+  "app-center": ["/app-center"],
+  assets: ["/assets"],
+  // 建站工具卡（侧栏不成项，只在建站管理/智慧分析卡片页出现）同样按模块裁剪。
+  health: ["/health"],
+  "knowledge-pay": ["/knowledge-pay"],
+  "digital-human": ["/digital-human"],
+  "card-shop": ["/card-shop"],
+  kuaidi: ["/kuaidi"],
+  marketplace: ["/marketplace"],
+};
+
+/** 子账号不展示主账号专属入口（人员、签约、计费与资质管理）。 */
+const SUB_ACCOUNT_HIDDEN_GROUPS = new Set(["管理设置"]);
+
+function filterRoutesForScopes(
+  routes: EnterpriseRoute[],
+  scopes: string[],
+): EnterpriseRoute[] {
+  const allowed = new Set(scopes);
+  return routes
+    .filter((route) => !(route.name && SUB_ACCOUNT_HIDDEN_GROUPS.has(route.name)))
+    .map((route) => {
+      if (route.routes) {
+        return { ...route, routes: filterRoutesForScopes(route.routes, scopes) };
+      }
+      if (!route.path) return route;
+      const matched = Object.entries(SUB_ACCOUNT_MODULE_PATHS).find(([, paths]) =>
+        paths.some(
+          (prefix) =>
+            route.path === prefix || route.path!.startsWith(`${prefix}/`),
+        ),
+      );
+      if (!matched || allowed.has(matched[0])) return route;
+      return undefined;
+    })
+    .filter((route): route is EnterpriseRoute => Boolean(route))
+    .filter((route) => route.type !== "group" || Boolean(route.routes?.length));
+}
+
+/**
+ * 子账号未被授权的模块 key 集合（主账号返回空集）。
+ * 卡片页/页签页用它在渲染入口前先收窄，与侧栏 `filterRoutesForScopes` 同一份数据源。
+ */
+export function deniedModuleKeysFor(me: EnterpriseMe | null): Set<string> {
+  if (!me?.isSubAccount) return new Set();
+  const allowed = new Set(me.scopes ?? []);
+  return new Set(
+    Object.keys(SUB_ACCOUNT_MODULE_PATHS).filter((key) => !allowed.has(key)),
+  );
+}
+
+/**
  * 只用当前身份组织菜单；具备其他身份不会混入其管理入口。
  * 平台管理员侧栏只拼「平台管理」后台板块与工具菜单，不含「管理设置」分组（身份与资质 / 积分中心 / 我的邀请 / 平台机制属个人账户视角），
  * 也不含「模型服务」「智能硬件」里的账户级自助入口（见 ADMIN_HIDDEN_INTEGRATION_PATHS）。
@@ -460,6 +561,13 @@ export function navigationFor(
   const hidden = new Set(hiddenMenuPaths);
   if (hidden.has("/")) hidden.add("/dashboard");
   const routes = applyHiddenMenuPaths(enterpriseRoute.routes!, hidden);
+  // 子账号：菜单按授权模块裁剪，且不展示平台管理员/主账号专属入口。
+  if (me.isSubAccount) {
+    return {
+      ...enterpriseRoute,
+      routes: filterRoutesForScopes(routes, me.scopes ?? []),
+    };
+  }
   const management = routes.find((route) => route.name === "管理设置")!;
   const tools = routes
     .filter((route) => route.name === "模型服务" || route.name === "智能硬件")
@@ -529,22 +637,124 @@ export const PAGE_META: Record<
   "/insight": {
     title: "智慧分析",
     description:
-      "趋势研判与垂类热点洞察的工具箱：一张卡片一个工具，全域内容热点分析在前、流行趋势分析在后，共用采集、数据资产、多维表格与统一模型网关。",
+      "趋势研判、垂类热点洞察与企业咨询的工具箱：一张卡片一个工具，全域内容热点分析、流行趋势分析、AI-FDE 实施分析与企业咨询并列，共用采集、数据资产、多维表格与统一模型网关。",
   },
   "/insight/hotspot": {
     title: "全域内容热点分析",
     description:
-      "订阅自己的垂类（关键词/话题/博主）后，用 BotBuddy 主机托管窗口（主）或本机浏览器代理（备）把公开内容采进「热点内容」多维表格，热点引擎按时段聚合打分分层（萌芽/上升/峰值/衰退），给出热点大盘、榜单、追踪台账与 AI 快报。",
+      "订阅自己的垂类（关键词/话题/博主）后，用 AWBotDSH 主机托管窗口（主）或本机浏览器代理（备）把公开内容采进「热点内容」多维表格，热点引擎按时段聚合打分分层（萌芽/上升/峰值/衰退），给出热点大盘、榜单、追踪台账与 AI 快报。",
   },
   "/insight/trends": {
     title: "流行趋势分析",
     description:
       "对自有数字资产图片与电商采集结果做 VLM 打标、色彩/元素时序、价格带与爆款打分；开启联动后，用社媒互动热度（热点）×电商商业热度看概念商业化潜力四象限。数据面限定自有资产+自有采集，不接入受保护商业平台。",
   },
+  "/insight/fde": {
+    title: "AI-FDE实施分析",
+    description:
+      "提交企业画像、流程痛点、系统数据条件与目标约束，由统一模型网关按 AI-FDE（AI 前置交付工程师）方法产出就绪度诊断、场景优先级、交付组织、技术架构、分阶段路线图、KPI 与风险清单；支持补充行业成果资料，报告按账号留存可回看。",
+  },
+  "/insight/consulting": {
+    title: "企业咨询",
+    description:
+      "提交企业数据并勾选分析模型：波士顿矩阵、SWOT、PEST、大战略矩阵、价值链、SPACE、易经、特劳特定位、营销 4Ps/4Cs/4Rs、麦肯锡方法、波特五力、第一性原理、人力资源与企业资源分析等；逐维度产出结论，再汇总成跨模型的综合建议，报告按账号留存可回看。",
+  },
   "/help": {
     title: "帮助中心",
     description:
       "按章节了解系统怎么用的知识库：快速开始、工作台工具、内容与营销、多平台分发、业务服务与管理设置；同一份知识以 MCP 只读工具开放，可直接问 Agent 获得官方用法。",
+  },
+  "/site-builder": {
+    title: "建站管理",
+    description:
+      "用户自建、自主运营与上传发布的站点工具集：小程序板块放微信原生小程序工具（知识付费 / 上门服务 / 品牌商城 / 数字人 / 卡密商城 / 快递寄件 / 跑腿 / 圈子社区），Web建站板块放浏览器独立站；每个工具一套自己的数据、会员与订单。",
+  },
+  "/site-builder/mini-dev-guide": {
+    title: "小程序开发与发布",
+    description:
+      "下载平台统一输出的小程序源码包，查看本账号要填的地址与租户码；导入 Codex、Qoder、TREA / TRAE、AWBotDSH 等客户端改代码，再回微信开发者工具编译预览，最后在微信公众平台提审发布。平台不代编译、不代传微信。",
+  },
+  "/site-builder/launch": {
+    title: "启动设置",
+    description:
+      "建站管理下每个工具的启动开关与计费口径：未启动＝顾客端停服 + 不能出包 + 站内配置只读，且不扣积分；启动后按平台管理员配置的口径（免费 / 按日 / 按 30 天 / 按年 / 按访问 / 按流量）自动出账，欠费进宽限、超期停服、充值自动补扣复活。",
+  },
+  "/rental": {
+    title: "租赁管理小程序",
+    description:
+      "通用租赁（车辆 / 设备 / 场地）的租品、租单、取还验车、押金结算与门店统计；租客小程序与员工工作台分身份使用，客服复用 AI 客服、私域复用企业微信 SCRM，后台账号与权限沿用本站体系。",
+  },
+  "/errand": {
+    title: "跑腿小程序工具",
+    description:
+      "做同城帮送/帮买：账号负责人就是小程序管理员，一个账号一部小程序；按起步价 + 距离 + 重量 + 夜间与帮买服务费自动计价，接入腾讯地图算驾车距离与骑手定位，支持自动派单、转单/弃单、骑手审核、钱包提现、顾客评价与优惠券；客服复用 AI 客服，AI 调度走平台模型网关，按订阅时间/流量/访问量/浏览量扣积分启动。",
+  },
+  "/kuaidi": {
+    title: "快递寄件小程序工具",
+    description:
+      "开一个自己的快递寄件平台：一个账号一部小程序，可建多个寄件点让顾客就近选点；配置快递公司首重/续重、偏远加价与保价规则，买家按重量与地区自动报价、预约取件并微信支付；你按「接单 → 取件 → 运输 → 签收」推进履约，客服复用 AI 客服，收款进你自己的微信商户号，平台不经手资金。",
+  },
+  "/circle": {
+    title: "圈子社区小程序工具",
+    description:
+      "开一个自己的圈子社区小程序：账号负责人就是社区管理员，建分类与圈子、审核圈主与成员、管理图文帖与楼中楼评论、处理举报与站内消息；C 端成员是社区自己的用户，与站内账号隔离。社区素材可从数字资产管理选择，在线客服复用 AI 客服，AI 运营助手走平台模型网关，按订阅时间/流量/访问量/浏览量扣积分启动。",
+  },
+  "/card-shop": {
+    title: "卡密商城小程序工具",
+    description:
+      "开一个自动发卡的微信小程序商店：导入卡密、上架卡密商品，买家匿名或微信登录下单，支付成功后立即拿到卡密，也能凭单号与联系方式自助查单取卡；券码、公告与模块开关都在同一处，收款进你自己的微信商户号，平台不经手资金。",
+  },
+  "/brand-mall": {
+    title: "电商小程序工具",
+    description:
+      "开一个属于自己的微信小程序商城：店铺与交易设置、商品多规格、页面装修、订单与售后、顾客运营、优惠券，最后下载平台统一输出的源码分发包（zip），在微信开发者工具里自填参数、上传、提审与发布（本站不代编译、不代传）。资金直进你自己的微信商户账户，平台不经手。",
+  },
+  "/marketplace": {
+    title: "多店铺商城平台",
+    description:
+      "把自己做成平台方：创建市场并维护统一类目，审核商户入驻，治理店铺经营。商户是独立账号体系，在自己的商户后台管理店铺；买家入口在 B1 期的小程序。资金直进各商户自己的微信商户号，平台不经手，抽佣按市场台账线下结算。",
+  },
+  "/health": {
+    title: "健康管理小程序工具",
+    description:
+      "建一部自己运营的健康管理小程序：机构与医护入驻审核、服务目录与号源排班、挂号问诊与报告、就诊人档案与指标随访、体检与商城、会员券积分与分账提现台账；顾客端与医护端小程序按本店配置出包，资金直进你自己的微信商户号，平台不经手。",
+  },
+  "/merchant": {
+    title: "商户后台",
+    description:
+      "商户独立账号入口：入驻申请、登录后台、店铺资料与微信支付设置、店员账号。与站内企业工作台账号互不通用。",
+  },
+  "/brand-mall/goods": {
+    title: "商品管理",
+    description: "三级分类 + 多规格商品：规格维度自动生成 SKU 行，逐行定价定库存，主表价格取启用 SKU 的最低价。",
+  },
+  "/brand-mall/order": {
+    title: "订单管理",
+    description: "按状态分页的订单台账：发货、标记完成、关闭与卖家备注，详情含商品快照、金额构成与操作时间线。",
+  },
+  "/brand-mall/refund": {
+    title: "售后管理",
+    description: "退款申请的处理台：同意即通过你自己的商户号原路退回，拒绝必须写明理由（买家可见）。",
+  },
+  "/brand-mall/customer": {
+    title: "顾客管理",
+    description: "本店私域顾客：等级与备注、地址簿、近期订单与积分流水，可拉黑限制下单。",
+  },
+  "/brand-mall/marketing": {
+    title: "优惠券",
+    description: "满减/折扣券的发放与核销台账；折扣只按命中作用域的商品金额计算，指定范围券的适用范围、门槛与有效期在表单里明示。",
+  },
+  "/brand-mall/decorate": {
+    title: "页面装修",
+    description: "拖组件拼顾客端页面（首页/分类/我的/活动页），草稿与线上快照分离，发布才生效。",
+  },
+  "/brand-mall/publish": {
+    title: "小程序发布",
+    description: "绑定你自己的小程序 AppID 与微信商户号，下载平台统一源码分发包，在微信开发者工具里自填参数并上传、提审、发布。",
+  },
+  "/brand-mall/setting": {
+    title: "店铺设置",
+    description: "基础信息、交易与售后参数、运费与积分规则、本店快递维护与关店/删店等危险操作。",
   },
   "/data-table": {
     title: "多维表格",
@@ -554,12 +764,12 @@ export const PAGE_META: Record<
   "/rpa": {
     title: "RPA自动化",
     description:
-      "按账号归属的云端 RPA：RPA 任务（建任务即绑定脚本＋账号＋运行参数）、RPA 账号（口令密文保存）、RPA 脚本（Automa JSON / JS / Python，可由 AIPDD 文字模型按需求生成），本地比特浏览器凭 API Key 认领执行并回传结果；另有「本地 Chrome 插件（浏览器代理）」执行端——插件登录本系统后本机浏览器成为在线设备，Agent 可在你已登录的站点自主多步执行；还有「BotBuddy 浏览器」——BotBuddy 客户端自带的内核级指纹窗口，随客户端内置 Automa 插件开箱即用，浏览器本体与插件都在客户端，平台侧登记主机在线状态。",
+      "按账号归属的云端 RPA：RPA 任务（建任务即绑定脚本＋账号＋运行参数）、RPA 账号（口令密文保存）、RPA 脚本（Automa JSON / JS / Python，可由 AIPDD 文字模型按需求生成），本地比特浏览器凭 API Key 认领执行并回传结果；另有「本地 Chrome 插件（浏览器代理）」执行端——插件登录本系统后本机浏览器成为在线设备，Agent 可在你已登录的站点自主多步执行；还有「AWBotDSH 浏览器」——AWBotDSH 客户端自带的内核级指纹窗口，随客户端内置 Automa 插件开箱即用，浏览器本体与插件都在客户端，平台侧登记主机在线状态。",
   },
   "/agent-bot": {
     title: "Agent-Bot",
     description:
-      "四个页签把「跑活的 Agent」收在一处：BotBuddy 主机（本机客户端配对成在线主机，说人话下发指令、选工作区、排定时任务）、MoBot 手机（6 位连接码配对，心跳领取 Prompt 由手机本地 Agent 执行回传）、WorkBuddy 企业云（一个腾讯云企业账号即一条执行通道：账号对话、定时任务、SecretId/SecretKey 密文保存）与 AI 调用账号（第三方平台口令 / API Key / Cookie 加密保存）。三类通道各自的「Agent 绑定账号」页签按设备授权：客户端凭主机令牌、任务侧凭平台 API Key 按 kind + Agent ID 取用，未绑定的一律取不到。模型密钥、技能与本机文件永不离开这台设备，平台只传「做什么」与「做到哪了」。",
+      "四个页签把「跑活的 Agent」收在一处：AWBotDSH 主机（本机客户端配对成在线主机，说人话下发指令、选工作区、排定时任务）、AWBot 手机（6 位连接码配对，心跳领取 Prompt 由手机本地 Agent 执行回传）、WorkBuddy 企业云（一个腾讯云企业账号即一条执行通道：账号对话、定时任务、SecretId/SecretKey 密文保存）与 AI 调用账号（第三方平台口令 / API Key / Cookie 加密保存）。三类通道各自的「Agent 绑定账号」页签按设备授权：客户端凭主机令牌、任务侧凭平台 API Key 按 kind + Agent ID 取用，未绑定的一律取不到。模型密钥、技能与本机文件永不离开这台设备，平台只传「做什么」与「做到哪了」。",
   },
   "/app-center": {
     title: "应用中心",
@@ -586,20 +796,20 @@ export const PAGE_META: Record<
     description:
       "发布企业内或公开的专题讨论：企业内由本组织与签约/承办伙伴的职员参与，公开对所有登录账号开放；发起人可结案（AI 总结全部发言与回复的回复）、重新结案、关闭或删除，发言可选本人或数字分身署名。",
   },
+  "/quiz": {
+    title: "答题小程序",
+    description:
+      "做自己的答题/考试小程序：建题库、录题或让 AI 按资料出题，发布后选手在微信里练习、考试、看错题与排行；题目与交卷记录都落在账号自己的多维表格，可直接筛选导出；封面与学习资料从数字资产管理选取，客服入口绑定已有 AI 客服站点。",
+  },
   "/kb": {
     title: "知识库",
     description:
       "公共知识库与知识图谱底座：资料投进知识空间后编译为可溯源的 wiki 页面，[[链接]] 自动长出图谱，混合检索与带引用问答随写随可用；支持消费者绑定、Agent 操作记忆提炼与上下文回流，未配置大模型时全链路走规则式回落。",
   },
-  "/social": {
-    title: "商务社交",
+  "/ai-social": {
+    title: "AI社交",
     description:
-      "本地闭环的商务社交板块：结识同行人（好友/拉黑）、发布动态（公开/仅好友）、小组讨论（对标豆瓣：发现/加入小组、分类发帖、可逐条匿名、楼层回复与推荐、组长/管理员置顶加精与入组审批）、站内私信往来、维护与主页分叉的职场简历。全部在你的账号下读写，不受上游影响，账号被封禁时自动拦截。",
-  },
-  "/hiring": {
-    title: "招聘",
-    description:
-      "本地闭环的招聘专区（移植 SNS 招聘专区）：发布全职/兼职/实习等岗位，进招聘广场信息流供全站浏览与站内私信对接。本地发布免费、无需绑定 APIKey；已绑定 AIPDD APIKey 时可将岗位同步为 AIworkin 的用工需求（类目固定取平台「灵活用工」子树）并镜像上游状态。另有「AI 简历代投」（求职者视角）：维护求职画像与简历、按岗位打分匹配、生成优化简历；投递先落为待确认，必须本人在界面确认后发出，并跟踪面试 / Offer 漏斗。",
+      "AIworkin 的 DSH 社交插件入口：打开聊天、我的分身、发现人脉、小组、招聘、站内私信与我的主页都在新窗口打开；社交数据与操作全部落在 AIworkin，不在本站保存。首次进入需先绑定 AIPDD API Key；平台管理员可在功能开关里关闭整个入口。",
   },
   "/invite": {
     title: "我的邀请",

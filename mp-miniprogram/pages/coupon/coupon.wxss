@@ -1,0 +1,41 @@
+.coupon-row {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+}
+
+.coupon-row.off {
+  opacity: 0.6;
+}
+
+.coupon-left {
+  width: 180rpx;
+  flex: none;
+  text-align: center;
+  border-right: 1rpx dashed #e5e6eb;
+  padding-right: 16rpx;
+}
+
+.coupon-value {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #e5484d;
+}
+
+.coupon-body {
+  min-width: 0;
+}
+
+.coupon-name {
+  font-size: 28rpx;
+  font-weight: 500;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.coupon-status {
+  flex: none;
+  font-size: 24rpx;
+  color: #8a8f99;
+}

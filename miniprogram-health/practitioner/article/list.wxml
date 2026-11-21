@@ -1,0 +1,25 @@
+<view class="page">
+  <view class="head-bar">
+    <view class="muted">共 {{total}} 篇</view>
+    <button class="mini primary" bindtap="onCreate">＋ 新建投稿</button>
+  </view>
+
+  <view class="card" wx:if="{{list.length}}">
+    <view class="list-item" wx:for="{{list}}" wx:key="id">
+      <view class="item-head">
+        <view class="item-title">{{item.title}}</view>
+        <text class="tag">{{item.auditLabel}}</text>
+      </view>
+      <view class="item-meta">{{item.statusLabel}} · 阅读 {{item.viewCount || 0}} · 点赞 {{item.likeCount || 0}} · {{item.timeText}}</view>
+      <view class="item-meta" wx:if="{{item.summary}}">{{item.summary}}</view>
+      <view class="item-meta reject" wx:if="{{item.auditReason}}">审核意见：{{item.auditReason}}</view>
+      <view class="actions">
+        <text class="link" data-id="{{item.id}}" bindtap="onEdit">编辑</text>
+        <text class="link danger" wx:if="{{item.status === 'ON'}}" data-id="{{item.id}}" bindtap="onOffline">下线</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="empty" wx:elif="{{!loading}}">还没有投稿；审核通过后会在顾客端科普栏目展示</view>
+  <view class="empty" wx:else>正在加载…</view>
+</view>

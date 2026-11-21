@@ -60,3 +60,25 @@ describe('Hono attachment request size limits', () => {
     expect(response.status).toBe(413);
   });
 });
+
+/**
+ * 上限分级必须与各服务自己声明的上限同级：中间件先按默认 12MB 拦一刀，
+ * 业务侧那句"文件超过 100MB"的有用报错就永远到不了用户眼前。
+ */
+describe('requestBodyLimit 分级', () => {
+  it.each([
+    ['/enterprise/content/uploads', 100 * 1024 * 1024],
+    ['/enterprise/content/digital-assets/upload', 100 * 1024 * 1024],
+    ['/api/public/digital-human/upload', 100 * 1024 * 1024],
+    ['/enterprise/community/uploads', 50 * 1024 * 1024],
+    ['/enterprise/admin/upgrade/upload', 512 * 1024 * 1024],
+    ['/enterprise/flex/onboardings/attachments', 16 * 1024 * 1024],
+    ['/enterprise/crm/customer/create', 12 * 1024 * 1024],
+    [
+      '/api/backend/enterprise/content/digital-assets/upload',
+      100 * 1024 * 1024,
+    ],
+  ] as const)('%s → %s 字节', (path, expected) => {
+    expect(requestBodyLimit(path)).toBe(expected);
+  });
+});

@@ -11,6 +11,7 @@ import { ScrmMassView } from "./scrm-mass-view";
 import { ScrmTransfersView } from "./scrm-transfers-view";
 import { ScrmSopsView } from "./scrm-sops-view";
 import { ScrmComplianceView } from "./scrm-compliance-view";
+import { ScrmTerminalView } from "./scrm-terminal-view";
 
 /**
  * 企微原生 SCRM：客户以企微为唯一同步源，本地只做镜像与运营。
@@ -25,7 +26,8 @@ type ViewKey =
   | "mass"
   | "transfers"
   | "sops"
-  | "compliance";
+  | "compliance"
+  | "terminals";
 
 const VIEWS = [
   { key: "overview", label: "概览" },
@@ -36,6 +38,7 @@ const VIEWS = [
   { key: "transfers", label: "分配与继承" },
   { key: "sops", label: "SOP" },
   { key: "compliance", label: "合规质检" },
+  { key: "terminals", label: "终端接入" },
 ];
 
 export function ScrmTab() {
@@ -54,6 +57,7 @@ export function ScrmTab() {
       {view === "transfers" ? <ScrmTransfersView tick={tick} /> : null}
       {view === "sops" ? <ScrmSopsView tick={tick} /> : null}
       {view === "compliance" ? <ScrmComplianceView tick={tick} /> : null}
+      {view === "terminals" ? <ScrmTerminalView /> : null}
     </Space>
   );
 }

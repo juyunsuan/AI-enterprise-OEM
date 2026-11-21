@@ -1,0 +1,105 @@
+<view class="page" style="{{themeStyle}}">
+  <view class="card">
+    <view class="section-title">查单取卡</view>
+    <view class="muted hint">凭下单时的订单号与联系方式取回卡密；设置过取卡密码的订单需要再填密码。</view>
+
+    <view class="field-label">订单号</view>
+    <input
+      class="input"
+      maxlength="40"
+      placeholder="下单后得到的订单号"
+      value="{{orderNo}}"
+      bindinput="onOrderNoInput"
+    />
+
+    <view class="field-label">联系方式</view>
+    <input
+      class="input"
+      maxlength="120"
+      placeholder="下单时填的手机号 / 邮箱 / QQ"
+      value="{{contact}}"
+      bindinput="onContactInput"
+    />
+
+    <view class="field-label">取卡密码（下单时设置过才需要）</view>
+    <input
+      class="input"
+      password
+      maxlength="32"
+      placeholder="未设置可留空"
+      value="{{takeCardPassword}}"
+      bindinput="onPasswordInput"
+    />
+
+    <view class="btn query-btn {{loading ? 'btn-disabled' : ''}}" bindtap="submit">
+      {{loading ? '查询中…' : '查询订单'}}
+    </view>
+    <view class="muted link-row" wx:if="{{showMyOrders}}" bindtap="goMyOrders">我的订单 ›</view>
+  </view>
+
+  <block wx:if="{{searched && result}}">
+    <view class="empty" wx:if="{{!result.found}}">{{result.message}}</view>
+
+    <block wx:else>
+      <view class="card">
+        <view class="row between">
+          <text class="title ellipsis flex1">{{result.goodsName}}</text>
+          <text class="tag {{result.payState === 'PAID' ? 'tag-primary' : ''}}">{{result.payStateLabel}}</text>
+        </view>
+        <view class="row between info-row">
+          <text class="muted">订单号</text>
+          <text>{{result.orderNo}}</text>
+        </view>
+        <view class="row between info-row">
+          <text class="muted">购买数量</text>
+          <text>{{result.quantity}} 张</text>
+        </view>
+        <view class="row between info-row">
+          <text class="muted">订单金额</text>
+          <text class="price">¥{{result.totalText}}</text>
+        </view>
+        <view class="row between info-row" wx:if="{{result.createdText}}">
+          <text class="muted">下单时间</text>
+          <text class="small">{{result.createdText}}</text>
+        </view>
+        <view class="row between info-row" wx:if="{{result.paidText}}">
+          <text class="muted">支付时间</text>
+          <text class="small">{{result.paidText}}</text>
+        </view>
+        <view class="muted message" wx:if="{{result.message}}">{{result.message}}</view>
+        <view class="btn pay-btn" wx:if="{{canPay}}" bindtap="goPay">去支付</view>
+      </view>
+
+      <view class="card" wx:if="{{cards.length}}">
+        <view class="row between">
+          <text class="section-title">卡密明细</text>
+          <text class="copy-all" bindtap="copyAll">复制全部</text>
+        </view>
+        <view class="card-item" wx:for="{{cards}}" wx:key="id">
+          <view class="row between">
+            <text class="muted">第 {{item.index}} 张</text>
+            <text class="copy-link" bindtap="copyCard" data-index="{{index}}" data-field="number">复制卡号</text>
+          </view>
+          <view class="copy-secret secret-line" wx:if="{{item.number}}">{{item.number}}</view>
+          <block wx:if="{{item.secret}}">
+            <view class="row between secret-head">
+              <text class="muted">卡密</text>
+              <text class="copy-link" bindtap="copyCard" data-index="{{index}}" data-field="secret">复制卡密</text>
+            </view>
+            <view class="copy-secret secret-line">{{item.secret}}</view>
+          </block>
+        </view>
+        <view class="muted hint">请立即复制保存。店主不经手已发出的卡密，本页可凭单号与联系方式反复查询。</view>
+      </view>
+
+      <view class="card" wx:if="{{needPassword}}">
+        <view class="muted">输入取卡密码后重新查询即可看到卡密。</view>
+      </view>
+
+      <view class="card" wx:if="{{result.remark}}">
+        <view class="section-title">使用说明</view>
+        <text class="muted small">{{result.remark}}</text>
+      </view>
+    </block>
+  </block>
+</view>

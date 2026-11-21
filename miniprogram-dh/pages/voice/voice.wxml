@@ -1,0 +1,49 @@
+<view class="page" style="{{themeStyle}}">
+  <view class="tip">
+    上传一段 {{voiceMinSec}}-{{voiceMaxSec}} 秒的清晰朗读音频（mp3/wav/m4a），训练完成后可在合成时选择。每次克隆消耗 1 个声音点。
+  </view>
+
+  <view wx:if="{{examples.length}}" class="card hint-card">
+    <view class="hint-card-title">朗读示例</view>
+    <view class="example-item" wx:for="{{examples}}" wx:key="id" data-content="{{item.content}}" bindtap="copyExample">
+      <view class="example-content">{{item.content}}</view>
+      <view class="example-copy">点击复制</view>
+    </view>
+  </view>
+
+  <view wx:if="{{hints.length}}" class="card hint-card">
+    <view class="hint-card-title">录音要求</view>
+    <view class="hint-item" wx:for="{{hints}}" wx:key="id">
+      <view class="hint-name">{{item.title}}</view>
+      <view class="hint-body">{{item.content}}</view>
+    </view>
+  </view>
+
+  <view wx:if="{{error}}" class="status-banner">{{error}}</view>
+  <view wx:if="{{busy}}" class="status-banner">上传中 {{progress}}%</view>
+
+  <view wx:for="{{list}}" wx:key="id" class="card voice-card">
+    <view class="row between">
+      <view>
+        <view class="voice-name">{{item.name}}</view>
+        <view class="voice-time">{{item.createdAt}}</view>
+      </view>
+      <text class="tag {{item.status === 1 ? '' : 'gray'}}">{{item.statusText}}</text>
+    </view>
+    <view wx:if="{{item.failReason}}" class="voice-fail">{{item.failReason}}</view>
+    <view class="row voice-actions">
+      <view
+        wx:if="{{item.demoAudioUrl}}"
+        class="btn-ghost voice-action"
+        data-url="{{item.demoAudioUrl}}"
+        bindtap="playDemo"
+      >试听</view>
+    </view>
+  </view>
+
+  <view wx:if="{{!loading && !list.length}}" class="empty">还没有克隆声音，点下方按钮开始</view>
+
+  <view class="fab {{busy ? 'disabled' : ''}}" bindtap="create">
+    {{busy ? '提交中…' : '新建声音克隆'}}
+  </view>
+</view>

@@ -5,11 +5,28 @@ import { clip, orgKey } from '../hrm/hrm.helpers';
 import { num } from './project.shared';
 import type { PageQuery, Row } from './project.shared';
 import { ProjectBase } from './project.base';
-import type { HrmOrg } from '../hrm/hrm.scope';
+import type { HrmOrg, HrmScopeService } from '../hrm/hrm.scope';
+import type { MechanismService } from '../mechanisms/mechanism.service';
+import type { AiEvalService } from '../ai/ai-eval.service';
+import type { PrismaService } from '../prisma/prisma.service';
+import { unwiredErpPort, type ErpPort } from '../erp/erp-port';
+import { failingErpWritePort, type ErpWritePort } from '../erp/erp-write-port';
 import { toJsonInput } from '../common/json-input';
 
 /** 项目主档与成员。 */
 export class ProjectCoreService extends ProjectBase {
+  constructor(
+    prisma: PrismaService,
+    scope: HrmScopeService,
+    mechanisms: MechanismService,
+    aiEval: AiEvalService,
+    /** ERP 读侧端口：读数走端口。 */
+    private readonly erp: ErpPort = unwiredErpPort(),
+    /** ERP 写侧端口：合同回款 → 应收单从这里落，单号与归属由 ERP 域自证。 */
+    private readonly erpWrites: ErpWritePort = failingErpWritePort,
+  ) {
+    super(prisma, scope, mechanisms, aiEval);
+  }
   async listProjects(
     user: CurrentUser,
     query: PageQuery & { status?: string; q?: string },
@@ -298,33 +315,15 @@ export class ProjectCoreService extends ProjectBase {
       where: { id: contract.customerId, deletedAt: null },
       select: { name: true },
     });
-    const existing = await this.prisma.erpReceivable.findFirst({
-      where: {
-        orgType: org.orgType,
-        orgUserId: org.orgUserId,
-        sourceType: 'CONTRACT',
-        sourceId: contract.id,
-      },
-    });
-    if (existing) {
-      if (existing.status === 'CANCELED') return;
-      await this.prisma.erpReceivable.update({
-        where: { id: existing.id },
-        data: { amount, customerName: customer?.name || existing.customerName },
-      });
-      return;
-    }
-    await this.prisma.erpReceivable.create({
-      data: {
-        ...orgKey(org),
-        customerName: customer?.name || '未命名客户',
-        customerId: contract.customerId,
-        contractId: contract.id,
-        sourceType: 'CONTRACT',
-        sourceId: contract.id,
-        amount,
-        note: `合同 ${contract.number || `#${contract.id}`} 回款计划`,
-      },
+    // 应收单的幂等键（CONTRACT + 合同 id）、YS 当日流水号与归属自证都在 ERP 写端口里。
+    // 原先这里是「读端口读一次 + prisma 直写」：直写的 where: { id } 不带组织条件，
+    // 建单又不填 code（ERP 侧走 YS 当日流水），两套号源并存只会让财务对不上账。
+    await this.erpWrites.syncContractReceivable(org, {
+      contractId: contract.id,
+      customerId: contract.customerId,
+      customerName: customer?.name || '未命名客户',
+      amount,
+      note: `合同 ${contract.number || `#${contract.id}`} 回款计划`,
     });
   }
 

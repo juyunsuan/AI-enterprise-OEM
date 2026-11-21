@@ -1,0 +1,14 @@
+<view class="wrap">
+  <view wx:if="{{!list.length && !loading}}" class="empty">暂无账单。绑定企业后，园区账单会显示在这里。</view>
+  <view wx:for="{{list}}" wx:key="id" class="card">
+    <view class="row">
+      <view class="section-title">{{item.periodStart}} ~ {{item.periodEnd}}</view>
+      <text class="tag">{{item.statusLabel}}</text>
+    </view>
+    <view class="muted">{{item.billNo}} · {{item.tenantName}}</view>
+    <view class="row" style="margin-top: 12rpx;">
+      <view class="muted">到期 {{item.dueDate}}</view>
+      <view class="section-title">¥{{item.amount}}</view>
+    </view>
+  </view>
+</view>

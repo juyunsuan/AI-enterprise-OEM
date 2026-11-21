@@ -8,7 +8,7 @@ import { aiCallApi, type AiCallAccount, type AiCallPrincipalKind } from "./ai-ca
 
 /**
  * Agent 绑定账号：把「AI 调用账号」里的第三方平台凭据按设备主体授权给具体 Agent。
- * 一台 BotBuddy 主机 / 一部 MoBot 手机 / 一个 WorkBuddy 企业账号各选各的；
+ * 一台 AWBotDSH 主机 / 一部 AWBot 手机 / 一个 WorkBuddy 企业账号各选各的；
  * 设备侧取凭据时（x-bot-token 设备通道或 x-api-key + kind/agentId）严格按这份绑定放行。
  */
 export type BindableDevice = {

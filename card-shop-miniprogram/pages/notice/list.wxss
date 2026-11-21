@@ -1,0 +1,23 @@
+.notice-title {
+  font-size: 30rpx;
+  font-weight: 500;
+  line-height: 42rpx;
+}
+
+.notice-summary {
+  margin-top: 8rpx;
+  line-height: 34rpx;
+}
+
+.notice-foot {
+  margin-top: 16rpx;
+}
+
+.arrow {
+  color: var(--muted);
+}
+
+.loading-text {
+  text-align: center;
+  padding: 24rpx 0;
+}

@@ -73,13 +73,13 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 /**
- * RPA 脚本：先选目标设备（PC 比特浏览器 / 安卓云手机 / iPhone 云手机 / 本地 Chrome / BotBuddy 浏览器），
+ * RPA 脚本：先选目标设备（PC 比特浏览器 / 安卓云手机 / iPhone 云手机 / 本地 Chrome / AWBotDSH 浏览器），
  * 再选该设备能吃的脚本类型，
  * 正文（Automa JSON / 比特流程导出 / JS / Python）＋运行参数定义，按账号归属。
  * 「AI 写脚本」按需求 + 设备 + 类型 + AIPDD 文字模型生成，先预览再生成后保存到脚本清单；
  * 客户端导出的 RPA 流程模型写不出来，只能导出正文后在这里登记（比特流程还要填客户端任务 ID）。
  * 被任务引用的脚本删不掉（云端任务认领时要按 scriptId 取正文）。
- * PC 与 BotBuddy 浏览器吃的都是 Automa JSON：一份脚本可以同时被两边的任务引用（换设备不换脚本）。
+ * PC 与 AWBotDSH 浏览器吃的都是 Automa JSON：一份脚本可以同时被两边的任务引用（换设备不换脚本）。
  */
 export function ScriptPanel({
   scripts,

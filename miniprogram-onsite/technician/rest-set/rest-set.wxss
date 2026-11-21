@@ -1,0 +1,68 @@
+.field {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #eef0f3;
+}
+
+.label {
+  width: 180rpx;
+  color: #4e5969;
+  font-size: 27rpx;
+  flex-shrink: 0;
+}
+
+.input {
+  flex: 1;
+  font-size: 27rpx;
+}
+
+.picker-value {
+  color: #3370ff;
+  font-size: 27rpx;
+}
+
+.tip {
+  margin-top: 14rpx;
+  line-height: 1.6;
+}
+
+.error {
+  margin-top: 18rpx;
+  color: #f53f3f;
+  font-size: 25rpx;
+  line-height: 1.6;
+}
+
+.submit {
+  margin-top: 26rpx;
+}
+
+.rest {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-top: 16rpx;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #eef0f3;
+}
+
+.rest-main {
+  flex: 1;
+}
+
+.rest-time {
+  font-size: 27rpx;
+  margin-bottom: 6rpx;
+}
+
+.day {
+  margin-right: 12rpx;
+  font-weight: 600;
+}
+
+.delete {
+  color: #f53f3f;
+  font-size: 26rpx;
+  padding-left: 24rpx;
+}

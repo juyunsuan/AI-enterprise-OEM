@@ -1,0 +1,144 @@
+<view class="empty" wx:if="{{loading}}">正在读取评价信息…</view>
+
+<view class="card closed" wx:elif="{{notReady}}">
+  <view class="title">店铺暂未开通</view>
+  <view class="muted note">{{readyReason}}</view>
+</view>
+
+<view class="empty" wx:elif="{{error}}">{{error}}</view>
+
+<block wx:elif="{{readOnly}}">
+  <view class="card">
+    <view class="row">
+      <text class="title">该订单已评价</text>
+      <text class="muted">{{existing.statusText}}</text>
+    </view>
+    <view class="muted note">同一订单只能评价一次，以下为已提交的内容，不可重复提交。</view>
+    <view class="rate-line">
+      <text class="label">整体评分</text>
+      <text class="value">{{existing.rating}} 分</text>
+    </view>
+    <view class="rate-line">
+      <text class="label">服务评分</text>
+      <text class="value">{{existing.serviceRating}} 分</text>
+    </view>
+    <view class="rate-line">
+      <text class="label">态度评分</text>
+      <text class="value">{{existing.attitudeRating}} 分</text>
+    </view>
+    <view class="block-text" wx:if="{{existing.content}}">{{existing.content}}</view>
+    <view class="muted" wx:else>未填写文字评价</view>
+    <view class="images" wx:if="{{existing.images.length}}">
+      <image
+        class="image"
+        wx:for="{{existing.images}}"
+        wx:key="*this"
+        src="{{item}}"
+        mode="aspectFill"
+        data-index="{{index}}"
+        bindtap="previewExistingImage"
+      ></image>
+    </view>
+    <view class="rate-line" wx:if="{{existing.anonymous}}">
+      <text class="label">匿名</text>
+      <text class="value">是</text>
+    </view>
+    <view class="rate-line">
+      <text class="label">提交时间</text>
+      <text class="value">{{existing.createdAtText}}</text>
+    </view>
+    <view class="reply" wx:if="{{existing.reply}}">
+      <view class="muted">店主回复（{{existing.repliedAtText}}）</view>
+      <view>{{existing.reply}}</view>
+    </view>
+  </view>
+</block>
+
+<block wx:else>
+  <view class="card">
+    <view class="title">整体评分</view>
+    <view class="rate-row">
+      <view
+        class="rate-item {{item <= rating ? 'active' : ''}}"
+        wx:for="{{stars}}"
+        wx:key="*this"
+        data-score="{{item}}"
+        bindtap="setRating"
+      >{{item}}</view>
+    </view>
+    <view class="muted note">1 分最低，5 分最高</view>
+  </view>
+
+  <view class="card">
+    <view class="title">分项评分</view>
+    <view class="rate-line">
+      <text class="label">服务</text>
+      <view class="rate-row small">
+        <view
+          class="rate-item {{item <= serviceRating ? 'active' : ''}}"
+          wx:for="{{stars}}"
+          wx:key="*this"
+          data-score="{{item}}"
+          bindtap="setServiceRating"
+        >{{item}}</view>
+      </view>
+    </view>
+    <view class="rate-line">
+      <text class="label">态度</text>
+      <view class="rate-row small">
+        <view
+          class="rate-item {{item <= attitudeRating ? 'active' : ''}}"
+          wx:for="{{stars}}"
+          wx:key="*this"
+          data-score="{{item}}"
+          bindtap="setAttitudeRating"
+        >{{item}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="title">文字评价</view>
+    <textarea
+      class="text-input"
+      value="{{content}}"
+      maxlength="{{contentMax}}"
+      placeholder="说说这次服务体验（选填）"
+      bindinput="onContentInput"
+    ></textarea>
+    <view class="row images-head">
+      <text class="muted">图片 {{images.length}}/{{imageMax}}</text>
+      <text class="muted" wx:if="{{uploading}}">上传中…</text>
+    </view>
+    <view class="images">
+      <view class="image-item" wx:for="{{images}}" wx:key="*this">
+        <image
+          class="image"
+          src="{{item}}"
+          mode="aspectFill"
+          data-index="{{index}}"
+          bindtap="previewImage"
+        ></image>
+        <view class="image-del" data-index="{{index}}" catchtap="removeImage">删除</view>
+      </view>
+      <view class="image-add" bindtap="chooseImages" wx:if="{{images.length < imageMax}}">添加图片</view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="row">
+      <text>匿名评价</text>
+      <switch checked="{{anonymous}}" bindchange="toggleAnonymous"></switch>
+    </view>
+    <view class="muted note">匿名后顾客昵称不对外展示，店主仍可看到订单信息。</view>
+  </view>
+
+  <view class="footer">
+    <button
+      class="button-primary"
+      bindtap="submit"
+      loading="{{submitting}}"
+      disabled="{{submitting || uploading}}"
+    >提交评价</button>
+  </view>
+</block>

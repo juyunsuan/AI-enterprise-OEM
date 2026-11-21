@@ -392,6 +392,74 @@ export const serviceDeskAgentSchema = z.object({
 
 export type ServiceDeskAgent = z.infer<typeof serviceDeskAgentSchema>;
 
+/** 接待时段：days 空数组＝每天；start/end 为 "HH:mm"，都留空＝全天在岗。 */
+export const serviceDeskWorkingHoursSchema = z.object({
+  days: z.array(z.number().int().min(0).max(6)).default([]),
+  start: z.string().max(5).default(""),
+  end: z.string().max(5).default(""),
+});
+
+/**
+ * 纯AI客服员工：AI客服团队里的一类员工（与真人坐席并列）。
+ * 人设、模型、知识库范围与转人工口径都挂在员工身上，账号级 AI 设置只做回落；
+ * 业务工具要用 AI（如健康小程序的 AI 医护）只引用这里的 id，不在各自域内再造一套。
+ */
+export const serviceDeskAiAgentSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  avatar: z.string(),
+  intro: z.string(),
+  /** 归属客服组：0＝不按组分流，参与全局自动分配 */
+  groupId: z.number(),
+  status: z.string(),
+  statusLabel: z.string(),
+  /** AUTO＝AI 先接可转人工；BOT＝纯AI接待不转人工 */
+  mode: z.string(),
+  modeLabel: z.string(),
+  persona: z.string(),
+  aiChannelId: z.number(),
+  aiModel: z.string(),
+  kbSpaceIds: z.array(z.number()),
+  kbSpaces: z.array(z.string()),
+  handoffKeywords: z.array(z.string()),
+  handoffGroupId: z.number(),
+  maxConcurrent: z.number(),
+  workingHours: serviceDeskWorkingHoursSchema,
+  greetingText: z.string(),
+  /** 当前在处理会话数（容量展示） */
+  activeCount: z.number(),
+  /** 接待台账：历史接待会话数 */
+  handledCount: z.number().default(0),
+  /** 接待台账：改由真人接待的会话数（转人工留痕） */
+  handoffCount: z.number().default(0),
+  /** 接待台账：转人工占比 0~1 */
+  handoffRate: z.number().default(0),
+  /** 接待台账：已评分会话数 */
+  ratingCount: z.number().default(0),
+  /** 接待台账：平均满意度 1~5（一位小数，无评分为 0） */
+  ratingAvg: z.number().default(0),
+  /** 启用 + 在接待时段内＝可接单 */
+  onDuty: z.boolean(),
+  createdAt: z.string(),
+});
+export type ServiceDeskAiAgent = z.infer<typeof serviceDeskAiAgentSchema>;
+
+/** AI 应答的知识出处（业主端试问与业务工具引用共用同一结构）。 */
+export const aiAnswerReferenceSchema = z.object({
+  title: z.string(),
+  ref: z.string(),
+});
+
+export const aiAgentAnswerSchema = z.object({
+  agentId: z.number(),
+  agentName: z.string(),
+  answer: z.string(),
+  references: z.array(aiAnswerReferenceSchema),
+  /** 命中转人工口径：调用方据此提示「建议转人工」，本接口不替业务域做转人工。 */
+  handoff: z.boolean(),
+});
+export type AiAgentAnswer = z.infer<typeof aiAgentAnswerSchema>;
+
 export const serviceDeskConversationSchema = z.object({
   id: z.number(),
   siteId: z.number(),
@@ -399,6 +467,10 @@ export const serviceDeskConversationSchema = z.object({
   groupId: z.number(),
   assigneeUserId: z.string(),
   assigneeName: z.string(),
+  /** USER＝真人坐席接待；AI＝纯AI客服员工接待 */
+  assigneeType: z.string().default("USER"),
+  aiAgentId: z.number().default(0),
+  aiAgentName: z.string().default(""),
   visitorName: z.string(),
   visitorContact: z.string(),
   status: z.string(),
@@ -667,6 +739,82 @@ export const serviceDeskEndpoints = {
     query: emptyQuery,
     body: z.object({ status: z.enum(["ONLINE", "AWAY", "OFFLINE"]) }),
     response: envelope(z.object({ status: z.string() })),
+  },
+  ServiceDesk_aiAgents: {
+    method: "get" as const,
+    path: "/enterprise/service-desk/ai-agents",
+    params: z.object({}),
+    query: emptyQuery,
+    body: z.undefined(),
+    response: envelope(z.array(serviceDeskAiAgentSchema)),
+  },
+  ServiceDesk_saveAiAgent: {
+    method: "post" as const,
+    path: "/enterprise/service-desk/ai-agents",
+    params: z.object({}),
+    query: emptyQuery,
+    body: z.object({
+      id: z.number().int().min(0).default(0),
+      name: z.string().min(1).max(60),
+      avatar: z.string().max(500).default(""),
+      intro: z.string().max(200).default(""),
+      groupId: z.number().int().min(0).default(0),
+      mode: z.enum(["AUTO", "BOT"]).default("AUTO"),
+      persona: z.string().max(6000).default(""),
+      aiChannelId: z.number().int().min(0).default(0),
+      aiModel: z.string().max(128).default(""),
+      kbSpaceIds: z.array(z.number().int().positive()).max(20).default([]),
+      handoffKeywords: z.array(z.string().max(30)).max(20).default([]),
+      handoffGroupId: z.number().int().min(0).default(0),
+      maxConcurrent: z.number().int().min(1).max(500).default(50),
+      workingHours: serviceDeskWorkingHoursSchema.default({
+        days: [],
+        start: "",
+        end: "",
+      }),
+      greetingText: z.string().max(2000).default(""),
+    }),
+    response: envelope(serviceDeskAiAgentSchema),
+  },
+  ServiceDesk_setAiAgentStatus: {
+    method: "post" as const,
+    path: "/enterprise/service-desk/ai-agents/:id/status",
+    params: z.object({ id: z.string() }),
+    query: emptyQuery,
+    body: z.object({ status: z.enum(["ON", "DISABLED"]) }),
+    response: envelope(z.object({ id: z.number(), status: z.string() })),
+  },
+  ServiceDesk_removeAiAgent: {
+    method: "delete" as const,
+    path: "/enterprise/service-desk/ai-agents/:id",
+    params: z.object({ id: z.string() }),
+    query: emptyQuery,
+    body: z.undefined(),
+    response: envelope(z.object({ id: z.number() })),
+  },
+  /**
+   * 通用问答：业主端「试问一句」用它验人设与知识库效果。
+   * 业务工具不新开自己的 AI 接口，引用同一个员工 id 走后端 answerForAgent。
+   */
+  ServiceDesk_askAiAgent: {
+    method: "post" as const,
+    path: "/enterprise/service-desk/ai-agents/ask",
+    params: z.object({}),
+    query: emptyQuery,
+    body: z.object({
+      agentId: z.number().int().positive(),
+      question: z.string().min(1).max(2000),
+      history: z
+        .array(
+          z.object({
+            role: z.enum(["user", "assistant"]),
+            content: z.string().max(2000),
+          }),
+        )
+        .max(20)
+        .default([]),
+    }),
+    response: envelope(aiAgentAnswerSchema),
   },
   ServiceDesk_conversations: {
     method: "get" as const,

@@ -68,7 +68,7 @@ type TaskRow = {
   deviceType: string;
   /** deviceType=chrome 时绑定的本地 Chrome 设备号；其他设备为空串 */
   chromeClientId: string;
-  /** deviceType=botbuddy 时绑定的 BotBuddy 主机 ID；其他设备为 null */
+  /** deviceType=botbuddy 时绑定的 AWBotDSH 主机 ID；其他设备为 null */
   botHostId: number | null;
   /** deviceType=botbuddy 时指定的指纹窗口档案 ID；空串＝由主机自取默认窗口 */
   fpProfileId: string;
@@ -247,7 +247,7 @@ export class RpaTaskService {
       );
     }
     const script = await this.scripts.loadOwned(user, scriptId);
-    // 设备默认跟随脚本；PC 与 BotBuddy 浏览器是同一套 Automa 正文，可以互换，
+    // 设备默认跟随脚本；PC 与 AWBotDSH 浏览器是同一套 Automa 正文，可以互换，
     // 其余组合仍然按脚本判——执行端拿到对不上的正文只会跑出一个假成功。
     const deviceType =
       body.deviceType === undefined
@@ -256,7 +256,7 @@ export class RpaTaskService {
     const isChrome = deviceType === 'chrome';
     const isBotBuddy = deviceType === 'botbuddy';
     const accountIds = parseIdList(body.accountIds, 'RPA 账号');
-    // 本地 Chrome 与 BotBuddy 浏览器都跑在用户自己机器、用户本人登录态下，
+    // 本地 Chrome 与 AWBotDSH 浏览器都跑在用户自己机器、用户本人登录态下，
     // 服务端不中转口令，所以不强制绑 RPA 账号。
     if (!isChrome && !isBotBuddy && !accountIds.length) {
       throw new BusinessException(
@@ -332,7 +332,7 @@ export class RpaTaskService {
       );
     }
     if (accountIds.length <= 1) {
-      // 无账号（本地 Chrome / BotBuddy 浏览器）或只选一个账号：不需要拆分，直接按单任务建
+      // 无账号（本地 Chrome / AWBotDSH 浏览器）或只选一个账号：不需要拆分，直接按单任务建
       return [await this.create(user, body)];
     }
     const chromeClientId = isChrome
@@ -417,7 +417,7 @@ export class RpaTaskService {
       data.scriptId = next;
     }
     // 设备与脚本互相校验：换脚本要过一遍「这台设备跑不跑得动这份正文」，
-    // 只换设备（PC ↔ BotBuddy 共用 Automa 脚本）也一样按当前脚本重判。
+    // 只换设备（PC ↔ AWBotDSH 共用 Automa 脚本）也一样按当前脚本重判。
     let deviceType = row.deviceType;
     let boundScript = script;
     if (script || body.deviceType !== undefined) {
@@ -450,7 +450,7 @@ export class RpaTaskService {
     } else if (row.deviceType === 'chrome') {
       data.chromeClientId = '';
     }
-    // BotBuddy 浏览器任务：换主机要重选，换到别的设备类型则清空主机与窗口
+    // AWBotDSH 浏览器任务：换主机要重选，换到别的设备类型则清空主机与窗口
     if (isBotBuddy) {
       const binding = await this.requireBotBuddyTarget(
         user,
@@ -644,8 +644,8 @@ export class RpaTaskService {
       body.deviceType === undefined || text(body.deviceType).trim() === ''
         ? ''
         : normalizeDeviceType(body.deviceType);
-    // 本地 Chrome 与 BotBuddy 浏览器都不走一次性认领：它们分别由插件心跳通道、
-    // BotBuddy 主机令牌通道驱动，报文里不含口令，与比特浏览器执行端的语义不同，
+    // 本地 Chrome 与 AWBotDSH 浏览器都不走一次性认领：它们分别由插件心跳通道、
+    // AWBotDSH 主机令牌通道驱动，报文里不含口令，与比特浏览器执行端的语义不同，
     // 混在一起会让 PC 执行端抢到跑不了的任务。
     this.rejectChromeClaim(deviceType);
     await this.sweepTimeouts(user.userId);
@@ -683,8 +683,8 @@ export class RpaTaskService {
       where: {
         createdBy: user.userId,
         status: 'pending',
-        // 不显式声明设备时，本地 Chrome 与 BotBuddy 浏览器任务都不进比特浏览器执行端的候选
-        //（它们分别归插件心跳通道、BotBuddy 主机令牌通道）
+        // 不显式声明设备时，本地 Chrome 与 AWBotDSH 浏览器任务都不进比特浏览器执行端的候选
+        //（它们分别归插件心跳通道、AWBotDSH 主机令牌通道）
         deviceType: deviceType || { notIn: ['chrome', 'botbuddy'] },
         OR: [{ scheduledAt: null }, { scheduledAt: { lte: now } }],
       },
@@ -927,13 +927,16 @@ export class RpaTaskService {
   }
 
   /**
-   * BotBuddy 浏览器认领任务：与 `claimChrome` 同一套「原子抢单 + 落执行记录」语义，
-   * 差别只在设备位是一台已配对的 BotBuddy 主机（客户端凭主机令牌来领）：
+   * AWBotDSH 浏览器认领任务：与 `claimChrome` 同一套「原子抢单 + 落执行记录」语义，
+   * 差别只在设备位是一台已配对的 AWBotDSH 主机（客户端凭主机令牌来领）：
    *   1) 只认 botbuddy 设备任务，且任务绑了主机时必须与来领的主机一致；
    *   2) 没绑主机的任务由第一台来领的主机认领并回写绑定（之后不会漂到另一台机器）；
    *   3) 正文就是 Automa 工作流 JSON，主机令牌通道不回传任何目标平台口令（同 D3-A）。
    */
   async claimBotBuddy(userId: string, hostId: number, taskId?: number) {
+    // 与 PC 通道的 claim() 对齐：每次领取先扫一遍超时，
+    // 否则桌面主机崩溃后既不 finish 也不 release，任务会一直卡在 running。
+    await this.sweepTimeouts(userId);
     const candidates = taskId
       ? [await this.loadOwnedById(userId, taskId)]
       : await this.scanBotBuddy(userId, hostId);
@@ -960,7 +963,7 @@ export class RpaTaskService {
     }
     throw new BusinessException(
       ErrorCode.CONFLICT,
-      '待执行的 BotBuddy 任务刚被其他执行端认领，请稍后重试',
+      '待执行的 AWBotDSH 任务刚被其他执行端认领，请稍后重试',
     );
   }
 
@@ -985,7 +988,7 @@ export class RpaTaskService {
     if (!rows.length) {
       throw new BusinessException(
         ErrorCode.NOT_FOUND,
-        '这台 BotBuddy 主机当前没有待执行的任务：请到「RPA → RPA 任务」新建一条目标设备为 BotBuddy 浏览器的任务',
+        '这台 AWBotDSH 主机当前没有待执行的任务：请到「RPA → RPA 任务」新建一条目标设备为 AWBotDSH 浏览器的任务',
       );
     }
     const scripts = await this.prisma.rpaScript.findMany({
@@ -1005,13 +1008,13 @@ export class RpaTaskService {
     if (row.deviceType !== 'botbuddy') {
       throw new BusinessException(
         ErrorCode.BAD_REQUEST,
-        `任务 #${row.id} 不是 BotBuddy 浏览器任务（当前是${deviceLabel(row.deviceType)}）`,
+        `任务 #${row.id} 不是 AWBotDSH 浏览器任务（当前是${deviceLabel(row.deviceType)}）`,
       );
     }
     if (row.botHostId && row.botHostId !== hostId) {
       throw new BusinessException(
         ErrorCode.CONFLICT,
-        `任务 #${row.id} 绑定的是另一台 BotBuddy 主机（#${row.botHostId}），本机领不到`,
+        `任务 #${row.id} 绑定的是另一台 AWBotDSH 主机（#${row.botHostId}），本机领不到`,
       );
     }
     if (row.status !== 'pending') {
@@ -1036,7 +1039,7 @@ export class RpaTaskService {
     if (!scriptRunnableByDevice(script, 'botbuddy')) {
       throw new BusinessException(
         ErrorCode.CONFLICT,
-        `任务 #${row.id} 的脚本「${script.name}」是${SCRIPT_FILE_TYPE_LABELS[script.fileType] || script.fileType}，BotBuddy 浏览器跑不了，请改绑 JSON（Automa 脚本）`,
+        `任务 #${row.id} 的脚本「${script.name}」是${SCRIPT_FILE_TYPE_LABELS[script.fileType] || script.fileType}，AWBotDSH 浏览器跑不了，请改绑 JSON（Automa 脚本）`,
       );
     }
     const workflow = parseWorkflowContent(script);
@@ -1143,7 +1146,7 @@ export class RpaTaskService {
       where: {
         createdBy: user.userId,
         ...(status ? { status } : {}),
-        // 机器通道的待办清单里不放插件设备与 BotBuddy 浏览器设备（各走自己的通道）
+        // 机器通道的待办清单里不放插件设备与 AWBotDSH 浏览器设备（各走自己的通道）
         deviceType: deviceType || { notIn: ['chrome', 'botbuddy'] },
       },
       orderBy: { createdAt: 'asc' },
@@ -1458,7 +1461,7 @@ export class RpaTaskService {
   }
 
   /**
-   * BotBuddy 浏览器任务的设备位：一台已配对且在线的主机 +（可选）该主机上报的指纹窗口。
+   * AWBotDSH 浏览器任务的设备位：一台已配对且在线的主机 +（可选）该主机上报的指纹窗口。
    * 与本地 Chrome 同一口径——离线主机领不到任务，也就不能把任务存成指向它；
    * 窗口只认客户端心跳上报的候选表，平台不替用户建窗口（与工作区白名单同一先例）。
    */
@@ -1471,7 +1474,7 @@ export class RpaTaskService {
     if (!Number.isInteger(hostId) || hostId <= 0) {
       throw new BusinessException(
         ErrorCode.BAD_REQUEST,
-        'BotBuddy 浏览器任务要选定一台 BotBuddy 主机：请先在客户端「绑定」页填本站地址并配对（主机清单在「Agent-Bot → Bot 主机」页可见）',
+        'AWBotDSH 浏览器任务要选定一台 AWBotDSH 主机：请先在客户端「绑定」页填本站地址并配对（主机清单在「Agent-Bot → Bot 主机」页可见）',
       );
     }
     const host = await this.prisma.workbuddyHost.findFirst({
@@ -1488,19 +1491,19 @@ export class RpaTaskService {
     if (!host) {
       throw new BusinessException(
         ErrorCode.BAD_REQUEST,
-        `BotBuddy 主机 #${hostId} 不存在或不属于当前账号：请在客户端里重新配对本站`,
+        `AWBotDSH 主机 #${hostId} 不存在或不属于当前账号：请在客户端里重新配对本站`,
       );
     }
     if (host.clientKind !== 'DESKTOP') {
       throw new BusinessException(
         ErrorCode.BAD_REQUEST,
-        `「${host.name}」是 Mobot 手机，不是 BotBuddy 浏览器：手机任务请选「安卓云手机 / iPhone 云手机」`,
+        `「${host.name}」是 AWBot 手机，不是 AWBotDSH 浏览器：手机任务请选「安卓云手机 / iPhone 云手机」`,
       );
     }
     if (!botHostOnline({ status: host.status, lastSeenAt: host.lastSeenAt })) {
       throw new BusinessException(
         ErrorCode.CONFLICT,
-        `主机「${host.name}」当前离线：请打开 BotBuddy 客户端并保持运行，等它变「在线」后再保存任务`,
+        `主机「${host.name}」当前离线：请打开 AWBotDSH 客户端并保持运行，等它变「在线」后再保存任务`,
       );
     }
     const fpProfileId = text(rawProfileId).trim().slice(0, 64);
@@ -1528,7 +1531,7 @@ export class RpaTaskService {
     if (deviceType === 'botbuddy') {
       throw new BusinessException(
         ErrorCode.CONFLICT,
-        'BotBuddy 浏览器任务不通过 API Key 通道认领：请在 BotBuddy 客户端的「RPA」页签执行（主机令牌通道）',
+        'AWBotDSH 浏览器任务不通过 API Key 通道认领：请在 AWBotDSH 客户端的「RPA」页签执行（主机令牌通道）',
       );
     }
   }

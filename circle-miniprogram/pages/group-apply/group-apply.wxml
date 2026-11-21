@@ -1,0 +1,31 @@
+<view class="container">
+  <view class="card">
+    <view class="muted">圈子名称</view>
+    <input class="input" data-key="name" value="{{name}}" bindinput="input" maxlength="40" placeholder="例如：摄影交流圈" />
+
+    <view class="muted" style="margin-top:20rpx">分类</view>
+    <picker range="{{categories}}" range-key="name" value="{{categoryIndex}}" bindchange="pickCategory">
+      <view class="input">{{categories[categoryIndex].name || '请选择分类'}}</view>
+    </picker>
+
+    <view class="muted" style="margin-top:20rpx">封面</view>
+    <view class="row">
+      <image wx:if="{{cover}}" class="avatar" src="{{cover}}" mode="aspectFill" />
+      <view class="btn ghost" style="margin-left:16rpx" bindtap="pickCover">上传封面</view>
+    </view>
+
+    <view class="muted" style="margin-top:20rpx">简介</view>
+    <textarea class="textarea" data-key="intro" value="{{intro}}" bindinput="input" maxlength="2000" placeholder="介绍这个圈子" />
+
+    <view class="muted" style="margin-top:20rpx">圈规</view>
+    <textarea class="textarea" data-key="rules" value="{{rules}}" bindinput="input" maxlength="5000" placeholder="加入与发帖规则" />
+
+    <view class="muted" style="margin-top:20rpx">加入方式</view>
+    <radio-group bindchange="pickMode">
+      <label><radio value="APPROVAL" checked="{{joinMode === 'APPROVAL'}}" />申请加入</label>
+      <label style="margin-left:30rpx"><radio value="FREE" checked="{{joinMode === 'FREE'}}" />自由加入</label>
+    </radio-group>
+  </view>
+
+  <view class="btn" bindtap="submit" style="margin-top:20rpx">{{submitting ? '提交中…' : '提交申请'}}</view>
+</view>

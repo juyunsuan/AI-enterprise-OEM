@@ -1,0 +1,52 @@
+<view class="pay-page">
+  <view class="head">
+    <view class="amount">¥{{payAmountText}}</view>
+    <view class="tip" wx:if="{{expireText}}">剩余 {{expireText}} 未支付将自动取消</view>
+    <view class="tip" wx:else>订单号 {{orderNo}}</view>
+  </view>
+
+  <view class="card" wx:if="{{payEnabled}}">
+    <view class="row-line">
+      <view class="method">
+        <view class="method-icon">微</view>
+        <view class="method-text">
+          <view>微信支付</view>
+          <view class="muted">由{{shopName}}的微信商户号收款</view>
+        </view>
+      </view>
+      <view class="radio on">✓</view>
+    </view>
+  </view>
+
+  <view class="card" wx:else>
+    <view class="row-line">
+      <view class="method">
+        <view class="method-icon offline">线</view>
+        <view class="method-text">
+          <view>线下支付</view>
+          <view class="muted">商家未开通在线收款</view>
+        </view>
+      </view>
+      <view class="radio on">✓</view>
+    </view>
+    <view class="offline-box">
+      请把订单号 <text class="strong">{{orderNo}}</text>（¥{{payAmountText}}）发给{{shopName}}完成付款，
+      商家确认后会在后台把订单标记为已付款并安排发货。
+    </view>
+    <view class="offline-actions">
+      <view class="btn-plain" bindtap="copyOrderNo">复制订单号</view>
+      <view class="btn-plain" bindtap="callService">拨打客服电话</view>
+    </view>
+  </view>
+
+  <view class="message" wx:if="{{message}}">{{message}}</view>
+
+  <view class="footer-gap"></view>
+
+  <view class="bar">
+    <view class="bar-plain" bindtap="goOrders">稍后再付</view>
+    <view class="bar-main {{paying ? 'dis' : ''}}" bindtap="payNow">
+      {{payEnabled ? (paying ? '支付中…' : '确认支付') : '线下付款说明'}}
+    </view>
+  </view>
+</view>

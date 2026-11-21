@@ -25,10 +25,6 @@ import {
   registerPlatformAdminRoutes,
   registerPlatformPublicRoutes,
 } from '../platform/platform.routes';
-import {
-  createSocialModule,
-  registerSocialRoutes,
-} from '../social/social.routes';
 import { registerQxyAdminRoutes } from '../qixiangyun/qxy-admin.routes';
 import { registerCapabilityAdminRoutes } from '../capability/capability-admin.routes';
 import {
@@ -40,17 +36,15 @@ import {
   createServicePackageModule,
   registerServicePackageRoutes,
 } from '../service-package/service-package.routes';
-import {
-  createListingModule,
-  registerListingRoutes,
-} from '../social/listing.routes';
-import {
-  createHiringModule,
-  registerHiringRoutes,
-} from '../social/hiring.routes';
 import { registerRoutes } from './routes';
 import { registerAutomationRoutes } from './automation-routes';
 import { featureGateMiddleware } from '../feature/feature-gate.middleware';
+import { toolLaunchGateMiddleware } from '../tool-launch/tool-launch-gate.middleware';
+import {
+  TOOL_LAUNCH_PUBLIC_PREFIXES,
+  toolLaunchMeterMiddleware,
+} from '../tool-launch/tool-launch.meter.middleware';
+import { rbacMiddleware } from '../rbac/rbac.middleware';
 import { publishReviewMiddleware } from '../moderation/publish-review.middleware';
 import { registerPublishReviewRoutes } from '../moderation/publish-review.routes';
 import { registerMcpRoutes } from '../mcp/mcp-routes';
@@ -58,6 +52,7 @@ import { registerLivecodePublic } from '../livecode/livecode.public';
 import { registerGeoSitePublic } from '../geo-site/geo-site.public';
 import { registerServiceDeskPublic } from '../service-desk/service-desk.public';
 import { registerSurveyPublic } from '../survey/survey.public';
+import { registerQuizPublic } from '../quiz/quiz.public';
 import { registerMechanismPublic } from '../mechanisms/mechanism.public';
 import { registerScrmPublic } from '../wecom-scrm/scrm-callback';
 import { registerScrmSidebarPublic } from '../wecom-scrm/scrm-sidebar.service';
@@ -67,10 +62,32 @@ import { registerHardwarePublic } from '../hardware/hardware.public';
 import { registerRpaChromePublic } from '../rpa/rpa-chrome.public';
 import {
   registerBotHostPublic,
-  registerMobotPublic,
+  registerAWBotPublic,
+  registerAWBotDSHPublic,
 } from '../bot-host/bot-host.public';
 import { registerHardwareMachineRoutes } from '../hardware/hardware.machine';
 import { registerWechatMpPublic } from '../wechat-mp/wechat-mp.public';
+import { registerKnowledgePayPublic } from '../knowledge-pay/kp.public';
+import { registerOnsitePublic } from '../onsite/onsite.public';
+import { registerOnsiteStaffApi } from '../onsite/onsite.staff-api';
+import { registerOnsiteAgentApi } from '../onsite/onsite.agent-api';
+import { registerOnsiteUpload } from '../onsite/onsite.upload';
+import { registerRentalPublic } from '../rental/rental.public';
+import { registerRentalUpload } from '../rental/rental.upload';
+import { registerParkPublic } from '../park/park.public';
+import { registerParkUpload } from '../park/park.upload';
+import { registerBrandPublic } from '../brand-mall/brand.public';
+import { registerTakeoutPublic } from '../takeout/takeout.public';
+import { registerMarketplacePublic } from '../marketplace/mp.public';
+import { registerMarketplaceBuyerApi } from '../marketplace/mp.buyer.routes';
+import { registerMarketplaceMerchantApi } from '../marketplace/mp.merchant.routes';
+import { registerCardShopPublic } from '../card-shop/card-shop.public';
+import { registerKuaidiPublic } from '../kuaidi/kuaidi.public';
+import { registerCirclePublic } from '../circle/circle.public';
+import { registerErrandPublic } from '../errand/errand.public';
+import { registerDigitalHumanPublic } from '../digital-human/dh.public';
+import { registerHealthPublic } from '../health/health.public';
+import { registerHealthStaffPublic } from '../health/health.staff.public';
 import { registerMiniProgramPublic } from '../miniprogram/miniprogram.public';
 import { McpService } from '../mcp/mcp.service';
 import { handleError, validationHook } from './error-handler';
@@ -98,6 +115,13 @@ export function requestBodyLimit(path: string) {
   // 平台升级包：Release 源码包可能到数百 MB，与 UpgradePackageService 的 512MB 上限对齐
   if (canonical === '/enterprise/admin/upgrade/upload')
     return 512 * 1024 * 1024;
+  // 数字资产直传本站 OSS 的接口：业务侧上限 100MB（content.controller 的 UPLOAD_MAX_BYTES），
+  // 这里必须放到同级，否则 12MB 默认值会先拦一刀，用户看到的是没有说明的 413。
+  if (canonical === '/enterprise/content/digital-assets/upload')
+    return 100 * 1024 * 1024;
+  // 数字人小程序顾客端上传（头像/素材）：与 dh.public 的 UPLOAD_LIMIT_BYTES=100MB 对齐。
+  if (canonical === '/api/public/digital-human/upload')
+    return 100 * 1024 * 1024;
   return 12 * 1024 * 1024;
 }
 /**
@@ -168,12 +192,6 @@ export function createApp(services: Services) {
   const points = createPointsModule(services);
   // 官方服务套餐：目录 + 积分直购 + 平台整合交付，复用 services.ts 已构造实例。
   const servicePackages = createServicePackageModule(services);
-  // M5 社交板块：把原 NestJS SNS 的关系/动态/小组/私信/简历本地化进 Hono（直连 sns_ 表）。
-  const social = createSocialModule(services);
-  // M6 供求广场：社交板通用发布需求/服务，本地免 Key + 勾选同步 AIworkin（复用上游通道）。
-  const listing = createListingModule(services);
-  // 商务人脉·招聘：岗位本地免 Key 发布进招聘广场，勾选则同步为 AIworkin 用工需求（同一上游通道）。
-  const hiring = createHiringModule(services);
   const auth = new AuthService(
     services.prisma,
     services.users,
@@ -291,12 +309,17 @@ export function createApp(services: Services) {
   });
   // 意图中间件在鉴权之后、业务路由之前：全站写请求只在这一处进记忆，业务服务不各自埋点。
   business.use('*', agentIntentMiddleware(services.agentMemory));
+  // 租户 RBAC：子账号按模块授权拦截，主/子账号写操作统一留痕。
+  business.use('*', rbacMiddleware(services.controllers.rbacService));
   // 平台升级维护闸：升级/还原期间只放行读请求与升级后台自身，其余写请求 503。
   // 放在意图采集之后，维护期被拒的写请求不进入记忆。
   business.use('*', maintenanceMiddleware(services.upgrade.jobs));
   // §5.10 功能开关拦截：鉴权后、路由前，菜单隐藏的板块直链/MCP 转发同口径 403 FEATURE_CLOSED；
   // 平台管理/认证会话/账户计费/合规退出四组 protected 前缀在中间件内部直接跳过。
   business.use('*', featureGateMiddleware(services.feature.toggle));
+  // 建站工具启动闸门：工具未启动 / 欠费停服期间，该工具域下的写操作一律 403 TOOL_NOT_STARTED，
+  // 读与充值自救照常（放行名单见 tool-launch.catalog 的 LAUNCH_GATE_ALLOW_PREFIXES）。
+  business.use('*', toolLaunchGateMiddleware(services.toolLaunch.service));
   // 发布审核：鉴权与功能开关之后、业务路由之前，按路径拦截发帖 / 简历 / 需求 / 服务发布。
   business.use('*', publishReviewMiddleware(services.publishReview));
   registerRoutes(business, services);
@@ -329,10 +352,7 @@ export function createApp(services: Services) {
     services.identity.requireAdmin(user),
   );
   // L1 知识库底座（§10）由契约 moduleHandlers 注册（Kb_*），可见性闸在服务内部收口。
-  // M5 社交路由挂 business：继承统一鉴权与平台级封禁即时拦截，无需各自判重。
-  registerSocialRoutes(business, social);
-  registerListingRoutes(business, listing);
-  registerHiringRoutes(business, hiring);
+  // AI 社交由契约 AiSocial_ 注册（automation-routes）；社交数据与操作全部在 AIworkin 侧。
   registerAutomationRoutes(business, services);
   // 外部 MCP 端点与 Agent 的「本站 MCP Server」连接器共用同一个服务实例、同一条授权闸。
   const mcpService = new McpService(services);
@@ -427,6 +447,9 @@ export function createApp(services: Services) {
     }
     return c.json(document);
   });
+  // 多店铺商城平台·商户后台：只认商户令牌（x-mp-token / Bearer），不走站内会话。
+  // 必须先于 /api/backend 挂载，否则请求会先命中 business 的会话鉴权直接 401。
+  registerMarketplaceMerchantApi(app, services);
   app.route('/api/backend', business);
   // Legacy service-to-service URLs share handlers but do not duplicate OpenAPI operation IDs.
   for (const endpoint of Object.values(endpoints)) {
@@ -444,10 +467,20 @@ export function createApp(services: Services) {
   app.post(MCP_ENDPOINT_PATH, (c) => business.fetch(c.req.raw));
   // 硬件机器通道（含独立 MCP 端点）也不在契约表里，整段前缀转发给 business 走 Key 鉴权。
   app.all('/api/v1/hardware/*', (c) => business.fetch(c.req.raw));
+  // 建站工具公开通道计量：闸门放行时把「工具 + 站主」记在请求上下文，这里统一累计 PV 与响应字节。
+  // 必须注册在所有公开通道之前，否则中间件排在路由后面就不会被执行。
+  for (const prefix of TOOL_LAUNCH_PUBLIC_PREFIXES) {
+    app.use(
+      `${prefix}/*`,
+      toolLaunchMeterMiddleware(services.toolLaunch.meter),
+    );
+  }
+
   // 活码落地页 / 官网脚本 / 访客客服通道：公开、免登录，不走统一信封
   registerLivecodePublic(app, services);
   registerServiceDeskPublic(app, services);
   registerSurveyPublic(app, services);
+  registerQuizPublic(app, services);
   // 资产公开分享与 OIDC 外部身份源回跳：免登录，路径带 /api/public 前缀。
   registerMechanismPublic(app, services);
   // 企微事件回调（安全模式验签）与员工侧边栏 H5：免登录，靠密钥/票据自证。
@@ -467,8 +500,10 @@ export function createApp(services: Services) {
   registerRpaChromePublic(app, services, mcpService);
   // Bot 主机客户端通道：/api/public/bot-host/**，只认主机令牌（x-bot-token）。
   registerBotHostPublic(app, services, { account, auth, platform });
-  // Mobot 手机：与 Bot 主机同一服务，独立通道与 MOBOT 设备类型。
-  registerMobotPublic(app, services, { account, auth, platform });
+  // AWBot 手机：与 Bot 主机同一服务，独立通道与 AWBOT 设备类型。
+  registerAWBotPublic(app, services, { account, auth, platform });
+  // AWBotDSH 桌面：DSH 底座的新客户端，设备类型沿用 DESKTOP，只区分通道。
+  registerAWBotDSHPublic(app, services, { account, auth, platform });
   // 微信服务号：服务器配置回调与微信内网页授权（免登录，靠微信签名/state 自证）。
   registerWechatMpPublic(app, services, {
     issueSession: async (userId) => {
@@ -486,6 +521,50 @@ export function createApp(services: Services) {
   });
   // 用户版小程序：启动配置与 wx 免登 / 账号密码登录（免登录，公开通道靠 code 自证）。
   registerMiniProgramPublic(app, services, { account: account.account });
+  // 知识付费小程序公开通道（终端会员免登录）：刻意不进功能开关拦截，站点级启停在服务内自检。
+  registerKnowledgePayPublic(app, services);
+  // 上门服务小程序公开通道：店铺启动配置 + 顾客令牌登录；免登录、不走站内鉴权。
+  registerOnsitePublic(app, services);
+  // 上门服务小程序技师端：顾客令牌换技师令牌（bind）后，一切读写按 shopId + staffId 双条件过滤。
+  registerOnsiteStaffApi(app, services);
+  // 上门服务小程序代理端：店铺码 + 手机号换代理令牌后，按 shopId + role + refId 三条件过滤。
+  registerOnsiteAgentApi(app, services);
+  // 上门服务公开上传：打卡照 / 签名图 / 评价图，顾客或技师令牌任一有效即可，产物不落库只回直链。
+  registerOnsiteUpload(app, services);
+  // 租赁管理小程序：顾客端与员工端免登录公开通道，身份只认各自令牌。
+  registerRentalPublic(app, services);
+  registerRentalUpload(app, services);
+  // 园区小程序公开通道：园区码/AppID 反查，顾客令牌场景固定 PARK，员工令牌独立 issuer。
+  registerParkPublic(app, services);
+  registerParkUpload(app, services);
+  // 电商小程序顾客端公开通道：店铺 bootstrap + 顾客令牌登录 + 商品/购物车/下单/支付回调。
+  // 免站内鉴权，但一切顾客态读写都要带顾客令牌并按 shopId + customerId 双条件过滤。
+  registerBrandPublic(app, services);
+  // 外卖点餐小程序公开通道：独立 takeout_* 数据域，只复用登录/支付/SCRM/算价公共服务。
+  registerTakeoutPublic(app, services);
+  // 多店铺商城平台公开通道：市场入驻页下拉 + 商户入驻申请 + 商户登录（免登录、按 IP 限流）。
+  registerMarketplacePublic(app, services);
+  // 买家侧：浏览 / 顾客登录 / 地址 / 购物车 / 拆单结算 / 父单支付回调 / 订单。
+  registerMarketplaceBuyerApi(app, services);
+  // 卡密商城小程序公开通道：商店 bootstrap + 顾客令牌登录 + 商品/下单/查单取卡/支付回调。
+  // 免站内鉴权，但一切顾客态读写按 siteId + customerId 双条件过滤，查单另设独立限流防单号枚举。
+  registerCardShopPublic(app, services);
+  // 快递寄件小程序公开通道：站点配置 / 报价 / 登录 / 下单支付 / 查单取消 / 地址簿 / 支付回调。
+  // 免站内鉴权，但顾客态读写按 siteId + customerId 双条件过滤，查单另设独立限流防单号枚举。
+  registerKuaidiPublic(app, services);
+  registerCirclePublic(app, services);
+  // 跑腿小程序公开通道：站点配置 / 报价 / 登录 / 下单支付 / 查单取消 / 地址簿 / 优惠券 / 骑手报名与工作台。
+  // 免站内鉴权：顾客令牌与骑手令牌分属独立 issuer，越权一律按站点 + 身份双条件过滤。
+  registerErrandPublic(app, services);
+  // 健康管理小程序公开通道：店铺启动配置 / 微信登录 / 服务与内容 / 号源 / 统一下单与支付回调。
+  // 免站内鉴权，顾客态一律按 shopId + customerId 双条件过滤，就诊人再校验归属。
+  registerHealthPublic(app, services);
+  // 医护工作台：医护令牌通道（绑定 / 就诊人 / 随访 / 排班 / 核销 / 收益 / 科普投稿）。
+  // 与顾客通道共用店铺闸门，但一切读写按 shopId + practitionerId 双条件过滤。
+  registerHealthStaffPublic(app, services);
+  // 数字人小程序公开通道：站点配置 / 登录 / 上传 / 合成任务 / 支付回调 / 供应商 webhook。
+  // 免站内鉴权，但一切会员态读写都要带会员令牌并按 siteId + memberId 双条件过滤。
+  registerDigitalHumanPublic(app, services);
   // GEO 独立站公开投递：泛子域/自定义域名按 Host 反查，本站路径按 slug；免登录、不走统一信封。
   registerGeoSitePublic(app, services);
   app.notFound((c) =>

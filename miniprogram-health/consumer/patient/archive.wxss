@@ -1,0 +1,156 @@
+.patient-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.patient-name {
+  font-size: 34rpx;
+  font-weight: 600;
+}
+
+.quick {
+  display: flex;
+  margin-top: 20rpx;
+}
+
+.quick-item {
+  flex: 1;
+  margin-right: 16rpx;
+  padding: 16rpx 0;
+  border-radius: 12rpx;
+  background: #eef3ff;
+  color: #1a73e8;
+  font-size: 26rpx;
+  text-align: center;
+}
+
+.quick-item:last-child {
+  margin-right: 0;
+}
+
+.block-title {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12rpx;
+}
+
+.group {
+  margin-top: 16rpx;
+}
+
+.group-title {
+  margin-bottom: 8rpx;
+  color: #5c6068;
+  font-size: 26rpx;
+  font-weight: 600;
+}
+
+.record {
+  padding: 16rpx;
+  margin-bottom: 12rpx;
+  border-radius: 12rpx;
+  background: #f7f8fa;
+}
+
+.record-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.record-label {
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.line {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #f0f1f5;
+}
+
+.line:last-child {
+  border-bottom: none;
+}
+
+.line-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.metric-inline {
+  margin-left: 16rpx;
+  color: #1a73e8;
+  font-size: 34rpx;
+  font-weight: 600;
+}
+
+.metric-unit {
+  margin-left: 4rpx;
+  color: #8a8f99;
+  font-size: 22rpx;
+}
+
+.empty.small {
+  padding: 24rpx 0;
+  font-size: 24rpx;
+}
+
+.sheet-mask {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 20;
+}
+
+.sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 21;
+  max-height: 86vh;
+  overflow-y: auto;
+  padding: 24rpx 24rpx calc(24rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  background: #fff;
+  border-radius: 24rpx 24rpx 0 0;
+}
+
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+
+.sheet-title {
+  font-size: 32rpx;
+  font-weight: 600;
+}
+
+.sheet-save {
+  margin-top: 24rpx;
+  height: 88rpx;
+  line-height: 88rpx;
+}
+
+.field-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.field.half {
+  width: 48%;
+}

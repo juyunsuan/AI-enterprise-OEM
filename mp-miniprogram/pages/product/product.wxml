@@ -1,0 +1,81 @@
+<view class="wrap" style="padding-bottom:200rpx">
+  <view wx:if="{{loading}}" class="empty">正在加载商品…</view>
+
+  <view wx:elif="{{error}}" class="card">
+    <view class="error-box">{{error}}</view>
+  </view>
+
+  <block wx:else>
+    <swiper
+      class="cover-swiper"
+      indicator-dots="{{images.length > 1}}"
+      circular
+      autoplay="{{images.length > 1}}"
+      interval="4000"
+    >
+      <swiper-item wx:for="{{images}}" wx:key="*this">
+        <image class="cover-image" src="{{item}}" mode="aspectFill" />
+      </swiper-item>
+    </swiper>
+
+    <view class="card">
+      <view class="price-line">
+        <text class="money price">¥{{product.priceText}}</text>
+        <text wx:if="{{product.marketPriceText}}" class="muted del">¥{{product.marketPriceText}}</text>
+        <text class="muted" style="margin-left:auto">已售 {{product.sales}}</text>
+      </view>
+      <view class="title">{{product.title}}</view>
+      <view wx:if="{{product.subtitle}}" class="muted">{{product.subtitle}}</view>
+      <view wx:if="{{guarantee.length}}" class="chips" style="margin-top:16rpx;margin-bottom:0">
+        <view wx:for="{{guarantee}}" wx:key="*this" class="tag">{{item}}</view>
+      </view>
+    </view>
+
+    <view wx:if="{{skus.length}}" class="card">
+      <view class="section-title">选择规格</view>
+      <view class="chips" style="margin-bottom:0">
+        <view
+          wx:for="{{skus}}"
+          wx:key="id"
+          class="chip sku-chip {{skuIndex === index ? 'active' : ''}} {{item.stock <= 0 ? 'soldout' : ''}}"
+          data-index="{{index}}"
+          bindtap="pickSku"
+        >{{item.skuName || '默认'}}</view>
+      </view>
+      <view class="muted" style="margin-top:12rpx">库存 {{stock}} 件</view>
+    </view>
+
+    <view class="card">
+      <view class="row" bindtap="goShop">
+        <view class="grow">
+          <view class="section-title" style="margin-bottom:4rpx">{{shop.name}}</view>
+          <view class="muted">{{shop.intro || '市场入驻店铺'}}</view>
+        </view>
+        <text class="muted">进店 ›</text>
+      </view>
+      <view class="divider"></view>
+      <view class="row" bindtap="goService">
+        <text class="muted">联系店铺客服</text>
+        <text class="muted">›</text>
+      </view>
+    </view>
+
+    <view wx:if="{{detail}}" class="card">
+      <view class="section-title">商品详情</view>
+      <rich-text nodes="{{detail}}" class="detail"></rich-text>
+    </view>
+  </block>
+</view>
+
+<view wx:if="{{!loading && !error}}" class="bottom-bar">
+  <view class="grow">
+    <view class="muted">数量</view>
+    <view class="stepper">
+      <view class="stepper-btn" bindtap="minus">−</view>
+      <view class="stepper-value">{{quantity}}</view>
+      <view class="stepper-btn" bindtap="plus">+</view>
+    </view>
+  </view>
+  <view class="btn btn-ghost" bindtap="addCart">加入购物车</view>
+  <view class="btn btn-primary" bindtap="buyNow">立即购买</view>
+</view>

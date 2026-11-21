@@ -1,0 +1,119 @@
+{
+  "manifest_version": 3,
+  "name": "AIPDD Enterprise",
+  "version": "1.6.0",
+  "description": "多平台内容分发 + AI 获客 + 本地 Chrome 控制：从 AIPDD Enterprise 营销工具接收任务，在你的浏览器里已登录的微博 / 小红书 / 抖音 / 知乎 / 今日头条 / 快手 / 视频号 / 知识星球 / 公众号 / 百家号 / B站 / 简书 / 豆瓣创作页自动填充并发布；在平台公开搜索页与评论区采集线索、执行已确认的触达；也可作为本地 Chrome 设备登录本系统，由云端 Agent 逐步决策、插件在本机执行，并支持把网页列表按字段清单收割、去重后落到多维表格。账号凭据不出本机，不读 Cookie、不绕过验证码。",
+  "permissions": [
+    "tabs",
+    "storage",
+    "alarms",
+    "sidePanel",
+    "scripting"
+  ],
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    },
+    "default_title": "AIPDD Enterprise · 右侧侧边栏的浏览器代理与分发助手"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "commands": {
+    "open-side-panel": {
+      "suggested_key": {
+        "default": "Alt+A"
+      },
+      "description": "打开浏览器代理侧边栏"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://weibo.com/*",
+        "https://creator.xiaohongshu.com/*",
+        "https://creator.douyin.com/*",
+        "https://zhuanlan.zhihu.com/*",
+        "https://mp.toutiao.com/*",
+        "https://cp.kuaishou.com/*",
+        "https://channels.weixin.qq.com/*",
+        "https://wx.zsxq.com/*",
+        "https://mp.weixin.qq.com/*",
+        "https://baijiahao.baidu.com/*",
+        "https://member.bilibili.com/*",
+        "https://www.jianshu.com/*",
+        "https://www.douban.com/*"
+      ],
+      "js": [
+        "publisher.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.xiaohongshu.com/*",
+        "https://www.douyin.com/*",
+        "https://www.zhihu.com/*",
+        "https://zhuanlan.zhihu.com/*",
+        "https://s.weibo.com/*",
+        "https://weibo.com/*",
+        "https://search.bilibili.com/*",
+        "https://www.bilibili.com/*",
+        "https://weixin.sogou.com/*",
+        "https://mp.weixin.qq.com/*"
+      ],
+      "js": [
+        "collector.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://weibo.com/*",
+        "https://creator.xiaohongshu.com/*",
+        "https://creator.douyin.com/*",
+        "https://zhuanlan.zhihu.com/*",
+        "https://www.zhihu.com/*",
+        "https://mp.toutiao.com/*",
+        "https://cp.kuaishou.com/*",
+        "https://channels.weixin.qq.com/*",
+        "https://wx.zsxq.com/*",
+        "https://mp.weixin.qq.com/*",
+        "https://baijiahao.baidu.com/*",
+        "https://member.bilibili.com/*",
+        "https://www.jianshu.com/*",
+        "https://www.douban.com/*"
+      ],
+      "js": [
+        "metrics.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.xiaohongshu.com/*",
+        "https://www.douyin.com/*"
+      ],
+      "js": [
+        "outreach.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuRZ+b3v0qlBa93EuIC5twsdgOSrQGxBCcOcJApO5yun8NGGr/7h/2bucI9K0xRj+Wp8GGgcP39VAg2Ob7sxKf/Exi+M4Q7lCmDGJ5RlZCdZAKkcoMFnz6Oyp1TO7gKSkuINlI6e3lFfhm9IjksTx0WWj8fg3IZQZTjN5YRZjghsI5Omr46G3RU7c3/9bX1nlKu9otp/Wjoef+bW9av3MGVAtULU2aj06ugm/ADpleQLaBB+NaAxXBFhIrSycSn+nXIEykDZT3rMPhwLKdzythDACV6XhIuDWcABw0Q7lJp0sL6GcO5zLTgi+Rkmdva34IOUmxbZ8qE23vXIVO5hxNQIDAQAB"
+}

@@ -29,6 +29,7 @@ const api = {
   // --- 设备绑定（连接码）---
   refreshPairCode: () => ipcRenderer.invoke('pair:refresh'),
   getPairStatus: () => ipcRenderer.invoke('pair:status'),
+  createPairQr: () => ipcRenderer.invoke('pair:qr'),
 
   // --- utilities ---
   copyText: (t) => ipcRenderer.invoke('copy:text', t),
@@ -56,7 +57,7 @@ const api = {
   skillHubDetail: (slug) => ipcRenderer.invoke('skillhub:detail', slug),
   skillHubDownload: (slug) => ipcRenderer.invoke('skillhub:download', slug),
   skillHubInstall: (slug) => ipcRenderer.invoke('skillhub:install', slug),
-  // RPA（BotBuddy 浏览器设备）：待办清单、手动跑一条、自动领取开关
+  // RPA（AWBotDSH 浏览器设备）：待办清单、手动跑一条、自动领取开关
   rpaTasks: () => ipcRenderer.invoke('rpa:tasks'),
   rpaRun: (taskId) => ipcRenderer.invoke('rpa:run', taskId),
   rpaSetAutoRun: (value) => ipcRenderer.invoke('rpa:setAutoRun', value),
@@ -93,6 +94,7 @@ const api = {
   listChromeExtensions: () => ipcRenderer.invoke('chromeExt:list'),
   importChromeExtension: (mode) => ipcRenderer.invoke('chromeExt:importPackage', mode),
   removeChromeExtension: (id) => ipcRenderer.invoke('chromeExt:remove', id),
+  setChromeExtensionEnabled: (id, enabled) => ipcRenderer.invoke('chromeExt:setEnabled', id, enabled),
   openChromeExtFolder: () => ipcRenderer.invoke('chromeExt:openFolder'),
   fpState: () => ipcRenderer.invoke('fp:state'),
   fpCreate: (body) => ipcRenderer.invoke('fp:create', body),
@@ -103,6 +105,7 @@ const api = {
   fpClose: (id) => ipcRenderer.invoke('fp:close', id),
   fpCloseAll: () => ipcRenderer.invoke('fp:closeAll'),
   fpPages: () => ipcRenderer.invoke('fp:pages'),
+  fpNavigate: (url) => ipcRenderer.invoke('fp:navigate', url),
   fpCheckProxy: (body) => ipcRenderer.invoke('fp:checkProxy', body),
   fpSetAgent: (id) => ipcRenderer.invoke('fp:setAgent', id),
   fpSetMaxOpen: (value) => ipcRenderer.invoke('fp:setMaxOpen', value),

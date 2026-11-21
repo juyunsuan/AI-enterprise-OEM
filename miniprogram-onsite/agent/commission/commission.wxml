@@ -1,0 +1,30 @@
+<scroll-view class="tabs" scroll-x="true" enable-flex="true">
+  <view
+    class="pill {{activeKey === item.key ? 'pill-active' : ''}}"
+    wx:for="{{tabs}}"
+    wx:key="key"
+    data-key="{{item.key}}"
+    bindtap="switchTab"
+  >{{item.label}}</view>
+</scroll-view>
+
+<view class="error" wx:if="{{errorText}}">{{errorText}}</view>
+
+<view class="list" wx:if="{{list.length}}">
+  <view class="card item" wx:for="{{list}}" wx:key="id">
+    <view class="row">
+      <text class="order-no" data-no="{{item.orderNo}}" bindtap="copyOrderNo">{{item.orderNo}}</text>
+      <text class="tag {{item.tone}}">{{item.statusText}}</text>
+    </view>
+    <view class="row bottom">
+      <text class="muted">{{item.timeText}}<text wx:if="{{item.rateText}}"> · {{item.rateText}}</text></text>
+      <text class="amount">{{item.amountText}}</text>
+    </view>
+    <view class="muted hint" wx:if="{{item.reversedText}}">{{item.reversedText}}</view>
+  </view>
+  <view class="muted footer" wx:if="{{finished}}">共 {{total}} 条，已全部加载</view>
+  <view class="muted footer" wx:else>上拉加载更多</view>
+</view>
+
+<view class="empty" wx:elif="{{loading}}">正在加载…</view>
+<view class="empty" wx:else>当前状态下没有佣金记录。佣金在订单支付后才生效，退款会按比例冲销。</view>

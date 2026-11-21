@@ -100,6 +100,38 @@ export class ServiceDeskController {
     );
   }
 
+  // ---------- 纯AI客服员工（与真人坐席并列的一类员工） ----------
+
+  async aiAgents(user: CurrentUser) {
+    return ok(await this.service.aiAgents(user));
+  }
+
+  async saveAiAgent(user: CurrentUser, body: Record<string, unknown>) {
+    return ok(await this.service.saveAiAgent(user, body));
+  }
+
+  async setAiAgentStatus(
+    user: CurrentUser,
+    id: string,
+    body: Record<string, unknown>,
+  ) {
+    return ok(
+      await this.service.setAiAgentStatus(
+        user,
+        Number(id),
+        typeof body.status === 'string' ? body.status : 'DISABLED',
+      ),
+    );
+  }
+
+  async deleteAiAgent(user: CurrentUser, id: string) {
+    return ok(await this.service.deleteAiAgent(user, Number(id)));
+  }
+
+  async askAiAgent(user: CurrentUser, body: Record<string, unknown>) {
+    return ok(await this.service.askAiAgent(user, body));
+  }
+
   async conversations(user: CurrentUser, query: Record<string, unknown>) {
     return ok(
       await this.service.conversations(user, {

@@ -17,46 +17,26 @@ export type MiniProgramStoredSettings = {
   appName: string;
   appId: string;
   appSecretCipher: string;
-  /** 微信代码上传密钥（`private.<appid>.key` 内容）的密文，用于后台直传代码。 */
-  uploadKeyCipher: string;
-  /** CI 机器人编号，微信侧 1–30。 */
-  robot: number;
   siteDomain: string;
   themeColor: string;
   /** 功能开关：键为 MINIPROGRAM_FEATURES，关闭的 tab 在小程序端整个不渲染。 */
   features: Record<string, boolean>;
   qrcodeUrl: string;
-  lastUploadVersion: string;
-  lastUploadAt: string;
   updatedBy: string;
   updatedAt: string;
 };
 
 export type MiniProgramRuntime = { appId: string; appSecret: string };
 
-/** 后台直传微信所需凭据（AppID + 代码上传密钥 + 机器人编号）。 */
-export type MiniProgramUploadCredentials = {
-  appId: string;
-  privateKey: string;
-  robot: number;
-};
-
-const clampRobot = (value: unknown) =>
-  Math.min(30, Math.max(1, Math.round(Number(value) || 1)));
-
 const defaults = (): MiniProgramStoredSettings => ({
   enabled: false,
   appName: 'AIworkin',
   appId: '',
   appSecretCipher: '',
-  uploadKeyCipher: '',
-  robot: 1,
   siteDomain: '',
   themeColor: '#3370ff',
   features: Object.fromEntries(MINIPROGRAM_FEATURES.map((key) => [key, true])),
   qrcodeUrl: '',
-  lastUploadVersion: '',
-  lastUploadAt: '',
   updatedBy: '',
   updatedAt: '',
 });
@@ -110,8 +90,6 @@ export class MiniProgramSettingsService {
         appName: String(parsed.appName || '').slice(0, 60) || base.appName,
         appId: String(parsed.appId || '').slice(0, 64),
         appSecretCipher: String(parsed.appSecretCipher || ''),
-        uploadKeyCipher: String(parsed.uploadKeyCipher || ''),
-        robot: clampRobot(parsed.robot),
         siteDomain: String(parsed.siteDomain || '').slice(0, 200),
         themeColor: HEX_COLOR.test(String(parsed.themeColor || ''))
           ? String(parsed.themeColor)
@@ -120,8 +98,6 @@ export class MiniProgramSettingsService {
           MINIPROGRAM_FEATURES.map((key) => [key, rawFeatures[key] !== false]),
         ),
         qrcodeUrl: String(parsed.qrcodeUrl || '').slice(0, 500),
-        lastUploadVersion: String(parsed.lastUploadVersion || '').slice(0, 40),
-        lastUploadAt: String(parsed.lastUploadAt || '').slice(0, 40),
         updatedBy: String(parsed.updatedBy || ''),
         updatedAt: String(parsed.updatedAt || ''),
       };
@@ -168,10 +144,7 @@ export class MiniProgramSettingsService {
 
   async view(): Promise<MiniprogramSettingsView> {
     const value = await this.load();
-    const [releaseCount, boundCount] = await Promise.all([
-      this.prisma.miniProgramRelease.count(),
-      this.prisma.miniProgramBinding.count(),
-    ]);
+    const boundCount = await this.prisma.miniProgramBinding.count();
     const features: MiniprogramFeatureToggle[] = MINIPROGRAM_FEATURES.map(
       (key) => ({ key, enabled: value.features[key] !== false }),
     );
@@ -180,56 +153,13 @@ export class MiniProgramSettingsService {
       appName: value.appName,
       appId: value.appId,
       appSecretConfigured: Boolean(value.appSecretCipher),
-      uploadKeyConfigured: Boolean(value.uploadKeyCipher),
-      robot: value.robot,
       siteDomain: value.siteDomain,
       themeColor: value.themeColor,
       features,
       qrcodeUrl: value.qrcodeUrl,
-      releaseCount,
       boundCount,
-      lastUploadVersion: value.lastUploadVersion,
-      lastUploadAt: value.lastUploadAt,
       updatedAt: value.updatedAt,
     };
-  }
-
-  /**
-   * 后台直传微信所需凭据：AppID + 代码上传密钥。上传是构建动作，
-   * 不要求小程序已启用（与「连接自检」同一口径），但两者都缺失时给出可执行的补配指引。
-   */
-  async requireUploadCredentials(): Promise<MiniProgramUploadCredentials> {
-    const value = await this.load();
-    if (!value.appId) {
-      throw new BusinessException(
-        ErrorCode.BAD_REQUEST,
-        '请先在「基础配置」填写小程序 AppID',
-      );
-    }
-    if (!value.uploadKeyCipher) {
-      throw new BusinessException(
-        ErrorCode.BAD_REQUEST,
-        '请先在「基础配置」填写微信代码上传密钥（微信公众平台 → 开发管理 → 开发设置 → 小程序代码上传密钥），并把本服务器公网 IP 加入其白名单',
-      );
-    }
-    const privateKey = this.crypto.decrypt(value.uploadKeyCipher);
-    if (!privateKey) {
-      throw new BusinessException(
-        ErrorCode.BAD_REQUEST,
-        '微信代码上传密钥为空，请重新填写',
-      );
-    }
-    return { appId: value.appId, privateKey, robot: value.robot };
-  }
-
-  /** 记录最近一次直传结果（只记上传信息，不动「配置更新时间」）。 */
-  async saveUploadResult(version: string, uploadedAt: string) {
-    const current = await this.readRaw();
-    await this.write({
-      ...current,
-      lastUploadVersion: String(version || '').slice(0, 40),
-      lastUploadAt: String(uploadedAt || '').slice(0, 40),
-    });
   }
 
   /** 保存后把小程序码写回设置（生成 / 上传两条入口共用）。 */
@@ -252,7 +182,6 @@ export class MiniProgramSettingsService {
   ): Promise<MiniprogramSettingsView> {
     const current = await this.readRaw();
     const appSecret = String(body.appSecret || '').trim();
-    const uploadKey = String(body.uploadKey || '').trim();
     const themeColor = String(body.themeColor || '').trim();
     if (themeColor && !HEX_COLOR.test(themeColor)) {
       throw new BusinessException(
@@ -279,10 +208,6 @@ export class MiniProgramSettingsService {
       appSecretCipher: appSecret
         ? this.crypto.encrypt(appSecret)
         : current.appSecretCipher,
-      uploadKeyCipher: uploadKey
-        ? this.crypto.encrypt(uploadKey)
-        : current.uploadKeyCipher,
-      robot: clampRobot(body.robot),
       siteDomain: cleanDomain(body.siteDomain),
       themeColor: themeColor || current.themeColor,
       features,

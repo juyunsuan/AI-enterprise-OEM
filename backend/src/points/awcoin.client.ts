@@ -83,20 +83,28 @@ export class AwcoinClient {
     private readonly crypto: AccountCrypto,
   ) {}
 
+  /** 余额查询固定使用最早绑定的可用 Key（与模型/计费的主 Key 口径一致）。 */
   private async keyOf(userId: string) {
-    const binding = await this.prisma.userAipddBinding.findUnique({
+    const bindings = await this.prisma.userAipddBinding.findMany({
       where: { userId },
+      orderBy: { boundAt: 'asc' },
     });
-    if (!binding) return null;
-    const key = await this.prisma.aipddKey.findUnique({
-      where: { id: binding.keyId },
+    if (!bindings.length) return null;
+    const keys = await this.prisma.aipddKey.findMany({
+      where: { id: { in: bindings.map((binding) => binding.keyId) } },
     });
-    if (!key || key.status !== 'ACTIVE') return null;
-    return {
-      id: key.id,
-      plain: this.crypto.decrypt(key.keyCipher),
-      profile: key.aipddProfile,
-    };
+    const byId = new Map(keys.map((key) => [key.id, key]));
+    for (const binding of bindings) {
+      const key = byId.get(binding.keyId);
+      if (key?.status === 'ACTIVE') {
+        return {
+          id: key.id,
+          plain: this.crypto.decrypt(key.keyCipher),
+          profile: key.aipddProfile,
+        };
+      }
+    }
+    return null;
   }
 
   /** 单次探测：拿不到（非 2xx / 业务码非 0 / 网络异常）返回 null，拿到了返回上游 data 原样。 */

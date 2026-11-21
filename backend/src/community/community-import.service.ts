@@ -6,6 +6,7 @@ import { CurrentUser } from '../auth/current-user';
 import { IdentityService } from '../identity/identity.service';
 import { UserLookupService } from '../directory/user-lookup.service';
 import { OssService } from '../oss/oss.service';
+import type { SystemAssetService } from '../system-asset/system-asset.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { toJsonInput } from '../common/json-input';
 import {
@@ -112,6 +113,7 @@ export class CommunityImportService {
     private readonly users: UserLookupService,
     private readonly oss: OssService,
     private readonly comfy: ComfyClient,
+    private readonly assets: SystemAssetService,
   ) {}
 
   /** Key 只在这里做形状兜底；绝不回显、绝不进日志。 */
@@ -469,10 +471,15 @@ export class CommunityImportService {
         const downloaded = item.url
           ? await this.comfy.downloadBytes(apiKey, item.url, maxBytes)
           : await this.comfy.viewFile(apiKey, item, maxBytes);
-        const uploaded = await this.oss.upload(
-          `community/import/${safeSegment(job.id)}/${safeSegment(item.filename, 'output')}`,
-          downloaded.bytes,
-        );
+        // 转存媒体入账到执行迁移的账号名下（与工作流 ownerUserId 同口径）
+        const uploaded = await this.assets.put({
+          ownerUserId: user.userId,
+          path: `community/import/${safeSegment(job.id)}/${safeSegment(item.filename, 'output')}`,
+          bytes: downloaded.bytes,
+          name: item.filename,
+          assetType: item.kind === 'video' ? 'video' : 'image',
+          bizRef: `community-import:${job.id}`,
+        });
         coverKeys.push(uploaded.key);
         task.importedMedia += 1;
       } catch (error) {

@@ -1,0 +1,31 @@
+<view class="page" style="{{themeStyle}}">
+  <view wx:if="{{error}}" class="empty">{{error}}</view>
+
+  <block wx:if="{{work}}">
+    <video
+      class="player"
+      src="{{work.resultVideoUrl}}"
+      poster="{{work.coverUrl}}"
+      autoplay
+      controls
+      object-fit="contain"
+    ></video>
+
+    <view class="card">
+      <view class="work-title">{{work.title || '数字人作品'}}</view>
+      <view class="work-meta">播放 {{work.playCount}} · 分享 {{work.shareCount}} · {{createdAt}}</view>
+      <view class="actions">
+        <button class="btn-ghost action" bindtap="saveVideo">保存视频</button>
+        <button class="btn-ghost action" bindtap="onShareTap">分享作品</button>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="card-title">同款数字人，你也能做</view>
+      <view class="muted">上传一段视频克隆形象，再输入文案就能生成口播视频。</view>
+      <view class="cta" bindtap="goCreate">立即创作</view>
+    </view>
+  </block>
+
+  <view wx:if="{{loading}}" class="empty">加载中…</view>
+</view>

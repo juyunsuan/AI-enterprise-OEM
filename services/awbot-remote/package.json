@@ -1,0 +1,24 @@
+{
+  "name": "awbot-remote",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "AIPDD Remote Server: platform-account auth + device-pairing v1 + DSH Remote relay",
+  "main": "src/main.ts",
+  "scripts": {
+    "start": "tsx src/main.ts",
+    "check": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@dsh-remote/protocol": "file:./protocol",
+    "tsx": "^4.19.2",
+    "ws": "^8.18.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/ws": "^8.5.13",
+    "typescript": "^5.7.2"
+  },
+  "license": "MIT"
+}

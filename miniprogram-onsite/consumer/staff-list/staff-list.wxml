@@ -1,0 +1,53 @@
+<view class="search-bar">
+  <input
+    class="search-input"
+    value="{{keywordInput}}"
+    placeholder="按姓名搜索"
+    confirm-type="search"
+    bindinput="onKeywordInput"
+    bindconfirm="onSearch"
+  />
+  <view class="search-clear" wx:if="{{keywordInput}}" bindtap="onClearKeyword">清空</view>
+  <view class="search-button" bindtap="onSearch">搜索</view>
+</view>
+
+<view class="empty" wx:if="{{loading}}">正在加载服务人员…</view>
+
+<view class="empty" wx:elif="{{error}}">
+  <view>{{error}}</view>
+  <view class="link" bindtap="onRetry">重新加载</view>
+</view>
+
+<view class="card" wx:elif="{{notReady}}">
+  <view class="title">店铺暂未开通</view>
+  <view class="muted detail-text">{{readyReason}}</view>
+</view>
+
+<view class="empty" wx:elif="{{!list.length}}">没有找到服务人员</view>
+
+<block wx:else>
+  <view class="card staff" wx:for="{{list}}" wx:key="id" data-id="{{item.id}}" bindtap="openStaff">
+    <view class="staff-head">
+      <image class="avatar" src="{{item.avatar}}" mode="aspectFill" wx:if="{{item.avatar}}"></image>
+      <view class="staff-avatar" wx:else>{{item.name[0]}}</view>
+      <view class="staff-main">
+        <view class="staff-name">
+          {{item.name}}
+          <text class="tag tag-blue" wx:if="{{item.levelName}}">{{item.levelName}}</text>
+          <text class="tag" wx:if="{{item.serviceCity}}">{{item.serviceCity}}</text>
+        </view>
+        <view class="muted">
+          <text wx:if="{{item.ratingText}}">{{item.ratingText}} 分</text>
+          <text wx:if="{{item.reviewText}}"> · {{item.reviewText}}</text>
+          <text wx:if="{{item.orderText}}"> · {{item.orderText}}</text>
+        </view>
+      </view>
+    </view>
+    <view class="detail-text" wx:if="{{item.intro}}">{{item.intro}}</view>
+    <view class="muted" wx:if="{{item.windowText}}">可服务时段 {{item.windowText}}</view>
+  </view>
+
+  <view class="muted more" wx:if="{{loadingMore}}">正在加载更多…</view>
+  <view class="muted more" wx:elif="{{hasMore}}">继续上拉可加载更多</view>
+  <view class="muted more" wx:else>共 {{total}} 位服务人员</view>
+</block>

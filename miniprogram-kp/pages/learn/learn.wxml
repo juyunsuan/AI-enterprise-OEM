@@ -1,0 +1,83 @@
+<view class="page learn-page" style="{{themeStyle}}">
+  <view class="empty" wx:if="{{loading}}">加载中…</view>
+  <view class="empty" wx:elif="{{error}}">
+    <view>{{error}}</view>
+    <view class="btn empty-btn" wx:if="{{id}}" bindtap="goCourse">返回课程详情</view>
+  </view>
+
+  <block wx:else>
+    <view class="card head-card">
+      <view class="muted ellipsis">{{course.title}}</view>
+      <view class="lesson-head">
+        <view class="lesson-title">{{lesson.title}}</view>
+        <view class="lesson-index muted">第 {{index + 1}}/{{course.lessonCount}} 讲</view>
+      </view>
+      <view class="muted chapter-title" wx:if="{{chapterTitle}}">{{chapterTitle}}</view>
+      <view class="meta muted">
+        <text>{{lesson.mediaLabel}}</text>
+        <text wx:if="{{lesson.durationText}}"> · {{lesson.durationText}}</text>
+        <text wx:if="{{completed}}" class="done-flag"> · 已学完</text>
+      </view>
+      <view class="progress-line">
+        <progress percent="{{progress.percent}}" active-color="{{themeColor}}" stroke-width="3" />
+      </view>
+    </view>
+
+    <video
+      wx:if="{{player === 'video'}}"
+      class="player"
+      src="{{playUrl}}"
+      poster="{{cover}}"
+      initial-time="{{progress.positionSec}}"
+      show-center-play-btn="{{true}}"
+      object-fit="contain"
+      bindtimeupdate="onVideoTimeUpdate"
+      bindended="onVideoEnded"
+    />
+
+    <view wx:elif="{{player === 'audio'}}" class="card audio-box">
+      <view class="audio-btn {{audio.playing ? 'audio-on' : ''}}" bindtap="onAudioPlay">
+        {{audio.playing ? '暂停' : '播放'}}
+      </view>
+      <view class="audio-main">
+        <view class="audio-title ellipsis">{{lesson.title}}</view>
+        <progress percent="{{audio.progress}}" active-color="{{themeColor}}" stroke-width="3" />
+        <view class="muted">{{audio.timeText}}</view>
+      </view>
+    </view>
+
+    <image wx:elif="{{player === 'image'}}" class="image-full" src="{{playUrl}}" mode="widthFix" />
+
+    <view wx:elif="{{player === 'live'}}" class="card">
+      <video
+        class="player"
+        src="{{playUrl}}"
+        poster="{{cover}}"
+        show-center-play-btn="{{true}}"
+        object-fit="contain"
+        bindtimeupdate="onVideoTimeUpdate"
+        bindended="onVideoEnded"
+      />
+      <view class="muted tip-line">直播回放播放结束后自动标记学完。</view>
+    </view>
+
+    <view class="card" wx:if="{{intro}}">
+      <view class="section-title small">{{player === 'rich' ? '本讲正文' : '本讲说明'}}</view>
+      <rich-text class="rich-body" nodes="{{intro}}"></rich-text>
+    </view>
+
+    <view class="card" wx:if="{{player === 'rich'}}">
+      <view class="muted">阅读完本讲后点下方「标记学完」，进度会记录到「我的学习」。</view>
+    </view>
+
+    <view class="footer-gap"></view>
+
+    <view class="bottom-bar">
+      <view class="nav-btn {{hasPrev ? '' : 'nav-disabled'}}" bindtap="goPrev">上一讲</view>
+      <view class="btn complete-btn {{completed ? 'btn-plain' : ''}}" bindtap="onComplete">
+        {{completed ? '已学完，可继续下一讲' : submitting ? '保存中…' : '标记学完'}}
+      </view>
+      <view class="nav-btn {{hasNext ? '' : 'nav-disabled'}}" bindtap="goNext">下一讲</view>
+    </view>
+  </block>
+</view>

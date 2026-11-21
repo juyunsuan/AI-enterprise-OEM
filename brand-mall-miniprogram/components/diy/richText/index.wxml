@@ -1,0 +1,3 @@
+<view class="diy-rich-text">
+  <rich-text wx:if="{{html}}" class="body" nodes="{{html}}" />
+</view>

@@ -2,6 +2,7 @@ import { Context } from 'hono';
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import { createRoute } from '@hono/zod-openapi';
 import { readFile } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
 import { endpoints, z } from '@enterprise/contracts';
 import type { CurrentUser } from '../auth/current-user';
 import type { Services } from './services';
@@ -524,9 +525,11 @@ export function registerAutomationRoutes(
     Workbuddy_cancelTask: async (i) =>
       c.workbuddyController.cancelTask(i.user, i.param['id']),
 
-    // ---------- Bot 主机（Agent-Bot：BotBuddy 客户端领指令在本机执行） ----------
+    // ---------- Bot 主机（Agent-Bot：AWBotDSH 客户端领指令在本机执行） ----------
     BotHost_list: async (i) => c.botHostController.list(i.user, i.query),
     BotHost_pair: async (i) => c.botHostController.pair(i.user, i.json),
+    BotHost_createPairQr: async (i) =>
+      c.botHostController.createPairQr(i.user, i.json),
     BotHost_setStatus: async (i) =>
       c.botHostController.setStatus(i.user, i.param['hostId'], i.json),
     BotHost_remove: async (i) =>
@@ -570,7 +573,7 @@ export function registerAutomationRoutes(
       c.aiCallController.bindings(
         i.user,
         readValidated<{
-          kind: 'DESKTOP' | 'MOBOT' | 'WORKBUDDY';
+          kind: 'DESKTOP' | 'AWBOT' | 'WORKBUDDY';
           principalId: number;
         }>(i.query),
       ),
@@ -578,7 +581,7 @@ export function registerAutomationRoutes(
       c.aiCallController.saveBindings(
         i.user,
         readValidated<{
-          kind: 'DESKTOP' | 'MOBOT' | 'WORKBUDDY';
+          kind: 'DESKTOP' | 'AWBOT' | 'WORKBUDDY';
           principalId: number;
           accountIds: number[];
         }>(i.json),
@@ -591,7 +594,7 @@ export function registerAutomationRoutes(
         i.param['id'],
         readValidated<{
           bindings: {
-            kind: 'DESKTOP' | 'MOBOT' | 'WORKBUDDY';
+            kind: 'DESKTOP' | 'AWBOT' | 'WORKBUDDY';
             principalId: number;
           }[];
         }>(i.json),
@@ -604,7 +607,7 @@ export function registerAutomationRoutes(
       c.aiCallOpenController.list(
         i.user,
         readValidated<{
-          kind: 'DESKTOP' | 'MOBOT' | 'WORKBUDDY';
+          kind: 'DESKTOP' | 'AWBOT' | 'WORKBUDDY';
           agentId: number;
           platform?: string;
         }>(i.query),
@@ -614,7 +617,7 @@ export function registerAutomationRoutes(
         i.user,
         i.param['id'],
         readValidated<{
-          kind: 'DESKTOP' | 'MOBOT' | 'WORKBUDDY';
+          kind: 'DESKTOP' | 'AWBOT' | 'WORKBUDDY';
           agentId: number;
         }>(i.query),
       ),
@@ -1138,7 +1141,7 @@ export function registerAutomationRoutes(
     Notifications_readAll: async (i) =>
       c.notificationController.readAll(i.user, i.json),
     Notifications_readSns: async (i) =>
-      c.snsController.readSns(i.user, i.param['id']),
+      c.notificationController.readExternal(i.user, i.param['id']),
     // ---------- AIworkin 社交（SNS）私信 ----------
     Sns_sendMessage: async (i) => c.snsController.sendMessage(i.user, i.json),
     // ---------- 统一组织成员 ----------
@@ -1198,6 +1201,16 @@ export function registerAutomationRoutes(
       c.serviceDeskController.removeAgent(i.user, i.param['id']),
     ServiceDesk_setStatus: async (i) =>
       c.serviceDeskController.setStatus(i.user, i.json),
+    // ---------- 纯AI客服员工（与真人坐席并列；静态段 /ai-agents/ask 由注册顺序排序先于 /ai-agents/:id） ----------
+    ServiceDesk_aiAgents: async (i) => c.serviceDeskController.aiAgents(i.user),
+    ServiceDesk_saveAiAgent: async (i) =>
+      c.serviceDeskController.saveAiAgent(i.user, i.json),
+    ServiceDesk_askAiAgent: async (i) =>
+      c.serviceDeskController.askAiAgent(i.user, i.json),
+    ServiceDesk_setAiAgentStatus: async (i) =>
+      c.serviceDeskController.setAiAgentStatus(i.user, i.param['id'], i.json),
+    ServiceDesk_removeAiAgent: async (i) =>
+      c.serviceDeskController.deleteAiAgent(i.user, i.param['id']),
     ServiceDesk_conversations: async (i) =>
       c.serviceDeskController.conversations(i.user, i.query),
     ServiceDesk_conversation: async (i) =>
@@ -1310,6 +1323,62 @@ export function registerAutomationRoutes(
     Survey_results: async (i) =>
       ok(await c.surveyController.results(i.user, i.param['id'], i.query)),
 
+    // ---------- 答题小程序（题库与答题记录写入多维表格） ----------
+    Quiz_site: async (i) => ok(await c.quizController.site(i.user)),
+    Quiz_package: async (i) => ok(await c.quizController.package(i.user)),
+    Quiz_saveSite: async (i) =>
+      ok(await c.quizController.saveSite(i.user, i.json)),
+    Quiz_banks: async (i) => ok(await c.quizController.banks(i.user)),
+    Quiz_createBank: async (i) =>
+      ok(await c.quizController.createBank(i.user, i.json)),
+    Quiz_updateBank: async (i) =>
+      ok(await c.quizController.updateBank(i.user, i.param['id'], i.json)),
+    Quiz_publishBank: async (i) =>
+      ok(await c.quizController.publishBank(i.user, i.param['id'])),
+    Quiz_closeBank: async (i) =>
+      ok(await c.quizController.closeBank(i.user, i.param['id'])),
+    Quiz_reopenBank: async (i) =>
+      ok(await c.quizController.reopenBank(i.user, i.param['id'])),
+    Quiz_removeBank: async (i) =>
+      ok(await c.quizController.removeBank(i.user, i.param['id'])),
+    Quiz_questions: async (i) =>
+      ok(await c.quizController.questions(i.user, i.param['id'])),
+    Quiz_createQuestion: async (i) =>
+      ok(await c.quizController.createQuestion(i.user, i.param['id'], i.json)),
+    Quiz_updateQuestion: async (i) =>
+      ok(
+        await c.quizController.updateQuestion(
+          i.user,
+          i.param['id'],
+          i.param['rowId'],
+          i.json,
+        ),
+      ),
+    Quiz_removeQuestion: async (i) =>
+      ok(
+        await c.quizController.removeQuestion(
+          i.user,
+          i.param['id'],
+          i.param['rowId'],
+        ),
+      ),
+    Quiz_aiGenerate: async (i) =>
+      ok(await c.quizController.aiGenerate(i.user, i.param['id'], i.json)),
+    Quiz_results: async (i) =>
+      ok(await c.quizController.results(i.user, i.param['id'], i.query)),
+    Quiz_rank: async (i) =>
+      ok(await c.quizController.rank(i.user, i.param['id'], i.query)),
+    Quiz_participants: async (i) =>
+      ok(await c.quizController.participants(i.user, i.query)),
+    Quiz_reviewParticipant: async (i) =>
+      ok(
+        await c.quizController.reviewParticipant(
+          i.user,
+          i.param['rowId'],
+          i.json,
+        ),
+      ),
+
     // ---------- 平台管理员：生成 Skill ----------
     Admin_skillGeneratorCatalog: async (i) =>
       ok(await services.skillGenerator.catalog(i.user)),
@@ -1371,6 +1440,8 @@ export function registerAutomationRoutes(
     moduleHandlers('AgentDispatch_', c.agentDispatchController),
     moduleHandlers('LowCode_', c.lowcodeController),
     moduleHandlers('Okr_', c.okrController),
+    // 租户 RBAC：子账号管理、当前账号授权上下文、操作日志。
+    moduleHandlers('Rbac_', c.rbacController),
     moduleHandlers('Oa_', c.oaController),
     // 统一任务中心：列表 / 摘要 / 本人关闭 / 重开 / 机构收件箱 / 改派 / 接单。
     moduleHandlers('MyTask_', c.taskCenterController),
@@ -1409,8 +1480,8 @@ export function registerAutomationRoutes(
     moduleHandlers('GeoSiteContent_', c.geoSiteContentController),
     // 模板库（区块另存 + 整页另存）单独一个前缀：与页面/内容同名方法会互相覆盖
     moduleHandlers('GeoSiteTemplate_', c.geoSiteTemplateController),
-    // L3 AI 简历代投（§5.6）
-    moduleHandlers('Recruit_', c.recruitController),
+    // AI 社交：Key 准入 + DSH 社交插件入口（社交数据全部在 AIworkin 侧）
+    moduleHandlers('AiSocial_', c.aiSocialController),
     // AI 获客（营销工具）：线索雷达/触达/档案/剧本/跟进/质检/看板
     moduleHandlers('Acquisition_', c.acquisitionController),
     // 企业微信原生 SCRM（营销工具）：客户/群/活码/群发/继承/SOP/合规/统计/侧边栏
@@ -1420,7 +1491,50 @@ export function registerAutomationRoutes(
     moduleHandlers('WechatMpAdmin_', c.wechatMpController),
     // 用户版小程序：用户绑定 + 平台后台「小程序管理」（代码包台账 / 小程序码 / 内置包）。
     moduleHandlers('MiniProgram_', c.miniProgramController),
+    // 知识付费小程序工具（工作台 → 建站管理）：用户侧管理端点。
+    moduleHandlers('Kp_', c.knowledgePayController),
     moduleHandlers('MiniProgramAdmin_', c.miniProgramController),
+    // 上门服务小程序工具：店主侧 Onsite_（店铺 / 主体凭据 / 出包发布），平台侧 OnsiteAdmin_（台账与参数）。
+    moduleHandlers('Onsite_', c.onsiteController),
+    moduleHandlers('OnsiteAdmin_', c.onsiteAdminController),
+    // 租赁管理小程序：门店 / 租品 / 租单 / 验车 / 顾客 / 员工 / 统计。
+    moduleHandlers('Rental_', c.rentalController),
+    // 园区管理：站点 / 空间 / 租户 / 员工 / 审批 / 预约 / 工单 / 公告。
+    moduleHandlers('Park_', c.parkController),
+    // 电商小程序工具：店主侧 BrandMall_（店铺 / 主体凭据 / 商品 / 装修 / 出包发布 / 看板），
+    // 平台侧 BrandMallAdmin_（店铺台账、停服、配额与预置快递）。
+    moduleHandlers('BrandMall_', c.brandController),
+    moduleHandlers('Takeout_', c.takeoutController),
+    moduleHandlers('BrandMallAdmin_', c.brandAdminController),
+    // 多店铺商城平台：市场运营方 Market_（市场/类目/入驻审核/店铺台账）与平台侧 MpAdmin_。
+    // 商户后台 MpMerchant_ 不走这里：独立令牌通道，见 marketplace/mp.merchant.routes.ts。
+    moduleHandlers('Market_', c.marketplaceController),
+    moduleHandlers('MpAdmin_', c.marketplaceAdminController),
+    // 建站工具启动设置：用户侧 ToolLaunch_（启动/停止/状态），平台侧 ToolLaunchAdmin_（口径与台账）。
+    moduleHandlers('ToolLaunch_', c.toolLaunchController),
+    moduleHandlers('ToolLaunchAdmin_', c.toolLaunchAdminController),
+    // 小程序发布说明（源码分发包口径）：用户侧 MiniGuide_（按工具/通用说明），平台侧 MiniGuideAdmin_（正文维护）。
+    moduleHandlers('MiniGuide_', c.miniGuideController),
+    moduleHandlers('MiniGuideAdmin_', c.miniGuideAdminController),
+    // 二次开发指引：平台侧只读真源 + 保存本站补充说明，全部要求平台管理员。
+    moduleHandlers('DevGuideAdmin_', c.devGuideAdminController),
+    // 卡密商城小程序工具：顾客端不在这里，走 app.ts 注册的 /api/public/card-shop 公开通道。
+    moduleHandlers('CardShop_', c.cardShopController),
+    moduleHandlers('CardShopAdmin_', c.cardShopAdminController),
+    // 快递寄件小程序工具：店主侧 Kuaidi_，平台侧 KuaidiAdmin_；C 端走 /api/public/kuaidi。
+    moduleHandlers('Kuaidi_', c.kuaidiController),
+    moduleHandlers('KuaidiAdmin_', c.kuaidiAdminController),
+    moduleHandlers('Circle_', c.circleController),
+    moduleHandlers('CircleAdmin_', c.circleAdminController),
+    // 跑腿小程序工具：店主侧 Errand_，平台侧 ErrandAdmin_；顾客与骑手走 /api/public/errand。
+    moduleHandlers('Errand_', c.errandController),
+    moduleHandlers('ErrandAdmin_', c.errandAdminController),
+    // 健康管理小程序工具：店主侧 Health_，平台侧 HealthAdmin_；C 端与医护通道走 app.ts 的 /api/public/health。
+    moduleHandlers('Health_', c.healthWorkbenchController),
+    moduleHandlers('HealthAdmin_', c.healthAdminController),
+    // 数字人小程序工具：店主侧 Dh_（站点 / 渠道 / 会员 / 素材 / 合成 / 商城 / 分销 / 出包），
+    // C 端与供应商回调走 app.ts 注册的 /api/public/digital-human 公开通道。
+    moduleHandlers('Dh_', c.digitalHumanController),
     // 通用协作底座（§5.2）：评论/@/标签/收藏/资源链接
     moduleHandlers('Collab_', c.collabController),
     // §5.8 横切机制：各组都有 list/save/remove，因此按契约前缀分组注册。
@@ -1668,6 +1782,10 @@ export function registerAutomationRoutes(
   registerContentSkillImport(app, services);
   registerUpgradePackageUpload(app, services);
   registerMiniProgramUploads(app, services);
+  // 知识付费工具素材上传（封面/轮播图，账号内可用）。
+  registerKnowledgePayUploads(app, services);
+  // 数字人小程序工具后台素材上传（轮播/海报/图文封面/套餐图）。
+  registerDigitalHumanUploads(app, services);
   registerMiniProgramBuiltinDownload(app, services);
   registerAiCodeRoutes(app, services);
   registerWorkflowRunStream(app, services);
@@ -1972,33 +2090,20 @@ function registerHardwareKitUpload(
           '请选择要上传的开发包文件',
         );
       }
-      const result = await services.hardware.adminKitUpload(file);
+      const result = await services.hardware.adminKitUpload(
+        context.get('user')!.userId,
+        file,
+      );
       return context.json({ code: 0, message: 'ok', data: result });
     },
   );
 }
 
-/** 用户版小程序代码包上传：multipart 不进 JSON 契约，字节进本站 OSS，元数据由 Admin 端点落库。 */
+/** 用户版小程序小程序码上传：multipart 不进 JSON 契约，字节进本站 OSS，元数据由 Admin 端点落库。 */
 function registerMiniProgramUploads(
   app: OpenAPIHono<ApiEnv>,
   services: Services,
 ) {
-  app.post(
-    '/enterprise/admin/miniprogram/releases/upload',
-    async (context: Context<ApiEnv>) => {
-      services.identity.requireAdmin(context.get('user')!);
-      const form = await context.req.formData();
-      const file = form.get('file');
-      if (!(file instanceof File)) {
-        throw new BusinessException(
-          ErrorCode.BAD_REQUEST,
-          '请选择要上传的小程序代码包',
-        );
-      }
-      const result = await services.miniprogram.service.uploadPackage(file);
-      return context.json({ code: 0, message: 'ok', data: result });
-    },
-  );
   app.post(
     '/enterprise/admin/miniprogram/qrcode/upload',
     async (context: Context<ApiEnv>) => {
@@ -2011,8 +2116,88 @@ function registerMiniProgramUploads(
           '请选择要上传的小程序码图片',
         );
       }
-      const result = await services.miniprogram.service.uploadQrcodeImage(file);
+      const result = await services.miniprogram.service.uploadQrcodeImage(
+        context.get('user')!.userId,
+        file,
+      );
       return context.json({ code: 0, message: 'ok', data: result });
+    },
+  );
+}
+
+/** 知识付费工具的素材上传（封面/轮播图）：multipart 不进 JSON 契约，字节直落本站 OSS。 */
+function registerKnowledgePayUploads(
+  app: OpenAPIHono<ApiEnv>,
+  services: Services,
+) {
+  app.post(
+    '/enterprise/knowledge-pay/media/upload',
+    async (context: Context<ApiEnv>) => {
+      const form = await context.req.formData();
+      const file = form.get('file');
+      if (!(file instanceof File)) {
+        throw new BusinessException(
+          ErrorCode.BAD_REQUEST,
+          '请选择要上传的图片素材',
+        );
+      }
+      const result = await services.knowledgePay.service.uploadMedia(
+        context.get('user')!.userId,
+        file,
+      );
+      return context.json({ code: 0, message: 'ok', data: result });
+    },
+  );
+}
+
+const DH_MEDIA_EXT = /\.(png|jpe?g|webp|gif)$/i;
+const DH_MEDIA_LIMIT = 10 * 1024 * 1024;
+
+/** 数字人工具后台素材上传：multipart 不进 JSON 契约，只收图片，落站点自己的 OSS 目录。 */
+function registerDigitalHumanUploads(
+  app: OpenAPIHono<ApiEnv>,
+  services: Services,
+) {
+  app.post(
+    '/enterprise/digital-human/media/upload',
+    async (context: Context<ApiEnv>) => {
+      const form = await context.req.formData();
+      const file = form.get('file');
+      if (!(file instanceof File)) {
+        throw new BusinessException(
+          ErrorCode.BAD_REQUEST,
+          '请选择要上传的图片',
+        );
+      }
+      if (file.size > DH_MEDIA_LIMIT) {
+        throw new BusinessException(
+          ErrorCode.PAYLOAD_TOO_LARGE,
+          `图片超过 ${DH_MEDIA_LIMIT / 1024 / 1024}MB 上限，请压缩后再传`,
+        );
+      }
+      const ext = (DH_MEDIA_EXT.exec(file.name || '')?.[0] || '').toLowerCase();
+      if (!ext) {
+        throw new BusinessException(
+          ErrorCode.BAD_REQUEST,
+          '只支持 png/jpg/webp/gif 图片',
+        );
+      }
+      const site = await services.digitalHuman.member.siteOfOwner(
+        context.get('user')!.userId,
+      );
+      // 店主上传的素材进台账：桶里有条无账的字节，等于说"存储成本看不见"
+      const uploaded = await services.systemAsset.put({
+        ownerUserId: site.userId,
+        path: `digital-human/media/${site.id}/${randomUUID()}${ext}`,
+        bytes: Buffer.from(await file.arrayBuffer()),
+        name: file.name,
+        bizRef: `site:${site.id}`,
+      });
+      return context.json({
+        code: 0,
+        message: 'ok',
+        data: { url: uploaded.url },
+      });
     },
   );
 }

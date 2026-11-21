@@ -1,0 +1,52 @@
+<view class="page">
+  <view class="search">
+    <input
+      class="search-input"
+      value="{{keywordInput}}"
+      placeholder="搜索服务名称"
+      placeholder-class="search-placeholder"
+      confirm-type="search"
+      bindinput="onKeywordInput"
+      bindconfirm="onSearch"
+    />
+    <text class="search-btn" bindtap="onSearch">搜索</text>
+    <text class="search-clear" bindtap="onClearKeyword" wx:if="{{keywordInput}}">清空</text>
+  </view>
+
+  <view class="summary muted" wx:if="{{!loading && !error}}">
+    <text wx:if="{{keyword}}">关键词「{{keyword}}」</text>
+    <text wx:if="{{keyword}}"> · </text>
+    <text>共 {{total}} 项服务</text>
+  </view>
+
+  <view class="empty" wx:if="{{loading}}">正在加载服务…</view>
+
+  <view class="empty" wx:elif="{{error}}">
+    <view>{{error}}</view>
+    <view class="link" bindtap="onRetry">重新加载</view>
+  </view>
+
+  <view class="empty" wx:elif="{{!list.length}}">
+    <block wx:if="{{keyword}}">没有找到与「{{keyword}}」相关的服务</block>
+    <block wx:else>该店铺暂未上架服务</block>
+  </view>
+
+  <view class="card svc" wx:for="{{list}}" wx:key="id" data-id="{{item.id}}" bindtap="openService">
+    <image class="svc-cover" src="{{item.cover}}" mode="aspectFill" wx:if="{{item.cover}}"></image>
+    <view class="svc-main">
+      <view class="svc-title">{{item.title}}</view>
+      <view class="muted svc-subtitle" wx:if="{{item.subtitle}}">{{item.subtitle}}</view>
+      <view class="tags" wx:if="{{item.highlights.length}}">
+        <text class="tag" wx:for="{{item.highlights}}" wx:for-item="tag" wx:key="*this">{{tag}}</text>
+      </view>
+      <view class="svc-foot">
+        <text class="price">{{item.priceText}}<text class="price-unit"> 起</text></text>
+        <text class="muted">{{item.durationText}}</text>
+        <text class="muted" wx:if="{{item.salesText}}">{{item.salesText}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="muted more" wx:if="{{loadingMore}}">正在加载更多…</view>
+  <view class="muted more" wx:elif="{{list.length && !hasMore}}">没有更多了</view>
+</view>

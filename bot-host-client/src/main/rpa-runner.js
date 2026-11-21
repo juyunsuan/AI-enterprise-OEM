@@ -3,7 +3,7 @@
 /**
  * RPA 执行端：把平台派发的 Automa 工作流跑在这台机器的指纹窗口里。
  *
- * 链路：平台「RPA 任务」目标设备＝BotBuddy 浏览器 → 主机令牌通道领取 →
+ * 链路：平台「RPA 任务」目标设备＝AWBotDSH 浏览器 → 主机令牌通道领取 →
  * 打开（或复用）任务指定的指纹窗口 → 经 CDP 进 Automa 自己的扩展页发
  * `background--workflow:execute` → 盯 Automa 的执行台账到终态 → 回传结果。
  *
@@ -151,8 +151,8 @@ async function findSenderTarget(session) {
 
 /**
  * 一个插件页面都没有时，临时开一个当发信方。
- * 扩展 ID 不硬编码：解包加载时 ID 由内核按目录算，这里直接从已有插件相关 target 里取，
- * 完全没有线索才按商店 ID 试一次（内置包就是它）。
+ * 扩展 ID 不硬编码：解包加载时 ID 由 manifest.key 派生，这里先从已有插件相关 target 里取，
+ * 完全没有线索才用内置 Automa 的固定 ID 试一次。
  */
 async function openSenderTarget(session) {
   const infos = await session.targets();
@@ -161,7 +161,8 @@ async function openSenderTarget(session) {
     const match = /^chrome-extension:\/\/([a-p]{32})\//.exec(String(item.url || ''));
     if (match) ids.add(match[1]);
   }
-  if (!ids.size) ids.add('kfefaponhdnhhcggeamejckaddlkjmed');
+  // 兜底：内置 Automa 的固定 ID（manifest.key 派生）。动态抓取优先，ID 只防“一条都没抓到”。
+  if (!ids.size) ids.add('hgppffefgolfkiliifdijnpnjbophdmh');
   for (const id of ids) {
     for (const page of ['newtab.html', 'popup.html', 'params.html']) {
       try {

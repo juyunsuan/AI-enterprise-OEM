@@ -1,0 +1,45 @@
+<view class="container">
+  <view class="card" wx:if="{{group}}">
+    <view class="row">
+      <image class="avatar" src="{{group.cover}}" mode="aspectFill" />
+      <view class="name">{{group.name}}</view>
+    </view>
+    <view class="muted" style="margin-top:8rpx">{{group.categoryName}} · {{group.memberCount}} 人 · {{group.postCount}} 帖</view>
+    <view class="content">{{group.intro}}</view>
+    <view class="muted" wx:if="{{group.rules}}">圈规：{{group.rules}}</view>
+    <view class="actions">
+      <view class="btn" wx:if="{{!group.isJoined}}" bindtap="join">加入圈子</view>
+      <view class="btn ghost" wx:else bindtap="leave">退出圈子</view>
+      <view class="btn ghost" style="margin-left:20rpx" bindtap="follow">{{group.isFollowing ? '已关注' : '关注'}}</view>
+      <view class="btn ghost" style="margin-left:20rpx" wx:if="{{group.role === 'OWNER' || group.role === 'ADMIN'}}" bindtap="manage">管理</view>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{activities.length}}">
+    <view class="name" style="margin-left:0">圈子活动</view>
+    <view wx:for="{{activities}}" wx:key="id" data-id="{{item.id}}" bindtap="openActivity" style="margin-top:14rpx">
+      <view class="between">
+        <view>{{item.title}}</view>
+        <view class="tag">{{item.joinCount}}/{{item.capacity || '不限'}}</view>
+      </view>
+      <view class="muted">{{item.startAt}} · {{item.address || '线上/地点待定'}}</view>
+    </view>
+  </view>
+
+  <view class="card" wx:for="{{posts}}" wx:key="id" data-id="{{item.id}}" bindtap="openPost">
+    <view class="row">
+      <image class="avatar" src="{{item.author.avatar}}" mode="aspectFill" />
+      <view class="name">{{item.author.nickname}}</view>
+      <view class="muted" style="margin-left:auto">{{item.timeText}}</view>
+    </view>
+    <view class="content">{{item.content}}</view>
+    <view class="images" wx:if="{{item.images.length}}">
+      <image class="image" wx:for="{{item.images}}" wx:for-item="pic" wx:key="*this" src="{{pic}}" mode="aspectFill" />
+    </view>
+  </view>
+
+  <view class="empty" wx:if="{{!loading && !posts.length}}">圈子里还没有帖子</view>
+  <view class="empty" wx:if="{{loading}}">正在加载…</view>
+</view>
+
+<view class="floating" bindtap="createPost">+</view>

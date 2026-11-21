@@ -1,0 +1,3 @@
+.result-stat .value {
+  font-size: 30rpx;
+}

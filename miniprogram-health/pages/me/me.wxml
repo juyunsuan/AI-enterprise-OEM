@@ -1,0 +1,99 @@
+<view class="page me">
+  <block wx:if="{{loggedIn}}">
+    <view class="profile">
+      <image wx:if="{{customer.avatar}}" class="profile-avatar" src="{{customer.avatar}}" mode="aspectFill" />
+      <view wx:else class="profile-avatar"></view>
+      <view class="profile-body">
+        <view class="profile-name">{{customer.nickname || '微信用户'}}</view>
+        <view class="profile-meta">
+          <text wx:if="{{customer.memberLevelName}}">{{customer.memberLevelName}}</text>
+          <text wx:else>普通顾客</text>
+          <text wx:if="{{customer.phone}}"> · {{customer.phone}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="card stats">
+      <view class="stat" data-url="/consumer/member/index?tab=wallet" bindtap="onCell">
+        <view class="stat-value">{{walletText}}</view>
+        <view class="stat-label">余额</view>
+      </view>
+      <view class="stat" data-url="/consumer/member/index?tab=point" bindtap="onCell">
+        <view class="stat-value">{{customer.points}}</view>
+        <view class="stat-label">积分</view>
+      </view>
+      <view class="stat" data-url="/consumer/member/index?tab=coupon" bindtap="onCell">
+        <view class="stat-value">{{coupons}}</view>
+        <view class="stat-label">优惠券</view>
+      </view>
+      <view class="stat" data-url="/consumer/order/list?status=UNPAID" bindtap="onCell">
+        <view class="stat-value">{{unpaidOrders}}</view>
+        <view class="stat-label">待付款</view>
+      </view>
+    </view>
+
+    <view class="card entries">
+      <view class="grid">
+        <view
+          class="grid-item"
+          wx:for="{{cells}}"
+          wx:key="key"
+          data-url="{{item.url}}"
+          bindtap="onCell"
+        >
+          <view class="cell-badge">{{item.label}}</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="card grants" wx:if="{{grants.length}}">
+      <view class="grants-title">会员权益核销码</view>
+      <view
+        class="grant"
+        wx:for="{{grants}}"
+        wx:key="id"
+        data-code="{{item.verifyCode}}"
+        bindtap="onGrant"
+      >
+        <view>
+          <view class="grant-code">{{item.verifyCode}}</view>
+          <view class="item-meta">有效期至 {{item.expireText}}，点击复制</view>
+        </view>
+        <text class="tag tag-blue">{{item.status === 'BINDING' ? '生效中' : item.status}}</text>
+      </view>
+    </view>
+
+    <view class="card rows">
+      <view
+        class="row-item"
+        wx:for="{{rows}}"
+        wx:key="key"
+        data-url="{{item.url}}"
+        data-key="{{item.key}}"
+        data-tab="{{item.tab}}"
+        bindtap="onRow"
+      >
+        <text>{{item.label}}</text>
+        <text class="row-arrow">›</text>
+      </view>
+      <view class="row-item" bindtap="onCall">
+        <text>联系店铺客服</text>
+        <text class="row-arrow">›</text>
+      </view>
+    </view>
+
+    <view class="me-footer">
+      <view class="logout" bindtap="onLogout">退出登录</view>
+      <view class="footer-tip" wx:if="{{emergencyTip}}">{{emergencyTip}}</view>
+    </view>
+  </block>
+
+  <block wx:else>
+    <view class="card guest">
+      <view class="guest-title">登录后管理健康档案</view>
+      <view class="guest-desc">就诊人、随访任务、指标记录与订单都需要登录后查看；首次登录自动建档。</view>
+      <button class="button-primary" loading="{{loading}}" bindtap="onLogin">微信登录</button>
+      <view class="guest-link" bindtap="onSettings">协议与须知 · 服务器地址</view>
+    </view>
+  </block>
+</view>

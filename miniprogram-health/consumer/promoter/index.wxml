@@ -1,0 +1,88 @@
+<view class="promoter-page">
+  <view class="empty" wx:if="{{loading}}">正在加载推广信息…</view>
+
+  <view class="card" wx:elif="{{error}}">
+    <view class="title">推广中心暂不可用</view>
+    <view class="muted">{{error}}</view>
+    <view class="btn" bindtap="load">重新加载</view>
+  </view>
+
+  <block wx:elif="{{center}}">
+    <view class="card" wx:if="{{!center.enabled}}">
+      <view class="title">店铺暂未开放推广分销</view>
+      <view class="muted">可先联系店铺客服了解开通方式。</view>
+    </view>
+
+    <block wx:else>
+      <view class="card" wx:if="{{!center.promoter}}">
+        <view class="title">申请成为推客</view>
+        <view class="muted">顾客通过你的推广链接或海报进入并下单后，按店铺比例获得分佣。</view>
+        <view class="field">
+          <input class="input" data-field="name" value="{{name}}" bindinput="onInput" maxlength="60" placeholder="你的称呼" />
+        </view>
+        <view class="field">
+          <input class="input" data-field="phone" value="{{phone}}" type="number" bindinput="onInput" maxlength="20" placeholder="手机号（选填，便于店主联系）" />
+        </view>
+        <view class="btn" bindtap="apply">{{applying ? '提交中…' : '提交申请'}}</view>
+      </view>
+
+      <view class="card" wx:elif="{{center.promoter.auditStatus === 'REJECTED'}}">
+        <view class="title">申请未通过</view>
+        <view class="muted" wx:if="{{center.promoter.auditReason}}">原因：{{center.promoter.auditReason}}</view>
+        <view class="muted">修改称呼或联系方式后可重新提交。</view>
+        <view class="field">
+          <input class="input" data-field="name" value="{{name}}" bindinput="onInput" maxlength="60" placeholder="你的称呼" />
+        </view>
+        <view class="field">
+          <input class="input" data-field="phone" value="{{phone}}" type="number" bindinput="onInput" maxlength="20" placeholder="手机号（选填）" />
+        </view>
+        <view class="btn" bindtap="apply">{{applying ? '提交中…' : '重新提交申请'}}</view>
+      </view>
+
+      <view class="card" wx:elif="{{!center.promoter.approved}}">
+        <view class="title">申请审核中</view>
+        <view class="muted">审核通过后即可获取推广码与海报。</view>
+      </view>
+
+      <block wx:else>
+        <view class="card">
+          <view class="title">我的推广码</view>
+          <view class="code">{{center.promoter.code}}</view>
+          <view class="muted">分佣比例 {{center.promoter.ratePercent}}%</view>
+          <view class="stats">
+            <view class="stat">
+              <view class="stat-value">{{center.promoter.bindCustomerCount}}</view>
+              <view class="stat-label">绑定顾客</view>
+            </view>
+            <view class="stat">
+              <view class="stat-value">{{center.promoter.orderCount}}</view>
+              <view class="stat-label">成交订单</view>
+            </view>
+            <view class="stat">
+              <view class="stat-value">{{center.promoter.earningText}}</view>
+              <view class="stat-label">累计收益</view>
+            </view>
+            <view class="stat">
+              <view class="stat-value">{{center.promoter.settleableText}}</view>
+              <view class="stat-label">可结算</view>
+            </view>
+          </view>
+          <button class="btn share" open-type="share">分享给好友</button>
+        </view>
+
+        <view class="card" wx:if="{{center.posters.length}}">
+          <view class="title">推广海报</view>
+          <view class="muted">点海报可预览大图，或直接分享对应海报。</view>
+          <view class="posters">
+            <view class="poster" wx:for="{{center.posters}}" wx:key="id">
+              <image class="poster-image" src="{{item.background}}" mode="widthFix" data-url="{{item.background}}" bindtap="previewPoster" />
+              <view class="poster-name">{{item.name}}</view>
+              <view class="poster-sub" wx:if="{{item.subtitleText}}">{{item.subtitleText}}</view>
+              <button class="btn small" open-type="share" data-id="{{item.id}}">分享这张</button>
+            </view>
+          </view>
+        </view>
+      </block>
+    </block>
+  </block>
+</view>

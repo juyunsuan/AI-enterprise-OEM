@@ -1,0 +1,32 @@
+<view class="page">
+  <view class="card" wx:if="{{reports.length}}">
+    <view
+      class="report"
+      wx:for="{{reports}}"
+      wx:key="id"
+      data-id="{{item.id}}"
+      bindtap="onReport"
+    >
+      <view class="report-head">
+        <view class="report-title">
+          {{item.title}}
+          <text class="dot" wx:if="{{item.unread}}"></text>
+        </view>
+        <text class="tag tag-blue">{{item.typeLabel}}</text>
+      </view>
+      <view class="item-meta">
+        <text wx:if="{{item.patientName}}">{{item.patientName}}</text>
+        <text wx:if="{{item.hospitalName}}"> · {{item.hospitalName}}</text>
+        <text wx:if="{{item.timeText}}"> · {{item.timeText}}</text>
+      </view>
+      <view class="report-foot">
+        <text class="tag tag-red" wx:if="{{item.abnormalCount}}">{{item.abnormalCount}} 项异常</text>
+        <text class="tag tag-green" wx:elif="{{item.haveFile}}">含报告文件</text>
+        <text class="link">查看详情 ›</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="empty" wx:elif="{{!loading}}">暂无体检报告，报告上传后可在这里查看</view>
+  <view class="empty" wx:else>正在加载…</view>
+</view>

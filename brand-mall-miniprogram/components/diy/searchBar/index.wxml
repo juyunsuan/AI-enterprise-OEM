@@ -1,0 +1,6 @@
+<view class="diy-search-bar">
+  <view class="bar" style="border-radius: {{radius}}rpx" bindtap="onTap">
+    <text class="icon">搜索</text>
+    <text class="ph">{{placeholder}}</text>
+  </view>
+</view>

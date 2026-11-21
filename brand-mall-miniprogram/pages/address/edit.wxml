@@ -1,0 +1,52 @@
+<view class="addr-edit">
+  <view class="card">
+    <view class="field">
+      <text class="field-label">收货人</text>
+      <input class="input" data-field="realName" value="{{realName}}" maxlength="30" placeholder="请填写收货人姓名" bindinput="onInput" />
+    </view>
+    <view class="field">
+      <text class="field-label">手机号</text>
+      <input class="input" data-field="phone" type="number" value="{{phone}}" maxlength="20" placeholder="11 位手机号" bindinput="onInput" />
+    </view>
+    <picker mode="region" value="{{region}}" bindchange="onRegion">
+      <view class="field">
+        <text class="field-label">所在地区</text>
+        <view class="picker">{{regionText}}</view>
+      </view>
+    </picker>
+    <view class="field">
+      <text class="field-label">详细地址</text>
+      <textarea class="textarea" data-field="detail" value="{{detail}}" maxlength="200" placeholder="街道、楼牌号等" bindinput="onInput" />
+    </view>
+    <view class="field">
+      <text class="field-label">邮政编码（选填）</text>
+      <input class="input" data-field="postalCode" value="{{postalCode}}" maxlength="10" placeholder="选填" bindinput="onInput" />
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="field-label">标签</view>
+    <view class="tags">
+      <view
+        class="tag {{tag === item ? 'on' : ''}}"
+        wx:for="{{tags}}"
+        wx:key="*this"
+        data-tag="{{item}}"
+        bindtap="pickTag"
+      >
+        {{item}}
+      </view>
+    </view>
+    <view class="cell">
+      <text>设为默认地址</text>
+      <switch checked="{{isDefault}}" color="#fa3534" bindchange="toggleDefault" />
+    </view>
+  </view>
+
+  <view class="footer-gap"></view>
+
+  <view class="bar">
+    <view class="op" wx:if="{{id}}" bindtap="remove">删除</view>
+    <view class="submit {{saving ? 'dis' : ''}}" bindtap="save">{{saving ? '保存中…' : '保存地址'}}</view>
+  </view>
+</view>

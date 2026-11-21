@@ -1,0 +1,75 @@
+.page {
+  padding: 24rpx 24rpx 160rpx;
+}
+
+.address-card {
+  background: #ffffff;
+  border-radius: 22rpx;
+  padding: 26rpx;
+  margin-bottom: 18rpx;
+  box-shadow: 0 8rpx 22rpx rgba(44, 38, 34, 0.05);
+}
+
+.address-head {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+}
+
+.address-name {
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.address-phone {
+  font-size: 24rpx;
+  color: #80746c;
+}
+
+.default-tag {
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+  background: #fdf0ef;
+  color: #c73b36;
+  font-size: 20rpx;
+}
+
+.address-line {
+  margin-top: 12rpx;
+  font-size: 26rpx;
+  color: #5e534c;
+  line-height: 1.5;
+}
+
+.address-actions {
+  margin-top: 18rpx;
+  padding-top: 16rpx;
+  border-top: 1rpx solid #f3eeea;
+  display: flex;
+  gap: 30rpx;
+}
+
+.link {
+  font-size: 24rpx;
+  color: #7a6f67;
+}
+
+.link-danger {
+  color: #c73b36;
+}
+
+.add-btn {
+  position: fixed;
+  left: 24rpx;
+  right: 24rpx;
+  bottom: 24rpx;
+}
+
+.error-card {
+  margin-top: 80rpx;
+  text-align: center;
+}
+
+.retry {
+  margin-top: 24rpx;
+}

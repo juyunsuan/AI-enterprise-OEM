@@ -1,0 +1,26 @@
+<view class="page" style="{{themeStyle}}">
+  <view class="empty" wx:if="{{!enabled}}">店主没有开启公告与资讯栏目</view>
+
+  <block wx:else>
+    <view class="empty" wx:if="{{error}}">{{error}}</view>
+    <view class="empty" wx:elif="{{!list.length && !loading}}">还没有公告</view>
+
+    <view
+      class="card notice-card"
+      wx:for="{{list}}"
+      wx:key="id"
+      bindtap="openNotice"
+      data-id="{{item.id}}"
+    >
+      <view class="notice-title ellipsis-2">{{item.title}}</view>
+      <view class="muted small notice-summary ellipsis-2" wx:if="{{item.summary}}">{{item.summary}}</view>
+      <view class="row between notice-foot">
+        <text class="muted small">{{item.createdText}}</text>
+        <text class="arrow">›</text>
+      </view>
+    </view>
+
+    <view class="muted loading-text" wx:if="{{loading}}">加载中…</view>
+    <view class="muted loading-text" wx:elif="{{list.length && finished}}">没有更多了</view>
+  </block>
+</view>

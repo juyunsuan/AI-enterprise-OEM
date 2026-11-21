@@ -2,6 +2,8 @@ import type { HrmOrg, HrmScopeService } from '../hrm/hrm.scope';
 import type { MechanismService } from '../mechanisms/mechanism.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import { stub } from '../../test/doubles';
+import { noopErpPort } from '../erp/erp-port';
+import type { ErpPort } from '../erp/erp-port';
 import { OperationRiskService } from './operation-risk.service';
 
 const org: HrmOrg = {
@@ -16,22 +18,30 @@ const org: HrmOrg = {
 };
 
 function prismaStub(data: {
-  receivables?: object[];
-  payables?: object[];
   projects?: object[];
   costs?: { projectId: number; _sum: { amount: number } }[];
-  stocks?: object[];
   tasks?: object[];
 }) {
   return stub<PrismaService>({
-    erpReceivable: { findMany: jest.fn(async () => data.receivables || []) },
-    erpPayable: { findMany: jest.fn(async () => data.payables || []) },
     pjProject: { findMany: jest.fn(async () => data.projects || []) },
     pjCostItem: { groupBy: jest.fn(async () => data.costs || []) },
-    erpStock: { findMany: jest.fn(async () => data.stocks || []) },
-    erpVariant: { findMany: jest.fn(async () => []) },
-    erpVendor: { findMany: jest.fn(async () => []) },
     pjTask: { findMany: jest.fn(async () => data.tasks || []) },
+  });
+}
+
+/** ERP 读侧端口替身：按被测路径返回读数 DTO。 */
+function erpStub(data: {
+  receivables?: object[];
+  payables?: object[];
+  stocks?: object[];
+  variants?: object[];
+}) {
+  return stub<ErpPort>({
+    ...noopErpPort,
+    listOverdueReceivables: jest.fn(async () => data.receivables || []),
+    listOverduePayables: jest.fn(async () => data.payables || []),
+    listStock: jest.fn(async () => data.stocks || []),
+    listVariants: jest.fn(async () => data.variants || []),
   });
 }
 
@@ -46,6 +56,22 @@ function scopeStub(): HrmScopeService {
 describe('OperationRiskService：经营异常模型', () => {
   it('五类异常按现有单据现场扫描出信号，并给责任人派单', async () => {
     const prisma = prismaStub({
+      projects: [
+        { id: 10, name: '项目 X', ownerId: 'pm-1', budgetAmount: 1000 },
+      ],
+      costs: [{ projectId: 10, _sum: { amount: 1300 } }],
+      tasks: [
+        {
+          id: 9,
+          title: '超期任务',
+          dueDate: '2026-10-03',
+          assigneeId: 'staff-1',
+          assigneeType: 'STAFF',
+          projectId: 10,
+        },
+      ],
+    });
+    const erp = erpStub({
       receivables: [
         {
           id: 1,
@@ -66,19 +92,16 @@ describe('OperationRiskService：经营异常模型', () => {
           dueDate: '2026-10-02',
         },
       ],
-      projects: [
-        { id: 10, name: '项目 X', ownerId: 'pm-1', budgetAmount: 1000 },
-      ],
-      costs: [{ projectId: 10, _sum: { amount: 1300 } }],
       stocks: [{ warehouseId: 1, variantId: 5, onHand: 1, reorderPoint: 10 }],
-      tasks: [
+      // 变体读数存在 → 派单会尝试建补货申请；写侧 create 不在替身里，
+      // ensureReplenishment 失败被吞掉，不影响「异常→任务」主断言。
+      variants: [
         {
-          id: 9,
-          title: '超期任务',
-          dueDate: '2026-10-03',
-          assigneeId: 'staff-1',
-          assigneeType: 'STAFF',
-          projectId: 10,
+          id: 5,
+          sku: 'SKU-5',
+          name: '商品甲',
+          productId: 1,
+          purchasePrice: 10,
         },
       ],
     });
@@ -89,6 +112,7 @@ describe('OperationRiskService：经营异常模型', () => {
       scopeStub(),
       stub<MechanismService>({ dispatch }),
       { assign },
+      erp,
     );
     const signals = await service.dispatchRisks(org);
     expect(signals.map((item) => item.kind).sort()).toEqual(
@@ -123,7 +147,8 @@ describe('OperationRiskService：经营异常模型', () => {
   });
 
   it('关闭前复核：异常仍在就拒绝关闭并给出原因', async () => {
-    const prisma = prismaStub({
+    const prisma = prismaStub({});
+    const erp = erpStub({
       receivables: [
         {
           id: 1,
@@ -140,6 +165,7 @@ describe('OperationRiskService：经营异常模型', () => {
       scopeStub(),
       stub<MechanismService>({ dispatch: jest.fn() }),
       { assign: jest.fn() },
+      erp,
     );
     const blocked = await service.recheck(org, 'receivable:1');
     expect(blocked.cleared).toBe(false);

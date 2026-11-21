@@ -1,0 +1,53 @@
+<view class="diy-page" style="{{pageStyle}}">
+  <diy-block wx:for="{{blocks}}" wx:key="key" type="{{item.type}}" props="{{item.props}}" ctx="{{ctx}}" />
+
+  <view class="search-bar" bindtap="goSearch">
+    <view class="search-box">搜索商品</view>
+  </view>
+
+  <view class="body">
+    <scroll-view class="side" scroll-y="{{true}}">
+      <view
+        class="side-item {{activeIndex === index ? 'on' : ''}}"
+        wx:for="{{categories}}"
+        wx:key="id"
+        data-index="{{index}}"
+        bindtap="selectCategory"
+      >
+        {{item.name}}
+      </view>
+      <view class="side-empty" wx:if="{{!categories.length}}">{{error || '暂无分类'}}</view>
+    </scroll-view>
+
+    <scroll-view class="main" scroll-y="{{true}}">
+      <view class="sub-row" wx:if="{{subCategories.length > 1}}">
+        <view
+          class="sub-chip {{activeCategoryId === item.id || (item.id === 0 && activeCategoryId === categories[activeIndex].id) ? 'on' : ''}}"
+          wx:for="{{subCategories}}"
+          wx:key="id"
+          data-id="{{item.id}}"
+          data-name="{{item.name}}"
+          bindtap="selectSub"
+        >
+          {{item.name}}
+        </view>
+      </view>
+
+      <view class="goods" wx:for="{{goods}}" wx:key="id" data-id="{{item.id}}" bindtap="openGoods">
+        <image class="pic" src="{{item.image}}" mode="aspectFill" lazy-load="{{true}}" />
+        <view class="info">
+          <view class="name ellipsis-2">{{item.title}}</view>
+          <view class="sub ellipsis" wx:if="{{item.subtitle}}">{{item.subtitle}}</view>
+          <view class="foot">
+            <text class="price">¥{{item.priceText}}</text>
+            <text class="sales">{{item.sales}} 人买过</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="empty" wx:if="{{!goods.length && !loading}}">这个分类下还没有上架商品</view>
+      <view class="loading" wx:if="{{loading}}">加载中…</view>
+      <view class="loading" wx:elif="{{noMore && goods.length}}">没有更多了</view>
+    </scroll-view>
+  </view>
+</view>

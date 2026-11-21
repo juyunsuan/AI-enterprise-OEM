@@ -1,0 +1,88 @@
+.manage {
+  margin-top: 24rpx;
+  padding-top: 24rpx;
+  border-top: 1rpx solid #f0f1f5;
+}
+
+.switch-row {
+  align-items: center;
+  padding: 8rpx 0;
+}
+
+.switch-main {
+  flex: 1;
+  margin-right: 16rpx;
+}
+
+.switch-label {
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.bind-row {
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #f0f1f5;
+}
+
+.bind-row:last-child {
+  border-bottom: none;
+}
+
+.bind-name {
+  display: flex;
+  align-items: center;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.qa {
+  margin-top: 24rpx;
+}
+
+.q-bubble {
+  padding: 16rpx 20rpx;
+  border-radius: 20rpx 4rpx 20rpx 20rpx;
+  background: #1a73e8;
+  color: #fff;
+  font-size: 28rpx;
+  line-height: 1.6;
+  word-break: break-all;
+}
+
+.a-meta {
+  margin-top: 8rpx;
+  color: #a6abb3;
+  font-size: 22rpx;
+}
+
+.a-bubble {
+  margin-top: 8rpx;
+  padding: 16rpx 20rpx;
+  border-radius: 4rpx 20rpx 20rpx 20rpx;
+  background: #f7f8fa;
+  font-size: 28rpx;
+  line-height: 1.7;
+  word-break: break-all;
+}
+
+.a-ref {
+  margin-top: 12rpx;
+  padding-top: 12rpx;
+  border-top: 1rpx solid #e6e8ee;
+  color: #5c6068;
+  font-size: 24rpx;
+  line-height: 1.6;
+}
+
+.ask-input {
+  margin-top: 24rpx;
+  height: 160rpx;
+}
+
+.waiting {
+  margin-top: 16rpx;
+}
+
+.send {
+  margin-top: 16rpx;
+}
