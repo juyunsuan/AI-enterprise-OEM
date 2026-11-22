@@ -11,20 +11,57 @@
  *     POST /result 回结果，Agent 侧 await 拿到。
  *
  * 动作清单（插件侧实现）：
- *   tabs.list / tab.open / tab.close / page.text / page.click / page.fill / page.eval
+ *   tabs.list / tab.open / tab.activate / tab.close / page.text
+ *   page.step / page.read / page.fill / page.click / page.press / page.wait / page.focus
  *
  * 这一层只做搬运与超时，不解析网页、不读 Cookie、不注入账号凭据。
  */
 
+const crypto = require('crypto');
+const fs = require('fs');
 const http = require('http');
+const path = require('path');
 const { URL } = require('url');
 
 const DEFAULT_PORT = 35911;
 const LONG_POLL_MS = 25000;
 const ACTION_TIMEOUT_MS = 30000;
 const MAX_QUEUE = 20;
-/** 桥接扩展的固定 ID（manifest.key 派生）：只有它能用 /bootstrap 自助取令牌。 */
+/** 旧内置副本的固定 ID；实际以随包 manifest.key 实算的 ID 为准。 */
 const BRIDGE_EXTENSION_ID = 'hadiefimeiaaaheoffhkalggnkmlnlbg';
+
+/** manifest.key（RSA 公钥 DER）→ Chrome 扩展 ID：SHA-256 前 16 字节映射 a–p。 */
+function extensionIdOf(publicKeyBase64) {
+  const der = Buffer.from(String(publicKeyBase64 || ''), 'base64');
+  if (!der.length) return '';
+  const hash = crypto.createHash('sha256').update(der).digest();
+  let id = '';
+  for (const byte of hash.subarray(0, 16)) {
+    id += String.fromCharCode(97 + (byte >> 4));
+    id += String.fromCharCode(97 + (byte & 0x0f));
+  }
+  return id;
+}
+
+function builtinRoot() {
+  const packaged = path.join(process.resourcesPath || '', 'builtin-extensions');
+  if (process.resourcesPath && fs.existsSync(packaged)) return packaged;
+  return path.join(__dirname, '..', '..', 'builtin-extensions');
+}
+
+/** 允许自助取令牌的扩展 ID：常量 + 随包副本实算（换 key 后无需改代码）。 */
+const BOOTSTRAP_IDS = (() => {
+  const ids = new Set([BRIDGE_EXTENSION_ID]);
+  try {
+    const file = path.join(builtinRoot(), 'chrome-bridge-extension', 'manifest.json');
+    const manifest = JSON.parse(fs.readFileSync(file, 'utf8'));
+    const computed = extensionIdOf(manifest.key);
+    if (computed) ids.add(computed);
+  } catch (error) {
+    /* 没打包或没有 key 时退回常量 */
+  }
+  return ids;
+})();
 
 function json(res, status, body) {
   const text = JSON.stringify(body == null ? {} : body);
@@ -139,10 +176,11 @@ class ChromeBridge {
     const url = new URL(req.url || '/', 'http://127.0.0.1');
     if (req.method === 'OPTIONS') return json(res, 204, {});
 
-    // 预装扩展自助取令牌：只认固定扩展 ID 的 Origin，用户无需手填 token。
+    // 预装扩展自助取令牌：只认内置副本的 Origin，用户无需手填 token。
     if (req.method === 'GET' && url.pathname === '/bootstrap') {
       const origin = String(req.headers.origin || '');
-      if (origin !== 'chrome-extension://' + BRIDGE_EXTENSION_ID) {
+      const id = origin.startsWith('chrome-extension://') ? origin.slice('chrome-extension://'.length) : '';
+      if (!id || !BOOTSTRAP_IDS.has(id)) {
         return json(res, 403, { ok: false, error: '来源不受信任' });
       }
       if (!this.token) return json(res, 503, { ok: false, error: '桥接令牌未就绪' });

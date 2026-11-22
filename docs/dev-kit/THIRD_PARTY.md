@@ -19,6 +19,7 @@
 | DS Bot | 见 `awbot-app/THIRD_PARTY_NOTICES.md` | Apache-2.0 | vendored 改写 | `awbot-app/` | 同上「DS Bot」段 | 已修改，须保留许可与变更说明 | ✅ |
 | dartssh2 | https://github.com/vicajilau/dartssh2（4.1.0） | MIT | vendored 本地包 | `awbot-app/` | `awbot-app/packages/dartssh2/VENDORED.md`、包内 `LICENSE` | 保留包内原始许可；Flutter 按本地依赖收集 | ✅ |
 | Automa | https://github.com/AutomaApp/automa | 未标注（待补） | 随客户端内置扩展 | `bot-host-client/` | `bot-host-client/builtin-extensions/automa/` | 随包分发；当前缺独立 LICENSE / NOTICE / PROVENANCE | ❌ |
+| fingerprint-chromium 指纹内核 | https://github.com/adryfish/fingerprint-chromium | BSD-3-Clause（The ungoogled-chromium Authors） | 随包分发二进制（未改动） | DSH 桌面端构建：`deepseek-harness/apps/desktop/resources/kernels/150.0.7871.186/` | 内核目录内 `LICENSE.ungoogled-chromium.txt`；ZIP sha256 `4d549c326e51ebbabf562fd365eb5380d9d4a81200da2c60f075c688d9a77e03`；说明见同目录 `README.md` | 仅按 `--fingerprint=` 协议调用，不改二进制；Chromium 组件级许可清单仍需在正式发布前补全 | ⚠️ |
 | BotBuddy 客户端 | 本仓 `bot-host-client/` | 与本仓一致（AGPL-3.0-only） | 自研 | `bot-host-client/` | `bot-host-client/` | 第三方 Electron / Chromium 许可随分发目录保留 | ⚠️ |
 | WorkBuddy 客户端 | 本仓 `workbuddy-host-client/` | 与本仓一致（AGPL-3.0-only） | 自研 | `workbuddy-host-client/` | `workbuddy-host-client/` | 同上 | ⚠️ |
 | CRMEB v8.0 | https://www.crmeb.com/ | Apache-2.0 | **仅参考**（业务分层与数据结构） | `.scratch/`（本地，不入库） | `README.md` 致谢；`.gitignore` 忽略 `.scratch/` | 未移植源码，不计入分发 | ⚠️ |
@@ -26,7 +27,7 @@
 | bee 点餐小程序 | https://github.com/woniudiancang/bee | Mulan PSL v2 | **仅参考**（点餐页布局与交互） | 本地附件，不入库 | `takeout-miniprogram/` 为独立重写，未复制上游源码或图片 | 不计入分发；如后续移植须保留许可证与来源 | ✅ |
 | ub-mode（技能文本） | https://github.com/poteto（loosely based on poteto-mode / pstack） | 文档引用（随本仓以 AGPL-3.0 分发） | 文档引用 + 改写文本 | `docs/dev-kit/skills/ub-mode/` | `docs/ub-mode/README.md`、技能内 `references/README.md` | crapper / dryer / mutator / uml-viewer 为外部工具，本仓不随附 | ✅ |
 
-## 必须如实保留的三条现状
+## 必须如实保留的四条现状
 
 1. `bot-host-client/` 内置 Automa 目前**没有独立许可证声明**，标 ❌；补 `THIRD_PARTY_NOTICES.md`
    或直接引用 Automa 上游许可是待办。在此之前不得宣称该部分已合规。
@@ -34,6 +35,9 @@
    「提供对应源码」。`awbot-app/` 的第三方组件**不在商业授权范围**（`docs/商业授权说明.md`）。
 3. `update/sources/` 下的旧 `LICENSE` 为 **Apache-2.0** 历史残留，不代表当前项目许可，
    也不得作为分发许可依据。
+4. AWBotDSH 桌面安装包自 2026-11-22 起**随包分发 fingerprint-chromium 指纹内核**
+   （150.0.7871.186，BSD-3 上游声明已随包写入内核目录）。但 Chromium 自身的组件级许可清单
+   尚未随包补全，在此之前不得宣称该部分已完全合规；正式发布前必须补齐组件清单。
 
 ## 维护
 

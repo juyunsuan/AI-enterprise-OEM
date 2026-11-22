@@ -34,6 +34,17 @@ cuante publiques demandas / servicios al mercado upstream (AIworkin), prepares e
 
 ---
 
+## 🌐 Fuente de modelo web: el cliente usa los chats web ya iniciados, sin gastar saldo de API
+
+El cliente de escritorio AWBotDSH puede usar tus **chats web con sesión iniciada** como fuente de modelo: DeepSeek, Wenxin (ERNIE), Kimi, Doubao, GLM, Qwen, Yuanbao y Spark. Con la sesión iniciada en ese navegador, el cliente pregunta directamente a la página y **no consume saldo de API**.
+
+- Dónde: Ajustes → Navegador → Modelo web y luego elige "…(Web)" en el selector de modelos
+- Dos entornos: primero el navegador de huella integrado (control CDP directo); Chrome local como respaldo (carga la extensión incluida y pega la URL y el token del puente)
+- Al campo de texto solo se envía **la pregunta actual**; el prompt del sistema y los resultados de herramientas nunca se sincronizan
+- Límites: es automatización del navegador, no una API oficial; los cambios de diseño o el control de riesgo pueden romperla. Sirve para Q&A simple, no para tareas de agente con muchas herramientas. Nunca se leen cookies, contraseñas ni captchas
+
+---
+
 ## 📸 Vista previa de la interfaz
 
 > Las siguientes capturas provienen del sitio de demostración <https://enterprise.aiworkin.com> (vista del superadministrador; a la izquierda, el menú «Workbench / Servicios de negocio»).

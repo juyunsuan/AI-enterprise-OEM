@@ -32,6 +32,17 @@ plus a platform admin console organized into 5 groups with 31 sections in total 
 
 ---
 
+## 🌐 Web model source: the client spends web chat capacity, not API quota
+
+The AWBotDSH desktop client can treat your **signed-in web chats** as a model source: DeepSeek, Wenxin (ERNIE), Kimi, Doubao, GLM, Qwen, Yuanbao and Spark. Once you are logged in in that browser, the client asks the page directly — **no API balance is consumed**.
+
+- Where: Settings → Browser → Web model, then pick "…(Web)" in the model selector
+- Two carriers: the built-in fingerprint browser (driven over CDP) first, local Chrome as fallback (load the shipped Chrome extension, paste the bridge URL and token)
+- Only the current question is typed into the page — system prompts and tool results are never synced into it
+- Limits: this is browser automation, not an official API, so redesigns or risk controls can break it. It suits plain Q&A, not tool-heavy agent runs. Cookies, passwords and captchas are never read.
+
+---
+
 ## 📸 UI Preview
 
 > The screenshots below are taken from the demo site <https://enterprise.aiworkin.com> (super-admin view; the left sidebar shows the "Workbench / Business Services" menus).

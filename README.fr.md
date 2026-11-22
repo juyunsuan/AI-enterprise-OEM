@@ -38,6 +38,17 @@ et d'approvisionnement locales sont **utilisables sans clé** ; pour publier des
 
 ---
 
+## 🌐 Source de modèle web : le client utilise les chats web déjà connectés, sans dépenser de quota API
+
+Le client bureau AWBotDSH peut utiliser vos **chats web déjà connectés** comme source de modèle : DeepSeek, Wenxin (ERNIE), Kimi, Doubao, GLM, Qwen, Yuanbao et Spark. Une fois connecté dans ce navigateur, le client pose la question directement à la page et **ne consomme aucun quota API**.
+
+- Où : Réglages → Navigateur → Modèle web, puis choisissez « …(Web) » dans le sélecteur de modèle
+- Deux supports : d'abord le navigateur d'empreinte intégré (pilotage CDP direct), Chrome local en repli (chargez l'extension fournie et renseignez l'URL et le jeton du pont)
+- Seule **la question courante** est saisie dans le champ : le prompt système et les résultats d'outils ne sont jamais synchronisés
+- Limites : il s'agit d'automatisation de navigateur, pas d'une API officielle ; refontes du site ou contrôles de risque peuvent la casser. Adapté au Q&A simple, pas aux tâches d'agent riches en outils. Cookies, mots de passe et captchas ne sont jamais lus
+
+---
+
 ## 📸 Aperçu de l'interface
 
 > Les captures ci-dessous proviennent du site de démonstration <https://enterprise.aiworkin.com> (vue super-administrateur, menus « Espace de travail / Services métier » à gauche).

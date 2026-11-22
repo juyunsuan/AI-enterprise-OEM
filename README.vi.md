@@ -32,6 +32,17 @@ khi cần công bố nhu cầu / dịch vụ lên thị trường thượng ngu�
 
 ---
 
+## 🌐 Nguồn mô hình web: client dùng trực tiếp sức mạnh chat web, không tốn hạn mức API
+
+Client desktop AWBotDSH có thể dùng **các chat web đã đăng nhập** làm nguồn mô hình: DeepSeek, Wenxin (ERNIE), Kimi, Doubao, GLM, Qwen, Yuanbao và Spark. Chỉ cần đăng nhập trong trình duyệt đó, client sẽ hỏi trực tiếp trang web và **không tiêu tốn hạn mức API**.
+
+- Vị trí: Cài đặt → Trình duyệt → Mô hình web, rồi chọn "…(Web)" trong bộ chọn mô hình
+- Hai môi trường: ưu tiên trình duyệt vân tay tích hợp (điều khiển CDP trực tiếp); Chrome cục bộ là phương án dự phòng (nạp tiện ích Chrome đi kèm, điền URL và token của cầu nối)
+- Chỉ gửi **câu hỏi hiện tại** vào ô nhập; system prompt và kết quả công cụ không bao giờ được đồng bộ
+- Giới hạn: đây là tự động hóa trình duyệt, không phải API chính thức, nên thay đổi giao diện hoặc kiểm soát rủi ro có thể làm hỏng. Phù hợp hỏi đáp thông thường, không phù hợp tác vụ agent dùng nhiều công cụ. Không đọc cookie, mật khẩu hay captcha
+
+---
+
 ## 📸 Xem trước giao diện
 
 > Ảnh chụp dưới đây lấy từ trang demo <https://enterprise.aiworkin.com>（góc nhìn siêu quản trị viên, bên trái là menu「Bàn làm việc / Dịch vụ nghiệp vụ」）.

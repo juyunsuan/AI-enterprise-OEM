@@ -1677,7 +1677,7 @@
     $('fpCores').value = profile ? String(profile.hardwareConcurrency || 0) : '0';
     $('fpSeed').value = profile ? profile.seed : '';
     $('fpCanvas').value = profile ? profile.canvasNoise : 'off';
-    $('fpAudio').value = profile ? profile.audioNoise : 'light';
+    $('fpAudio').value = profile ? profile.audioNoise : 'off';
     $('fpWebrtc').value = profile ? profile.webrtcMode : 'proxy';
     const proxy = (profile && profile.proxy) || {
       mode: 'direct',
