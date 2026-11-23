@@ -1,12 +1,14 @@
 "use client";
 
 import {
+  ApartmentOutlined,
   CarOutlined,
   GlobalOutlined,
   MedicineBoxOutlined,
   MessageOutlined,
   PayCircleOutlined,
   QuestionCircleOutlined,
+  ReadOutlined,
   SendOutlined,
   ShopOutlined,
   TeamOutlined,
@@ -147,6 +149,36 @@ const TOOLS: BuilderTool[] = [
     description:
       "开一个自己的圈子社区：账号负责人就是社区管理员，建分类与圈子、审核圈主与成员、管理图文帖与楼中楼评论、处理举报与站内消息；C 端成员独立于站内账号。客服复用 AI 客服，AI 运营助手走平台模型网关，按订阅时间/流量/访问量/浏览量扣积分启动。",
     path: "/circle",
+  },
+  {
+    feature: "rental",
+    module: "rental",
+    group: "mini",
+    icon: <CarOutlined aria-hidden />,
+    title: "租赁管理小程序",
+    description:
+      "通用租赁（车辆 / 设备 / 场地）的租品、租单、取还验车、押金结算与门店统计；租客小程序与员工工作台分身份使用，客服复用 AI 客服、私域复用企业微信 SCRM，后台账号与权限沿用本站体系。",
+    path: "/rental",
+  },
+  {
+    feature: "park",
+    module: "park",
+    group: "mini",
+    icon: <ApartmentOutlined aria-hidden />,
+    title: "园区管理小程序",
+    description:
+      "运营一个园区：租约与周期账单（可同步 ERP 应收）、员工与门岗核验、访客与场地预约通行码、公告与活动报名；租户在小程序里查看自己的账单与预约，账号与权限沿用本站体系。",
+    path: "/park",
+  },
+  {
+    feature: "quiz",
+    module: "quiz",
+    group: "mini",
+    icon: <ReadOutlined aria-hidden />,
+    title: "答题小程序",
+    description:
+      "做自己的答题/考试小程序：建题库、录题或让 AI 按资料出题，发布后选手在微信里练习、考试、看错题与排行；题目与交卷记录都落在账号自己的多维表格，可直接筛选导出；封面与学习资料从数字资产管理选取，客服入口绑定已有 AI 客服站点。",
+    path: "/quiz",
   },
   {
     feature: "global-site",

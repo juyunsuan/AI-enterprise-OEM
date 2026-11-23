@@ -297,7 +297,7 @@ export const adminRoute: EnterpriseRoute = {
 
 /**
  * 驾驶舱独立置顶，菜单按当前身份筛选。
- * 顺序：工作台 → 业务服务 → 商务人脉（AI社交） → 模型服务（含 AIPDD 算力平台外链） → 管理设置（含平台机制） → 智能硬件。
+ * 顺序：工作台 → 业务服务 → 商务人脉（AI社交） → 模型服务 → 管理设置（含平台机制） → 智能硬件。
  */
 export const enterpriseRoute: EnterpriseRoute = {
   path: "/",
@@ -334,11 +334,8 @@ export const enterpriseRoute: EnterpriseRoute = {
         },
         { path: "/marketing-tools", name: "营销工具", icon: "horn" },
         // 「建站管理」卡片页（一个菜单，页内两板块：小程序 / Web建站）；新增建站类工具继续往卡片页加卡并在功能目录挂子码。
+        // 建站工具一律只在 /site-builder 的卡片里出现，不再往工作台平铺菜单项（租赁 / 园区 / 答题小程序均已收进卡片页）。
         { path: "/site-builder", name: "建站管理", icon: "mobile" },
-        { path: "/rental", name: "租赁管理", icon: "car" },
-        { path: "/park", name: "园区管理", icon: "shop" },
-        // 小程序开发与发布：源码包下载 + AI 客户端开发建议 + 微信侧发布步骤（原发布说明抽屉的独立页）。
-        { path: "/site-builder/mini-dev-guide", name: "小程序开发与发布", icon: "code" },
         /**
          * 「智慧分析」营销工具同款卡片页（一个菜单，页内四张工具卡：
          * 全域内容热点分析、流行趋势分析、AI-FDE实施分析、企业咨询；点卡片进各自工具页）。
@@ -355,7 +352,6 @@ export const enterpriseRoute: EnterpriseRoute = {
         { path: "/erp", name: "进销存", icon: "shop" },
         { path: "/app-center", name: "应用中心", icon: "appstore" },
         { path: "/question-hall", name: "专题大厅", icon: "peoples" },
-        { path: "/quiz", name: "答题小程序", icon: "file-done" },
       ],
     },
     {
@@ -393,10 +389,6 @@ export const enterpriseRoute: EnterpriseRoute = {
         { path: "/model-plaza", name: "模型广场", icon: "appstore" },
         { path: "/model-settings", name: "模型设置", icon: "setting" },
         { path: "/developer/api-mcp-skill", name: "API-MCP-Skill", icon: "book" },
-        // AIPDD 算力平台外链固定挂在「模型服务」最后
-        { path: "https://app.aipdd.work", name: "AIPDD算力平台", icon: "bolt" },
-        // A2A 供需平台外链：功能目录里的 ai-a2a 此前没有对应菜单项，关掉它什么也不会发生，这里补上入口。
-        { path: "https://www.aiworkin.com", name: "A2A供需平台", icon: "link" },
       ],
     },
     {
@@ -547,7 +539,7 @@ export function deniedModuleKeysFor(me: EnterpriseMe | null): Set<string> {
  * 只用当前身份组织菜单；具备其他身份不会混入其管理入口。
  * 平台管理员侧栏只拼「平台管理」后台板块与工具菜单，不含「管理设置」分组（身份与资质 / 积分中心 / 我的邀请 / 平台机制属个人账户视角），
  * 也不含「模型服务」「智能硬件」里的账户级自助入口（见 ADMIN_HIDDEN_INTEGRATION_PATHS）。
- * `hiddenMenuPaths` 来自后台「站点设置 → 用户侧菜单显隐」，覆盖前台侧栏每一条菜单（含驾驶舱入口与「AIPDD算力平台」外链），
+ * `hiddenMenuPaths` 来自后台「站点设置 → 用户侧菜单显隐」，覆盖前台侧栏每一条菜单（含驾驶舱入口），
  * 对管理员与普通用户一致生效：只控制菜单显示，直接访问链接不受影响，某分组内全部隐藏后该分组自动消失。
  */
 export function navigationFor(

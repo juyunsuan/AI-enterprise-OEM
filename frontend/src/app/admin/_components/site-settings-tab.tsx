@@ -15,7 +15,7 @@ import { PermissionNotice, useAdminData } from "./common";
 /**
  * 用户侧菜单候选项：与侧栏菜单定义（enterpriseRoute）同源，新增/删减栏目只改 routes.ts。
  * 顶级单条（如首页）与每个分组各成一节；分组内的嵌套分组（如「工作台 → 内容创作」）拍平进所属节。
- * 值即菜单里的 path（「AIPDD算力平台」的外链为完整 URL）。
+ * 值即菜单里的 path（外链项为完整 URL）。
  */
 function leafMenuItems(routes: EnterpriseRoute[]): { label: string; value: string }[] {
   return routes.flatMap((route) =>
@@ -260,7 +260,7 @@ export function SiteSettingsTab() {
           <Form.Item
             name="hiddenMenuPaths"
             label="用户侧菜单显隐（勾选即隐藏）"
-            extra="控制前台侧栏每一条菜单是否显示，覆盖首页入口与每个分组（含「AIPDD算力平台」的外链），保存后对所有用户即时生效；仅影响菜单展示，已收藏链接的直接访问不受影响；某分组内的菜单项全部隐藏后该分组自动消失。"
+            extra="控制前台侧栏每一条菜单是否显示，覆盖首页入口与每个分组，保存后对所有用户即时生效；仅影响菜单展示，已收藏链接的直接访问不受影响；某分组内的菜单项全部隐藏后该分组自动消失。"
           >
             <MenuVisibilityPicker />
           </Form.Item>

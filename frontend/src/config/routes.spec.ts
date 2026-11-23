@@ -34,12 +34,23 @@ describe("navigationFor 站点级菜单显隐", () => {
     );
     // 「工作流」已收进 Agent 的「工作流」页签，不再是工作台独立菜单项
     expect(leaves(menu, "工作台")).not.toContain("/workflow");
+    // 建站工具只在 /site-builder 卡片页出现，不平铺回工作台菜单
+    expect(leaves(menu, "工作台")).not.toEqual(
+      expect.arrayContaining([
+        "/rental",
+        "/park",
+        "/quiz",
+        "/site-builder/mini-dev-guide",
+      ]),
+    );
     expect(leaves(menu, "业务服务")).toHaveLength(12);
     expect(leaves(menu, "商务人脉")).toEqual(["/ai-social"]);
     expect(leaves(menu, "管理设置")).toContain("/points");
     expect(leaves(menu, "管理设置")).toContain("/developer/mechanisms");
     expect(leaves(menu, "模型服务")).toContain("/developer/api-mcp-skill");
-    expect(leaves(menu, "模型服务")).toContain("https://app.aipdd.work");
+    // 「AIPDD算力平台」「A2A供需平台」外链已删除，模型服务只剩站内入口
+    expect(leaves(menu, "模型服务")).not.toContain("https://app.aipdd.work");
+    expect(leaves(menu, "模型服务")).not.toContain("https://www.aiworkin.com");
     expect(leaves(menu, "智能硬件")).toEqual([
       "/hardware",
       "/hardware/devices",
@@ -49,12 +60,12 @@ describe("navigationFor 站点级菜单显隐", () => {
     expect(topPaths(menu)).not.toContain("AI增值服务");
   });
 
-  it("按路径隐藏：工作台 / 模型服务 / 外链菜单可逐项隐藏，同组其它项保留", () => {
-    const menu = navigationFor(me, ["/crm", "/developer/api-mcp-skill", "https://app.aipdd.work"]);
+  it("按路径隐藏：工作台与模型服务的菜单项可逐项隐藏，同组其它项保留", () => {
+    const menu = navigationFor(me, ["/crm", "/developer/api-mcp-skill", "/model-plaza"]);
     expect(leaves(menu, "工作台")).not.toContain("/crm");
     expect(leaves(menu, "工作台")).toContain("/erp");
     expect(leaves(menu, "模型服务")).not.toContain("/developer/api-mcp-skill");
-    expect(leaves(menu, "模型服务")).not.toContain("https://app.aipdd.work");
+    expect(leaves(menu, "模型服务")).not.toContain("/model-plaza");
     expect(leaves(menu, "模型服务")).toContain("/model-settings");
     expect(leaves(menu, "管理设置")).toContain("/developer/mechanisms");
   });

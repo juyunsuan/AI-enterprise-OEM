@@ -134,6 +134,12 @@ export const FEATURE_SEED: FeatureSeedNode[] = [
     '/marketing-tools?tab=international-site',
     40,
   ),
+  // 答题小程序：题库与交卷记录落在账号自己的多维表格，选手端走微信免登录通道。
+  menu('quiz', 'site-builder', '答题小程序', '/quiz', 41),
+  // 园区管理：租约与周期账单、门岗核验、访客预约通行码，租户端是微信小程序。
+  menu('park', 'site-builder', '园区管理小程序', '/park', 42),
+  // 租赁管理（车辆 / 设备 / 场地通用建模）只有 RBAC 模块 key，功能目录暂不挂子码：
+  // 卡片入口靠 module 收窄，接口仍由 rbac 的 /enterprise/rental/ 前缀授权，不因本行改动而新增整域拦截。
   // ---------- 智慧分析（营销工具同款卡片页：单菜单 + 两张工具卡子项）----------
   menu('insight', 'workbench', '智慧分析', '/insight', 65),
   menu(
@@ -154,12 +160,10 @@ export const FEATURE_SEED: FeatureSeedNode[] = [
   menu('service-desk', 'workbench', 'AI客服', '/service-desk', 130),
   menu('app-center', 'workbench', '应用中心', '/app-center', 140),
   menu('question-hall', 'workbench', '专题大厅', '/question-hall', 150),
-  menu('quiz', 'workbench', '答题小程序', '/quiz', 155),
   menu('kb', 'workbench', '知识库', '/kb', 160),
   menu('hrm', 'workbench', 'HR工作台', '/hrm', 170),
   menu('project', 'workbench', '项目管理', '/project', 180),
   menu('erp', 'workbench', '进销存', '/erp', 190),
-  menu('park', 'workbench', '园区管理', '/park', 195),
   // ---------- 业务服务 ----------
   group('business-services', '业务服务', 20),
   menu('marketing', 'business-services', '营销服务', '/marketing', 10),
