@@ -192,14 +192,14 @@ M0 未完成项：DeepSeek 真实输入上限、Kimi/豆包等其余站点证据
 | T4 工具伪协议 | ✅ | `tools.ts`：标记块 + JSON Schema 子集校验；坏 `arguments` 在网关侧就拦住，不交给 DSH |
 | T5 真站跑通 | ✅ | DeepSeek 连续两轮正常；工具轮产出合法 `tool_calls`（`scripts/gateway-live-check.mts`、`gateway-live-tools-check.mts`） |
 | T5.1 真站暴露的缺陷 | ✅ 已修 | SSE 漏 `data:` 前缀；按事件数而非字符数判成败；BATCH 的 `p:"response"` 抢走正文续写路径；账本并发丢键；跨实例陈旧缓存 |
-| T5.2 站点会话证实 → 启用增量 | ⏳ | 站点会话 id 未经证实前一律整段重发（多发只是慢，少发会答非所问）。下一步：从已旁听的请求/响应里核对会话字段名（只记字段名与长度），证实后 `planTurn` 才允许 `delta` |
+| T5.2 站点会话证实 → 启用增量 | ✅ 真站实测通过 | 会话标识改为按 URL 结构判定（路由段 / 哈希路由 / 查询参数，段名白名单 `c\|chat\|conversation\|session`），DSH 仓 `awbotdsh-browser/src/gateway/sites.ts` 的 `siteSessionFromHref`；真机第二轮 `同一会话: true`、只发增量且答案延续了首轮上下文（`scripts/gateway-live-check.mts`，档案 baidu，attach 58880）。自测抓到两处形态缺陷：`?chat_id=` 漏读、`/api/v0/chat/completion` 被误当会话，均已修并钉进 `tests/gateway-sites.spec.ts`（9 条） |
 | T5.3 文心接入 | ⛔ 停 | 自动轮次触发图形验证码，按红线不绕过；未取证站点不接入 |
-| T6 设置面板展示 baseUrl / key | ⏳ | DSH 渠道填写要有处可抄 |
+| T6 设置面板展示 baseUrl / key | ✅ 代码就位，UI 待真机复核 | 状态接口已回 `gateway.status()`（running/port/baseUrl/token/models）；面板 `设置 → 浏览器设置 → 网页模型` 改为网关优先：可复制 Base URL 与 Key、模型 id 列表、DSH 渠道填法说明；旧 Chrome 桥降为第二张卡并标注"一个版本周期后退役" |
 | T7 退役旧 DOM 链路 | ⏳ | `src/webchat/` 保留一个版本周期；`.oxlintrc.staged.json` 里对该目录的豁免随删除一并撤掉 |
 
-**验证口径**：`packages/client/awbotdsh-browser/tests/` 10 个文件 115 用例通过；结构门 `scripts/check-webchat-parts.mts` 34 项通过；staged oxlint 0 error；网关代码内无凭据字段、无整包正文日志。
+**验证口径**：`packages/client/awbotdsh-browser/tests/` 11 个文件 124 用例通过；结构门 `scripts/check-webchat-parts.mts` 34 项通过；staged oxlint 0 error；网关代码内无凭据字段、无整包正文日志。真站两项实测：两轮问答（第二轮走增量）与工具轮 `finish_reason: tool_calls` + 参数通过模式校验。
 
-**未验证**：T5.2 之前增量发送（`mode: 'delta'`）在真站上尚无证据——站点会话未证实，线上实际走的都是整段重发；真站工具轮次本轮未复跑（需登录态）。
+**未验证**：T6 面板的实际渲染效果需在带界面的客户端里人眼确认；本机构建产物是否把新 `lib` 打进 `app.asar` 由打包后自证。
 
 ## 12. 证据索引（自查用）
 
