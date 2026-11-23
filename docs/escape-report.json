@@ -1,19 +1,19 @@
 {
   "tool": "escape-audit",
   "version": 2,
-  "commit": "193b148",
+  "commit": "7334e49",
   "date": "2026-11-23",
   "root": "E:\\wwwroot\\oem-enterprise",
-  "files": 2919,
-  "candidates": 13265,
-  "untracked": 0,
+  "files": 2920,
+  "candidates": 13267,
+  "untracked": 1,
   "missing": [],
   "excluded": {
     "dir": 1018,
     "instrument": 2
   },
-  "loc": 1004336,
-  "prodLoc": 863605,
+  "loc": 1004567,
+  "prodLoc": 863694,
   "total": 307,
   "prodTotal": 273,
   "unallowlisted": 301,
@@ -79,29 +79,29 @@
     }
   },
   "byRole": {
+    "test": {
+      "files": 253,
+      "loc": 49621,
+      "total": 32
+    },
     "script": {
       "files": 581,
       "loc": 91252,
       "total": 2
     },
-    "test": {
-      "files": 252,
-      "loc": 49479,
-      "total": 32
-    },
     "prod": {
       "files": 2086,
-      "loc": 863605,
+      "loc": 863694,
       "total": 273
     }
   },
   "workspaces": [
     {
       "ws": "backend",
-      "files": 1277,
-      "loc": 489378,
+      "files": 1278,
+      "loc": 489574,
       "prodFiles": 1027,
-      "prodLoc": 440154,
+      "prodLoc": 440219,
       "total": 258,
       "prodTotal": 225,
       "density": 0.51,
@@ -129,9 +129,9 @@
     {
       "ws": "frontend",
       "files": 967,
-      "loc": 333097,
+      "loc": 333132,
       "prodFiles": 956,
-      "prodLoc": 332336,
+      "prodLoc": 332360,
       "total": 32,
       "prodTotal": 31,
       "density": 0.09,
