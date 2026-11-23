@@ -1,27 +1,25 @@
 {
   "tool": "escape-audit",
   "version": 2,
-  "commit": "afe4402",
-  "date": "2026-11-21",
+  "commit": "193b148",
+  "date": "2026-11-23",
   "root": "E:\\wwwroot\\oem-enterprise",
-  "files": 3079,
-  "candidates": 13565,
-  "untracked": 1157,
-  "missing": [
-    "backend/src/miniprogram/miniprogram-ci.service.ts"
-  ],
+  "files": 2919,
+  "candidates": 13265,
+  "untracked": 0,
+  "missing": [],
   "excluded": {
     "dir": 1018,
     "instrument": 2
   },
-  "loc": 1047983,
-  "prodLoc": 889443,
-  "total": 309,
-  "prodTotal": 274,
-  "unallowlisted": 303,
+  "loc": 1004336,
+  "prodLoc": 863605,
+  "total": 307,
+  "prodTotal": 273,
+  "unallowlisted": 301,
   "allowMatched": 6,
   "allowStale": [],
-  "density": 0.31,
+  "density": 0.32,
   "byCat": {
     "asNever": {
       "total": 99,
@@ -38,8 +36,8 @@
       "dts": 0
     },
     "asUnknownAs": {
-      "total": 179,
-      "prod": 167,
+      "total": 178,
+      "prod": 166,
       "test": 10,
       "script": 2,
       "dts": 0
@@ -66,10 +64,10 @@
       "dts": 0
     },
     "explicitAny": {
-      "total": 6,
+      "total": 5,
       "prod": 5,
       "test": 0,
-      "script": 1,
+      "script": 0,
       "dts": 0
     },
     "tsNocheck": {
@@ -82,35 +80,35 @@
   },
   "byRole": {
     "script": {
-      "files": 681,
-      "loc": 109066,
-      "total": 3
-    },
-    "prod": {
-      "files": 2146,
-      "loc": 889443,
-      "total": 274
+      "files": 581,
+      "loc": 91252,
+      "total": 2
     },
     "test": {
       "files": 252,
-      "loc": 49474,
+      "loc": 49479,
       "total": 32
+    },
+    "prod": {
+      "files": 2086,
+      "loc": 863605,
+      "total": 273
     }
   },
   "workspaces": [
     {
       "ws": "backend",
-      "files": 1287,
-      "loc": 497204,
-      "prodFiles": 1037,
-      "prodLoc": 447985,
-      "total": 259,
-      "prodTotal": 226,
-      "density": 0.5,
+      "files": 1277,
+      "loc": 489378,
+      "prodFiles": 1027,
+      "prodLoc": 440154,
+      "total": 258,
+      "prodTotal": 225,
+      "density": 0.51,
       "cats": {
         "asNever": 98,
         "asAny": 0,
-        "asUnknownAs": 160,
+        "asUnknownAs": 159,
         "tsIgnore": 0,
         "tsExpectError": 0,
         "eslintDisable": 1,
@@ -120,7 +118,7 @@
       "prodCats": {
         "asNever": 76,
         "asAny": 0,
-        "asUnknownAs": 149,
+        "asUnknownAs": 148,
         "tsIgnore": 0,
         "tsExpectError": 0,
         "eslintDisable": 1,
@@ -130,10 +128,10 @@
     },
     {
       "ws": "frontend",
-      "files": 981,
-      "loc": 337336,
-      "prodFiles": 970,
-      "prodLoc": 336575,
+      "files": 967,
+      "loc": 333097,
+      "prodFiles": 956,
+      "prodLoc": 332336,
       "total": 32,
       "prodTotal": 31,
       "density": 0.09,
@@ -185,66 +183,6 @@
         "tsExpectError": 0,
         "eslintDisable": 0,
         "explicitAny": 5,
-        "tsNocheck": 0
-      }
-    },
-    {
-      "ws": "bot-host-client",
-      "files": 133,
-      "loc": 31151,
-      "prodFiles": 36,
-      "prodLoc": 13502,
-      "total": 1,
-      "prodTotal": 0,
-      "density": 0,
-      "cats": {
-        "asNever": 0,
-        "asAny": 0,
-        "asUnknownAs": 0,
-        "tsIgnore": 0,
-        "tsExpectError": 0,
-        "eslintDisable": 0,
-        "explicitAny": 1,
-        "tsNocheck": 0
-      },
-      "prodCats": {
-        "asNever": 0,
-        "asAny": 0,
-        "asUnknownAs": 0,
-        "tsIgnore": 0,
-        "tsExpectError": 0,
-        "eslintDisable": 0,
-        "explicitAny": 0,
-        "tsNocheck": 0
-      }
-    },
-    {
-      "ws": ".tmp-fde-smoke.mjs",
-      "files": 1,
-      "loc": 86,
-      "prodFiles": 0,
-      "prodLoc": 0,
-      "total": 0,
-      "prodTotal": 0,
-      "density": 0,
-      "cats": {
-        "asNever": 0,
-        "asAny": 0,
-        "asUnknownAs": 0,
-        "tsIgnore": 0,
-        "tsExpectError": 0,
-        "eslintDisable": 0,
-        "explicitAny": 0,
-        "tsNocheck": 0
-      },
-      "prodCats": {
-        "asNever": 0,
-        "asAny": 0,
-        "asUnknownAs": 0,
-        "tsIgnore": 0,
-        "tsExpectError": 0,
-        "eslintDisable": 0,
-        "explicitAny": 0,
         "tsNocheck": 0
       }
     },
@@ -671,9 +609,9 @@
     {
       "ws": "packages/contracts",
       "files": 88,
-      "loc": 87507,
+      "loc": 87241,
       "prodFiles": 88,
-      "prodLoc": 87507,
+      "prodLoc": 87241,
       "total": 0,
       "prodTotal": 0,
       "density": 0,
@@ -761,7 +699,7 @@
     {
       "ws": "scripts",
       "files": 101,
-      "loc": 25946,
+      "loc": 25960,
       "prodFiles": 0,
       "prodLoc": 0,
       "total": 0,
@@ -822,66 +760,6 @@
       "ws": "takeout-miniprogram",
       "files": 19,
       "loc": 2502,
-      "prodFiles": 0,
-      "prodLoc": 0,
-      "total": 0,
-      "prodTotal": 0,
-      "density": 0,
-      "cats": {
-        "asNever": 0,
-        "asAny": 0,
-        "asUnknownAs": 0,
-        "tsIgnore": 0,
-        "tsExpectError": 0,
-        "eslintDisable": 0,
-        "explicitAny": 0,
-        "tsNocheck": 0
-      },
-      "prodCats": {
-        "asNever": 0,
-        "asAny": 0,
-        "asUnknownAs": 0,
-        "tsIgnore": 0,
-        "tsExpectError": 0,
-        "eslintDisable": 0,
-        "explicitAny": 0,
-        "tsNocheck": 0
-      }
-    },
-    {
-      "ws": "tmp-onsite-cov.mjs",
-      "files": 1,
-      "loc": 17,
-      "prodFiles": 0,
-      "prodLoc": 0,
-      "total": 0,
-      "prodTotal": 0,
-      "density": 0,
-      "cats": {
-        "asNever": 0,
-        "asAny": 0,
-        "asUnknownAs": 0,
-        "tsIgnore": 0,
-        "tsExpectError": 0,
-        "eslintDisable": 0,
-        "explicitAny": 0,
-        "tsNocheck": 0
-      },
-      "prodCats": {
-        "asNever": 0,
-        "asAny": 0,
-        "asUnknownAs": 0,
-        "tsIgnore": 0,
-        "tsExpectError": 0,
-        "eslintDisable": 0,
-        "explicitAny": 0,
-        "tsNocheck": 0
-      }
-    },
-    {
-      "ws": "tmp-p2-ddl-check.mjs",
-      "files": 1,
-      "loc": 76,
       "prodFiles": 0,
       "prodLoc": 0,
       "total": 0,

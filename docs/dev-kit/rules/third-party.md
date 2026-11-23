@@ -17,7 +17,8 @@
 
 - 根项目与 `awbot-app/` 均为 AGPL-3.0-only；通过网络提供服务须履行对应源码义务。
 - `awbot-app/` 内第三方组件按各自原许可证分发，**不在商业授权范围内**（见 `docs/商业授权说明.md`）。
-- `bot-host-client/` 内置 Automa 目前缺独立 LICENSE / NOTICE，属合规待办（见 `THIRD_PARTY.md`）。
+- AWBotDSH 桌面端源码自 v1.8.x 起移出本仓；其安装包仍随客户端二进制分发内置的 Automa，
+  缺独立 LICENSE / NOTICE 的合规待办改由客户端私有源码维护（见 `THIRD_PARTY.md`）。
 - `update/sources/` 下的旧 LICENSE 属升级包残留，不代表当前项目许可。
 - `.scratch/` / `.tmp/` 是本地参考副本，不计入分发。
 

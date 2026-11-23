@@ -4,7 +4,7 @@
 > **v4 边界修订（2026-11-14）**：客户端本地配置（模型渠道、技能、数字分身、工作区目录）**一律不上报、不展示、不校验**——平台只保留「主机在线/离线」「工作区候选」与「平台模型授权」三类信息。平台可向主机下发**模型渠道授权（B 方案）**：心跳时序把该渠道的真实密钥交给客户端，客户端当成一条「平台渠道」使用；撤销后客户端清空并切回自己的渠道。客户端新增 **Agent 插件**（声明式 HTTP/命令工具）与 **Chrome 插件桥接**（127.0.0.1 长轮询，Agent 可查标签页/读页面/点击/填表）。顶部导航新增手机端（AWBot）与 PC 端（AWBotDSH）两个下载入口，下载地址由管理员在「站点设置 → 手机端下载地址 / PC 端下载地址」维护，点击新窗口打开。
 > **v3 执行体修订（2026-11-14）**：本机 Agent（模型渠道 + 技能 + 数字分身 + 长期记忆 + 本地工具）直接内置在 BotBuddy 客户端，**平台与 Bot 里的 Agent 直接对接**；客户端不再连接 WorkBuddy / Codex，也不再托管任何 ACP 运行时。设备绑定（连接码/令牌）并入 Agent 菜单，本机状态全部存 SQLite。
 > 历史：v2 阶段 WorkBuddy / Codex 双运行时的验证过程归档在 `docs/WorkBuddy常驻握手接入方案.md` 与 `docs/双运行时接入与工作区选择方案.md`；其结论（端口随会话漂移、会话无法隔离、自托管运行时不继承登录态）正是本次改为「客户端内置 Agent」的直接原因，本文件不再保留任何 ACP 交付口径。
-> 融合来源：①《Agent-Bot · Bot 主机 · 需求文档》（平台侧范式与复用底座）；②本机 Agent 的模型客户端、工具层与工作区沙箱实现（`bot-host-client/src/main/agent/`）
+> 融合来源：①《Agent-Bot · Bot 主机 · 需求文档》（平台侧范式与复用底座）；②本机 Agent 的模型客户端、工具层与工作区沙箱实现（`awbotdsh-client/src/main/agent/`，私有源码）
 >
 > 一句话目标：
 > **平台上的 Agent（「Bot 主机」对话）当"大脑/调度"，用户本地 BotBuddy 客户端里的 Agent 当"执行手脚"；平台只下发自然语言指令，执行与工具调用都在本机完成，结果回传同一对话（A2A）。**
@@ -547,7 +547,7 @@ Windows 出 nsis x64 安装包（`BotBuddy Setup 1.0.0.exe`，`oneClick:false` �
 - `docs/api/openapi.json`：`pnpm api:docs` 重新生成（否则 `api:docs:check` 失败）
 - 文档：本文件由 `Agent-Bot与Workbuddy主机方案.md` 更名为 `Agent-Bot方案.md`；v2 的 ACP 验证过程归档在 `WorkBuddy常驻握手接入方案.md` 与 `双运行时接入与工作区选择方案.md`，不再作为交付口径
 
-**主机客户端（仓库内独立工程 `bot-host-client/`）**
+**主机客户端（独立工程 `awbotdsh-client`；源码自 v1.8.x 起不在本仓，安装包随 Release 提供）**
 - 产品名 **BotBuddy**（`build.productName`/`executableName`/`shortcutName`、托盘与窗口标题、`User-Agent: botbuddy/1.0.0`）
 - 主进程：`main.js`（单实例锁、托盘、单窗口、心跳循环、IPC 白名单）、`db.js`（better-sqlite3 + Electron ABI，`~/.botbuddy/botbuddy.db`，WAL，`PRAGMA user_version`，v4 逐列探测后 `ALTER` 补列）、`config-store.js`（settings / workspaces 两表 + 旧 `config.json` 一次性导入）、`platform-client.js`（零依赖出站 HTTP，6 个设备通道端点）、`pairing.js`（连接码申请与 2 秒轮询）、`task-runner.js`（同工作区串行、跨工作区并行、`commandCode` 去重）、`selfcheck.js`（模型/工作区/平台三项）、`workspaces.js`（白名单与默认目录）、`references.js`（参考文件闸门 + 原生文件对话框过滤器）、`tray.js`
 - 本机 Agent：`agent/index.js`（主循环，最多 8 轮工具往返；支持本机对话的 history / 逐字回调 / 工具事件，并按会话解析技能勾选与数字分身、拼参考文件）、`agent/model-client.js`（OpenAI 兼容 / Anthropic 流式）、`agent/tools.js`（7 工具 + 工作区沙箱 + 三档权限）、`agent/config.js`（渠道/技能/分身/记忆/采样参数）

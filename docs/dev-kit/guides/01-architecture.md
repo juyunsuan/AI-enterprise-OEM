@@ -13,8 +13,8 @@
 3. **前端应用层**：`frontend/src/`。页面与组件只调用 `src/api/*` 的业务方法。
 4. **公共终端底座**：`shared/mini-core/`。多个小程序共用的请求、会话、鉴权与登录骨架。
 5. **小程序模板**：各 `miniprogram-*` / `*-miniprogram` 目录，只承载终端差异。
-6. **客户端与外部终端**：`awbot-app/`、`bot-host-client/`、`workbuddy-host-client/` 等，
-   通过公开通道或契约接口与主仓协作，不直接读写主库。
+6. **客户端与外部终端**：`awbot-app/`、`workbuddy-host-client/` 等，
+   通过公开通道或契约接口与主仓协作，不直接读写主库。AWBotDSH 桌面端源码自 v1.8.x 起不在本仓。
 
 ## 鉴权与数据归属
 

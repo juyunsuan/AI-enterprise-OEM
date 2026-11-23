@@ -30,7 +30,7 @@
 | 界面语言 | 8（含阿拉伯语整站 RTL） |
 | 数据库 | MySQL 8 或 PostgreSQL（安装时二选一） |
 
-> 当前版本 **v1.8.0**（[Release 说明](https://github.com/liujh0729-jpg/AI-enterprise-OEM/releases/tag/v1.8.0)）：「商务人脉」整组替换为「AI社交」——入口与 AIworkin 的 DSH 社交插件一致（聊天 / 分身 / 人脉 / 小组 / 招聘 / 撮合 / 技能市场 / 应用市场 / 好友 / 私信 / 通知 / 开发者），社交数据全部落在 AIworkin，绑定 AIPDD API Key 后进入；一个账号可绑定多把 Key，插件通知按 Key 所属账号聚合进本站铃铛。AWBot 安卓客户端与 AWBotDSH PC 客户端随本 Release 提供。
+> 当前版本 **v1.8.0**（[Release 说明](https://github.com/liujh0729-jpg/AI-enterprise-OEM/releases/tag/v1.8.0)）：「商务人脉」整组替换为「AI社交」——入口与 AIworkin 的 DSH 社交插件一致（聊天 / 分身 / 人脉 / 小组 / 招聘 / 撮合 / 技能市场 / 应用市场 / 好友 / 私信 / 通知 / 开发者），社交数据全部落在 AIworkin，绑定 AIPDD API Key 后进入；一个账号可绑定多把 Key，插件通知按 Key 所属账号聚合进本站铃铛。AWBot 安卓客户端与 AWBotDSH PC 客户端随本 Release 提供（安装包可下载）；AWBotDSH 桌面端源码自 v1.8.x 起不再随本仓库分发。
 
 ---
 
@@ -44,7 +44,7 @@
 | AWBotDSH 客户端 | 用户电脑 | 托盘常驻、出站心跳、领取指令、调用本机 Agent 执行、结果回传、本地配置与权限档 |
 | 本机 Agent | 客户端进程内 | 调用户自己的模型渠道、跑本地工具、读写工作区、按权限档执行 |
 | 指纹浏览器 | AWBotDSH 客户端 | 每档案独立内核进程 / user-data-dir / 指纹 / 出口 IP；单 Agent-Bot 100 个档案，Agent 经 CDP 驱动绑定窗口 |
-| AWBot 手机（平台侧 · 群控） | 本系统平台 | 一个账号配对 **N 部手机**统一调度：6 位码配对与 `awb_` 令牌、`/api/public/awbot/**` 通道按 kind 与桌面主机互斥、心跳领取 Prompt、逐台对话（排队 / 取消 / 排队位次）、逐台定时任务、逐台在线台账（电量 / 充电 / 网络 / 引擎）、按设备授权模型；手机 App 侧（AWBot Link / Android 前台服务 / 模型同步）是独立的 Flutter 工程，其 AGPL 对应源码随包收录在本仓库 [`awbot-app/`](awbot-app/PROVENANCE.md) |
+| AWBot 手机（平台侧 · 群控） | 本系统平台 | 一个账号配对 **N 部手机**统一调度：6 位码配对与 `awb_` 令牌、`/api/public/awbot/**` 通道按 kind 与桌面主机互斥、心跳领取 Prompt、逐台对话（排队 / 取消 / 排队位次）、逐台定时任务、逐台在线台账（电量 / 充电 / 网络 / 引擎）、按设备授权模型；手机 App 侧（AWBot Link / Android 前台服务 / 模型同步）是独立的 Flutter 工程；本仓库 [`awbot-app/`](awbot-app/PROVENANCE.md) 收录的是其 AGPL 对应源码（履行源码提供义务，不是本仓库的开源业务代码） |
 
 ### 一台平台，怎么控制 N 台主机
 
@@ -73,7 +73,7 @@
 2. 在这台电脑安装 AWBotDSH，填一个模型渠道（OpenAI 兼容 / Anthropic）并选工作区，把连接码填回平台完成配对；
 3. 在平台主机对话里直接派活，或建定时任务；其余 N 台重复第 1–2 步，即可在同一平台统一调度。
 
-> 技术方案、协议与安全红线见 [`docs/Agent-Bot方案.md`](docs/Agent-Bot方案.md)；客户端源码与打包说明见 [`bot-host-client/`](bot-host-client/)。
+> 技术方案、协议与安全红线见 [`docs/Agent-Bot方案.md`](docs/Agent-Bot方案.md)；AWBotDSH 客户端安装包随 Release 下载，其源码自 v1.8.x 起不再随本仓库分发（历史提交仍可在 git 历史中检出），客户端打包说明由维护方私有提供。
 
 ### 网页模型源：客户端直接调用网页算力（登录即可）
 
@@ -105,7 +105,7 @@ AWBotDSH 内置**内核级指纹浏览器**（每个窗口一个独立 Chromium 
 - **三个页签就是群控的三件事**：**设备**（在线 / 离线 / 最近心跳，外加手机自报的电量、充电、网络与执行引擎版本，可停用 / 重置令牌 / 移除）、**对话**（左列一部手机一行，点选切换；对话即 A2A，指令进该机的 PENDING 队列，上线按序取走，可取消并看到排队位次）、**定时任务**（once / scheduled / recurring，到点自动入队，错过不补跑，每轮运行记录可跳回当轮对话）。
 - **手机里怎么跑**：平台只传「做什么」，手机心跳领取 Prompt、由机内本地 Agent 执行并分片回传过程与结果；**不下发工作区、也不下发桌面执行模式**，平台看不到手机里的模型渠道、技能与文件，口令与本地数据都不出机。
 - **模型从平台统一供**：在设备台账里给某部手机授权一个平台模型渠道（没有独立授权时回落到该账号的 AIPDD Key），随心跳下发；手机侧把它写进自己的模型配置，撤销即回落本地。也可以把「AI 调用账号」（第三方平台凭据 / Key / Cookie，密文保存）绑定给指定设备，只放行绑定给本机的那批。
-- **诚实边界**：每台手机是**单机串行队列**（一次跑一条，离线照常排队），指令只跑 `prompt` 一类并按 `commandCode` 幂等；**「一次选中多部手机、同一条指令群发」的原子群发始终不做**——「Agent 群控」（[`docs/Agent群控（替换插件页签）产品设计方案.md`](docs/Agent群控（替换插件页签）产品设计方案.md)）是把活拆成逐条指令、逐台（含企业云账号）派发，成功的不回收。手机 App 侧的 AWBot Link、Android 前台服务与模型同步是独立 Flutter 工程，接入口径见 [`docs/AWBot手机接入方案.md`](docs/AWBot手机接入方案.md)，其 AGPL 对应源码收录在 [`awbot-app/`](awbot-app/PROVENANCE.md)。
+- **诚实边界**：每台手机是**单机串行队列**（一次跑一条，离线照常排队），指令只跑 `prompt` 一类并按 `commandCode` 幂等；**「一次选中多部手机、同一条指令群发」的原子群发始终不做**——「Agent 群控」（[`docs/Agent群控（替换插件页签）产品设计方案.md`](docs/Agent群控（替换插件页签）产品设计方案.md)）是把活拆成逐条指令、逐台（含企业云账号）派发，成功的不回收。手机 App 侧的 AWBot Link、Android 前台服务与模型同步是独立 Flutter 工程，接入口径见 [`docs/AWBot手机接入方案.md`](docs/AWBot手机接入方案.md)；其 AGPL 对应源码（非开源发行版）收录在 [`awbot-app/`](awbot-app/PROVENANCE.md)。
 
 > 与指纹浏览器矩阵的关系：AWBotDSH 主机侧的「一个客户端 100 个独立窗口」管的是浏览器环境（可当 RPA 的「AWBotDSH 浏览器」设备用），AWBot 手机管的是真机 App 侧执行，两者在 Agent-Bot 里各占一个页签，互不替代。
 
@@ -693,7 +693,9 @@ pwsh scripts/smoke-aipdd-platform-key.ps1  # 平台 AIPDD Key：密文不外泄 
 
 ## 💼 商业授权（可选）
 
-本项目的全部源码以 [GNU Affero General Public License v3.0](LICENSE)（AGPL-3.0-only）开源。
+平台侧源码（后端、前端、契约包与平台脚本）以 [GNU Affero General Public License v3.0](LICENSE)（AGPL-3.0-only）开源；
+[`awbot-app/`](awbot-app/PROVENANCE.md) 收录的是 AWBot 安卓客户端的 AGPL 对应源码；
+AWBotDSH 桌面客户端源码自 v1.8.x 起不再随本仓库分发。
 **社区版与商业版的代码完全一致**——功能、模块、更新节奏没有任何差别，不购买任何授权也可以自由下载、
 部署、修改和商用，但须遵守 AGPL：通过网络向用户提供服务时，须向这些用户提供对应源码（第 13 条）。
 

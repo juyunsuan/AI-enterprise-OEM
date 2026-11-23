@@ -605,7 +605,9 @@ Pour rejoindre le groupe de discussion du système de services d'entreprise IA, 
 
 ## 💼 Licence commerciale (facultative)
 
-L'intégralité du code source de ce projet est publiée sous [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0-only).
+Le code source côté plateforme (backend, frontend, paquets de contrats et scripts de plateforme) est publié sous [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0-only) ;
+[`awbot-app/`](awbot-app/PROVENANCE.md) contient le code source correspondant de l'AGPL du client Android AWBot ;
+le code source du client de bureau AWBotDSH n'est plus distribué avec ce dépôt à partir de la v1.8.x.
 **Les éditions communautaire et commerciale sont identiques** — mêmes fonctionnalités, mêmes modules,
 même rythme de publication. Vous pouvez le télécharger, le déployer, le modifier et l'exploiter commercialement sans rien acheter,
 à condition de respecter l'AGPL : lors d'une mise à disposition par réseau, vous devez fournir le code source correspondant aux utilisateurs (article 13).

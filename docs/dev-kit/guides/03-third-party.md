@@ -16,7 +16,7 @@
 
 ## 已知待办（如实标注，不美化）
 
-- `bot-host-client/` 随包内置 Automa，目前缺少独立 LICENSE / NOTICE / PROVENANCE，列为合规待办。
+- AWBotDSH 客户端（私有源码，不在本仓）随包内置 Automa，目前缺少独立 LICENSE / NOTICE / PROVENANCE，列为合规待办。
 - 升级包 `update/sources/` 下存在旧版 Apache-2.0 LICENSE，属历史残留，不代表当前项目许可。
 - 外部工具的许可证以 `THIRD_PARTY.md` 的证据路径为准；清单里标 ❌ 的条目不得当作已合规。
 

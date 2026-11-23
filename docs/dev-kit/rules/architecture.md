@@ -9,8 +9,8 @@
 3. **前端** `frontend/src/`：Next.js App Router。页面 → 业务 API（`src/api/*`）→ `src/api/http.ts`。
 4. **公共终端底座** `shared/mini-core/`：多个原生小程序共用的请求 / 会话 / 鉴权骨架。
 5. **小程序模板**：各 `miniprogram-*` / `*-miniprogram` 目录，只承载差异，公共骨架由脚本同步。
-6. **客户端**：`awbot-app/`（安卓/iOS）、`bot-host-client/`、`workbuddy-host-client/` 等，
-   与主仓通过公开通道或契约接口协作。
+6. **客户端**：`awbot-app/`（安卓/iOS，AGPL 对应源码）、`workbuddy-host-client/` 等，
+   与主仓通过公开通道或契约接口协作。AWBotDSH 桌面端源码自 v1.8.x 起不在本仓。
 
 ## 边界规则
 

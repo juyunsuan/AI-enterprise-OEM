@@ -64,7 +64,7 @@ G1 的闭环用现有原语即可跑通；G2 的边际成本随站点数递减�
 
 ### 2.3 Harness 侧（已核实）
 
-- `bot-host-client/builtin-skills/dsh-go-plugin/SKILL.md` 明确划分：dsh-go 手机原生界面用该技能；
+- `awbot-app/app/assets/skills/dsh-go-plugin/SKILL.md` 明确划分：dsh-go 手机原生界面用该技能；
   **Cordis / Harness Web / 桌面端插件走官方流程**，两者目录与安装入口不同，不能混用。
 - `awbot-app/packages/dsh_client/lib/src/providers_api.dart`（已核实）：工作区已有把"自定义 OpenAI / Anthropic 兼容端点"
   注册进内置 `llm-pi-ai` 适配器的完整客户端逻辑——通过 `settings/mutate` 写 `providers.<route>`，
@@ -381,5 +381,5 @@ export function apply(ctx) {
 - 本项目内事实源：
   - 插件与动作闭集：`extensions/aipdd-enterprise/`、`packages/contracts/src/chrome-rpa.ts`、`extension.ts`
   - 校验约束：`scripts/verify-extension-caps.mjs`
-  - Harness 生态：`bot-host-client/builtin-skills/dsh-go-plugin/SKILL.md`、
+  - Harness 生态：`awbot-app/app/assets/skills/dsh-go-plugin/SKILL.md`、
     `awbot-app/packages/dsh_client/lib/src/providers_api.dart`、`docs/dsh/slot-catalog-0.2.2-rc.5.json`

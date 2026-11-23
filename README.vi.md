@@ -599,7 +599,9 @@ Tham gia nhóm thảo luận hệ thống dịch vụ doanh nghiệp AI, quét m
 
 ## 💼 Giấy phép thương mại (tùy chọn)
 
-Toàn bộ mã nguồn của dự án này được phát hành theo [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0-only).
+Mã nguồn phía nền tảng (backend, frontend, các gói hợp đồng và script nền tảng) được phát hành theo [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0-only);
+[`awbot-app/`](awbot-app/PROVENANCE.md) chứa mã nguồn tương ứng theo AGPL của ứng dụng AWBot trên Android;
+mã nguồn ứng dụng desktop AWBotDSH không còn được phân phối kèm kho lưu trữ này kể từ v1.8.x.
 **Bản cộng đồng và bản thương mại có mã nguồn hoàn toàn giống nhau** — cùng tính năng, cùng mô-đun,
 cùng nhịp phát hành. Bạn có thể tải về, triển khai, sửa đổi và dùng cho mục đích thương mại mà không cần mua bất cứ thứ gì,
 với điều kiện tuân thủ AGPL: khi cung cấp dịch vụ cho người dùng qua mạng, phải cung cấp mã nguồn tương ứng cho họ (Điều 13).

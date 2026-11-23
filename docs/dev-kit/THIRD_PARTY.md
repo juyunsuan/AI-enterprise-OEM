@@ -5,7 +5,7 @@
 
 ## 统计口径
 
-- 作用域：`root`（主仓）、`awbot-app/`、`bot-host-client/`、`workbench-host-client/`；`.scratch/`、`.tmp/` 只作本地参考，不计入分发。
+- 作用域：`root`（主仓）、`awbot-app/`、`workbuddy-host-client/`；AWBotDSH 桌面端源码自 v1.8.x 起不在本仓（随客户端二进制分发的组件仍按下表登记）；`.scratch/`、`.tmp/` 只作本地参考，不计入分发。
 - 引入形态：依赖引入 / vendored 改写 / 随包分发二进制 / 仅参考未移植 / 文档引用。
 - 合规状态：✅ 已声明 / ⚠️ 部分 / ❌ 缺失待补。
 
@@ -18,9 +18,9 @@
 | Phase | 见 `awbot-app/THIRD_PARTY_NOTICES.md` | MIT | vendored 改写（认证后的压缩支持） | `awbot-app/` | 同上「Phase」段 | 不改密码算法 | ✅ |
 | DS Bot | 见 `awbot-app/THIRD_PARTY_NOTICES.md` | Apache-2.0 | vendored 改写 | `awbot-app/` | 同上「DS Bot」段 | 已修改，须保留许可与变更说明 | ✅ |
 | dartssh2 | https://github.com/vicajilau/dartssh2（4.1.0） | MIT | vendored 本地包 | `awbot-app/` | `awbot-app/packages/dartssh2/VENDORED.md`、包内 `LICENSE` | 保留包内原始许可；Flutter 按本地依赖收集 | ✅ |
-| Automa | https://github.com/AutomaApp/automa | 未标注（待补） | 随客户端内置扩展 | `bot-host-client/` | `bot-host-client/builtin-extensions/automa/` | 随包分发；当前缺独立 LICENSE / NOTICE / PROVENANCE | ❌ |
+| Automa | https://github.com/AutomaApp/automa | 未标注（待补） | 随客户端内置扩展 | AWBotDSH 客户端（私有源码，不在本仓） | `builtin-extensions/automa/`（私有源码仓） | 随客户端二进制分发；当前缺独立 LICENSE / NOTICE / PROVENANCE | ❌ |
 | fingerprint-chromium 指纹内核 | https://github.com/adryfish/fingerprint-chromium | BSD-3-Clause（The ungoogled-chromium Authors） | 随包分发二进制（未改动） | DSH 桌面端构建：`deepseek-harness/apps/desktop/resources/kernels/150.0.7871.186/` | 内核目录内 `LICENSE.ungoogled-chromium.txt`；ZIP sha256 `4d549c326e51ebbabf562fd365eb5380d9d4a81200da2c60f075c688d9a77e03`；说明见同目录 `README.md` | 仅按 `--fingerprint=` 协议调用，不改二进制；Chromium 组件级许可清单仍需在正式发布前补全 | ⚠️ |
-| BotBuddy 客户端 | 本仓 `bot-host-client/` | 与本仓一致（AGPL-3.0-only） | 自研 | `bot-host-client/` | `bot-host-client/` | 第三方 Electron / Chromium 许可随分发目录保留 | ⚠️ |
+| BotBuddy 客户端 | 自研（私有源码，不在本仓） | UNLICENSED | 自研 | AWBotDSH 客户端（私有源码仓） | 随客户端二进制分发 | 第三方 Electron / Chromium 许可随分发目录保留 | ⚠️ |
 | WorkBuddy 客户端 | 本仓 `workbuddy-host-client/` | 与本仓一致（AGPL-3.0-only） | 自研 | `workbuddy-host-client/` | `workbuddy-host-client/` | 同上 | ⚠️ |
 | CRMEB v8.0 | https://www.crmeb.com/ | Apache-2.0 | **仅参考**（业务分层与数据结构） | `.scratch/`（本地，不入库） | `README.md` 致谢；`.gitignore` 忽略 `.scratch/` | 未移植源码，不计入分发 | ⚠️ |
 | new-api | https://github.com/QuantumNous/new-api | 未在本仓标注 | **仅参考**（本地 `.tmp/new-api-ref/`） | 本地 `.tmp/`，不入库 | `.gitignore` 忽略 `.tmp/` | 不计入分发；如后续引入须补许可证与来源 | ⚠️ |
@@ -29,7 +29,7 @@
 
 ## 必须如实保留的四条现状
 
-1. `bot-host-client/` 内置 Automa 目前**没有独立许可证声明**，标 ❌；补 `THIRD_PARTY_NOTICES.md`
+1. AWBotDSH 客户端（私有源码，不在本仓）内置 Automa 目前**没有独立许可证声明**，标 ❌；补 `THIRD_PARTY_NOTICES.md`
    或直接引用 Automa 上游许可是待办。在此之前不得宣称该部分已合规。
 2. 根项目与 `awbot-app/` 均为 **AGPL-3.0-only**；通过网络提供服务须履行第 13 条
    「提供对应源码」。`awbot-app/` 的第三方组件**不在商业授权范围**（`docs/商业授权说明.md`）。

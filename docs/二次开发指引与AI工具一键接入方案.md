@@ -485,7 +485,7 @@ description: >                     # ≤1024 字符；触发词前置，说清�
 | 名称 / 上游 URL | deepseek-harness、dsh-Go、Automa、CRMEB v8、new-api、ub-mode(@poteto)、crapper/dryer/mutator、dartssh2、AIPDD 插件… |
 | 许可证 | MIT / AGPL-3.0-only / Apache-2.0 / **未标注（待补）** |
 | 引入形态 | 依赖引入 / vendored 改写 / 随包分发二进制 / 仅参考未移植 / 文档引用 |
-| 作用域 | 根目录、`awbot-app/`、`bot-host-client/`、`.scratch`/`.tmp`（参考副本不计入分发） |
+| 作用域 | 根目录、`awbot-app/`、`.scratch`/`.tmp`（参考副本不计入分发）；AWBotDSH 桌面端源码自 v1.8.x 起不在本仓 |
 | 对应文件/证据 | `awbot-app/THIRD_PARTY_NOTICES.md:82-105`、`PROVENANCE.md:8-12`、`README.md:666`、manifest 路径 |
 | 改动与约束 | 是否可改、是否需署名、是否禁止商业化套皮（`awbot-app/README.md:336-343`） |
 | 合规状态 | ✅ 已声明 / ⚠️ 部分 / ❌ 缺失待补 |

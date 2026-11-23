@@ -1,7 +1,0 @@
-# 构建期由 tools/prepare-vendor.js 拉取，单文件约 173MB，不入库
-src/vendor/
-# 依赖与打包输出（换目录打包以绕开 asar 文件锁）
-node_modules/
-dist/
-dist-*/
-*.log
