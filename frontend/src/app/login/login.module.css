@@ -161,7 +161,9 @@
   background: #fff;
 }
 
-.alert {
+/* antd v6 运行时注入 `.ant-alert{margin:0}`，与单类选择器等权且更晚生效，会把这里的 20px 顶掉；
+   重复一次类名抬高权重，才压得住这行提示与下面表单之间的间距。 */
+.alert.alert {
   margin-bottom: 20px;
   text-align: left;
 }
