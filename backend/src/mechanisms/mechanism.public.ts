@@ -1,9 +1,9 @@
 import { randomBytes } from 'node:crypto';
 import type { Context } from 'hono';
 import type { OpenAPIHono } from '@hono/zod-openapi';
-import { setCookie } from 'hono/cookie';
 import { safeNextPath } from '@enterprise/contracts';
 import { ok } from '../common/api';
+import { writeSessionCookie } from '../auth/session';
 import { BusinessException } from '../common/business.exception';
 import { ErrorCode } from '../common/error-code';
 import { resolveSiteUrl } from '../common/site-url';
@@ -139,12 +139,8 @@ export function registerMechanismPublic(
       session.role,
       session.tokenVersion,
     );
-    setCookie(c, 'aiworkin_token', token, {
-      httpOnly: true,
-      sameSite: 'Lax',
-      path: '/',
-      maxAge: 172800,
-    });
+    // 机制 OIDC 回来后同样只写一处口径的会话 Cookie（含旧名迁移清理）。
+    writeSessionCookie(c, token);
     return c.redirect(pending.returnTo, 303);
   });
 }

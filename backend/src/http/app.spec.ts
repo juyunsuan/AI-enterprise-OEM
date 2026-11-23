@@ -132,7 +132,7 @@ describe('Hono routing and session boundary', () => {
       method: 'POST',
       headers: {
         origin: 'https://untrusted.invalid',
-        cookie: 'aiworkin_token=unit',
+        cookie: 'enterprise_token=unit',
       },
     });
     expect(r.status).toBe(403);

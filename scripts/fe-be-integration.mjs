@@ -63,7 +63,7 @@ const raw = (base, method, path, body, username, extraHeaders = {}) =>
     redirect: "manual",
     headers: {
       ...extraHeaders,
-      ...(username ? { Cookie: `aiworkin_token=${token(username)}` } : {}),
+      ...(username ? { Cookie: `enterprise_token=${token(username)}` } : {}),
     },
   });
 

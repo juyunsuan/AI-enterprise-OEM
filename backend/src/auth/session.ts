@@ -10,6 +10,7 @@ import {
 } from '@enterprise/contracts';
 import {
   issueSsoSession,
+  isSsoSession,
   parseAccessToken,
   REMEMBER_TTL_SECONDS,
 } from './token';
@@ -18,9 +19,19 @@ import { RateWindow } from '../common/rate-window';
 import type { ApiEnv } from '../http/types';
 import type { AccountModule } from '../account/account.routes';
 
-const ACCESS = 'aiworkin_token',
+/**
+ * 本站会话 Cookie 名。
+ *
+ * 曾用 `aiworkin_token`，与 AIworkin 主站同名：Cookie 只按 host 分罐、不分端口，
+ * 同一台机器（如 `127.0.0.1`）上两个产品并排开发时互相顶掉对方的会话，本站会拿到一枚
+ * 上游签发令牌当会话，于是「刚登录成功，下一个请求就 401」反复发生。本站会话因此改名。
+ */
+const ACCESS = 'enterprise_token',
+  /** 旧名：只有确实是本站自签会话时才继续承认（迁移期不踢存量用户），上游令牌一律忽略。 */
+  LEGACY_ACCESS = 'aiworkin_token',
   REFRESH = 'aiworkin_refresh_token';
 export const SESSION_COOKIE = ACCESS;
+export const LEGACY_SESSION_COOKIE = LEGACY_ACCESS;
 const cookieOptions = () => ({
   httpOnly: true,
   sameSite: 'Lax' as const,
@@ -30,12 +41,18 @@ const cookieOptions = () => ({
   path: '/',
   maxAge: 90 * 86400,
 });
-/** 微信 H5 网页授权换发会话时复用同一 Cookie 口径，避免两套过期时间互相覆盖。 */
+/**
+ * 写会话 Cookie 的唯一出口：写新名，并在旧名里那份确实是本站会话时把它清掉。
+ * 旧名里若是别处写的上游令牌则保留不动——那不是本站能替用户删的东西，也不该由本站负责。
+ */
 export function writeSessionCookie(
   c: Context<ApiEnv, string, Input>,
   token: string,
 ) {
   setCookie(c, ACCESS, token, cookieOptions());
+  if (isSsoSession(normalize(getCookie(c, LEGACY_ACCESS)) || '')) {
+    deleteCookie(c, LEGACY_ACCESS, { path: '/' });
+  }
 }
 function normalize(value?: string) {
   let result = value
@@ -58,7 +75,11 @@ function normalize(value?: string) {
 export function sessionToken(c: Context<ApiEnv, string, Input>) {
   const header = c.req.header('authorization');
   if (header) return normalize(header);
-  return normalize(getCookie(c, ACCESS)) || undefined;
+  const current = normalize(getCookie(c, ACCESS));
+  if (current) return current;
+  // 旧名只在「确实是本站自签会话」时兜底：同 host 上别的产品写的同名上游令牌一律不当会话。
+  const legacy = normalize(getCookie(c, LEGACY_ACCESS));
+  return legacy && isSsoSession(legacy) ? legacy : undefined;
 }
 const envelope = (code: number, message: string, data: unknown = null) => ({
   code,
@@ -118,7 +139,7 @@ export function registerSessionRoutes(
       body.remember === true ? REMEMBER_TTL_SECONDS : undefined,
     );
     parseAccessToken(token);
-    setCookie(c, ACCESS, token, cookieOptions());
+    writeSessionCookie(c, token);
     deleteCookie(c, REFRESH, { path: '/' });
     c.header('x-login-next', safeNextPath(c.req.query('next'), '/dashboard'));
     return c.json(envelope(0, '登录成功'));
@@ -179,6 +200,8 @@ export function registerSessionRoutes(
   });
   app.post('/api/auth/logout', (c) => {
     deleteCookie(c, ACCESS, { path: '/' });
+    // 旧名一并清掉：迁移期仍承认它，退出时也必须一起失效。
+    deleteCookie(c, LEGACY_ACCESS, { path: '/' });
     deleteCookie(c, REFRESH, { path: '/' });
     return c.json(envelope(0, '已退出登录'));
   });

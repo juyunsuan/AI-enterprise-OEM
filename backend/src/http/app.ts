@@ -12,7 +12,12 @@ import {
   registerUpstreamTokenResolver,
   registerBaseDataTokenResolver,
 } from '../common/upstream-token';
-import { registerSessionRoutes, sessionToken } from '../auth/session';
+import {
+  registerSessionRoutes,
+  sessionToken,
+  SESSION_COOKIE,
+  LEGACY_SESSION_COOKIE,
+} from '../auth/session';
 import { issueSsoSession } from '../auth/token';
 import { registerDevSessionRoutes } from '../auth/dev-session';
 import {
@@ -176,6 +181,39 @@ function originAllowed(
   }
 }
 
+function cookieValues(header: string, name: string): string[] {
+  const prefix = `${name}=`;
+  const out: string[] = [];
+  for (const item of header.split(';')) {
+    const pair = item.trim();
+    if (!pair.startsWith(prefix)) continue;
+    const raw = pair.slice(prefix.length);
+    if (!raw) continue;
+    try {
+      out.push(decodeURIComponent(raw));
+    } catch {
+      out.push(raw);
+    }
+  }
+  return out;
+}
+
+/**
+ * 401 时凭证是从哪儿带来的：新名会话 Cookie、旧名 Cookie，还是 Authorization 头。
+ * 同 host 上别的产品也写会话 Cookie 时（旧名时期发生过），这一列直接指出带的哪一份。
+ */
+function credentialSource(
+  cookieHeader: string,
+  authorization?: string,
+): 'header' | 'session-cookie' | 'legacy-cookie' | 'none' {
+  if (authorization) return 'header';
+  if (cookieValues(cookieHeader, SESSION_COOKIE).length)
+    return 'session-cookie';
+  if (cookieValues(cookieHeader, LEGACY_SESSION_COOKIE).length)
+    return 'legacy-cookie';
+  return 'none';
+}
+
 export function createApp(services: Services) {
   const app = new OpenAPIHono<ApiEnv>({ defaultHook: validationHook });
   // 开源版本地账户模块：先于 AuthService 构建，自签会话的封禁/改密失效核对依赖它。
@@ -212,13 +250,28 @@ export function createApp(services: Services) {
         c.set('requestId', requestId);
         c.header('X-Request-Id', requestId);
         await next();
-        if (process.env.NODE_ENV !== 'test')
+        if (process.env.NODE_ENV !== 'test') {
+          // 401 只有状态码定不了因（丢 Cookie、令牌过期、版本被顶替看起来一模一样），
+          // 所以补上「哪个路径 + 凭证从哪儿带来」，不写令牌值本身。
+          const unauthorized = c.res.status === 401;
+          const cookieHeader = unauthorized
+            ? (c.req.header('cookie') ?? '')
+            : '';
           console.info(
             JSON.stringify({
               event: 'http',
               requestId,
               method: c.req.method,
               route: c.req.routePath,
+              ...(unauthorized
+                ? {
+                    path: new URL(c.req.url).pathname.slice(0, 160),
+                    credential: credentialSource(
+                      cookieHeader,
+                      c.req.header('authorization'),
+                    ),
+                  }
+                : {}),
               status: c.res.status,
               elapsedMs: Date.now() - started,
               ...currentRequest()?.metrics,
@@ -227,6 +280,7 @@ export function createApp(services: Services) {
               sqlMsTotal: services.prisma.databaseMetrics.queryMs,
             }),
           );
+        }
       },
       { requestId, signal: c.req.raw.signal },
     );

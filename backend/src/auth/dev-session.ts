@@ -1,7 +1,7 @@
 import type { OpenAPIHono } from '@hono/zod-openapi';
-import { setCookie } from 'hono/cookie';
 import { safeNextPath } from '@enterprise/contracts';
 import { issueSsoSession } from './token';
+import { writeSessionCookie } from './session';
 import type { ApiEnv } from '../http/types';
 import type { AccountModule } from '../account/account.routes';
 
@@ -43,12 +43,8 @@ export function registerDevSessionRoutes(
       session.role,
       session.tokenVersion,
     );
-    setCookie(c, 'aiworkin_token', token, {
-      httpOnly: true,
-      sameSite: 'Lax',
-      path: '/',
-      maxAge: 43200,
-    });
+    // 会话 Cookie 的口径（名字与属性）与正式登录完全一致，避免开发态另留一份旧名令牌。
+    writeSessionCookie(c, token);
     return c.redirect(safeNextPath(c.req.query('next'), '/dashboard'), 303);
   });
 }

@@ -1,6 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { setCookie, getCookie } from 'hono/cookie';
-import type { Context } from 'hono';
+import type { Context, Input } from 'hono';
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import { z } from '@enterprise/contracts';
 import {
@@ -9,6 +8,7 @@ import {
   REMEMBER_TTL_SECONDS,
 } from '../auth/token';
 import { CurrentUser } from '../auth/current-user';
+import { sessionToken, writeSessionCookie } from '../auth/session';
 import { ok } from '../common/api';
 import { BusinessException } from '../common/business.exception';
 import { ErrorCode } from '../common/error-code';
@@ -21,17 +21,10 @@ import { NotifyChannelService } from './notify-channel.service';
 import { AipddKeyService } from './aipdd-key.service';
 import { exchangeWechatCode, fetchWechatProfile } from './wechat-oauth';
 
-/** 登录会话 Cookie 与既有会话通道同名，前端与退出逻辑零改动。 */
-const ACCESS_COOKIE = 'aiworkin_token';
-const cookieOptions = () => ({
-  httpOnly: true,
-  sameSite: 'Lax' as const,
-  secure:
-    process.env.NODE_ENV === 'production' ||
-    process.env.AUTH_COOKIE_SECURE === 'true',
-  path: '/',
-  maxAge: 90 * 86400,
-});
+/**
+ * 会话 Cookie 的口径（名字、属性、旧名兜底）只在 `auth/session.ts` 一处定义，
+ * 这里不复制第二套：两处过期时间/名字各写一遍正是上一版「同名 Cookie 被别的产品顶掉」的成因。
+ */
 
 export class AccountModule {
   readonly settings: AccountSettingsService;
@@ -107,7 +100,8 @@ type LoginSession = {
 };
 /** 签发会话令牌（勾选记住则 30 天）并写 Cookie。 */
 function setSessionCookie(
-  c: Context<ApiEnv>,
+  // 泛型写满：默认值里路径是 any，传给 auth/session 的会话工具会被判成不安全实参。
+  c: Context<ApiEnv, string, Input>,
   session: LoginSession,
   remember?: boolean,
 ) {
@@ -127,11 +121,11 @@ function setSessionCookie(
       : undefined,
   );
   parseIssue(token);
-  setCookie(c, ACCESS_COOKIE, token, cookieOptions());
+  writeSessionCookie(c, token);
 }
 /** 登录成功统一收口：写会话并返回登录页需要的数据。 */
 function writeSession(
-  c: Context<ApiEnv>,
+  c: Context<ApiEnv, string, Input>,
   session: LoginSession,
   remember?: boolean,
 ) {
@@ -542,7 +536,7 @@ export function registerAccountBusinessRoutes(
     c.json(ok(data, message));
   /** 改密/设密后换发当前设备 Cookie：其余旧会话由 tokenVersion 顶替失效。 */
   const refreshSession = (
-    c: Context<ApiEnv>,
+    c: Context<ApiEnv, string, Input>,
     session: {
       userId: string;
       username: string;
@@ -554,9 +548,7 @@ export function registerAccountBusinessRoutes(
       scopes?: string[];
     },
   ) => {
-    const keepTtl = tokenRemainingSeconds(
-      getCookie(c, ACCESS_COOKIE) || c.req.header('authorization'),
-    );
+    const keepTtl = tokenRemainingSeconds(sessionToken(c));
     const token = issueSsoSession(
       session.userId,
       session.username,
@@ -572,7 +564,7 @@ export function registerAccountBusinessRoutes(
           }
         : undefined,
     );
-    setCookie(c, ACCESS_COOKIE, token, cookieOptions());
+    writeSessionCookie(c, token);
   };
 
   app.get('/enterprise/account/profile', async (c) =>
