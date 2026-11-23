@@ -181,10 +181,29 @@ M0 未完成项：DeepSeek 真实输入上限、Kimi/豆包等其余站点证据
 
 第一次 DeepSeek 报 `silent`，原因是**它用 XMLHttpRequest 不用 fetch**——只包 fetch 会得出错误结论。因此中继实现从一开始就是双入口，并把 `seen` 作为自证：`seen` 为空说明站点绕过两个入口或这一轮没发出去，不再拿"静默"当判断。
 
-已实现并测试：`src/gateway/ledger.ts`（前缀匹配 / 分叉 / 100 条 / 2 小时上限，`tests/ledger.spec.ts` 12 条）与 `src/gateway/relay.ts`（`tests/relay.spec.ts` 16 条，含页面侧结构不合形状一律判失败）。合计 28 条通过。
+### 11.1 落地进度（2026-11-24，代码在 DSH 仓 `packages/client/awbotdsh-browser/`，提交 `7cc4a6cf`）
+
+| 阶段 | 状态 | 依据 |
+|---|---|---|
+| M0 取证（端点 / 正文落点 / 凭据形态） | ✅ | 上表，`scripts/probe-web-protocol.mts` |
+| T1 页内协议中继 | ✅ | `src/gateway/relay.ts`：fetch + XHR 双入口、`seen` 自证，不再把"静默"当判断 |
+| T2 本地 OpenAI 兼容网关 | ✅ | `src/gateway/server.ts`：`/v1/models` + `/v1/chat/completions`（SSE 与 JSON 双形态）、客户端断连不落账、空正文回 502 |
+| T3 会话账本与落盘 | ✅ | `ledger.ts`（前缀匹配 / 分叉 / 100 条 / 2 小时）+ `ledger-store.ts`（原子替换、共享读盘、mtime 失效重读） |
+| T4 工具伪协议 | ✅ | `tools.ts`：标记块 + JSON Schema 子集校验；坏 `arguments` 在网关侧就拦住，不交给 DSH |
+| T5 真站跑通 | ✅ | DeepSeek 连续两轮正常；工具轮产出合法 `tool_calls`（`scripts/gateway-live-check.mts`、`gateway-live-tools-check.mts`） |
+| T5.1 真站暴露的缺陷 | ✅ 已修 | SSE 漏 `data:` 前缀；按事件数而非字符数判成败；BATCH 的 `p:"response"` 抢走正文续写路径；账本并发丢键；跨实例陈旧缓存 |
+| T5.2 站点会话证实 → 启用增量 | ⏳ | 站点会话 id 未经证实前一律整段重发（多发只是慢，少发会答非所问）。下一步：从已旁听的请求/响应里核对会话字段名（只记字段名与长度），证实后 `planTurn` 才允许 `delta` |
+| T5.3 文心接入 | ⛔ 停 | 自动轮次触发图形验证码，按红线不绕过；未取证站点不接入 |
+| T6 设置面板展示 baseUrl / key | ⏳ | DSH 渠道填写要有处可抄 |
+| T7 退役旧 DOM 链路 | ⏳ | `src/webchat/` 保留一个版本周期；`.oxlintrc.staged.json` 里对该目录的豁免随删除一并撤掉 |
+
+**验证口径**：`packages/client/awbotdsh-browser/tests/` 10 个文件 115 用例通过；结构门 `scripts/check-webchat-parts.mts` 34 项通过；staged oxlint 0 error；网关代码内无凭据字段、无整包正文日志。
+
+**未验证**：T5.2 之前增量发送（`mode: 'delta'`）在真站上尚无证据——站点会话未证实，线上实际走的都是整段重发；真站工具轮次本轮未复跑（需登录态）。
 
 ## 12. 证据索引（自查用）
 
 - DSH：`packages/llm/llm/src/index.ts:190-285`（adapter 契约）、`llm-pi-ai/src/index.ts:29-53`（openai-completions 渠道，UI 可配）、`packages/core/agent-loop/src/agent.ts:298,485,675,741-749`（每步带 tools、AbortSignal）、`llm/src/types.ts:490` + `llm/src/assembler.ts:69-76,113-118,135-140`（tool-call-delta 聚合与截断丢弃）、`core/tools/src/batch.ts:67,99-106`（坏 arguments 不抛错→必须在上游拦住）、`compaction-basic/src/config.ts:142-208` + `llm-retry/src/index.ts:221-238`（预算与 Retry-After）。
-- 我方：`awbotdsh-browser/src/webchat/{recipes,ask,adapter,prune,bridge-server}.ts`、`vendor/{fingerprint,launch,ws-client,rpa-runner}.cjs`、`bundled-extensions/chrome-bridge-extension/background.js:8,240-321`、`scripts/check-webchat-parts.mts`。
+- 我方（新链路，已入仓）：`awbotdsh-browser/src/gateway/{relay,frames,extract/deepseek,ledger,ledger-store,payload,tools,server,web-runner,cdp-page,sites,gateway-service}.ts`、`tests/`（10 文件 115 用例）、`scripts/{probe-web-protocol,probe-relay,probe-deepseek-patch,gateway-live-check,gateway-live-tools-check}.mts`。
+- 我方（旧 DOM 链路，待退役）：`awbotdsh-browser/src/webchat/{recipes,ask,adapter,prune,bridge-server}.ts`、`vendor/{fingerprint,launch,ws-client,rpa-runner}.cjs`、`bundled-extensions/chrome-bridge-extension/background.js:8,240-321`、`scripts/check-webchat-parts.mts`。
 - 参考项目（本地已解包 `.tmp/refllm/`）：`identity_listener.py`、`turn_anchor.py`、`breakers.py`／`api-server.ts`、`refresh-policy.ts`、`errors/index.ts`、`types.ts`／`server.js:2501-2546,2930-2984`、`conversation_store.py:64-91`、`tool_bridge.py`、`content.py:59-85`、`message_compiler.py:48-53`（反面）。
