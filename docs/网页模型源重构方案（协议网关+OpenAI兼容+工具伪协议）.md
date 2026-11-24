@@ -194,12 +194,13 @@ M0 未完成项：DeepSeek 真实输入上限、Kimi/豆包等其余站点证据
 | T5.1 真站暴露的缺陷 | ✅ 已修 | SSE 漏 `data:` 前缀；按事件数而非字符数判成败；BATCH 的 `p:"response"` 抢走正文续写路径；账本并发丢键；跨实例陈旧缓存 |
 | T5.2 站点会话证实 → 启用增量 | ✅ 真站实测通过 | 会话标识改为按 URL 结构判定（路由段 / 哈希路由 / 查询参数，段名白名单 `c\|chat\|conversation\|session`），DSH 仓 `awbotdsh-browser/src/gateway/sites.ts` 的 `siteSessionFromHref`；真机第二轮 `同一会话: true`、只发增量且答案延续了首轮上下文（`scripts/gateway-live-check.mts`，档案 baidu，attach 58880）。自测抓到两处形态缺陷：`?chat_id=` 漏读、`/api/v0/chat/completion` 被误当会话，均已修并钉进 `tests/gateway-sites.spec.ts`（9 条） |
 | T5.3 文心接入 | ⛔ 停 | 自动轮次触发图形验证码，按红线不绕过；未取证站点不接入 |
-| T6 设置面板展示 baseUrl / key | ✅ 代码就位，UI 待真机复核 | 状态接口已回 `gateway.status()`（running/port/baseUrl/token/models）；面板 `设置 → 浏览器设置 → 网页模型` 改为网关优先：可复制 Base URL 与 Key、模型 id 列表、DSH 渠道填法说明；旧 Chrome 桥降为第二张卡并标注"一个版本周期后退役" |
+| T6 模型自动进模型服务 + 面板展示 | ✅ 代码就位，UI 待真机复核 | 新增 `src/gateway/provider.ts` 的 `GatewayLlmAdapter`：插件一开就把网关模型注册成提供方「网页模型网关（AWBotDSH）」，`设置 → 模型服务` 里直接选，不必手填渠道；它走的是与外部渠道**同一个** 127.0.0.1 入口，行为与故障一致。面板仍给可复制的 Base URL / Key 供外部渠道使用，旧 Chrome 桥降为第二张卡并标注"一个版本周期后退役" |
+| T8 装配韧性 | ✅ | 聊天里网页模型整块消失过一次：`registerAdapter` 挂在 `registerWebChat` 尾部，前面任一步抛错就永远走不到。现按 `src/gateway/init-steps.ts` 逐步隔离，两个提供方各自走 `registerProvider`（直接注册失败退到 effect 重试），结果写进状态接口 `init.reports/summary` 并显示在面板；网关 `ensureStarted` 让端口被占/未登录在下一次请求自愈 |
 | T7 退役旧 DOM 链路 | ⏳ | `src/webchat/` 保留一个版本周期；`.oxlintrc.staged.json` 里对该目录的豁免随删除一并撤掉 |
 
-**验证口径**：`packages/client/awbotdsh-browser/tests/` 11 个文件 124 用例通过；结构门 `scripts/check-webchat-parts.mts` 34 项通过；staged oxlint 0 error；网关代码内无凭据字段、无整包正文日志。真站两项实测：两轮问答（第二轮走增量）与工具轮 `finish_reason: tool_calls` + 参数通过模式校验。
+**验证口径**：`packages/client/awbotdsh-browser/tests/` 13 个文件 142 用例通过；结构门 `scripts/check-webchat-parts.mts` 39 项通过（含 5 项韧性回归锁：禁止再出现"注册裸挂在 effect 上"）；host 与 client 两个聚合检查各 0 error；staged oxlint 0 error；网关代码内无凭据字段、无整包正文日志。真站两项实测：两轮问答（第二轮走增量）与工具轮 `finish_reason: tool_calls` + 参数通过模式校验。
 
-**未验证**：T6 面板的实际渲染效果需在带界面的客户端里人眼确认；本机构建产物是否把新 `lib` 打进 `app.asar` 由打包后自证。
+**未验证**：新提供方在真界面 `设置 → 模型服务` 里的呈现（要装新包才能看到）；`*.client.spec.ts` 之外没有跑过真机 provider 端到端（真机端到端此前是走 HTTP 渠道验的）。
 
 ## 12. 证据索引（自查用）
 
