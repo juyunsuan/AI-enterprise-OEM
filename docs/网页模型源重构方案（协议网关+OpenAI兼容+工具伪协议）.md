@@ -213,6 +213,16 @@ M0 未完成项：DeepSeek 真实输入上限、Kimi/豆包等其余站点证据
 - 站点输入框硬上限被撞到时的正确动作：**明确报错并指向 harness 的 compaction／新建会话**，而不是就地截断——截断等于我们替 harness 改了它决定要发的内容。
 - 允许存在的"非对称"只有协议本身要求的：网页没有原生 function calling，所以工具清单要写成文本随载荷下发、模型返回的调用要还原成 `tool_calls` 交回 DSH 执行；网页是有状态单输入框，所以账本负责把"每次全量"映射成"增量+分叉重发"。这两条是**格式映射**，不是内容决策。
 
+## 14. 两个容量数字别混为一谈（踩坑实录）
+
+| 数字 | 管什么 | 取值 | 出错表现 |
+|---|---|---|---|
+| 报给 harness 的 `contextWindow` | DSH 判断"这个模型能不能切进来、要不要压缩" | **262144**（必须 > `compaction-basic` 默认 headroom 65536） | 声明 32000 时报 `Cannot switch to awbotdsh-web/web-wenxin: … reserves … 65536 headroom tokens of its 32000-token context window, leaving no pressure budget` |
+| 站点输入框硬上限 `maxInputChars` | 我们实际能往输入框塞多少字 | 按取证值（文心 `maxlength=20000`；DeepSeek 未测得则不拦截） | 超限由 `guardPayload` 明确报错，指向 harness 压缩／新建会话 |
+
+结论：**不能用"网页大概吃多少字"去填第一个数字**。网页对话自带上文，压缩不该由 harness 对它做；
+把两者混用的后果是模型选择器里根本切不进去（表现像"没接入"），而不是超限报错。
+
 ## 12. 证据索引（自查用）
 
 - DSH：`packages/llm/llm/src/index.ts:190-285`（adapter 契约）、`llm-pi-ai/src/index.ts:29-53`（openai-completions 渠道，UI 可配）、`packages/core/agent-loop/src/agent.ts:298,485,675,741-749`（每步带 tools、AbortSignal）、`llm/src/types.ts:490` + `llm/src/assembler.ts:69-76,113-118,135-140`（tool-call-delta 聚合与截断丢弃）、`core/tools/src/batch.ts:67,99-106`（坏 arguments 不抛错→必须在上游拦住）、`compaction-basic/src/config.ts:142-208` + `llm-retry/src/index.ts:221-238`（预算与 Retry-After）。
