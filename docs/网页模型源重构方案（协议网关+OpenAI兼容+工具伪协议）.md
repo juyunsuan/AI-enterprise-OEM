@@ -202,6 +202,17 @@ M0 未完成项：DeepSeek 真实输入上限、Kimi/豆包等其余站点证据
 
 **未验证**：新提供方在真界面 `设置 → 模型服务` 里的呈现（要装新包才能看到）；`*.client.spec.ts` 之外没有跑过真机 provider 端到端（真机端到端此前是走 HTTP 渠道验的）。
 
+## 13. 边界（钉住，别再越线）
+
+**网关只做一件事：DSH 与网页之间的协议对接。**
+
+- 上下文怎么组装——系统提示、历史、工具定义、工作区快照、附件投影、上一轮工具结果——**全部由 DSH 底层框架决定**；它按工作区算好该发给模型什么，我们就送什么。
+- 模型回来的东西怎么分发——文本流、`tool_call` 执行、结果回填、再问模型的多轮循环——**也全部由 DSH 决定**，我们只把它交给我们的东西翻译成站点能懂的形式，再把站点的回答翻译回 DSH 的形式。
+- 因此本层**禁止**：按"是不是真人说的话"筛消息、自行剪枝/压缩工具结果、自己决定发哪一段历史、自己执行工具。
+  这两类越界都真实发生过（一次是给 provider 加了 `source.kind` 过滤与旁白剔除，一次是在发送前加 `fitTurns` 剪工具结果），都已回退，并被结构门的边界断言钉住。
+- 站点输入框硬上限被撞到时的正确动作：**明确报错并指向 harness 的 compaction／新建会话**，而不是就地截断——截断等于我们替 harness 改了它决定要发的内容。
+- 允许存在的"非对称"只有协议本身要求的：网页没有原生 function calling，所以工具清单要写成文本随载荷下发、模型返回的调用要还原成 `tool_calls` 交回 DSH 执行；网页是有状态单输入框，所以账本负责把"每次全量"映射成"增量+分叉重发"。这两条是**格式映射**，不是内容决策。
+
 ## 12. 证据索引（自查用）
 
 - DSH：`packages/llm/llm/src/index.ts:190-285`（adapter 契约）、`llm-pi-ai/src/index.ts:29-53`（openai-completions 渠道，UI 可配）、`packages/core/agent-loop/src/agent.ts:298,485,675,741-749`（每步带 tools、AbortSignal）、`llm/src/types.ts:490` + `llm/src/assembler.ts:69-76,113-118,135-140`（tool-call-delta 聚合与截断丢弃）、`core/tools/src/batch.ts:67,99-106`（坏 arguments 不抛错→必须在上游拦住）、`compaction-basic/src/config.ts:142-208` + `llm-retry/src/index.ts:221-238`（预算与 Retry-After）。
