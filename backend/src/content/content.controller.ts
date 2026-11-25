@@ -145,6 +145,11 @@ export class ContentController {
     return ok(await this.jobs.retry(user, id));
   }
 
+  /** 成片下载：二进制响应不是 JSON 契约，路由层直接按附件头回字节。 */
+  async downloadJob(user: CurrentUser, id: string) {
+    return this.jobs.download(user, id);
+  }
+
   // ---------- AI 画布（我的画布 / 三个工作台共用任务表） ----------
 
   async listCanvases(user: CurrentUser, query: Record<string, unknown>) {

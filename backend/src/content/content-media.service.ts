@@ -199,7 +199,11 @@ export class ContentMediaService {
     token: string | undefined,
     input: Parameters<ContentAssetService['tryRegister']>[2],
   ): Promise<{ ok: boolean; assetId: string; url: string; message: string }> {
-    if (control?.source === 'canvas' || control?.source === 'workbench') {
+    if (
+      control?.source === 'canvas' ||
+      control?.source === 'studio' ||
+      control?.source === 'workbench'
+    ) {
       return Promise.resolve({
         ok: true,
         assetId: '',

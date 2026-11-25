@@ -117,6 +117,7 @@ export function readCanvasDoc(raw: unknown): CanvasDoc {
             x: Number(row.x) || 0,
             y: Number(row.y) || 0,
             width: Number(row.width) || 220,
+            ...(Number(row.height) > 0 ? { height: Number(row.height) } : {}),
             data,
           },
         ];
@@ -425,10 +426,13 @@ export function planNodeRun(
     if (images.length) {
       // 有参考图就是「按参考图出图」，提示词必须写清楚要改什么
       guardPrompt();
+      const sources = images.slice(0, IMAGE_MAX_REFS).map((item) => item.url);
       return {
         tool: 'image-edit',
         input: {
-          imageUrls: images.slice(0, IMAGE_MAX_REFS).map((item) => item.url),
+          // image 是契约字段；imageUrls 保留多图，入队校验与执行器都兼容它
+          image: sources[0] || '',
+          imageUrls: sources,
           prompt,
           size: size || undefined,
         },
@@ -500,7 +504,10 @@ export function planNodeRun(
       tool: 'video-ref',
       input: {
         prompt,
-        references: images.slice(0, IMAGE_MAX_REFS).map((item) => item.url),
+        // 通用 URL 数组无法保留视频 / 音频类型，参考素材统一按类型提交
+        references: assets
+          .slice(0, IMAGE_MAX_REFS)
+          .map((item) => ({ type: item.media, url: item.url })),
         ...spec,
       },
       models: pickModels('video', channelId, model),

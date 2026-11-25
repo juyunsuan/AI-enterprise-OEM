@@ -2,23 +2,32 @@
 
 import "@xyflow/react/dist/style.css";
 import {
+  AimOutlined,
+  AppstoreOutlined,
   ArrowLeftOutlined,
   CloseOutlined,
   CloudUploadOutlined,
   CustomerServiceOutlined,
+  FolderOpenOutlined,
+  MenuUnfoldOutlined,
+  MinusOutlined,
+  MoonOutlined,
   PictureOutlined,
   PlusOutlined,
   ProfileOutlined,
+  RedoOutlined,
   SaveOutlined,
   SettingOutlined,
+  SunOutlined,
+  UndoOutlined,
   VideoCameraOutlined,
   FileTextOutlined,
 } from "@ant-design/icons";
-import { App, Badge, Button, Dropdown, Input, Skeleton, Tag } from "antd";
+import { App, Badge, Button, Dropdown, Input, Skeleton, Tooltip } from "antd";
 import {
-  addEdge,
   Background,
-  Controls,
+  BackgroundVariant,
+  MiniMap,
   ReactFlow,
   ReactFlowProvider,
   useEdgesState,
@@ -27,6 +36,8 @@ import {
   type Connection,
   type Edge,
   type NodeTypes,
+  type OnConnectEnd,
+  type OnConnectStart,
 } from "@xyflow/react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -39,13 +50,15 @@ import type {
   CanvasNodeData,
   CanvasProject,
   ContentJob,
+  ContentDigitalAsset,
 } from "@enterprise/contracts";
 import { contentApi } from "@/api/content";
 import { TERMINAL } from "@/components/content/generation-config";
-import { AssetReferencePicker } from "@/components/content/asset-reference-picker";
+import { AssetReferencePicker, isReferenceMedia } from "@/components/content/asset-reference-picker";
 import { Notice } from "@/components/ui/panel";
 import { TaskDock } from "@/components/content/task-dock";
-import { CanvasNodeView, EDGE_ROLE_LABEL, type CanvasFlowNode } from "./flow-nodes";
+import { CanvasNodeView, canvasNodeSize, EDGE_ROLE_LABEL, type CanvasFlowNode } from "./flow-nodes";
+import { CanvasAssetSidebar } from "./canvas-asset-sidebar";
 import { wiredMentions, type MentionCandidate } from "./mention-field";
 import { NodePanel } from "./node-panel";
 
@@ -67,14 +80,25 @@ const EMPTY_DOC: CanvasDoc = {
   viewport: { x: 0, y: 0, zoom: 1 },
 };
 
+function canvasNodeMedia(data: CanvasNodeData) {
+  return data.kind === "generate" || data.kind === "asset" ? data.media : undefined;
+}
+
 function toFlow(doc: CanvasDoc): { nodes: CanvasFlowNode[]; edges: Edge[] } {
   return {
-    nodes: doc.nodes.map((node) => ({
-      id: node.id,
-      type: "canvas" as const,
-      position: { x: node.x, y: node.y },
-      data: { kind: node.data.kind, data: node.data },
-    })),
+    nodes: doc.nodes.map((node) => {
+      const fallback = canvasNodeSize(node.data.kind, canvasNodeMedia(node.data));
+      return {
+        id: node.id,
+        type: "canvas" as const,
+        position: { x: node.x, y: node.y },
+        data: { kind: node.data.kind, data: node.data },
+        style: {
+          width: node.width >= 280 ? node.width : fallback.width,
+          height: node.height && node.height >= 180 ? node.height : fallback.height,
+        },
+      };
+    }),
     edges: doc.edges.map((edge) => ({
       id: edge.id,
       source: edge.from,
@@ -98,7 +122,16 @@ function toDoc(
         type: node.data.kind,
         x: Math.round(node.position.x),
         y: Math.round(node.position.y),
-        width: 220,
+        width: Math.round(
+          node.measured?.width ||
+            (typeof node.style?.width === "number" ? node.style.width : canvasNodeSize(node.data.kind).width),
+        ),
+        height: Math.round(
+          node.measured?.height ||
+            (typeof node.style?.height === "number"
+              ? node.style.height
+              : canvasNodeSize(node.data.kind, canvasNodeMedia(node.data.data)).height),
+        ),
         data: node.data.data,
       }),
     ),
@@ -128,6 +161,11 @@ function roleForNode(node?: CanvasFlowNode): CanvasEdgeRole {
   return node.data.kind === "config" ? "config" : node.data.kind === "prompt" ? "prompt" : "asset";
 }
 
+function pointerPosition(event: MouseEvent | TouchEvent) {
+  const point = "touches" in event ? event.touches[0] || event.changedTouches[0] : event;
+  return point ? { x: point.clientX, y: point.clientY } : null;
+}
+
 export function CanvasEditor({ id }: { id: number }) {
   return (
     <ReactFlowProvider>
@@ -136,10 +174,19 @@ export function CanvasEditor({ id }: { id: number }) {
   );
 }
 
+type CanvasTheme = "light" | "dark";
+type CanvasGrid = "dots" | "lines" | "blank";
+type CanvasSnapshot = {
+  nodes: CanvasFlowNode[];
+  edges: Edge[];
+  viewport: { x: number; y: number; zoom: number };
+};
+
 function CanvasEditorInner({ id }: { id: number }) {
   const { message } = App.useApp();
   const router = useRouter();
-  const { fitView, getViewport } = useReactFlow<CanvasFlowNode, Edge>();
+  const { fitView, getViewport, zoomIn, zoomOut, setViewport, screenToFlowPosition } =
+    useReactFlow<CanvasFlowNode, Edge>();
   const [project, setProject] = useState<CanvasProject | null>(null);
   const [title, setTitle] = useState("");
   const [loading, setLoading] = useState(true);
@@ -147,19 +194,75 @@ function CanvasEditorInner({ id }: { id: number }) {
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
+  const [connectFrom, setConnectFrom] = useState<string | null>(null);
+  const [draggingFrom, setDraggingFrom] = useState<string | null>(null);
+  const [connectPoint, setConnectPoint] = useState<{ x: number; y: number } | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerTab, setPickerTab] = useState<"digital" | "local">("digital");
   const [taskOpen, setTaskOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarWidth, setSidebarWidth] = useState(280);
+  const [theme, setTheme] = useState<CanvasTheme>("light");
+  const [grid, setGrid] = useState<CanvasGrid>("dots");
+  const [zoom, setZoom] = useState(1);
+  const [, setHistoryVersion] = useState(0);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+  const historyRef = useRef<{ past: CanvasSnapshot[]; future: CanvasSnapshot[]; current: CanvasSnapshot | null }>({
+    past: [],
+    future: [],
+    current: null,
+  });
   const [channels, setChannels] = useState<{ value: number; label: string }[]>([]);
   const [jobs, setJobs] = useState<ContentJob[]>([]);
   const [taskVersion, setTaskVersion] = useState(0);
   const [nodes, setNodes, onNodesChange] = useNodesState<CanvasFlowNode>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const nodesRef = useRef<CanvasFlowNode[]>([]);
+  const edgesRef = useRef<Edge[]>([]);
+  const suppressPortClickRef = useRef(false);
+  const dragStartRef = useRef<{ x: number; y: number } | null>(null);
   const openPanel = useCallback((nodeId: string) => setSelected(nodeId), []);
 
   useEffect(() => {
     nodesRef.current = nodes;
   }, [nodes]);
+
+  useEffect(() => {
+    edgesRef.current = edges;
+  }, [edges]);
+
+  useEffect(() => {
+    const cancel = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setConnectFrom(null);
+      setDraggingFrom(null);
+      setConnectPoint(null);
+    };
+    window.addEventListener("keydown", cancel);
+    return () => window.removeEventListener("keydown", cancel);
+  }, []);
+
+  useEffect(() => {
+    nodesRef.current = nodes;
+  }, [nodes]);
+
+  useEffect(() => {
+    const savedTheme = window.localStorage.getItem("canvas-appearance-theme");
+    const savedGrid = window.localStorage.getItem("canvas-appearance-grid");
+    if (savedTheme === "dark" || savedTheme === "light") setTheme(savedTheme);
+    if (savedGrid === "dots" || savedGrid === "lines" || savedGrid === "blank") setGrid(savedGrid);
+  }, []);
+
+  const changeTheme = (next: CanvasTheme) => {
+    setTheme(next);
+    window.localStorage.setItem("canvas-appearance-theme", next);
+  };
+
+  const changeGrid = (next: CanvasGrid) => {
+    setGrid(next);
+    window.localStorage.setItem("canvas-appearance-grid", next);
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -172,6 +275,10 @@ function CanvasEditorInner({ id }: { id: number }) {
       const flow = toFlow(doc);
       setNodes(flow.nodes);
       setEdges(flow.edges);
+      historyRef.current = { past: [], future: [], current: null };
+      setCanUndo(false);
+      setCanRedo(false);
+      setHistoryVersion((value) => value + 1);
       setDirty(false);
       setTimeout(() => void fitView({ padding: 0.2 }), 80);
       setError("");
@@ -259,6 +366,18 @@ function CanvasEditorInner({ id }: { id: number }) {
     return () => window.clearInterval(timer);
   }, [pending, loadJobs]);
 
+  const settledRunsRef = useRef(new Set<string>());
+  useEffect(() => {
+    const runs = new Set(jobs.map((job) => job.runId).filter(Boolean));
+    for (const runId of runs) {
+      if (settledRunsRef.current.has(runId)) continue;
+      const batch = jobs.filter((job) => job.runId === runId);
+      if (!batch.length || batch.some((job) => !TERMINAL.has(job.status))) continue;
+      settledRunsRef.current.add(runId);
+      void refreshDoc();
+    }
+  }, [jobs, refreshDoc]);
+
   /** 保存当前画布；返回是否落库成功（「保存并退出」据此决定要不要跳回列表）。 */
   const persist = useCallback(
     async (silent: boolean) => {
@@ -304,13 +423,62 @@ function CanvasEditorInner({ id }: { id: number }) {
     return () => window.clearTimeout(timer);
   }, [dirty, saving, project, persist, nodes, edges]);
 
+  useEffect(() => {
+    if (loading) return;
+    const history = historyRef.current;
+    const snapshot: CanvasSnapshot = { nodes, edges, viewport: getViewport() };
+    if (!history.current || (history.current.nodes === nodes && history.current.edges === edges)) return;
+    const timer = window.setTimeout(() => {
+      const latest = historyRef.current;
+      if (!latest.current) {
+        latest.current = snapshot;
+      } else {
+        latest.past = [...latest.past, latest.current].slice(-80);
+        latest.current = snapshot;
+      }
+      latest.future = [];
+      setCanUndo(latest.past.length > 0);
+      setCanRedo(false);
+      setHistoryVersion((value) => value + 1);
+    }, 450);
+    return () => window.clearTimeout(timer);
+  }, [nodes, edges, loading, getViewport]);
+
+  const restoreSnapshot = (snapshot: CanvasSnapshot) => {
+    setNodes(snapshot.nodes);
+    setEdges(snapshot.edges);
+    void setViewport(snapshot.viewport);
+    historyRef.current.current = snapshot;
+    setSelected(null);
+    setDirty(true);
+    setHistoryVersion((value) => value + 1);
+  };
+
+  const undo = () => {
+    const history = historyRef.current;
+    const previous = history.past.pop();
+    if (!previous || !history.current) return;
+    history.future.push(history.current);
+    restoreSnapshot(previous);
+    setCanUndo(history.past.length > 0);
+    setCanRedo(history.future.length > 0);
+  };
+
+  const redo = () => {
+    const history = historyRef.current;
+    const next = history.future.pop();
+    if (!next || !history.current) return;
+    history.past.push(history.current);
+    restoreSnapshot(next);
+    setCanUndo(history.past.length > 0);
+    setCanRedo(history.future.length > 0);
+  };
+
   const addNode = useCallback(
     (kind: CanvasNodeData["kind"], extra?: Partial<CanvasNodeData>) => {
       const current = nodesRef.current;
       const prefix = kind === "prompt" ? "p" : kind === "asset" ? "a" : kind === "config" ? "c" : "g";
       const nodeId = nextId(current, prefix);
-      const x = 80 + (current.length % 4) * 280;
-      const y = 80 + Math.floor(current.length / 4) * 220;
       const base: Record<string, CanvasNodeData> = {
         prompt: { kind: "prompt", text: "" },
         asset: {
@@ -342,46 +510,59 @@ function CanvasEditorInner({ id }: { id: number }) {
         },
       };
       const data = { ...base[kind], ...(extra || {}) } as CanvasNodeData;
+      const size = canvasNodeSize(kind, data.kind === "generate" ? data.media : data.kind === "asset" ? data.media : undefined);
+      const anchor = screenToFlowPosition({
+        x: window.innerWidth * 0.56 + (current.length % 3) * 40,
+        y: window.innerHeight * 0.42 + Math.floor(current.length / 3) * 40,
+      });
       setNodes((prev) => [
         ...prev,
-        { id: nodeId, type: "canvas", position: { x, y }, data: { kind, data } },
+        {
+          id: nodeId,
+          type: "canvas",
+          position: { x: Math.round(anchor.x), y: Math.round(anchor.y) },
+          style: size,
+          data: { kind, data },
+        },
       ]);
       setSelected(nodeId);
       setDirty(true);
     },
-    [setNodes],
+    [setNodes, screenToFlowPosition],
   );
 
-  const addAssetNodes = (assets: {
-    id: number;
-    name: string;
-    type: string;
-    url: string;
-    previewUrl: string;
-  }[]) => {
+  const addAssetNodes = (
+    assets: ContentDigitalAsset[],
+    dropPosition?: { x: number; y: number },
+  ) => {
     const current = nodesRef.current;
     let base = current.reduce((acc, node) => {
       const num = Number(node.id.replace(/^[a-z]+/, ""));
       return Number.isFinite(num) && num > acc ? num : acc;
     }, 0);
+    const anchor = dropPosition || screenToFlowPosition({ x: window.innerWidth * 0.56, y: window.innerHeight * 0.42 });
     const added = assets
-      .filter((asset) => ["image", "video", "audio"].includes(asset.type))
+      .filter((asset): asset is ContentDigitalAsset & { type: "image" | "video" | "audio" } =>
+        ["image", "video", "audio"].includes(asset.type),
+      )
       .map((asset, index) => {
         base += 1;
+        const size = canvasNodeSize("asset", asset.type);
         return {
           id: `a${base}`,
           type: "canvas" as const,
           position: {
-            x: 80 + ((current.length + index) % 4) * 280,
-            y: 80 + Math.floor((current.length + index) / 4) * 220,
+            x: Math.round(anchor.x + (index % 2) * (size.width + 48)),
+            y: Math.round(anchor.y + Math.floor(index / 2) * (size.height + 64)),
           },
+          style: size,
           data: {
             kind: "asset" as const,
             data: {
               kind: "asset" as const,
               assetId: asset.id,
               name: asset.name,
-              media: asset.type as "image" | "video" | "audio",
+              media: asset.type,
               url: asset.url,
               previewUrl: asset.previewUrl || asset.url,
             },
@@ -393,25 +574,115 @@ function CanvasEditorInner({ id }: { id: number }) {
     setDirty(true);
   };
 
+  const connectNodes = useCallback((sourceId: string, targetId: string) => {
+    if (!sourceId || !targetId || sourceId === targetId) return;
+    const source = nodesRef.current.find((node) => node.id === sourceId);
+    const target = nodesRef.current.find((node) => node.id === targetId);
+    if (!source || target?.data.kind !== "generate") return;
+    const role = roleForNode(source);
+    if (edgesRef.current.some((edge) =>
+      edge.source === sourceId && edge.target === targetId && edge.data?.role === role,
+    )) return;
+    const edge: Edge = {
+      id: `e${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+      source: sourceId,
+      target: targetId,
+      sourceHandle: null,
+      targetHandle: "in",
+      label: EDGE_ROLE_LABEL[role],
+      data: { role },
+    };
+    setEdges((prev) =>
+      prev.some((item) =>
+        item.source === sourceId && item.target === targetId && item.data?.role === role,
+      ) ? prev : [...prev, edge],
+    );
+    setDirty(true);
+  }, [setEdges]);
+
   const onConnect = useCallback(
-    (connection: Connection) => {
-      const source = nodesRef.current.find((node) => node.id === connection.source);
-      const role = roleForNode(source);
-      setEdges((prev) =>
-        addEdge(
-          {
-            ...connection,
-            id: `e${Date.now().toString(36)}`,
-            label: EDGE_ROLE_LABEL[role],
-            data: { role },
-          },
-          prev,
-        ),
-      );
-      setDirty(true);
-    },
-    [setEdges],
+    (connection: Connection) => connectNodes(connection.source, connection.target),
+    [connectNodes],
   );
+
+  const isValidConnection = useCallback(
+    (connection: Connection | Edge) =>
+      Boolean(connection.source) &&
+      connection.source !== connection.target &&
+      nodesRef.current.find((node) => node.id === connection.target)?.data.kind === "generate",
+    [],
+  );
+
+  const onConnectStart = useCallback<OnConnectStart>((event, state) => {
+    const point = pointerPosition(event);
+    dragStartRef.current = point;
+    setConnectPoint(point);
+    setDraggingFrom(state.nodeId);
+  }, []);
+
+  const onConnectEnd = useCallback(
+    (event: MouseEvent | TouchEvent, state: Parameters<OnConnectEnd>[1]) => {
+      const point = pointerPosition(event);
+      const start = dragStartRef.current;
+      const moved = Boolean(point && start && Math.hypot(point.x - start.x, point.y - start.y) > 5);
+      if (moved) {
+        suppressPortClickRef.current = true;
+        window.setTimeout(() => { suppressPortClickRef.current = false; }, 0);
+      }
+      const sourceId = state.fromNode?.id || state.fromHandle?.nodeId || "";
+      const targetId = point
+        ? document.elementFromPoint(point.x, point.y)?.closest<HTMLElement>("[data-node-id]")?.dataset.nodeId || ""
+        : "";
+      if (targetId && targetId !== sourceId) {
+        const target = nodesRef.current.find((node) => node.id === targetId);
+        if (target?.data.kind === "generate") connectNodes(sourceId, targetId);
+        else if (moved) message.warning("连线只能接到图片、视频或音乐生成节点");
+      }
+      dragStartRef.current = null;
+      setDraggingFrom(null);
+      setConnectPoint(null);
+    },
+    [connectNodes, message],
+  );
+
+  const onPortClick = useCallback((nodeId: string) => {
+    if (suppressPortClickRef.current) {
+      suppressPortClickRef.current = false;
+      return;
+    }
+    setSelected(nodeId);
+    setConnectFrom((current) => {
+      if (current === nodeId) return null;
+      const handle = document.querySelector(`[data-id="${nodeId}"] .react-flow__handle.source`);
+      const rect = handle?.getBoundingClientRect();
+      setConnectPoint(rect ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 } : null);
+      return nodeId;
+    });
+  }, []);
+
+  const onNodeClick = useCallback((nodeId: string) => {
+    if (!connectFrom) {
+      setSelected(nodeId);
+      return;
+    }
+    if (connectFrom === nodeId) {
+      setConnectFrom(null);
+      setConnectPoint(null);
+      return;
+    }
+    const target = nodesRef.current.find((node) => node.id === nodeId);
+    if (target?.data.kind !== "generate") {
+      message.warning("请选择图片、视频或音乐生成节点作为连线终点");
+      setConnectFrom(null);
+      setConnectPoint(null);
+      setSelected(nodeId);
+      return;
+    }
+    connectNodes(connectFrom, nodeId);
+    setConnectFrom(null);
+    setConnectPoint(null);
+    setSelected(nodeId);
+  }, [connectFrom, connectNodes, message]);
 
   /** 图片素材连到视频生成节点后，双击连线在 素材 / 首帧 / 尾帧 之间切换（连线语义由这里决定）。 */
   const cycleEdgeRole = useCallback(
@@ -657,6 +928,7 @@ function CanvasEditorInner({ id }: { id: number }) {
             onPatch: (nodeId: string, patch: Partial<CanvasNodeData>) => patchNode(nodeId, patch),
             onRun: (nodeId: string) => void runNode(nodeId),
             onRefs: patchNodeRefs,
+            onPortClick,
             wired: wiredByNode.get(node.id) || [],
             canRun,
             runBlockedReason: blockedReason,
@@ -664,7 +936,7 @@ function CanvasEditorInner({ id }: { id: number }) {
           },
         };
       }),
-    [nodes, batchState, openPanel, patchNode, patchNodeRefs, promptFedNodes, runNode, wiredByNode],
+    [nodes, batchState, openPanel, onPortClick, patchNode, patchNodeRefs, promptFedNodes, runNode, wiredByNode],
   );
 
   // 画布内的「+」菜单：先按产出类型选（图片 / 视频 / 音乐），再是提示词 / 素材 / 模型配置
@@ -708,85 +980,206 @@ function CanvasEditorInner({ id }: { id: number }) {
     },
   ];
 
+  const openPicker = (tab: "digital" | "local") => {
+    setPickerTab(tab);
+    setPickerOpen(true);
+  };
+
+  const dropAssets = (event: React.DragEvent<HTMLDivElement>) => {
+    const raw = event.dataTransfer.getData("application/x-aipdd-canvas-asset");
+    if (!raw) return;
+    event.preventDefault();
+    try {
+      const value: unknown = JSON.parse(raw);
+      if (!Array.isArray(value)) return;
+      const assets = value.filter(
+        (item): item is ContentDigitalAsset =>
+          Boolean(item) &&
+          typeof item === "object" &&
+          Number.isInteger((item as ContentDigitalAsset).id) &&
+          typeof (item as ContentDigitalAsset).url === "string" &&
+          isReferenceMedia((item as ContentDigitalAsset).type),
+      );
+      if (assets.length) {
+        addAssetNodes(assets, screenToFlowPosition({ x: event.clientX, y: event.clientY }));
+        setSelected(null);
+      }
+    } catch {
+      message.warning("素材数据无法识别，请重新从素材库拖入");
+    }
+  };
+
+  const existingAssetUrls = nodes
+    .filter((node) => node.data.kind === "asset")
+    .map((node) => String((node.data.data as { url?: string }).url || ""));
+  const appearanceMenu = {
+    items: [
+      {
+        key: "appearance",
+        label: "画布外观",
+        type: "group" as const,
+        children: [
+          { key: "light", label: "浅色画布", icon: <SunOutlined />, onClick: () => changeTheme("light") },
+          { key: "dark", label: "深色画布", icon: <MoonOutlined />, onClick: () => changeTheme("dark") },
+          { type: "divider" as const },
+          { key: "dots", label: "点阵网格", onClick: () => changeGrid("dots") },
+          { key: "lines", label: "直线网格", onClick: () => changeGrid("lines") },
+          { key: "blank", label: "无网格", onClick: () => changeGrid("blank") },
+        ],
+      },
+    ],
+    selectedKeys: [theme, grid],
+  };
+
+  const activeConnectFrom = connectFrom || draggingFrom;
+  const connectPreview = (() => {
+    if (!activeConnectFrom || !connectPoint || typeof document === "undefined") return null;
+    const canvas = document.querySelector<HTMLElement>(".cv-canvas");
+    const handle = document.querySelector<HTMLElement>(`[data-id="${activeConnectFrom}"] .react-flow__handle.source`);
+    if (!canvas || !handle) return null;
+    const canvasRect = canvas.getBoundingClientRect();
+    const handleRect = handle.getBoundingClientRect();
+    const x = handleRect.left - canvasRect.left + handleRect.width / 2;
+    const y = handleRect.top - canvasRect.top + handleRect.height / 2;
+    return `M ${x} ${y} L ${connectPoint.x - canvasRect.left} ${connectPoint.y - canvasRect.top}`;
+  })();
+
   return (
-    <div className="cv-immersive">
+    <div className={`cv-immersive cv-theme-${theme}`}>
       {error ? <Notice variant="error">{error}</Notice> : null}
       {loading ? (
         <div className="cv-loading">
           <Skeleton active paragraph={{ rows: 6 }} />
         </div>
       ) : (
-        <div className="cv-editor">
-          <div className="cv-canvas">
+        <div className={`cv-editor cv-theme-${theme}${sidebarOpen ? " sidebar-open" : ""}`} style={{ "--cv-sidebar-width": `${sidebarWidth}px` } as React.CSSProperties}>
+          <div
+            className={`cv-canvas${activeConnectFrom ? " cv-connecting" : ""}`}
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={dropAssets}
+            onPointerMove={(event) => {
+              if (activeConnectFrom) setConnectPoint({ x: event.clientX, y: event.clientY });
+            }}
+          >
             <ReactFlow<CanvasFlowNode, Edge>
               nodes={displayNodes}
               edges={edges}
               nodeTypes={nodeTypes}
+              defaultEdgeOptions={{
+                type: "smoothstep",
+                style: { strokeWidth: 1.8 },
+                labelStyle: { fill: "var(--cv-muted)", fontSize: 11 },
+                labelBgStyle: { fill: "var(--cv-canvas)", fillOpacity: 0.9 },
+                labelBgPadding: [5, 8],
+                labelBgBorderRadius: 6,
+              }}
               onNodesChange={(changes) => {
                 onNodesChange(changes);
-                if (changes.some((item) => item.type === "position" && item.dragging === false)) {
-                  setDirty(true);
-                }
+                if (changes.some((item) =>
+                  (item.type === "position" && item.dragging === false) ||
+                  (item.type === "dimensions" && item.resizing === true) ||
+                  item.type === "remove",
+                )) setDirty(true);
               }}
               onEdgesChange={(changes) => {
                 onEdgesChange(changes);
-                if (changes.some((item) => item.type === "remove")) setDirty(true);
+                if (changes.some((item) => item.type === "remove" || item.type === "add")) setDirty(true);
               }}
               onConnect={onConnect}
+              onConnectStart={onConnectStart}
+              onConnectEnd={onConnectEnd}
+              isValidConnection={isValidConnection}
               onEdgeDoubleClick={(_, edge) => cycleEdgeRole(edge)}
-              onNodeClick={(_, node) => setSelected(node.id)}
-              onPaneClick={() => setSelected(null)}
+              onNodeClick={(_, node) => onNodeClick(node.id)}
+              onNodeDoubleClick={(_, node) => onNodeClick(node.id)}
+              onPaneClick={() => {
+                setConnectFrom(null);
+                setConnectPoint(null);
+                setSelected(null);
+              }}
+              onSelectionChange={({ nodes: selectedNodes }) => {
+                if (selectedNodes.length === 1) setSelected(selectedNodes[0].id);
+                else if (selectedNodes.length === 0) {
+                  setSelected(null);
+                  setConnectFrom(null);
+                  setConnectPoint(null);
+                }
+              }}
               onNodesDelete={() => setDirty(true)}
-              minZoom={0.2}
-              maxZoom={1.8}
+              onMoveEnd={(_, viewport) => setZoom(viewport.zoom)}
+              minZoom={0.05}
+              maxZoom={5}
               fitView
               proOptions={{ hideAttribution: true }}
             >
-              <Background gap={16} />
-              <Controls showInteractive={false} />
+              {grid !== "blank" ? (
+                <Background
+                  gap={48}
+                  size={grid === "dots" ? 1.2 : 1}
+                  color="var(--cv-grid)"
+                  variant={grid === "lines" ? BackgroundVariant.Lines : BackgroundVariant.Dots}
+                />
+              ) : null}
+              <MiniMap
+                pannable
+                zoomable
+                nodeColor={(node) => node.data.kind === "generate" ? "#8b7cf6" : node.data.kind === "asset" ? "#78a991" : "#b0aaa0"}
+                maskColor="rgba(41, 37, 36, .12)"
+                className="cv-minimap"
+              />
             </ReactFlow>
+            {connectPreview ? (
+              <svg className="cv-connect-preview" aria-hidden="true">
+                <path d={connectPreview} fill="none" strokeDasharray="5 5" strokeWidth={2} />
+              </svg>
+            ) : null}
             {!nodes.length ? (
               <div className="cv-hint">
-                点画布底部的「添加节点」放一个生成节点：选图片 / 视频 / 音乐，提示词直接写在卡片里，点卡片上的生成就能出片
+                <span className="cv-hint-mark"><AppstoreOutlined /></span>
+                <strong>从一个想法开始</strong>
+                <span>添加图片、视频或音乐生成节点，再从素材库拖入参考素材</span>
               </div>
             ) : null}
 
             <div className="cv-topbar">
-              <Button
-                type="text"
-                icon={<ArrowLeftOutlined />}
-                onClick={() => router.push("/content/canvas")}
-              >
-                返回画布
-              </Button>
-              <Input
-                value={title}
-                maxLength={120}
-                variant="borderless"
-                className="cv-topbar-title"
-                onChange={(event) => {
-                  setTitle(event.target.value);
-                  setDirty(true);
-                }}
-                onBlur={() => {
-                  if (project && title.trim() && title !== project.title) void persist(true);
-                }}
-              />
-              {project ? (
-                <Tag color="default" style={{ marginInlineEnd: 0 }}>
-                  {`v${project.version}`}
-                </Tag>
-              ) : null}
-              {dirty ? <Tag color="orange">未保存</Tag> : null}
-              <div className="cv-topbar-actions">
-                <Button
-                  icon={<SaveOutlined />}
-                  loading={saving}
-                  disabled={!dirty}
-                  onClick={() => void persist(false)}
-                >
-                  保存
+              <div className="cv-topbar-left">
+                {!sidebarOpen ? (
+                  <Tooltip title="打开素材库">
+                    <Button type="text" icon={<MenuUnfoldOutlined />} onClick={() => setSidebarOpen(true)} />
+                  </Tooltip>
+                ) : null}
+                <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => router.push("/content/canvas")}>
+                  画布
                 </Button>
+                <span className="cv-topbar-divider" />
+                <Input
+                  value={title}
+                  maxLength={120}
+                  variant="borderless"
+                  className="cv-topbar-title"
+                  onChange={(event) => {
+                    setTitle(event.target.value);
+                    setDirty(true);
+                  }}
+                  onBlur={() => {
+                    if (project && title.trim() && title !== project.title) void persist(true);
+                  }}
+                />
+                <span className={`cv-save-state${dirty ? " dirty" : ""}`}>
+                  {saving ? "保存中…" : dirty ? "未保存" : "已保存"}
+                </span>
+              </div>
+              <div className="cv-topbar-actions">
+                <Tooltip title="撤销">
+                  <Button type="text" icon={<UndoOutlined />} disabled={!canUndo} onClick={undo} />
+                </Tooltip>
+                <Tooltip title="重做">
+                  <Button type="text" icon={<RedoOutlined />} disabled={!canRedo} onClick={redo} />
+                </Tooltip>
+                <Dropdown menu={appearanceMenu} trigger={["click"]} placement="bottomRight">
+                  <Button type="text" icon={theme === "dark" ? <MoonOutlined /> : <SunOutlined />}>外观</Button>
+                </Dropdown>
+                <Button icon={<SaveOutlined />} loading={saving} disabled={!dirty} onClick={() => void persist(false)}>保存</Button>
                 <Button
                   type="primary"
                   icon={<CloudUploadOutlined />}
@@ -804,22 +1197,44 @@ function CanvasEditorInner({ id }: { id: number }) {
 
             <div className="cv-dock">
               <Dropdown menu={{ items: addMenu }} trigger={["click"]} placement="topLeft">
-                <Button type="primary" shape="round" icon={<PlusOutlined />}>
-                  添加节点
-                </Button>
+                <Button type="primary" className="cv-dock-add" icon={<PlusOutlined />}>添加节点</Button>
               </Dropdown>
-              <span className="cv-dock-tip">再把它和素材 / 提示词连线</span>
+              <span className="cv-dock-divider" />
+              <Button className="cv-dock-tool" icon={<FolderOpenOutlined />} onClick={() => setSidebarOpen(true)}>素材库</Button>
               <Badge count={pendingCount} size="small" offset={[-2, 2]}>
-                <Button
-                  shape="round"
-                  icon={<ProfileOutlined />}
-                  onClick={() => setTaskOpen((prev) => !prev)}
-                >
-                  任务
-                </Button>
+                <Button className="cv-dock-tool" icon={<ProfileOutlined />} onClick={() => setTaskOpen((prev) => !prev)}>任务</Button>
               </Badge>
             </div>
+
+            {connectFrom ? (
+              <div className="cv-dock-hint" role="status">
+                已选上游节点，点击下游生成节点完成连线
+                <span>Esc 取消</span>
+              </div>
+            ) : null}
+
+            <div className="cv-zoom-control">
+              <Button type="text" icon={<MinusOutlined />} onClick={() => void zoomOut({ duration: 160 })} aria-label="缩小" />
+              <button type="button" className="cv-zoom-value" onClick={() => void fitView({ padding: 0.2, duration: 180 })}>
+                {Math.round(zoom * 100)}%
+              </button>
+              <Button type="text" icon={<PlusOutlined />} onClick={() => void zoomIn({ duration: 160 })} aria-label="放大" />
+              <span />
+              <Tooltip title="适应画布">
+                <Button type="text" icon={<AimOutlined />} onClick={() => void fitView({ padding: 0.2, duration: 180 })} />
+              </Tooltip>
+            </div>
           </div>
+
+          <CanvasAssetSidebar
+            open={sidebarOpen}
+            width={sidebarWidth}
+            existingUrls={existingAssetUrls}
+            onWidth={setSidebarWidth}
+            onClose={() => setSidebarOpen(false)}
+            onAdd={(assets) => addAssetNodes(assets)}
+            onOpenPicker={openPicker}
+          />
 
           {selectedNode ? (
             <NodePanel
@@ -829,7 +1244,12 @@ function CanvasEditorInner({ id }: { id: number }) {
                 type: selectedNode.data.kind,
                 x: selectedNode.position.x,
                 y: selectedNode.position.y,
-                width: 220,
+                width: Math.round(
+                  selectedNode.measured?.width ||
+                    (typeof selectedNode.style?.width === "number"
+                      ? selectedNode.style.width
+                      : canvasNodeSize(selectedNode.data.kind).width),
+                ),
                 data: selectedNode.data.data,
               }}
               channels={channels}
@@ -866,9 +1286,8 @@ function CanvasEditorInner({ id }: { id: number }) {
 
       <AssetReferencePicker
         open={pickerOpen}
-        existingUrls={nodes
-          .filter((node) => node.data.kind === "asset")
-          .map((node) => String((node.data.data as { url?: string }).url || ""))}
+        initialTab={pickerTab}
+        existingUrls={existingAssetUrls}
         onCancel={() => setPickerOpen(false)}
         onPick={(assets) => {
           addAssetNodes(assets);

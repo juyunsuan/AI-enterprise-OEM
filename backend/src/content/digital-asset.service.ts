@@ -610,6 +610,29 @@ export class DigitalAssetService {
     }
   }
 
+  /**
+   * 任务产物下载：台账里能按 url 找到「带对象键」的自有资产时，直接回读本站 OSS 字节。
+   * 返回 null＝老产物只存了上游直链，由调用方走直连下载。
+   */
+  async readOwnedMedia(
+    user: CurrentUser,
+    url: string,
+  ): Promise<{ bytes: Buffer; name: string } | null> {
+    const target = readText(url).trim();
+    if (!target) return null;
+    const entry = await this.prisma.digitalAssetEntry.findFirst({
+      where: {
+        userId: user.userId,
+        url: target,
+        ossKey: { not: '' },
+      },
+      select: { ossKey: true, name: true },
+    });
+    if (!entry?.ossKey) return null;
+    const bytes = await this.storage.read(entry.ossKey, AIPDD_MEDIA_MAX_BYTES);
+    return { bytes, name: entry.name };
+  }
+
   /** 读台账行 → 自动理解/打标 + 图视频送审；异步兜底，失败只告警不阻断上传。 */
   private async enrichByAssetId(
     userId: string,

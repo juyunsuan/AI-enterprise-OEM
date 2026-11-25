@@ -611,6 +611,15 @@ export const contentLibraryDraftSchema = z.object({
 });
 export type ContentLibraryDraft = z.infer<typeof contentLibraryDraftSchema>;
 
+/** 带类型的参考素材：URL 数组只够表达图片，视频 / 音频必须显式保留类型。 */
+export const contentMediaReferenceSchema = z.object({
+  type: z.enum(["image", "video", "audio"]),
+  url: z.string(),
+});
+export type ContentMediaReference = z.infer<
+  typeof contentMediaReferenceSchema
+>;
+
 /** 卡片字段：一个清单一个维度，界面按 type 渲染控件，后端按 required 校验。 */
 export type ContentFieldType =
   "text" | "textarea" | "select" | "number" | "media";
@@ -1234,6 +1243,8 @@ export type CanvasNode = {
   x: number;
   y: number;
   width: number;
+  /** 画布节点高度（旧文档没有时按节点类型取默认） */
+  height?: number;
   data: CanvasNodeData;
 };
 

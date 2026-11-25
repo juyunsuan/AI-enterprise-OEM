@@ -45,11 +45,16 @@ export function useBusinessQuery<T>(
 export function useBusinessQueries<T>(
   module: string,
   resources: { resource: string; params: unknown; load: (signal: AbortSignal) => Promise<T> }[],
+  policy: Pick<
+    UseQueryOptions<T, Error, T>,
+    "staleTime" | "refetchInterval"
+  > = {},
 ) {
   const { me, loading, switchingIdentity } = useSession();
   const scope = queryKeys.scope(me?.userId || "", me?.currentIdentity || "", "all");
   return useQueries({
     queries: resources.map(({ resource, params, load }) => ({
+      ...policy,
       queryKey: queryKeys.resource(scope, module, resource, params),
       queryFn: ({ signal }: { signal: AbortSignal }) => load(signal),
       enabled: !!me && !loading && !switchingIdentity,

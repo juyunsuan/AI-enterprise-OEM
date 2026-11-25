@@ -1,7 +1,9 @@
 import {
   CONTENT_MEDIA_TYPE_LABELS,
   CONTENT_TOOLS,
+  type ContentField,
   type ContentJob,
+  type ContentMediaReference,
   type ContentTool,
 } from '@enterprise/contracts';
 import { text } from '../common/api';
@@ -11,7 +13,7 @@ import { ErrorCode } from '../common/error-code';
 import { Logger } from '../common/logger';
 import { CurrentUser } from '../auth/current-user';
 import { PrismaService } from '../prisma/prisma.service';
-import { AipddAssetClient } from './aipdd-asset.client';
+import { AipddAssetClient, AIPDD_MEDIA_MAX_BYTES } from './aipdd-asset.client';
 import {
   ContentMediaService,
   type JobControl,
@@ -103,29 +105,78 @@ function view(row: JobRow): ContentJob {
   };
 }
 
+/** 旧调用继续传 URL 数组按字段媒体类型读取；新调用可传 { type, url } 保留类型。 */
+function readMediaReferences(
+  raw: unknown,
+  fallback: 'image' | 'video' | 'audio' = 'image',
+): ContentMediaReference[] {
+  const list = Array.isArray(raw) ? raw : [raw];
+  const references: ContentMediaReference[] = [];
+  for (const item of list) {
+    if (item && typeof item === 'object') {
+      const storedType: unknown = Reflect.get(item, 'type');
+      const rawType = storedType === undefined ? fallback : storedType;
+      if (rawType !== 'image' && rawType !== 'video' && rawType !== 'audio') {
+        throw new BusinessException(
+          ErrorCode.BAD_REQUEST,
+          '参考素材类型无效，仅支持图片 / 视频 / 音频',
+        );
+      }
+      const url = text(Reflect.get(item, 'url')).trim();
+      if (url) references.push({ type: rawType, url });
+      continue;
+    }
+    const url = text(item).trim();
+    if (url) references.push({ type: fallback, url });
+  }
+  return references;
+}
+
+function validateMediaReferences(field: ContentField, raw: unknown) {
+  const references = readMediaReferences(raw, field.mediaKind || 'image');
+  if (field.required && !references.length) {
+    throw new BusinessException(
+      ErrorCode.BAD_REQUEST,
+      `请先上传「${field.label}」`,
+    );
+  }
+  if (!field.multiple && references.length > 1) references.length = 1;
+  if (references.some((item) => !/^https?:\/\//i.test(item.url))) {
+    throw new BusinessException(
+      ErrorCode.BAD_REQUEST,
+      `「${field.label}」不是有效的文件地址，请重新上传`,
+    );
+  }
+  return references;
+}
+
 function validateInput(tool: ContentTool, body: Record<string, unknown>) {
   const input: Record<string, unknown> = {};
   for (const field of tool.fields) {
     const raw = body[field.key];
     if (field.type === 'media') {
-      const list = Array.isArray(raw)
-        ? raw.map((item) => text(item))
-        : [text(raw)];
-      const urls = list.map((item) => item.trim()).filter(Boolean);
-      if (field.required && !urls.length) {
-        throw new BusinessException(
-          ErrorCode.BAD_REQUEST,
-          `请先上传「${field.label}」`,
-        );
+      const imageEdit = tool.key === 'image-edit' && field.key === 'image';
+      const references = validateMediaReferences(
+        imageEdit ? { ...field, multiple: true } : field,
+        imageEdit ? (body.imageUrls ?? raw) : raw,
+      );
+      if (imageEdit) {
+        // 画布保留多图别名；小工具仍只提交契约字段 image
+        input.image = references[0]?.url || '';
+        input.imageUrls = references.map((item) => item.url);
+        continue;
       }
-      if (!field.multiple && urls.length > 1) urls.length = 1;
-      if (urls.some((url) => !/^https?:\/\//i.test(url))) {
-        throw new BusinessException(
-          ErrorCode.BAD_REQUEST,
-          `「${field.label}」不是有效的文件地址，请重新上传`,
-        );
-      }
-      input[field.key] = field.multiple ? urls : urls[0] || '';
+      const typed =
+        Boolean(raw && typeof raw === 'object') ||
+        (Array.isArray(raw) &&
+          raw.some((item) => item && typeof item === 'object'));
+      input[field.key] = typed
+        ? field.multiple
+          ? references
+          : references[0]?.url || ''
+        : field.multiple
+          ? references.map((item) => item.url)
+          : references[0]?.url || '';
       continue;
     }
     if (field.type === 'number') {
@@ -417,9 +468,10 @@ export class ContentJobService {
       onProgress: this.progressWriter(jobId),
       onAccepted: (taskId) => void this.markAccepted(jobId, taskId),
     };
+    let outcome: ExecuteOutcome | undefined;
     try {
       // 后台没有请求上下文，不传令牌：渠道 0（AIPDD）的凭据由取凭据层按 userId 现取本人绑定的 Key
-      const outcome = await this.executeTool(
+      outcome = await this.executeTool(
         user,
         undefined,
         tool,
@@ -433,7 +485,7 @@ export class ContentJobService {
       await this.finish(jobId, 'SUCCESS', {
         output: { ...outcome.output, ...stored.output },
         assetUrl,
-        aipddAssetId: stored.assetId,
+        aipddAssetId: stored.assetId || row.aipddAssetId,
         progress: 100,
       });
       await this.rememberCanvasResult(row, assetUrl, stored.assetId);
@@ -452,7 +504,13 @@ export class ContentJobService {
           : error instanceof Error
             ? error.message.slice(0, 450)
             : '生成失败，请稍后重试';
-      await this.finish(jobId, 'FAILED', { error: message });
+      await this.finish(jobId, 'FAILED', {
+        error: message,
+        // 入资产失败时保留已生成产物，重试只补登记，不再扣一次生成算力
+        ...(outcome
+          ? { output: outcome.output, assetUrl: outcome.assetUrl }
+          : {}),
+      });
     }
   }
 
@@ -519,18 +577,59 @@ export class ContentJobService {
 
   /**
    * 画布 / 工作台产物入数字资产：下载上游直链字节存本站 OSS 并登记台账。
-   * 失败只告警不阻断任务成功（任务照样回上游直链）。
+   * 入库是成功的一部分；失败抛业务错误，由 execute 留存产物并落 FAILED。
    */
   private async store(row: JobRow, outcome: ExecuteOutcome) {
-    const empty = {
-      assetUrl: '',
-      assetId: '',
-      output: {} as Record<string, unknown>,
-    };
+    const empty: {
+      assetUrl: string;
+      assetId: string;
+      output: Record<string, unknown>;
+    } = { assetUrl: '', assetId: '', output: {} };
     const source = row.source || 'tool';
     // 老工具继续走 AIPDD 平台登记，只有画布 / 工作台接新底座
-    if (!outcome.assetUrl || source === 'tool' || !row.media) return empty;
+    if (
+      !outcome.assetUrl ||
+      (source !== 'canvas' && source !== 'studio') ||
+      !row.media
+    ) {
+      return empty;
+    }
     try {
+      // 编号可能来自上游平台登记，不能证明字节已在本站 OSS：只认带对象键的本地台账。
+      const knownId = Number(text(row.aipddAssetId).trim());
+      if (Number.isInteger(knownId) && knownId !== 0) {
+        const known = await this.prisma.digitalAssetEntry.findFirst({
+          where: {
+            userId: row.userId,
+            aipddAssetId: knownId,
+            ossKey: { not: '' },
+          },
+          select: { aipddAssetId: true, url: true },
+        });
+        if (known) {
+          return {
+            assetUrl: known.url || outcome.assetUrl,
+            assetId: String(known.aipddAssetId),
+            output: {},
+          };
+        }
+      }
+      // 本地资产可能已由其它链路登记；只按带对象键的归属台账去重，不重复下载 / 入账。
+      const known = await this.prisma.digitalAssetEntry.findFirst({
+        where: {
+          userId: row.userId,
+          url: outcome.assetUrl,
+          ossKey: { not: '' },
+        },
+        select: { aipddAssetId: true, url: true },
+      });
+      if (known) {
+        return {
+          assetUrl: known.url || outcome.assetUrl,
+          assetId: String(known.aipddAssetId),
+          output: {},
+        };
+      }
       const bytes = await this.client.download(outcome.assetUrl);
       const asset = await this.digitalAssets.registerDeliverable(row.userId, {
         bytes: Buffer.from(bytes),
@@ -539,12 +638,7 @@ export class ContentJobService {
         dir: source,
         source,
       });
-      if (!asset?.id) {
-        return {
-          ...empty,
-          output: { assetNote: '产物已生成，但未能存入本站数字资产' },
-        };
-      }
+      if (!asset?.id) throw new Error('数字资产服务未完成台账登记');
       return {
         assetUrl: asset.url || outcome.assetUrl,
         assetId: String(asset.id),
@@ -553,15 +647,14 @@ export class ContentJobService {
         output: { assetNote: '' },
       };
     } catch (error) {
-      logger.warn(
-        `产物入数字资产失败 job=${row.id}: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
+      const reason = error instanceof Error ? error.message : String(error);
+      logger.error(
+        `产物入数字资产失败 job=${row.id} source=${source} media=${row.media}: ${reason}`,
       );
-      return {
-        ...empty,
-        output: { assetNote: '产物已生成，但未能存入本站数字资产' },
-      };
+      throw new BusinessException(
+        ErrorCode.SERVICE_UNAVAILABLE,
+        `产物已生成，但入资产失败；请检查对象存储和数字资产服务配置后重试补登记（无需重新生成）：${reason.slice(0, 200)}`,
+      );
     }
   }
 
@@ -597,7 +690,7 @@ export class ContentJobService {
           },
         ].slice(-24),
       };
-      await this.prisma.contentCanvasProject.updateMany({
+      const updated = await this.prisma.contentCanvasProject.updateMany({
         where: { id: row.canvasId, version: canvas.version },
         data: {
           doc: toJsonInput(doc),
@@ -606,9 +699,14 @@ export class ContentJobService {
           coverUrl: deriveCoverUrl(doc),
         },
       });
+      if (updated.count !== 1) {
+        logger.error(
+          `画布节点结果回写失败 job=${row.id} canvasId=${row.canvasId} nodeId=${row.nodeId}: 版本冲突或画布已删除`,
+        );
+      }
     } catch (error) {
-      logger.warn(
-        `画布节点结果回写失败 job=${row.id}: ${
+      logger.error(
+        `画布节点结果回写失败 job=${row.id} canvasId=${row.canvasId} nodeId=${row.nodeId} runId=${row.runId}: ${
           error instanceof Error ? error.message : String(error)
         }`,
       );
@@ -631,6 +729,10 @@ export class ContentJobService {
       const single = text(value).trim();
       return single ? [single] : [];
     };
+    const refs = (
+      key: string,
+      fallback: 'image' | 'video' | 'audio' = 'image',
+    ) => readMediaReferences(input[key], fallback);
     const mediaStep = async (
       pending: Promise<Record<string, unknown>>,
     ): Promise<ExecuteOutcome> => {
@@ -670,10 +772,7 @@ export class ContentJobService {
               token,
               {
                 ...params,
-                references: frames.map((url) => ({
-                  type: 'image' as const,
-                  url,
-                })),
+                references: readMediaReferences(frames),
               },
               models,
               control,
@@ -694,9 +793,7 @@ export class ContentJobService {
               duration: Number(input.duration) || undefined,
               resolution: str('resolution') || undefined,
               ratio: str('ratio') || undefined,
-              references: urls('references')
-                .slice(0, 6)
-                .map((url) => ({ type: 'image' as const, url })),
+              references: refs('references').slice(0, 6),
             },
             models,
             control,
@@ -711,9 +808,7 @@ export class ContentJobService {
               prompt: str('prompt'),
               references: [
                 { type: 'video', url: str('video') },
-                ...urls('references')
-                  .slice(0, 4)
-                  .map((url) => ({ type: 'image' as const, url })),
+                ...refs('references').slice(0, 4),
               ],
             },
             models,
@@ -760,9 +855,7 @@ export class ContentJobService {
             {
               prompt: str('prompt'),
               duration: Number(input.duration) || undefined,
-              references: urls('materials')
-                .slice(0, 6)
-                .map((url) => ({ type: 'image' as const, url })),
+              references: refs('materials').slice(0, 6),
             },
             models,
             control,
@@ -792,7 +885,8 @@ export class ContentJobService {
         return { output, assetUrl: text(output.url) };
       }
       case 'image-edit': {
-        const sources = urls('image');
+        const aliases = urls('imageUrls');
+        const sources = aliases.length ? aliases : urls('image');
         return mediaStep(
           this.media.editImage(
             user,
@@ -996,6 +1090,36 @@ export class ContentJobService {
   }
 
   /**
+   * 产物下载：自有台账里带对象键的直接读本站 OSS；老产物只有上游直链时按直链代取。
+   * 大小上限与素材上传口径一致（100MB），避免整段大文件灌进进程内存。
+   */
+  async download(user: CurrentUser, id: string) {
+    const jobId = Number(id);
+    if (!Number.isInteger(jobId) || jobId <= 0) {
+      throw new BusinessException(ErrorCode.BAD_REQUEST, '任务编号无效');
+    }
+    const row = await this.rowOf(user, jobId);
+    if (row.status !== 'SUCCESS') {
+      throw new BusinessException(
+        ErrorCode.BAD_REQUEST,
+        '任务还没完成，暂时不能下载',
+      );
+    }
+    const output = (row.output || {}) as Record<string, unknown>;
+    const url = text(row.assetUrl).trim() || text(output.url).trim();
+    if (!url) {
+      throw new BusinessException(
+        ErrorCode.BAD_REQUEST,
+        '这个任务没有可下载的产物',
+      );
+    }
+    const owned = await this.digitalAssets.readOwnedMedia(user, url);
+    if (owned) return { ...owned, url };
+    const bytes = await this.client.download(url, AIPDD_MEDIA_MAX_BYTES);
+    return { bytes: Buffer.from(bytes), name: '', url };
+  }
+
+  /**
    * 取消：先落库 CANCELED（DB 是唯一真值，调度池不会再取），再 abort 中断本站等待。
    * 上游已产生的算力费用不退回，原因写进 cancelReason 供界面常驻展示。
    */
@@ -1034,7 +1158,52 @@ export class ContentJobService {
     return view(await this.rowOf(user, jobId));
   }
 
-  /** 重试 = 同参数新建一条任务（原任务保留历史）。 */
+  /** 生成已完成但入资产失败：重试只补登记原产物，不重新调用模型。 */
+  private async retryStore(row: JobRow) {
+    const previous: Record<string, unknown> =
+      row.output && typeof row.output === 'object'
+        ? Object.fromEntries(Object.entries(row.output))
+        : {};
+    const stored = await this.store(row, {
+      output: previous,
+      assetUrl: row.assetUrl,
+    });
+    const assetUrl = stored.assetUrl || row.assetUrl;
+    const result = await this.prisma.contentGenerationJob.updateMany({
+      where: {
+        id: row.id,
+        userId: row.userId,
+        status: 'FAILED',
+        assetUrl: row.assetUrl,
+      },
+      data: {
+        status: 'SUCCESS',
+        output: toJsonInput({ ...previous, ...stored.output }),
+        assetUrl,
+        aipddAssetId: stored.assetId,
+        error: '',
+        progress: 100,
+        finishedAt: new Date(),
+      },
+    });
+    const fresh = await this.prisma.contentGenerationJob.findUnique({
+      where: { id: row.id },
+    });
+    if (!fresh) {
+      throw new BusinessException(ErrorCode.NOT_FOUND, '任务不存在');
+    }
+    const current: JobRow = fresh;
+    if (result.count !== 1 && current.status !== 'SUCCESS') {
+      throw new BusinessException(
+        ErrorCode.CONFLICT,
+        '任务状态已变化，请刷新后重试',
+      );
+    }
+    await this.rememberCanvasResult(row, assetUrl, stored.assetId);
+    return view(current);
+  }
+
+  /** 重试 = 同参数新建一条任务（原任务保留历史）；入资产失败优先补登记。 */
   async retry(user: CurrentUser, id: string) {
     const jobId = Number(id);
     if (!Number.isInteger(jobId) || jobId <= 0) {
@@ -1046,6 +1215,13 @@ export class ContentJobService {
         ErrorCode.BAD_REQUEST,
         '任务还在进行中，请等它结束或先取消',
       );
+    }
+    if (
+      row.status === 'FAILED' &&
+      (row.source === 'canvas' || row.source === 'studio') &&
+      row.assetUrl
+    ) {
+      return this.retryStore(row);
     }
     // 重试请求不带请求上下文：沿用原任务的渠道与模型，凭据口径同后台执行（不传令牌）
     const models = (row.models || {}) as ModelOverrides;

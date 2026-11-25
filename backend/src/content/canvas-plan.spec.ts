@@ -228,6 +228,7 @@ describe('planNodeRun', () => {
       'g',
     );
     expect(plan.tool).toBe('image-edit');
+    expect(plan.input.image).toBe('https://x/1.png');
     expect(plan.input.imageUrls).toEqual([
       'https://x/1.png',
       'https://x/2.png',
@@ -277,7 +278,47 @@ describe('planNodeRun', () => {
       'g',
     );
     expect(refs.tool).toBe('video-ref');
-    expect(refs.input.references).toEqual(['https://x/ref.png']);
+    expect(refs.input.references).toEqual([
+      { type: 'image', url: 'https://x/ref.png' },
+    ]);
+  });
+
+  it('视频：参考图 / 视频 / 音频保留类型，共同计入 6 条上限', () => {
+    const plan = planNodeRun(
+      doc(
+        [
+          prompt('p', '混合参考'),
+          asset('i', 'image', 'https://x/ref.png'),
+          asset('v', 'video', 'https://x/ref.mp4'),
+          asset('a', 'audio', 'https://x/ref.mp3'),
+          asset('i2', 'image', 'https://x/2.png'),
+          asset('i3', 'image', 'https://x/3.png'),
+          asset('i4', 'image', 'https://x/4.png'),
+          asset('i5', 'image', 'https://x/5.png'),
+          generate('g', 'video', { duration: 5 }),
+        ],
+        [
+          { id: 'e1', from: 'p', to: 'g', role: 'prompt' },
+          { id: 'e2', from: 'i', to: 'g', role: 'asset' },
+          { id: 'e3', from: 'v', to: 'g', role: 'asset' },
+          { id: 'e4', from: 'a', to: 'g', role: 'asset' },
+          { id: 'e5', from: 'i2', to: 'g', role: 'asset' },
+          { id: 'e6', from: 'i3', to: 'g', role: 'asset' },
+          { id: 'e7', from: 'i4', to: 'g', role: 'asset' },
+          { id: 'e8', from: 'i5', to: 'g', role: 'asset' },
+        ],
+      ),
+      'g',
+    );
+    expect(plan.tool).toBe('video-ref');
+    expect(plan.input.references).toEqual([
+      { type: 'image', url: 'https://x/ref.png' },
+      { type: 'video', url: 'https://x/ref.mp4' },
+      { type: 'audio', url: 'https://x/ref.mp3' },
+      { type: 'image', url: 'https://x/2.png' },
+      { type: 'image', url: 'https://x/3.png' },
+      { type: 'image', url: 'https://x/4.png' },
+    ]);
   });
 
   it('视频：未填时长时如实报错（不给默认值）', () => {

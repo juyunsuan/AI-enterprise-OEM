@@ -263,12 +263,13 @@ export function NodePanel({
     <Drawer
       open
       placement="right"
-      size={380}
+      size={390}
       mask={false}
       closable={false}
       getContainer={false}
+      rootClassName="cv-node-panel-drawer"
       rootStyle={{ position: "absolute" }}
-      styles={{ body: { padding: 12 } }}
+      styles={{ body: { padding: 16, background: "var(--cv-panel)", color: "var(--cv-text)" } }}
       title={null}
     >
       <div className="cv-panel">

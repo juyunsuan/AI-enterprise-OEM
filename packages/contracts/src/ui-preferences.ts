@@ -4,10 +4,11 @@ const envelope = <T extends z.ZodType>(data: T) =>
   z.object({ code: z.number(), message: z.string(), data: data.nullable() });
 const emptyQuery = z.object({});
 
-/** 已知的界面偏好键：驾驶舱「快捷导航」「首页板块显隐」与侧栏「个性化菜单显隐」；未登记键一律拒绝写入。 */
+/** 已知的界面偏好键：驾驶舱「快捷导航」「首页板块显隐」「数据大屏」与侧栏「个性化菜单显隐」；未登记键一律拒绝写入。 */
 export const UI_PREFERENCE_KEYS = [
   "dashboard.shortcuts",
   "dashboard.sections",
+  "dashboard.bigscreen",
   "nav.hiddenMenus",
 ] as const;
 export type UiPreferenceKey = (typeof UI_PREFERENCE_KEYS)[number];
@@ -34,6 +35,17 @@ export const dashboardHiddenSectionsSchema = z.object({
   sections: z.array(z.string().min(1).max(64)).max(50),
 });
 export type DashboardHiddenSections = z.infer<typeof dashboardHiddenSectionsSchema>;
+
+/**
+ * 驾驶舱「数据大屏」：账号级（跨设备）保存前台大屏标题与要展示的图表 key。
+ * widget key 由前端图表目录约定，这里只做长度与数量约束。
+ */
+export const dashboardBigscreenSchema = z.object({
+  title: z.string().max(40).default(""),
+  subtitle: z.string().max(80).default(""),
+  widgets: z.array(z.string().min(1).max(64)).max(40),
+});
+export type DashboardBigscreen = z.infer<typeof dashboardBigscreenSchema>;
 
 /**
  * 侧栏「个性化菜单显隐」：账号级（跨设备）保存用户自己关掉的菜单叶子路径。

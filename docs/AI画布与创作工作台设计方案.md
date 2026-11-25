@@ -28,7 +28,7 @@
 | 任务超时收口 | `healStale()`：RUNNING 超 30 分钟置 FAILED | 同上 |
 | 媒体生成执行器 | `generateImage / generateVideo / generateVideoWithReferences / music / speech / editImage / upscaleVideo`，内部 `post()` + `poll()` | [content-media.service.ts:207](file:///E:/wwwroot/oem-enterprise/backend/src/content/content-media.service.ts#L207) |
 | HTTP 可取消 | `httpRequest()` 支持 `signal`，并与 `currentRequest()?.signal` 合并；`poll()` 已把 `TransportError kind='cancelled'` 转成「生成已中断」 | [transport.ts:138](file:///E:/wwwroot/oem-enterprise/backend/src/http/transport.ts#L138) |
-| 数字资产新底座 | 字节存自有 OSS（`ossKey` 非空，`aipddAssetId = -行id`）；`registerDeliverable()` 尽力而为不阻断 | [digital-asset.service.ts:824](file:///E:/wwwroot/oem-enterprise/backend/src/content/digital-asset.service.ts#L824) |
+| 数字资产新底座 | 字节存自有 OSS（`ossKey` 非空，`aipddAssetId = -行id`）；画布 / 工作台产物必须完成本站入库，失败保留产物并可重试补登记 | [digital-asset.service.ts:824](file:///E:/wwwroot/oem-enterprise/backend/src/content/digital-asset.service.ts#L824) |
 | 远端字节下载 | `AipddAssetClient.download(url)` → `Uint8Array` | [aipdd-asset.client.ts:322](file:///E:/wwwroot/oem-enterprise/backend/src/content/aipdd-asset.client.ts#L322) |
 | 进程内调度器范式 | `setInterval` + `onModuleInit/onModuleDestroy` + `busy` 去重（Agent 定时任务、内容巡检同款） | [agent-schedule.scheduler.ts](file:///E:/wwwroot/oem-enterprise/backend/src/content/agent-schedule.scheduler.ts) |
 | 契约驱动路由 | `packages/contracts` 出端点 → `automation-routes.ts` 按 operationId 挂 handler；读用户上游 Key 的端点须登记 `UPSTREAM_TOKEN_OPERATIONS` | [automation-routes.ts:99](file:///E:/wwwroot/oem-enterprise/backend/src/http/automation-routes.ts#L99) |
@@ -44,7 +44,7 @@
 | 2 | 引用数字资产里的图片/视频/音频 | 画布节点与三个工作台共用 `AssetReferencePicker`；选中的资产变成**素材节点**并在画布上连线到生成节点；提交时把参考素材展开成 `references: [{type,url}]` 或首尾帧字段 |
 | 3 | 选渠道 → 选模型 → 按模型规格提交 | 抽出共享组件 `GenerationConfig`（渠道 Select → 模型 Select → 规格控件），规格只读 `model.capabilities`，**不写死档位**；三个工作台与画布节点面板共用这一份 |
 | 4 | 生成是异步的，画布要有任务管理 | 任务表扩展画布维度字段（`canvasId / nodeId / runId / source / media / progress`）；新增**队列调度器**（每 5 秒取 PENDING 起跑）+ **超时收口**；界面统一 `TaskDock`：排队 / 进行中（进度）/ 成功 / 失败（可重试）/ 已取消 |
-| 5 | 生成好的内容存进数字资产管理 | 生成成功 → 下载上游直链字节（`client.download`）→ `digitalAssets.registerDeliverable(...)` 存自有 OSS + 台账；失败只告警不阻断出片（沿用 `tryRegister` 降级口径） |
+| 5 | 生成好的内容存进数字资产管理 | 画布 / 工作台生成成功 → 下载上游直链字节 → `digitalAssets.registerDeliverable(...)` 存自有 OSS + 台账；**本站入库是 SUCCESS 的必要条件**，失败落 FAILED、保留产物，重试只补登记不重新生成 |
 | 6 | 画布要能保存、再打开 | `content_canvas_projects` 整包 JSON（节点 + 连线 + 视口），前端 2 秒防抖自动保存，切换画布前落盘 |
 
 ---
@@ -223,7 +223,14 @@ export type CanvasEdge = {
 | prompt | 文本块，双击编辑 | 可连线到生成节点（role=prompt） |
 | asset | 缩略图 + 名称 + 类型标 | 可连线（role=asset / first-frame / last-frame）；点击在右侧面板「替换素材 / 下载 / 存为参考」 |
 | config | 渠道 + 模型 + 规格摘要 | 连线到多个生成节点共用一套配置 |
-| generate | 媒体类型标签、提示词摘要、上次结果缩略图、状态徽标 | 选中后右侧面板出 `GenerationConfig` + 提交；结果缩略图可直接拖成新的 asset 节点 |
+| generate | 媒体类型标签、提示词摘要、上次结果缩略图、状态徽标 | 选中后右侧面板出 `GenerationConfig` + 提交；结果缩略图可直接拖成新的 asset 节点；右侧输出口可继续连接下游生成节点（role=asset） |
+
+连线交互（与参考项目一致）：
+
+- 所有节点都有右侧输出口，默认在节点 hover、选中或连接模式时显示；提示词、素材、配置和生成节点均可作为上游。
+- 支持两种建边方式：拖动输出口到下游节点，或先点击输出口再点击下游节点。拖动落点按整个节点命中，不要求精确落到左侧输入口。
+- 只有生成节点能作为终点；拖到非生成节点不建边并提示。同一来源、目标、角色不重复建边。
+- 点击空白处、再次点击同一输出口或按 `Escape` 取消待完成连接；连接中显示虚线预览与底部操作提示。
 
 生成节点面板（右侧抽屉，宽 360）：
 
@@ -579,4 +586,40 @@ frontend/src/components/content/
 修法：节点面板加一处**回写规整** effect——换模型后按新模型的 `capabilities` 校验节点里的 `size / ratio / resolution`，越界就回写到该模型的默认档（与下拉框显示值一致）。这样面板显示什么、提交就发什么，不再有「显示一个、提交另一个」的错位；同样口径覆盖生图尺寸、视频比例 / 分辨率（时长由上面的必填守卫兜底，不参与回写默认）。
 
 - 复验：实测「720p → 480p」换模型后节点值与显示值同步规整；空时长点生成，前端就地拦截、后端补 400 守卫；填 5 秒后按钮恢复可点并正常出片。
+
+### 13.9 画布界面按参考项目整体升级 + 产物强制入库（2026-11-25）
+
+本轮按 `infinite-canvas` **视觉与交互重新实现**画布编辑器；只读取该项目的本地参考副本，未复制或移植源码（AGPL-3.0，参考副本位于 `.tmp/`，不入库、不计分发，见 `docs/dev-kit/THIRD_PARTY.md`）。
+
+**界面与交互**
+
+| 区域 | 实现 |
+| --- | --- |
+| 全屏沉浸 | 画布路由隐藏后台侧栏、顶栏与面包屑，布局容器固定铺满视口；素材栏占 280px，画布区域从素材栏右侧开始，顶部浮栏、底部 56px dock、右下缩放条、左下 240×160 小地图均位于画布可视区内 |
+| 素材双来源 | 左侧常驻素材栏合并「我的数字资产」与「收到的共享资料」，支持来源页签、媒体筛选、搜索、点击添加、拖拽入画布；「添加素材」仍打开 860px 选择器，既可从数字资产 / 共享资料多选，也可拖拽或批量上传本地文件，上传即登记数字资产并自动选中 |
+| 节点视觉 | 暖灰浅色 / 深色两套画布主题；图片 / 视频 / 音频节点为大尺寸媒体卡（默认 420px 宽），标题置于节点外，悬停工具、12px 可视化端口 + 大热区、选中蓝描边、可拖拽缩放；视频 / 音频使用原生播放器，生成结果显示「已入资产 / 待入库」 |
+| 控件 | 顶部提供撤销 / 重做（本地快照）、浅色 / 深色、点阵 / 直线 / 无网格、保存与保存退出；底部提供添加节点 / 素材库 / 任务；节点检查器为右侧 390px 抽屉并跟随画布主题 |
+| 撤销重做 | 文档与视口快照最多保留 80 步；节点拖动、缩放、增删、改参数都会形成历史，加载与结果回写不污染用户操作历史 |
+
+**生成产物入库（后端口径修正）**
+
+- `content-media.service.ts` 对 `canvas / studio / workbench` **不再先登记上游平台资产**，字节统一由任务层下载并经数字资产服务落本站 OSS。
+- `content-job.service.ts` 的 `store()` 只把 `ossKey` 非空的本地台账视为已入库；仅凭上游资产编号或 URL 不再跳过转存。入库失败任务落 `FAILED`，保留生成产物与上游地址；重试走 `retryStore()` 补登记，不再次调用模型、不重复计费。
+- 画布结果回写失败只记 error 日志，不把已入库任务改成失败；版本冲突与画布删除均留下可排查日志。
+- `image-edit` 同时接受契约字段 `image` 与画布多图别名 `imageUrls`；视频参考保留图片 / 视频 / 音频三类 typed references，旧 URL 数组继续兼容。
+
+**验证**
+
+- 桌面 1440×900 无头浏览器实测：画布铺满 1440×900，素材栏 280px，顶部浮栏位于画布内，小地图 240×160，底部 dock 56px；浅色 / 深色主题与实际背景色切换生效。
+- 本地文件上传实测：上传 `aipdd-logo.png` 后选择器提示「已上传并登记 1 个素材，并自动加入选择」，画布节点数递增并插入素材节点；验收后已删除测试节点与测试上传台账。
+- 后端定向 Jest：`canvas-plan.spec.ts`、`content-job.service.spec.ts`、`content-media.service.spec.ts` 共 33 例通过；前端 tsc / eslint 通过。
+- 未验证：共享资料实际选中（当前账号没有收到的共享素材）、真实模型生成调用（未在本轮消耗生成额度）、移动端真机。
+
+### 13.10 营销物料包范围收口与产物下载（2026-11-25）
+
+- 图生图复用 AI 画布，不新建物料工作台；用户下载原文件后到其他软件编辑。
+- 不实现内容结果转 RPA 发布任务、微信公众号 / 视频号 / 朋友圈 RPA、多时段定时与阅读量最佳时段测试。
+- 直播切片不实现：现有云端媒体能力没有裁剪 / 混剪接口；不建设直播接入、拉流、回放下载或本地 ffmpeg 等组件，也不展示不可用工具卡。
+- 内容创作结果、共享任务抽屉、视频模版生成结果统一提供附件下载：优先回读本人台账对应的本站 OSS 字节，历史产物才按已存直链代取；服务层校验任务属主、成功状态与产物地址，代取大小上限为 100MB。
+- 下载验证覆盖本人 OSS 回读、历史直链回退、越权拒绝、未完成任务与无产物错误；浏览器登录态过期，未完成登录态下的按钮点击与附件响应实测。
 

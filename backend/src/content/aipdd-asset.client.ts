@@ -319,13 +319,14 @@ export class AipddAssetClient {
   }
 
   /** 下载外链媒体（第三方渠道产物需要先转存到 AIPDD 才能登记）。 */
-  async download(url: string) {
+  async download(url: string, maxBytes = AIPDD_MEDIA_MAX_BYTES) {
     let response;
     try {
       response = await httpRequest<Uint8Array>(url, {
         timeoutMs: DOWNLOAD_TIMEOUT_MS,
         readAs: 'bytes',
         operation: 'content:downloadMedia',
+        maxBytes,
       });
     } catch (error) {
       if (error instanceof TransportError) {

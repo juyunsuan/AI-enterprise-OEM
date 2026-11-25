@@ -24,6 +24,7 @@
 | WorkBuddy 客户端 | 本仓 `workbuddy-host-client/` | 与本仓一致（AGPL-3.0-only） | 自研 | `workbuddy-host-client/` | `workbuddy-host-client/` | 同上 | ⚠️ |
 | CRMEB v8.0 | https://www.crmeb.com/ | Apache-2.0 | **仅参考**（业务分层与数据结构） | `.scratch/`（本地，不入库） | `README.md` 致谢；`.gitignore` 忽略 `.scratch/` | 未移植源码，不计入分发 | ⚠️ |
 | new-api | https://github.com/QuantumNous/new-api | 未在本仓标注 | **仅参考**（本地 `.tmp/new-api-ref/`） | 本地 `.tmp/`，不入库 | `.gitignore` 忽略 `.tmp/` | 不计入分发；如后续引入须补许可证与来源 | ⚠️ |
+| infinite-canvas | https://github.com/tigerowo/infinite-canvas | AGPL-3.0 | **仅参考**（画布视觉、尺寸与交互口径） | 本地 `.tmp/infinite-canvas/`，不入库 | `.gitignore` 忽略 `.tmp/`；画布实现为 `frontend/src/app/content/canvas/_components/` 内原创代码 | 未复制、未移植上游源码；不计入分发。如后续引入源码须保留 AGPL 许可与变更说明 | ✅ |
 | bee 点餐小程序 | https://github.com/woniudiancang/bee | Mulan PSL v2 | **仅参考**（点餐页布局与交互） | 本地附件，不入库 | `takeout-miniprogram/` 为独立重写，未复制上游源码或图片 | 不计入分发；如后续移植须保留许可证与来源 | ✅ |
 | ub-mode（技能文本） | https://github.com/poteto（loosely based on poteto-mode / pstack） | 文档引用（随本仓以 AGPL-3.0 分发） | 文档引用 + 改写文本 | `docs/dev-kit/skills/ub-mode/` | `docs/ub-mode/README.md`、技能内 `references/README.md` | crapper / dryer / mutator / uml-viewer 为外部工具，本仓不随附 | ✅ |
 

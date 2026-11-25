@@ -626,6 +626,11 @@ export const PAGE_META: Record<
 > = {
   "/": { title: "官网首页", description: "企业服务操作系统：一个账号连接企业全生命周期。" },
   "/dashboard": { title: "驾驶舱", description: "身份与资质、我的待办与业务台账。" },
+  "/dashboard/bigscreen": {
+    title: "经营看板设置",
+    description:
+      "选择数据大屏要展示的核心指标与各业务类型的状态分布图表；查看时以深色全屏页打开，数据每 60 秒自动刷新，适合放在公司前台大屏循环播放。",
+  },
   "/insight": {
     title: "智慧分析",
     description:

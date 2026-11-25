@@ -9,7 +9,7 @@ import {
 import { App, Button, Progress, Skeleton, Tag, Tooltip } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ContentJob } from "@enterprise/contracts";
-import { contentApi } from "@/api/content";
+import { contentApi, contentJobDownloadUrl } from "@/api/content";
 import { EmptyState, Notice } from "@/components/ui/panel";
 import { RawImg } from "@/components/ui/raw-img";
 import { MEDIA_LABEL, STATUS_COLOR, STATUS_LABEL, TERMINAL } from "./generation-config";
@@ -77,9 +77,9 @@ export function JobMedia({ job }: { job: ContentJob }) {
   }
   if ((media === "video" || media === "music" || media === "audio") && (url || fallbackUrl)) {
     return (
-      <a href={url || fallbackUrl} target="_blank" rel="noreferrer">
+      <a href={contentJobDownloadUrl(job.id)}>
         <Button size="small" icon={<DownloadOutlined />}>
-          打开
+          下载
         </Button>
       </a>
     );

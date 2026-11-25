@@ -34,6 +34,7 @@ import {
 } from "@enterprise/contracts";
 import {
   contentApi,
+  contentJobDownloadUrl,
   createContentJobs,
   uploadContentMedia,
 } from "@/api/content";
@@ -823,9 +824,16 @@ function JobResult({ job, compact }: { job: ContentJob; compact?: boolean }) {
         </div>
       ) : null}
       {url ? (
-        <a href={url} target="_blank" rel="noreferrer" className="text-12">
-          打开原文件
-        </a>
+        <div style={{ display: "flex", gap: 12 }}>
+          {job.status === "SUCCESS" ? (
+            <a href={contentJobDownloadUrl(job.id)} className="text-12">
+              下载原文件
+            </a>
+          ) : null}
+          <a href={url} target="_blank" rel="noreferrer" className="text-12">
+            打开原文件
+          </a>
+        </div>
       ) : null}
       {!url && !text ? <span className="text-12 muted">任务没有返回内容</span> : null}
     </div>

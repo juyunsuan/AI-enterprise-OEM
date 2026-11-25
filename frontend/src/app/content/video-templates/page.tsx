@@ -21,7 +21,7 @@ import {
   type VideoTemplateSort,
   type VideoTemplateType,
 } from "@enterprise/contracts";
-import { contentApi } from "@/api/content";
+import { contentApi, contentJobDownloadUrl } from "@/api/content";
 import { EmptyState, Notice, PageHero, Panel, PillTabs, TabStrip } from "@/components/ui/panel";
 import { RawImg } from "@/components/ui/raw-img";
 import { GenerateTemplateModal } from "./_components/generate-modal";
@@ -586,9 +586,14 @@ export default function VideoTemplatesPage() {
                             </Button>
                           ) : null}
                           {job.status === "SUCCESS" && url ? (
-                            <a href={url} target="_blank" rel="noreferrer" className="text-12">
-                              打开原文件
-                            </a>
+                            <>
+                              <a href={contentJobDownloadUrl(job.id)} className="text-12">
+                                下载原文件
+                              </a>
+                              <a href={url} target="_blank" rel="noreferrer" className="text-12">
+                                打开原文件
+                              </a>
+                            </>
                           ) : null}
                         </Space>
                       </div>

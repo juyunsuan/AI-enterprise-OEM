@@ -16,6 +16,7 @@ import { withoutRequestAbort } from '../common/request-context';
 import { upstreamToken, upstreamTokenOrNull } from '../common/upstream-token';
 import { toCsv } from '../crm/crm.helpers';
 import type { GenerateSkillInput } from '../content/skill-generator.service';
+import { mimeOf } from '../content/aipdd-asset.client';
 import { registerAiCodeRoutes } from '../ai-code/ai-code.routes';
 
 /** SSE 保活间隔：必须小于反向代理的空闲超时（Next dev 30 秒 / Nginx 60 秒）。 */
@@ -1787,6 +1788,7 @@ export function registerAutomationRoutes(
   // 数字人小程序工具后台素材上传（轮播/海报/图文封面/套餐图）。
   registerDigitalHumanUploads(app, services);
   registerMiniProgramBuiltinDownload(app, services);
+  registerContentJobDownload(app, services);
   registerAiCodeRoutes(app, services);
   registerWorkflowRunStream(app, services);
   registerRpaChromeScreenshot(app, services);
@@ -2220,6 +2222,66 @@ function registerMiniProgramBuiltinDownload(
         status: 200,
         headers: {
           'Content-Type': 'application/zip',
+          'Content-Disposition': `attachment; filename="${encoded}"; filename*=UTF-8''${encoded}`,
+        },
+      });
+    },
+  );
+}
+
+const DOWNLOAD_EXT_BY_MIME: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+  'video/mp4': 'mp4',
+  'video/quicktime': 'mov',
+  'video/webm': 'webm',
+  'audio/mpeg': 'mp3',
+  'audio/wav': 'wav',
+  'audio/mp4': 'm4a',
+};
+
+/**
+ * 内容创作产物下载：只按任务属主鉴权，字节由服务层从自有 OSS 回读或按直链代取。
+ * 二进制响应不是 JSON 契约，故单独登记；文件名优先取台账名，其次取直链末段。
+ */
+function registerContentJobDownload(
+  app: OpenAPIHono<ApiEnv>,
+  services: Services,
+) {
+  app.get(
+    '/enterprise/content/jobs/:id/download',
+    async (context: Context<ApiEnv>) => {
+      const user = context.get('user')!;
+      const id = context.req.param('id')!;
+      const {
+        bytes,
+        name,
+        url: sourceUrl,
+      } = await services.controllers.contentController.downloadJob(user, id);
+      let base = name.trim();
+      if (!base && sourceUrl) {
+        try {
+          base = decodeURIComponent(
+            new URL(sourceUrl).pathname.split('/').pop() || '',
+          );
+        } catch {
+          base = '';
+        }
+      }
+      if (!base) base = `content-${id}`;
+      base = base.replace(/[^\w.-]/g, '_').slice(-80);
+      const mime = mimeOf(base);
+      const filename = /\.[a-z0-9]{2,5}$/i.test(base)
+        ? base
+        : `${base}.${DOWNLOAD_EXT_BY_MIME[mime] || 'bin'}`;
+      const encoded = encodeURIComponent(filename);
+      return new Response(new Uint8Array(bytes), {
+        status: 200,
+        headers: {
+          'Content-Type': mime,
+          'Content-Length': String(bytes.length),
           'Content-Disposition': `attachment; filename="${encoded}"; filename*=UTF-8''${encoded}`,
         },
       });

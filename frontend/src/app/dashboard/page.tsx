@@ -6,6 +6,7 @@ import {
   BankOutlined,
   FileTextOutlined,
   FormOutlined,
+  FundProjectionScreenOutlined,
   GlobalOutlined,
   IdcardOutlined,
   InboxOutlined,
@@ -502,6 +503,12 @@ export default function DashboardPage() {
               onClick={() => router.push("/points")}
             >
               积分充值
+            </Button>
+            <Button
+              icon={<FundProjectionScreenOutlined />}
+              onClick={() => router.push("/dashboard/bigscreen")}
+            >
+              数据大屏设置
             </Button>
             <Button
               icon={<SkinOutlined />}

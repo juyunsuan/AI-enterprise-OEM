@@ -3,6 +3,7 @@ import {
   contentAgentSkillSchema,
   contentDigitalAssetSchema,
   endpoints,
+  requestPath,
   z,
 } from "@enterprise/contracts";
 import type {
@@ -327,4 +328,12 @@ export async function uploadDigitalAssetDirect(
   });
   if (!asset) throw new Error("直传登记没有返回结果");
   return asset;
+}
+
+/**
+ * 成片下载直链：后端按附件头回字节，锚点触发即可（大文件不进 JS 内存）。
+ * 只对本账号自己的任务有效，非本人任务返回 404。
+ */
+export function contentJobDownloadUrl(id: number) {
+  return requestPath(`/api/backend/enterprise/content/jobs/${id}/download`);
 }

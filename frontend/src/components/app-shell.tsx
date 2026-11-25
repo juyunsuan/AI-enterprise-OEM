@@ -17,8 +17,8 @@ const EnterpriseProLayout = dynamic(
   },
 );
 
-/** 官网首页与登录页独立于应用外壳渲染（不显示侧栏与顶栏，且首页无需登录态）。 */
-const SHELL_FREE_PATHS = ["/", "/login", "/merchant"];
+/** 官网首页、登录页与数据大屏独立于应用外壳渲染（不显示侧栏与顶栏，大屏铺满整屏）。 */
+const SHELL_FREE_PATHS = ["/", "/login", "/merchant", "/dashboard/bigscreen/view"];
 
 /** 独立版面（移动端 H5、微信服务号入口、简历打印页、商户后台）：整屏一列，不套桌面侧栏与顶栏。 */
 const SHELL_FREE_PREFIXES = ["/m/", "/embed/", "/survey/", "/book/", "/terms/", "/merchant/"];
